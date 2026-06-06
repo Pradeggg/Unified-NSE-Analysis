@@ -1,0 +1,1 @@
+def run(context): return [{'symbol': x['symbol'], 'add_score': x['trend_signal'] * 1.5, 'trim_score': x['trading_signal'] * 0.5} for x in context]

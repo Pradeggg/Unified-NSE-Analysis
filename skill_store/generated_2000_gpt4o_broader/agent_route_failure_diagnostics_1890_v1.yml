@@ -1,0 +1,57 @@
+id: "agent_route_failure_diagnostics_1890_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1890"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for intraday context: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as action watchlist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Investigate route failures and symbol resolution issues using market context and trading signals."
+sql_templates:
+  -
+    name: "fetch_failed_routes"
+    description: "Retrieve routes that have failed based on analysis date and market sentiment."
+    sql: "SELECT run_id, analysis_date, market_sentiment, notes FROM report.enhanced_runs WHERE market_sentiment < 50 ORDER BY analysis_date DESC;"
+  -
+    name: "fetch_symbol_issues"
+    description: "Identify symbols with ongoing resolution issues and low technical scores."
+    sql: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE tech_score < 30 AND recommendation = 'Hold';"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure correct diagnosis of failures."
+  - "Verify resolution issues with symbol data."
+  - "Check compliance with TradingView export standards."
+synthesis_guidance: "['Prioritize symbols with low RSI and MACD crosses.', 'Emphasize above-average volume ratios in diagnostics.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

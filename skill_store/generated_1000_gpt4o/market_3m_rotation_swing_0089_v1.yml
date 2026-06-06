@@ -1,0 +1,53 @@
+id: "market_3m_rotation_swing_0089_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0089"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: intraday context; response style: concise table."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Total market performance over the last 3 months."
+    template: "SELECT index_symbol, AVG(change_pct) as average_change FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 MONTHS' GROUP BY index_symbol;"
+  -
+    description: "Determine leading sectors based on stage 2 leadership."
+    template: "SELECT sector, COUNT(symbol) as count FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date > CURRENT_DATE - INTERVAL '3 MONTHS' GROUP BY sector ORDER BY count DESC;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure date range is exactly 3 months."
+  - "Confirm index and sector data represent current trends."
+synthesis_guidance: "['Synthesize SQL query results into a coherent market overview.', 'Prioritize concise and clear presentation of data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:41:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.average_change is not approved"

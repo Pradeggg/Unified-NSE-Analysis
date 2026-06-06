@@ -1,0 +1,53 @@
+id: "sector_breadth_rotation_watchlist_1007_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1007"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: today; response style: concise table."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for today: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as concise table"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "{task} - Analyze sectors using approved tables and generate concise sector comparison."
+sql_templates:
+  -
+    name: "sector_comparison"
+    query: "WITH sector_data AS (SELECT sector, pct_above_50dma, stage2_pct FROM breadth.sector_daily WHERE snapshot_date = CURRENT_DATE) SELECT sector, AVG(pct_above_50dma) as avg_dma50, AVG(stage2_pct) as avg_stage2_pct FROM sector_data GROUP BY sector ORDER BY avg_stage2_pct DESC;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sectors are ranked by avg_stage2_pct."
+  - "Output table must include sector names, avg_dma50, avg_stage2_pct."
+synthesis_guidance: "['Summarize insights with a focus on top sectors by stage participation.', 'Integrate findings with other evidence for comprehensive strategy.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:22"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

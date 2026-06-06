@@ -1,0 +1,73 @@
+id: "data_freshness_readiness_audit_0021_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0021"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: last 5 sessions; response style: concise table."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for last 5 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as concise table"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "last_5_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  evidence_access:
+    - "Analyze data freshness for the last 5 sessions across prescribed tables."
+  logic:
+    - "Ensure data from each table reflects the latest trading sessions and is ready for consumption."
+  responses:
+    - "Provide concise readiness status, highlighting freshness or staleness of datasets."
+sql_templates:
+  -
+    description: "Check data freshness in market index end-of-day data for the last 5 sessions."
+    sql: "SELECT trade_date, index_symbol, close FROM market.index_eod ORDER BY trade_date DESC LIMIT 5;"
+python_tools:
+  -
+    id: "calculate_data_gap"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "trade_dates"
+    outputs:
+      - "gap_identified"
+    approved_tables:
+      - "market.index_eod"
+    code: "def run(context):\n    # Sample concept to identify gaps\n    required_dates = set(context['current_dates'])\n    available_dates = set(context['trade_dates'])\n    gap_identified = required_dates - available_dates\n    return list(gap_identified)"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure each table has data for the most recent 5 trading days."
+  - "Identify any missing data or outliers in the dataset."
+synthesis_guidance: "['Produce a matrix summarizing data availability and freshness.', 'Outline any missing components or required actions for immediate resolution.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_data_gap: execution failed: KeyError: 'current_dates'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_data_gap: execution failed: KeyError: 'current_dates'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,65 @@
+id: "report_link_data_validation_0774_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Agent Adda Skill Card: Report Data Validation"
+description: "Identify and validate issues in report data and link functionality for pre-market watchlist creation."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for pre-market: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "pre_market"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Investigate and validate report generation issues using Agent Adda resources."
+sql_templates:
+  -
+    description: "Query to check for missing report metadata."
+    template: "SELECT run_id, analysis_date, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE universe_size IS NULL OR market_composite_score IS NULL;"
+  -
+    description: "Query to identify missing stock data in HTML files."
+    template: "SELECT run_id, symbol, current_price, open_price FROM report.enhanced_filtered_stocks WHERE current_price IS NULL OR open_price IS NULL;"
+python_tools:
+  -
+    id: "validate_report_links"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "report_urls"
+    outputs:
+      - "broken_links"
+    approved_tables:
+
+    code: "def run(context): return [url for url in context['report_urls'] if not validate_url(url)]"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all metadata fields are populated for each run."
+  - "Verify all stocks have complete pricing data."
+synthesis_guidance: "Focus on ensuring reliable data paths from generation to pre-market report presentation."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:37"
+generation_model: "gpt-4o"
+validation_errors:
+  - "validate_report_links: execution failed: KeyError: 'report_urls'"
+review:
+  status: "needs_heal"
+  findings:
+    - "validate_report_links: execution failed: KeyError: 'report_urls'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

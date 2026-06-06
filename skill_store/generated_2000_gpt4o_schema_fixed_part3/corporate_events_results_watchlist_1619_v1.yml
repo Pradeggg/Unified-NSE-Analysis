@@ -1,0 +1,59 @@
+id: "corporate_events_results_watchlist_1619_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1619"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: latest EOD; response style: debug trace."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for latest EOD: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as debug trace"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Combine event watchlist with results analysis linked to the latest stage snapshots."
+sql_templates:
+  watchlist_query:
+    template: "SELECT e.symbol, e.event_type, e.event_date, e.purpose_raw, e.source, a.verdict, s.stage, s.trading_signal FROM signals.corporate_events e JOIN scores.results_analysis a ON e.symbol = a.symbol AND e.event_date = a.period_end JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.event_date >= CURRENT_DATE ORDER BY e.event_date ASC LIMIT 100;"
+    description: "This query retrieves upcoming corporate events along with their analysis and stage information."
+python_tools:
+  - "required_function"
+  - "language"
+  - "mode"
+  - "inputs"
+  - "outputs"
+  - "approved_tables"
+  - "code"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure upcoming event dates are ordered by e.event_date."
+  - "Verify joins compliance with approved_schema._join_rules."
+synthesis_guidance: "['Focus on matching source trails to ensure traceability.', 'Use only verified data from known sources.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

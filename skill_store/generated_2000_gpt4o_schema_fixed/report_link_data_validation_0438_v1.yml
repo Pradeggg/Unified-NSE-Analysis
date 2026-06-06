@@ -1,0 +1,63 @@
+id: "report_link_data_validation_0438_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0438"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+  table_joins:
+    -
+      left_table: "report.enhanced_runs"
+      left_column: "run_id"
+      right_table: "report.enhanced_filtered_stocks"
+      right_column: "run_id"
+      condition: "report.enhanced_runs.run_id = report.enhanced_filtered_stocks.run_id"
+tool_plan_template:
+  -
+    evidence_table: "report.enhanced_runs"
+    sample_query: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '1 month'"
+  -
+    evidence_table: "report.enhanced_filtered_stocks"
+    sample_query: "SELECT run_id, symbol, score FROM report.enhanced_filtered_stocks WHERE score > 0 LIMIT 10"
+sql_templates:
+  -
+    template: "SELECT r.run_id, r.run_ts, r.analysis_date, s.symbol, s.score FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks s ON r.run_id = s.run_id WHERE r.run_ts >= CURRENT_DATE - INTERVAL '20 days'"
+    name: "check_recent_runs_and_symbols"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure run_ts is a valid timestamp and not null."
+  - "Verify symbols in enhanced_filtered_stocks are unique to each run_id."
+synthesis_guidance: "['Formulate findings related to missing links or data inconsistencies.', 'Consider portfolio impact when evaluating missing or incorrect data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

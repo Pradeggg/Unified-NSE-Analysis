@@ -1,0 +1,58 @@
+id: "sector_breadth_rotation_watchlist_1371_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1371"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: pre market; response style: exceptions and gaps first."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for pre market: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as exceptions and gaps first"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  type: "template"
+  steps:
+    - "Fetch latest sector breadth snapshot and stage data using approved SQL queries."
+    - "Identify improving sectors based on breadth changes and Stage 2 participation."
+    - "List candidate symbols with strong relative strength and price momentum."
+sql_templates:
+  -
+    name: "get_latest_breadth_and_stage"
+    sql: "WITH latest_snapshot AS (SELECT MAX(snapshot_date) AS latest_date FROM breadth.sector_daily) SELECT sd.sector, sd.pct_above_50dma, sd.change_5d, sd.breadth_signal, st.symbol, st.relative_strength, st.trading_signal FROM breadth.sector_daily sd JOIN scores.stage_snapshots st ON sd.sector = st.sector AND sd.snapshot_date = (SELECT latest_date FROM latest_snapshot) WHERE st.stage = 'STAGE_2' AND st.snapshot_date = (SELECT latest_date FROM latest_snapshot) ORDER BY sd.change_5d DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sector ranks are up to date."
+  - "Verify improving sectors match desired stage and breadth signals."
+synthesis_guidance: "['Focus on sectors showing stage 2 growth with significant breadth gains.', 'Rank sectors by breadth and provide top candidate symbols ready for analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:41"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

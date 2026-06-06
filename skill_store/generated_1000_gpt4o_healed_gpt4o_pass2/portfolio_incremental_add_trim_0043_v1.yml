@@ -1,0 +1,65 @@
+created_at: "2026-06-06T12:41:21"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: concise table."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0043_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for last 3 months: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as concise table"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    data = context['scores.stage_snapshots']\n    risk_flags = []\n    for record in data:\n        risk = 'Low' if record['stage_score'] > 7 and record['trend_signal'] == 'Positive' else 'High'\n        risk_flags.append({'symbol': record['symbol'], 'risk_flag': risk})\n    return risk_flags"
+    id: "calculate_risk_flags"
+    inputs:
+      - "stage_score"
+      - "trend_signal"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "risk_flags"
+review:
+  attempts: 3
+  findings:
+    - "calculate_risk_flags: execution failed: KeyError: 'scores.stage_snapshots'"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    description: "Retrieve recent scores and portfolio holdings for analysis."
+    template: "SELECT h.symbol, h.qty, h.avg_cost, s.sector, s.stage, s.stage_score, s.trend_signal, s.change_1m_pct FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date > CURRENT_DATE - INTERVAL '3 months';"
+status: "test_failed"
+synthesis_guidance:
+  - "Review recent performance and signals."
+  - "Identify stocks with favorable/unfavorable signals for add/trim."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "concise_table"
+title: "Portfolio Incremental Add Trim Review Variant 0043"
+tool_plan_template: "Using recent scores and portfolio holdings, identify candidates for incremental add or trim actions."
+validation_errors:
+  - "calculate_risk_flags: execution failed: KeyError: 'scores.stage_snapshots'"
+validation_rules:
+  - "Must use approved tables and columns only."
+  - "SQL must be read-only SELECT/WITH."
+version: 1

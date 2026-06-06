@@ -1,0 +1,60 @@
+id: "fii_dii_regime_breadth_review_0624_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0624"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: last 5 sessions; response style: debug trace."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for last 5 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as debug trace"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "last_5_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  sql:
+    -
+      name: "Fetch FII DII Flows and Regime"
+      template: "SELECT f.trade_date, f.fii_net_5d, f.dii_net_5d, f.flow_signal, r.regime, r.confidence FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date WHERE f.trade_date > CURRENT_DATE - INTERVAL '5 days';"
+    -
+      name: "Fetch Market Breadth"
+      template: "SELECT b.trade_date, b.advances, b.declines, b.ad_signal, b.market_sentiment FROM breadth.market_daily b WHERE b.trade_date > CURRENT_DATE - INTERVAL '5 days';"
+    -
+      name: "Fetch Index EOD"
+      template: "SELECT i.trade_date, i.index_symbol, i.close, i.change_pct, i.trend_signal FROM market.index_eod i WHERE i.trade_date > CURRENT_DATE - INTERVAL '5 days';"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all tables return data for the last 5 sessions."
+  - "Check for signal and trend consistency across evidence."
+synthesis_guidance: "['Combine FII/DII flow trends with regime confidence to articulate the market stance.', 'Correlate market breadth and index signals to validate risk-on or risk-off assumptions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,59 @@
+id: "vcp_breakouts_with_fundamentals_0688_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0688"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: intraday context; response style: debug trace."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  python_tools:
+
+  evidence_gaps:
+
+  sql_templates:
+    -
+      template_id: "breakout_candidates_with_fundamentals"
+      query: "WITH latest_eod AS (SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)), latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY')), latest_vcp AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)) SELECT e.symbol, e.close, v.vcp_score, s.enhanced_fund_score FROM latest_eod e JOIN latest_snapshots s ON e.symbol = s.symbol JOIN latest_vcp v ON e.symbol = v.symbol WHERE e.high = e.week52_high AND s.enhanced_fund_score > 80 ORDER BY v.vcp_score DESC, e.close DESC LIMIT 50;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

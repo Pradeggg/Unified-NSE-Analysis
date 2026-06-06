@@ -1,0 +1,61 @@
+id: "signal_outcome_feedback_review_0655_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Quarterly Signal Feedback Analysis"
+description: "Analyzes the effectiveness of past signals within a specified quarter, focusing on risk assessment and strategy improvement."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for quarter to date: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as debug trace"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    task: "Analyze signals hit target or stop"
+    method: "SQL and Python"
+    goal: "Determine which signals were successful and which hit stop-loss."
+sql_templates:
+  -
+    template: "SELECT s.symbol, s.hit_target, s.hit_stop, s.return_pct FROM signals.signal_log s WHERE s.date_issued >= CURRENT_DATE - INTERVAL '3 months' AND (s.hit_target = TRUE OR s.hit_stop = TRUE);"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signal_data"
+    outputs:
+      - "analysis_summary"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context):\n    # Analyze signal outcomes\n    outcomes = context['signal_data']\n    analysis_summary = {\n        'total_signals': len(outcomes),\n        'hit_target': sum(1 for o in outcomes if o['hit_target']),\n        'hit_stop': sum(1 for o in outcomes if o['hit_stop']),\n        'average_return': sum(o['return_pct'] for o in outcomes) / len(outcomes)\n    }\n    return analysis_summary"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure that all outputs provide feedback on the analyzed signals."
+  - "Check correctness of SQL execution and data extraction."
+synthesis_guidance: "['Focus on risk-first learnings from signal analyses.', 'Emphasize practical improvements in trading strategy.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:20"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.s is not approved"

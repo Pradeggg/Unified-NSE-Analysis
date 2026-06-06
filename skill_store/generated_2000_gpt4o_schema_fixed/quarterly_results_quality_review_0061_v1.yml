@@ -1,0 +1,51 @@
+id: "quarterly_results_quality_review_0061_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0061"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: post results; response style: concise table."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for post results: latest quarterly results analysis"
+  - "which companies had strong quarterly results as concise table"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "post_results"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Retrieve the latest quarterly results for companies using the evidence_required.tables. Analyze revenue and PAT growth, along with margin changes and narrative quality. Present results in a concise table format."
+sql_templates:
+  -
+    template: "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.revenue, qr.pat, qr.opm_pct, ra.verdict, ra.growth_yoy_revenue_pct, ra.growth_yoy_pat_pct FROM scores.quarterly_results qr JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end WHERE qr.period_type = 'quarter' AND qr.period_end = (SELECT MAX(period_end) FROM scores.quarterly_results) ORDER BY qr.symbol, qr.period_end DESC NULLS LAST LIMIT 50;"
+    description: "Selects latest quarterly financial results and verdicts for revenue, PAT growth, and OPM percentage assessments."
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure DISTINCT ON clause fetches unique latest entries per symbol."
+  - "Limit result set to improve performance and ensure concise output."
+synthesis_guidance: "Organize the data into a clear, concise table highlighting key financial metrics and narratives. Summarize the results into major categories such as filing timeliness, beat/miss status, and margin movements."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

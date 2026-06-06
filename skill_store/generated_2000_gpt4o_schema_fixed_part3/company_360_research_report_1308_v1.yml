@@ -1,0 +1,45 @@
+id: "company_360_research_report_1308_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Agent Adda Company Research Report"
+description: "Generates a comprehensive 360-degree research report for a company, focusing on fundamentals, technical context, and narrative evidence."
+input_patterns:
+  - "/research {symbol} comprehensive report"
+tags:
+  - "research"
+  - "fundamentals"
+  - "technical_analysis"
+  - "narrative"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "market.equity_eod"
+tool_plan_template: "Generate a comprehensive analysis for {symbol}."
+sql_templates:
+  - "SELECT * FROM scores.stage_snapshots WHERE symbol = '{symbol}' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  - "SELECT * FROM scores.quarterly_results WHERE symbol = '{symbol}' AND (period_end, fetched_at) = (SELECT period_end, fetched_at FROM scores.quarterly_results WHERE symbol = '{symbol}' ORDER BY period_end DESC NULLS LAST, fetched_at DESC LIMIT 1);"
+  - "SELECT * FROM scores.annual_results WHERE symbol = '{symbol}' AND (period_end, fetched_at) = (SELECT period_end, fetched_at FROM scores.annual_results WHERE symbol = '{symbol}' ORDER BY period_end DESC NULLS LAST, fetched_at DESC LIMIT 1);"
+  - "SELECT * FROM market.equity_eod WHERE symbol = '{symbol}' AND trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "narrative_analysis"
+validation_rules:
+  - "Ensure all latest data points are fetched using the latest snapshot."
+  - "Validate fetched data for correctness against expected data types and constraints."
+synthesis_guidance: "['Focus on providing exceptions and gaps first.', 'Highlight key insights for position-sizing context today.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

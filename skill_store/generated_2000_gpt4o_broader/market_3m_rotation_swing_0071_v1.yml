@@ -1,0 +1,62 @@
+id: "market_3m_rotation_swing_0071_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0071"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: pre market; response style: concise table."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "pre_market"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    name: "Last3MonthsMarketAnalysis"
+    description: "Analyze market regime, sector rotation, and leadership for potential swing trading over the last 3 months."
+    steps:
+      - "Aggregate market index trends over the last 3 months."
+      - "Identify leading sectors and price performance."
+      - "Highlight top stage 2 candidates from sector rotation."
+sql_templates:
+  -
+    name: "IndexPerformance"
+    query: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY trade_date DESC"
+  -
+    name: "Stage2Candidates"
+    query: "SELECT symbol, sector, stage FROM scores.stage_snapshots WHERE stage = '2' AND snapshot_date >= CURRENT_DATE - INTERVAL '3 months'"
+  -
+    name: "SectorLeaders"
+    query: "SELECT sector, AVG(change_1m_pct) as avg_monthly_return FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_monthly_return DESC"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all fields are within approved schema and tables."
+  - "Ensure SQL templates are read-only and compliant."
+synthesis_guidance: "['Summarize market trends briefly.', 'Highlight only top performing sectors and promising swing candidates.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:51"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.avg_monthly_return is not approved"

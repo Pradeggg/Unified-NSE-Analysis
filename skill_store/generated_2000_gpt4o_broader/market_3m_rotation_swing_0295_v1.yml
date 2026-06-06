@@ -1,0 +1,68 @@
+id: "market_3m_rotation_swing_0295_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0295"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: weekly review; response style: ranked candidates."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for weekly review: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze market rotation and sector leadership by assessing trends and stage scores across the approved tables. Generate a ranked list of candidates based on recent performance and signals."
+sql_templates:
+  -
+    operation: "trend_analysis"
+    sql: "SELECT trade_date, index_symbol, close, change_pct, relative_strength, trend_signal FROM market.index_eod WHERE trade_date >= CAST('now' AS DATE) - INTERVAL '3 MONTHS';"
+    description: "Get index trend signals from the last 3 months."
+  -
+    operation: "stage2_leadership"
+    sql: "SELECT snapshot_date, symbol, sector, stage, stage_score FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= CAST('now' AS DATE) - INTERVAL '3 MONTHS' ORDER BY stage_score DESC;"
+    description: "Identify leading Stage 2 candidates over the last 3 months."
+python_tools:
+  -
+    id: "calculate_risk"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "index_returns"
+      - "investment_score"
+    outputs:
+      - "risks"
+    approved_tables:
+
+    code: "def run(context):\n    risks = []\n    for ret in context['index_returns']:\n        risk = ret * (1 - context['investment_score']['average'])\n        risks.append(risk)\n    return {'risks': risks}"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "status must be 'generated'"
+  - "ensure all returns are calculated based on relative strength and change percentages"
+synthesis_guidance: "Assess strength and trend signals to prioritize liquidity and risk mitigation. Highlight sectors with consistent positive momentum."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.cast is not approved"
+  - "market.index_eod.date is not approved"
+  - "scores.stage_snapshots.cast is not approved"
+  - "scores.stage_snapshots.date is not approved"

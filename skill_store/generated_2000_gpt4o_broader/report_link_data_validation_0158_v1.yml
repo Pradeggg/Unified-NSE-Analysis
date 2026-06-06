@@ -1,0 +1,58 @@
+id: "report_link_data_validation_0158_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0158"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: quarter to date; response style: narrative plus evidence."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for quarter to date: review report links not working"
+  - "validate generated report links and missing data as narrative plus evidence"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  findings: "Assess the quality and completeness of report links and HTML data."
+  broken_links: "Identify and detail any report links that are not functioning."
+  missing_data: "Point out any missing stock data in the HTML files."
+  remediation: "Propose steps to fix the identified issues."
+  verification: "Outline methods to verify the remediation work."
+sql_templates:
+  -
+    template_name: "select_enhanced_runs"
+    sql: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered, indices_analyzed, market_composite_score, market_sentiment, notes FROM report.enhanced_runs"
+  -
+    template_name: "select_filtered_stocks"
+    sql: "SELECT run_id, rank, symbol, score, recommendation, current_price, open_price, high_price, low_price, volume, trading_value_cr, weekly_signal, daily_signal, day_change_pct, rsi, above_50dma, above_200dma, tech_score, fund_score, rs_score, macd_signal, week52_position, volume_ratio, rs_vs_nifty500 FROM report.enhanced_filtered_stocks"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "integrity_checks"
+  - "schema_conformance"
+synthesis_guidance: "Integrate SQL evidence and narrative for a robust validation report."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:58"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

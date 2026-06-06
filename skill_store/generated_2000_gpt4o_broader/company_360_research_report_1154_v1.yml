@@ -1,0 +1,72 @@
+id: "company_360_research_report_1154_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1154"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: watchlist creation; timeframe: quarter to date; response style: narrative plus evidence."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "watchlist creation for quarter to date: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as narrative plus evidence"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template: "N/A"
+sql_templates:
+  -
+    description: "Retrieve company overview and stage details for Reliance"
+    query: "SELECT snapshot_date, company_name, sector, market_cap_cat, price, stage, fundamental_score, technical_score FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' ORDER BY snapshot_date DESC LIMIT 1;"
+  -
+    description: "Fetch recent quarterly financial results for Reliance"
+    query: "SELECT period_end, revenue, operating_profit, pat, eps FROM scores.quarterly_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1;"
+  -
+    description: "Retrieve annual results overview for Reliance"
+    query: "SELECT period_end, revenue, operating_profit, pat, eps, dividend_payout_pct FROM scores.annual_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1;"
+  -
+    description: "Retrieve the latest balance sheet snapshot for Reliance"
+    query: "SELECT period_end, total_assets, total_liabilities, equity_capital, net_debt FROM scores.balance_sheet WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1;"
+  -
+    description: "Get recent cash flow data for Reliance"
+    query: "SELECT period_end, operating_cf, investing_cf, financing_cf FROM scores.cash_flow WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1;"
+  -
+    description: "Get recent market EOD data for Reliance"
+    query: "SELECT trade_date, open, high, low, close, volume, week52_high, week52_low FROM market.equity_eod WHERE symbol = 'RELIANCE' AND trade_date = (SELECT MAX(trade_date) FROM market.equity_eod WHERE symbol = 'RELIANCE');"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all fetched data is current as of the latest available dates."
+  - "Cross-check financial figures for consistency with market data."
+synthesis_guidance: "['Compile a cohesive report that includes all fetched data contextually.', 'Frame the narrative for Indian market perspectives and watchlist requirements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:49"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

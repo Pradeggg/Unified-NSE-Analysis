@@ -1,0 +1,66 @@
+created_at: "2026-06-06T12:52:20"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: post results; response style: action watchlist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0869_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  index_performance_query:
+    description: "Aggregate index performance over the last 3 months."
+    sql: "SELECT index_symbol, AVG(change_pct) AS average_return FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol"
+  leading_sectors_query:
+    description: "Determine leading sectors with strong relative strength."
+    sql: "SELECT sector, AVG(relative_strength) AS avg_relative_strength FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_relative_strength DESC LIMIT 5"
+  primary_candidates_query:
+    description: "Select primary swing candidates with VCP pattern."
+    sql: "SELECT symbol, company_name, vcp_score, sector, price FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' AND vcp_score > 80 ORDER BY vcp_score DESC LIMIT 10"
+  stage_distribution_query:
+    description: "Analyze stage distribution changes in sectors."
+    sql: "SELECT sector, stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector, stage"
+status: "test_failed"
+synthesis_guidance: "Combine insights from SQL queries to create a comprehensive 3-month market regime and sector leadership assessment. Focus on swing trading candidates using validated data sources."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "post_results"
+  - "action_watchlist"
+title: "3M Market Rotation Swing Assessment Variant 0869"
+tool_plan_template: "Use evidence tables to gather insights into market regimes and sector leadership for the last 3 months. Validate sources post results for reliable swing trading candidates."
+validation_errors:
+  - "market.index_eod.average_return is not approved"
+  - "scores.stage_snapshots.avg_relative_strength is not approved"
+validation_rules:
+  - "Ensure all SQL queries only read data."
+  - "Verify integrity using source-trail validation post data retrieval."
+version: 1
+review:
+  attempts: 3
+  findings:
+    - "market.index_eod.average_return is not approved"
+    - "scores.stage_snapshots.avg_relative_strength is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"

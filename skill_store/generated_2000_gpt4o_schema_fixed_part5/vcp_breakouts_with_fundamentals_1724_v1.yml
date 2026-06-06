@@ -1,0 +1,56 @@
+id: "vcp_breakouts_with_fundamentals_1724_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1724"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    description: "Extract top candidates based on VCP, breakout, and fundamental scores."
+sql_templates:
+  -
+    name: "select_latest_fundamental_scores"
+    description: "Retrieve fundamental scores for potential VCP and breakout stocks."
+    query: "WITH latest_snapshots AS (SELECT symbol, enhanced_fund_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY') AND stage = 'STAGE_2'), latest_vcp_picks AS (SELECT symbol, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 100) SELECT e.symbol, s.enhanced_fund_score, v.vcp_score FROM market.equity_eod e INNER JOIN latest_snapshots s ON e.symbol = s.symbol INNER JOIN latest_vcp_picks v ON e.symbol = v.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND e.series = 'EQ';"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure candidates have VCP and enhanced fund scores."
+  - "Verify candidates' latest trading signal is BUY or STRONG_BUY."
+  - "Check that candidates are within the top 100 by VCP score."
+synthesis_guidance: "[\"Generate a QA checklist to verify each candidate's breakout and fundamental strength.\", 'Compile a TradingView symbol list from finalist candidates.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:11"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,55 @@
+id: "insider_bulk_deal_signal_review_1956_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1956"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for quarter to date: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as comparison matrix"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Evaluate the intersection of insider alerts, bulk deals, and technical indicators within the quarter-to-date framework, delivering a comparative assessment."
+sql_templates:
+  -
+    template_name: "fetch_recent_insider_alerts"
+    template_sql: "SELECT symbol, alert_date, entity, qty, value_cr, alert_type, insider_score FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '90' DAY ORDER BY alert_date DESC;"
+  -
+    template_name: "fetch_bulk_deals"
+    template_sql: "SELECT symbol, deal_date, entity, qty, price FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '90' DAY ORDER BY deal_date DESC;"
+  -
+    template_name: "fetch_technical_indicators"
+    template_sql: "SELECT symbol, snapshot_date, technical_score, rsi, trend_signal, supertrend_state FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '90' DAY;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "rules"
+synthesis_guidance: "Use the fetched data to construct a comparison matrix, highlighting symbols with the highest score alignment across insider buying, bulk deals, and technical indicators."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:42"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.day is not approved"
+  - "signals.bulk_block_deals.day is not approved"
+  - "signals.insider_alerts.day is not approved"

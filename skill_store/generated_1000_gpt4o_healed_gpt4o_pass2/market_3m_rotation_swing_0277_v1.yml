@@ -1,0 +1,58 @@
+created_at: "2026-06-06T12:44:08"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: pre market; response style: ranked candidates."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0277_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 3
+  findings:
+    - "market.index_eod.date is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    name: "IndexPerformance"
+    template: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= DATE('now', '-3 months')"
+  -
+    name: "Stage2Leadership"
+    template: "WITH Stage2 AS (SELECT symbol, sector, MAX(snapshot_date) as latest_date FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= DATE('now', '-3 months') GROUP BY symbol, sector) SELECT s.symbol, s.sector, ss.technical_score, ss.relative_strength FROM Stage2 s JOIN scores.stage_snapshots ss ON s.symbol = ss.symbol AND s.latest_date = ss.snapshot_date ORDER BY ss.technical_score DESC"
+status: "test_failed"
+synthesis_guidance: "Provide ranked candidates based on sector-relative analysis over the past 3 months."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "ranked_candidates"
+title: "3M Market Rotation Swing Assessment Variant 0277"
+tool_plan_template: "Analyze market trends and sector leadership for the last 3 months."
+validation_errors:
+  - "market.index_eod.date is not approved"
+validation_rules:
+  - "Ensure SQL templates match approved schema."
+  - "Check that outputs are consistent with the input patterns."
+version: 1

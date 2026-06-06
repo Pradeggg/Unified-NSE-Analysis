@@ -1,0 +1,56 @@
+id: "vcp_breakouts_with_fundamentals_1108_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1108"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: today; response style: narrative plus evidence."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "today"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters:
+    - "Latest EOD data"
+    - "Stage 2 stocks only"
+    - "Constructive buy signals"
+sql_templates:
+  -
+    description: "Select VCP and breakout stocks with strong fundamentals and liquidity."
+    sql: "WITH latest_eod AS (SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)), latest_stage_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_vcp_picks AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)) SELECT le.symbol, le.close, ls.fundamental_score, lv.vcp_score FROM latest_eod le JOIN latest_stage_snapshots ls ON le.symbol = ls.symbol JOIN latest_vcp_picks lv ON le.symbol = lv.symbol WHERE ls.stage = 'STAGE_2' AND ls.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY lv.vcp_score DESC LIMIT 20;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all outputs are relevant to the Agent Adda Indian market."
+  - "Verify SQL templates are read-only and compliant with approved schema."
+synthesis_guidance: "['Focus on narrative style with evidential support.', 'Address position-sizing factors relevant to the Indian market.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:55:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

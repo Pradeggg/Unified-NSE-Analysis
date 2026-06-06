@@ -1,0 +1,54 @@
+id: "corporate_events_results_watchlist_0387_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0387"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: intraday context; response style: exceptions and gaps first."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for intraday context: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as exceptions and gaps first"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "event_watchlist"
+    description: "Retrieve intraday context and sector-relative comparison for corporate events and results."
+    template: "WITH latest_events AS (SELECT symbol, event_type, event_date, purpose_raw, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE AND event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM')), latest_stage AS (SELECT DISTINCT ON (symbol) symbol, sector, stage, snapshot_date FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT le.symbol, le.event_type, le.event_date, le.purpose_raw, ls.sector, ls.stage FROM latest_events le JOIN latest_stage ls ON le.symbol = ls.symbol LIMIT 100"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+synthesis_guidance: "{'exceptions_and_gaps': 'Prioritize highlighting sectors with missing data or significant deviations first.', 'sector_relative_comparison': 'Focus on providing insights on sectors outperforming or underperforming.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

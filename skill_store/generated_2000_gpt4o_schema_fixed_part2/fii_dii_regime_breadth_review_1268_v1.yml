@@ -1,0 +1,50 @@
+id: "fii_dii_regime_breadth_review_1268_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1268"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: post results; response style: ranked candidates."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for post results: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as ranked candidates"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Analyze FII/DII flows, market regime, breadth, and index levels to assess market context."
+sql_templates:
+  - "WITH latest_regime AS (SELECT * FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history)), latest_flows AS (SELECT * FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows)), latest_breadth AS (SELECT * FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily)), latest_index AS (SELECT * FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND index_symbol = 'Nifty 50') SELECT regime, confidence, flow_signal, ad_signal, change_pct, trend_signal FROM latest_regime JOIN latest_flows ON latest_regime.trade_date = latest_flows.trade_date JOIN latest_breadth ON latest_flows.trade_date = latest_breadth.trade_date JOIN latest_index ON latest_breadth.trade_date = latest_index.trade_date;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure recent data alignment across all selected features."
+  - "Review signals for consistency in regime and market classifications."
+synthesis_guidance: "['Consider both absolute and relative flow changes.', 'Ensure breadth indicators confirm the regime status.', 'Use trend signals to validate with macro context.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:33"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

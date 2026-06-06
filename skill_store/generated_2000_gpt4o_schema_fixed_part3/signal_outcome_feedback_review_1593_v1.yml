@@ -1,0 +1,53 @@
+id: "signal_outcome_feedback_review_1593_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1593"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for weekly review: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as research-only summary"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Research prior signals, assess hit targets and stops, derive improvement strategies from outcomes."
+sql_templates:
+  -
+    name: "Prior Signal Outcomes"
+    sql: "SELECT s.symbol, s.date_issued, s.signal, s.hit_target, s.hit_stop, s.return_pct FROM signals.signal_log s WHERE s.date_issued >= (SELECT MAX(date_issued) FROM signals.signal_log) - INTERVAL '1 week';"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure outcome summary includes all target hits and stops."
+  - "Highlight patterns in successful signals."
+  - "Identify reasons for stop losses."
+synthesis_guidance: "{'context': 'Agent Adda Indian market research.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:51"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

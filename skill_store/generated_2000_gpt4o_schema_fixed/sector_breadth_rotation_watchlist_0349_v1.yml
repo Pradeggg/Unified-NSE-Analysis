@@ -1,0 +1,60 @@
+id: "sector_breadth_rotation_watchlist_0349_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0349"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: last 3 months; response style: exceptions and gaps first."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for last 3 months: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as exceptions and gaps first"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+
+  sql_templates:
+    -
+      outputs: "sector_ranks"
+      query: "WITH recent_breadth AS (SELECT sector, AVG(pct_above_50dma) AS avg_pct_above_50dma, AVG(change_5d) AS avg_change_5d FROM breadth.sector_daily WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector), stage_contrib AS (SELECT sector, COUNT(symbol) AS stage2_participation FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector) SELECT rb.sector, rb.avg_pct_above_50dma, sc.stage2_participation FROM recent_breadth rb JOIN stage_contrib sc ON rb.sector = sc.sector ORDER BY sc.stage2_participation DESC, rb.avg_pct_above_50dma DESC LIMIT 10;"
+    -
+      outputs: "candidate_symbols"
+      query: "SELECT ss.symbol, ss.company_name FROM scores.stage_snapshots ss JOIN market.equity_eod eod ON ss.symbol = eod.symbol AND ss.snapshot_date = eod.trade_date WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.stage = 'STAGE_2' AND ss.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY ss.stage_score DESC LIMIT 10;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sector_ranks contains sectors with highest Stage 2 participation and breadth."
+  - "Candidate symbols must have a strong Stage 2 signal and recent buy signals."
+synthesis_guidance: "['Focus on sectors with increasing Stage 2 participation.', 'Identify gaps in sector improvements and strengths.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:16"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

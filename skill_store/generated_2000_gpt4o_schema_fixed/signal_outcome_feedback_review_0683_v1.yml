@@ -1,0 +1,52 @@
+id: "signal_outcome_feedback_review_0683_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0683"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: debug trace."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for intraday context: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as debug trace"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "{Evaluate signal outcomes and identify patterns.}"
+sql_templates:
+  -
+    statement: "WITH latest_signals AS (SELECT id, date_issued, symbol, signal, target_1, target_2, stop_loss, hit_target, hit_stop, return_pct FROM signals.signal_log ORDER BY date_issued DESC LIMIT 100) SELECT ls.symbol, ls.signal, ls.return_pct, ls.hit_target, ls.hit_stop, ss.stage FROM latest_signals ls JOIN scores.stage_snapshots ss ON ls.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    description: "Selects the latest 100 signals, with their outcomes, and joins with latest stage."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure results capture both positive and negative outcomes."
+  - "Check alignment with latest stage data."
+synthesis_guidance: "['Highlight common traits among winners and losers.', 'Suggest actionable improvements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:39"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

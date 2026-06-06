@@ -1,0 +1,59 @@
+id: "corporate_events_results_watchlist_0709_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0709"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: today; response style: QA checklist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for today: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as QA checklist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "today"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Use evidence to provide analysis of upcoming or recent corporate events and results with source-trail validation in a QA checklist format."
+sql_templates:
+  -
+    description: "Retrieve upcoming corporate events for the watchlist."
+    template: "SELECT symbol, event_type, event_date, purpose_raw, detail, source FROM signals.corporate_events WHERE event_date = CURRENT_DATE"
+  -
+    description: "Get results analysis including growth and source trail for recent filings."
+    template: "SELECT symbol, company_name, industry, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct, opm_delta_pp, eps_yoy_pct, verdict, source_trail FROM scores.results_analysis WHERE filing_date = CURRENT_DATE"
+  -
+    description: "Fetch stage snapshot data for corporate watchlist context."
+    template: "SELECT symbol, company_name, sector, market_cap_cat, price, trend_signal, stage FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all SQL queries are read-only SELECT statements."
+  - "Use only approved tables and columns."
+  - "Source-trail data must be included and accurate."
+  - "Check for complete and accurate event details."
+synthesis_guidance: "Present findings in a QA checklist style, ensuring each result is validated with a source trail."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

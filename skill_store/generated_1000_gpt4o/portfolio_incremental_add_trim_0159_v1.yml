@@ -1,0 +1,59 @@
+id: "portfolio_incremental_add_trim_0159_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0159"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: quarter to date; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "First, review current portfolio holdings for performance and exposure. Then, identify candidates for incremental add or trim based on stage, technical score, and market signals. Conclude with a narrative synthesis, embedding evidence from the approved tables."
+sql_templates:
+  -
+    name: "current_holdings_review"
+    template: "SELECT h.symbol, h.qty, h.avg_cost, h.buy_date, s.sector, s.stage, s.stage_score, s.technical_score, s.trend_signal FROM portfolio.holdings AS h JOIN (SELECT symbol, max(snapshot_date) AS latest FROM scores.stage_snapshots WHERE snapshot_date <= current_date GROUP BY symbol) AS latest_snap ON h.symbol = latest_snap.symbol JOIN scores.stage_snapshots AS s ON h.symbol = s.symbol AND s.snapshot_date = latest_snap.latest WHERE s.snapshot_date >= date_trunc('quarter', current_date);"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Use only approved schema tables and columns"
+  - "SQL templates must be read-only"
+  - "Python tools allowed only if SQL becomes complex"
+synthesis_guidance: "Summarize portfolio health in narrative form, suggest add/trim actions based on evidence. Ensure alignment with Indian market context and approved schema."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:42:26"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table h.avg_cost"
+  - "unknown table h.buy_date"
+  - "unknown table h.qty"
+  - "unknown table h.symbol"
+  - "unknown table latest_snap.latest"
+  - "unknown table latest_snap.symbol"
+  - "unknown table s.sector"
+  - "unknown table s.snapshot_date"
+  - "unknown table s.stage"
+  - "unknown table s.stage_score"
+  - "unknown table s.symbol"
+  - "unknown table s.technical_score"
+  - "unknown table s.trend_signal"

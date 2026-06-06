@@ -1,0 +1,60 @@
+id: "market_3m_rotation_swing_1639_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1639"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for last 20 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Execute a debug trace of market regime and sector rotation over the last 3 months, focusing on stage 2 leadership and liquid swing candidates. Validate source-trail path for last 20 sessions."
+sql_templates:
+  -
+    task: "Assess market index performance"
+    template: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months';"
+  -
+    task: "Identify stage 2 leaders"
+    template: "SELECT symbol, sector, stage FROM scores.stage_snapshots WHERE stage = '2' AND snapshot_date > CURRENT_DATE - INTERVAL '3 months';"
+  -
+    task: "Find candidates for swing trading"
+    template: "SELECT symbol, price, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date > CURRENT_DATE - INTERVAL '20 days';"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure SQL templates are read-only."
+  - "Verify coverage of all required evidence tables."
+  - "Ensure response is structured as a debug trace."
+synthesis_guidance: "Integrate findings into a cohesive narrative, highlighting sector rotation effects, stage 2 leadership dynamics, and potential swing candidates in the last 20 days."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:41"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

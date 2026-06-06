@@ -1,0 +1,1 @@
+def run(context): max_dates = context.inputs['max_dates']; return {'freshness_score': min(max_dates.values())}

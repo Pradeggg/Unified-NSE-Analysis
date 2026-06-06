@@ -1,0 +1,60 @@
+id: "vcp_breakouts_with_fundamentals_1738_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1738"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters:
+    - "STAGE_2"
+    - "trading_signal IN ('BUY', 'STRONG_BUY')"
+  global_rules:
+    - "For latest data, use snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+    - "Use series = 'EQ' for equity filters"
+sql_templates:
+  -
+    name: "find_vcp_breakouts"
+    description: "Fetch VCP breakout stocks with strong fundamentals."
+    sql: "SELECT st.symbol, st.company_name, st.enhanced_fund_score, st.vcp_score \nFROM scores.stage2_vcp_picks st\nWHERE st.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)\nAND st.trading_signal IN ('BUY', 'STRONG_BUY')\nORDER BY st.vcp_score DESC \nLIMIT 20"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Check output symbols for presence in NSE"
+  - "Ensure evidence aligns with input patterns"
+  - "Validate enhanced_fund_score and vcp_score rankings"
+synthesis_guidance: "{'framing': 'Agent Adda Indian market evidence and research-only framing.', 'stakeholder_alignment': 'Align candidates with top VCP picks.', 'compliance': 'Ensure read-only operations only.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:33"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,62 @@
+id: "fii_dii_regime_breadth_review_1940_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1940"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as comparison matrix"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Assess market conditions using FII/DII flows, regime history, market breadth, and index confirmation."
+sql_templates:
+  -
+    template_name: "fii_dii_flow_analysis"
+    template: "SELECT trade_date, fii_net_today, dii_net_today, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days';"
+  -
+    template_name: "regime_history_analysis"
+    template: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days';"
+  -
+    template_name: "market_breadth_analysis"
+    template: "SELECT trade_date, advances, declines, ad_signal FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days';"
+  -
+    template_name: "index_eod_analysis"
+    template: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure SQL outputs are within the last 20 sessions."
+  - "Verify data alignment across all evidence sources."
+  - "Check for consistency in market signals."
+synthesis_guidance: "Analyze flows, regime signals, and breadth to interpret the current market condition and determine the risk profile."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:36"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,65 @@
+id: "report_link_data_validation_1390_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1390"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: intraday context; response style: exceptions and gaps first."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for intraday context: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "intraday_context"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Validate run metadata and filtered stock rows for intraday context reports focusing on gaps."
+sql_templates:
+  -
+    name: "validate_enhanced_report_links"
+    query: "SELECT er.run_id, er.run_ts, er.analysis_date, ef.symbol FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id WHERE er.run_ts >= (CURRENT_DATE - INTERVAL '3 months') AND ef.symbol IS NULL;"
+python_tools:
+  -
+    id: "python_validation_tool_01"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+      - "symbol"
+      - "run_ts"
+    outputs:
+      - "missing_data_report"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Example read-only logic for Python validation\n    # Implement analysis logic here\n    return 'No missing data' # Placeholder"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure correct linkage between enhanced report runs and filtered stocks."
+  - "Identify symbols with missing data in the recent 3-month period."
+synthesis_guidance: "['Focus on exceptions and missing data first.', 'Highlight unmet data linkages affecting report validations.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:48"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python_validation_tool_01: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "python_validation_tool_01: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

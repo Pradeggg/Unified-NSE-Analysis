@@ -1,0 +1,55 @@
+id: "report_link_data_validation_0132_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0132"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: last 20 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as narrative plus evidence"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "last_20_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Analyze the integrity of report links and data completeness using metadata from recent reports."
+sql_templates:
+  -
+    name: "fetch_recent_runs"
+    description: "Fetch the recent 20 enhanced report runs."
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 20;"
+  -
+    name: "check_filtered_stock_data"
+    description: "Check stock data completeness for the recent 20 enhanced report runs."
+    template: "SELECT run_id, symbol, score, daily_signal FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 20);"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure that every report link corresponds to a populated entry in `enhanced_runs`."
+  - "Verify that all stocks in `enhanced_filtered_stocks` are analyzed without data loss."
+synthesis_guidance: "Combine narrative analysis with evidence from the last 20 report sessions, highlighting any discrepancies and suggesting data validation processes."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:42:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

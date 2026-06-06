@@ -1,0 +1,88 @@
+id: "data_freshness_readiness_audit_1561_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1561"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for post results: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as research-only summary"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    python_tools:
+      -
+        id: "check_freshness"
+        language: "python"
+        mode: "read_only"
+        inputs:
+          -
+            table: "market.index_eod"
+            columns:
+              - "trade_date"
+              - "index_symbol"
+          -
+            table: "market.equity_eod"
+            columns:
+              - "trade_date"
+              - "symbol"
+          -
+            table: "scores.stage_snapshots"
+            columns:
+              - "snapshot_date"
+              - "symbol"
+        outputs:
+          -
+            name: "freshness_matrix"
+            description: "Matrix of latest available dates across evidence sources"
+          -
+            name: "missing_sources"
+            description: "List of any sources with outdated or missing data"
+        approved_tables:
+          - "market.index_eod"
+          - "market.equity_eod"
+          - "scores.stage_snapshots"
+        code: "def run(context):\n    # Example code to identify latest dates and differences\n    pass"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Check all specified tables for latest data dates."
+  - "Ensure response provides clear identification of outdated data sources."
+  - "Verify completeness of the freshness matrix."
+synthesis_guidance: "['Summarize the results of the freshness check.', 'Identify areas needing attention or updates.', 'Provide a research-focused explanation.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:21"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

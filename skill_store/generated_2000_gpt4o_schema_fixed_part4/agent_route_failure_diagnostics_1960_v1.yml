@@ -1,0 +1,65 @@
+id: "agent_route_failure_diagnostics_1960_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1960"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for quarter to date: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as comparison matrix"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    steps:
+      -
+        description: "Identify recent run failures in agent routes."
+        type: "SQL"
+        template: "SELECT run_id, run_ts, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) AND stocks_analyzed > stocks_filtered;"
+      -
+        description: "Assess symbol resolution and stage patterns."
+        type: "SQL"
+        template: "WITH latest_stage AS (SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT es.symbol, es.recommendation, ls.stage, ls.trading_signal FROM report.enhanced_filtered_stocks es JOIN latest_stage ls ON es.symbol = ls.symbol WHERE es.run_id = (SELECT MAX(run_id) FROM report.enhanced_runs);"
+sql_templates:
+  -
+    name: "RecentFailedRuns"
+    template: "SELECT run_id, run_ts, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) AND stocks_analyzed > stocks_filtered;"
+  -
+    name: "SymbolResolutionAssessment"
+    template: "WITH latest_stage AS (SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT es.symbol, es.recommendation, ls.stage, ls.trading_signal FROM report.enhanced_filtered_stocks es JOIN latest_stage ls ON es.symbol = ls.symbol WHERE es.run_id = (SELECT MAX(run_id) FROM report.enhanced_runs);"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure response addresses all requested diagnostics."
+  - "Verification must map symbol resolutions and route failures accurately."
+  - "Utilize comparison matrix to contrast different routes and diagnoses."
+synthesis_guidance: "['Present findings in a comparison matrix format highlighting failures and potential fixes.', 'Ensure clarity in communicating tool gaps and diagnostic steps.', 'Focus on Indian market context and relevance.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,67 @@
+id: "portfolio_lab_paper_trading_review_1958_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1958"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: position-sizing context; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "position-sizing context for quarter to date: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as comparison matrix"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  strategy_state: "A summary of the current strategy state based on paper trading signals and executed trades."
+  open_trades: "Details of open trades in the paper trading portfolio, including entry and stop-loss levels."
+  entry_exit_rules: "Analysis of the rules that triggered entries and exits for the paper trading portfolio."
+  exposure: "Assessment of market exposure through the position-sizing approach for quarter-to-date."
+  exceptions: "List any discrepancies or deviations from expected trading behavior."
+sql_templates:
+  strategy_state:
+    query: "SELECT symbol, COUNT(*) AS trade_count, AVG(return_pct) AS avg_return FROM signals.signal_log WHERE action_bucket = 'paper_trade' AND date_resolved IS NOT NULL GROUP BY symbol;"
+    description: "Summarizes the trade count and average return for resolved paper trades."
+  open_trades:
+    query: "SELECT symbol, entry_low, entry_high, stop_loss FROM signals.signal_log WHERE action_bucket = 'paper_trade' AND date_resolved IS NULL;"
+    description: "Details of open paper trades including entry and stop-loss levels."
+  entry_exit_rules:
+    query: "SELECT symbol, AVG(price_at_issue) AS avg_entry, AVG(price_at_resolution) AS avg_exit FROM signals.signal_log WHERE action_bucket = 'paper_trade' GROUP BY symbol;"
+    description: "Average entry and exit prices for paper trades."
+  exposure:
+    query: "SELECT symbol, qty, AVG(avg_cost) AS avg_cost FROM portfolio.holdings WHERE symbol IN (SELECT DISTINCT symbol FROM signals.signal_log WHERE action_bucket = 'paper_trade') GROUP BY symbol;"
+    description: "Exposure details calculated from paper trades in the holdings."
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure queries do not modify the database."
+  - "Only approved tables and columns are used."
+  - "Output format and structure must match specified contract."
+synthesis_guidance: "Compare paper trading strategies to real holdings using a matrix approach to highlight differences in performance and exposure calculations without mixing live portfolio data."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:44"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.avg_entry is not approved"
+  - "signals.signal_log.avg_exit is not approved"
+  - "signals.signal_log.avg_return is not approved"
+  - "signals.signal_log.trade_count is not approved"

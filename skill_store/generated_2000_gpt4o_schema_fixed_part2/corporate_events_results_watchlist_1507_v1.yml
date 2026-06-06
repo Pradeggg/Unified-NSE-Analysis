@@ -1,0 +1,52 @@
+id: "corporate_events_results_watchlist_1507_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1507"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: today; response style: research-only summary."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for today: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as research-only summary"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "today"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Fetch data from 'signals.corporate_events', 'scores.results_analysis', and 'scores.stage_snapshots' to compile a sector-relative comparison list of stocks with upcoming or recent corporate events and results. Use approved joins and filters to ensure data validity."
+sql_templates:
+  -
+    template: "SELECT DISTINCT ON (ce.symbol) ce.symbol, ce.event_date, ce.event_type, ra.industry, sn.stage, sn.trading_signal\nFROM signals.corporate_events ce\nJOIN scores.stage_snapshots sn ON ce.symbol = sn.symbol\nJOIN scores.results_analysis ra ON ce.symbol = ra.symbol\nWHERE ce.event_date = CURRENT_DATE\nAND sn.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nAND ra.period_end = (SELECT MAX(period_end) FROM scores.results_analysis)\nORDER BY ce.symbol, ce.event_date DESC, ra.updated_at DESC\nLIMIT 50;"
+    description: "Fetches the latest events for today with sector and technical context"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure symbol is unique and mapped correctly across tables"
+  - "Dates must use latest per symbol where applicable"
+  - "Event types should match values like RESULTS, DIVIDEND, SPLIT, BONUS, AGM"
+synthesis_guidance: "Provide a sector-relative watchlist of stocks with significant corporate events happening today, illustrating the technical and results context using the latest available data."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

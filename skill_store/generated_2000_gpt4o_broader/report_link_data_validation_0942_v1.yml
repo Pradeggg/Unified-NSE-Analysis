@@ -1,0 +1,59 @@
+id: "report_link_data_validation_0942_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0942"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for last 3 months: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  tasks:
+    - "Validate completeness of report links based on recent run metadata."
+    - "Analyze filtered stock data for discrepancies within the last three months."
+  timeframe: "Last 3 months"
+sql_templates:
+  -
+    type: "metadata_validation"
+    query: "SELECT run_id, run_ts, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+    description: "Fetches report run metadata within the last 3 months."
+  -
+    type: "stock_data_discrepancy"
+    query: "SELECT run_id, symbol, current_price, open_price, tech_score FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months');"
+    description: "Fetches filtered stock rows with specific columns for analysis."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all report links correspond to a valid run_id with data."
+  - "Highlight runs with incomplete stock data or anomalies in current_price vs open_price."
+synthesis_guidance: "Provide a comparison matrix detailing broken links, stock discrepancies, and outline suggested remediations for verification gaps."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:33"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,81 @@
+id: "data_freshness_readiness_audit_1701_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1701"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: today; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for today: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "today"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  - "1. Identify tables used for freshness checks."
+  - "2. Use SQL templates to retrieve the latest data date for each table."
+  - "3. Compare dates against current date to determine freshness."
+  - "4. Provide QA checklist indicating which tables meet freshness standards."
+sql_templates:
+  -
+    title: "Check Market Index EOD Freshness"
+    query: "SELECT MAX(trade_date) AS latest_date FROM market.index_eod;"
+    context: "Ensure EOD data is up-to-date."
+  -
+    title: "Check Equity EOD Freshness"
+    query: "SELECT MAX(trade_date) AS latest_date FROM market.equity_eod WHERE series = 'EQ';"
+    context: "Ensure equity data is current."
+  -
+    title: "Check Scores Stage Snapshots Freshness"
+    query: "SELECT MAX(snapshot_date) AS latest_date FROM scores.stage_snapshots;"
+    context: "Validate snapshot data recency."
+  -
+    title: "Check Market Daily Freshness"
+    query: "SELECT MAX(trade_date) AS latest_date FROM breadth.market_daily;"
+    context: "Confirm daily market breadth data."
+  -
+    title: "Check MA Percentage Above Freshness"
+    query: "SELECT MAX(snapshot_date) AS latest_date FROM breadth.ma_pct_above;"
+    context: "Validate moving average data freshness."
+  -
+    title: "Check Enhanced Runs Freshness"
+    query: "SELECT MAX(run_ts) AS latest_date FROM report.enhanced_runs;"
+    context: "Ensure report runs are current."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "SQL output must indicate latest trade or snapshot dates for freshness checks."
+  - "Comparison should confirm date freshness relative to today's date."
+synthesis_guidance: "['Assess which data sources have outdated information.', 'Provide recommendations or actions based on detected freshness gaps.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:04"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.latest_date is not approved"
+  - "breadth.market_daily.latest_date is not approved"
+  - "market.equity_eod.latest_date is not approved"
+  - "market.index_eod.latest_date is not approved"
+  - "report.enhanced_runs.latest_date is not approved"
+  - "scores.stage_snapshots.latest_date is not approved"

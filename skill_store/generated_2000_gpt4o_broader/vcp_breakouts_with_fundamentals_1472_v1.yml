@@ -1,0 +1,54 @@
+id: "vcp_breakouts_with_fundamentals_1472_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1472"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: pre market; response style: portfolio-aware output."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  - "Identify stocks reaching new highs or showing VCP characteristics."
+  - "Assess fundamental strength and institutional backing using available scores."
+  - "Check liquidity and trading volume to ensure viability."
+sql_templates:
+  -
+    name: "select_high_potential_stocks"
+    query: "SELECT e.symbol, e.high, s.enhanced_fund_score, s.institutional_backing FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.high > e.week52_high AND s.enhanced_fund_score > 75"
+  -
+    name: "select_vcp_stocks"
+    query: "SELECT v.symbol, v.vcp_score, v.narrative FROM scores.stage2_vcp_picks v WHERE v.vcp_score > 80 AND v.trading_signal = 'buy'"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all selected stocks have enhanced fundamental scores greater than 75."
+  - "Trading signals must be validated to be 'buy'."
+synthesis_guidance: "['Prioritize stocks with recent new highs and robust VCP scores.', 'Highlight stocks with strong institutional backing and consistent performance.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:09:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.v is not approved"

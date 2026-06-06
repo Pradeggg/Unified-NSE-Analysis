@@ -1,0 +1,51 @@
+id: "vcp_breakouts_with_fundamentals_0254_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0254"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: quarter to date; response style: ranked candidates."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  type: "sql_or_python_plan"
+  steps:
+    - "Use SQL to filter stocks with new highs or VCP breakout signals."
+    - "Ensure stocks have strong fundamentals using SQL or Python for detailed checks."
+    - "Rank the filtered stocks based on combination of VCP score, fundamental score, and market cap."
+sql_templates:
+  new_highs_or_vcp_breakout: "SELECT s.symbol, s.company_name, s.sector, s.price, s.enhanced_fund_score, s.vcp_score FROM scores.stage2_vcp_picks as s WHERE s.vcp_score > 70 AND s.enhanced_fund_score > 60 ORDER BY s.vcp_score DESC, s.enhanced_fund_score DESC LIMIT 100"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure the stock list is ranked by VCP and fundamental scores."
+  - "Confirm that stocks in the list have made recent new highs or show VCP patterns."
+synthesis_guidance: "Focus on identifying stocks that are technically strong while having robust fundamental indicators."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:04"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.s is not approved"

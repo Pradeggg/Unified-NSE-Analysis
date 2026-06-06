@@ -1,0 +1,72 @@
+id: "company_360_research_report_1574_v1"
+version: 1
+status: "review_pending"
+domain: "fundamental_analysis"
+title: "Agent Adda Skill Card for NSE Analysis"
+description: "Provides a comprehensive analysis of a company listed on NSE using approved tables and joins for creating pre-market watchlists."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "watchlist creation for pre market: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as research-only summary"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "watchlist_creation"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    steps:
+      -
+        action: "SQL"
+        input: "Fetch latest stage snapshot and technical scores for the given symbol."
+        template: "SELECT symbol, company_name, sector, market_cap_cat, price, change_1d_pct, stage, stage_score, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol = '{symbol}';"
+      -
+        action: "SQL"
+        input: "Fetch latest financial results."
+        template: "SELECT symbol, period_label, revenue, expenses, operating_profit, opm_pct, pat, eps FROM scores.quarterly_results WHERE symbol = '{symbol}' AND period_end = (SELECT MAX(period_end) FROM scores.quarterly_results WHERE symbol = '{symbol}');"
+      -
+        action: "SQL"
+        input: "Fetch current market and trading data."
+        template: "SELECT trade_date, open, high, low, close, volume FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND symbol = '{symbol}';"
+sql_templates:
+  - "SELECT symbol, company_name, sector, market_cap_cat, price, change_1d_pct, stage, stage_score, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol = '{symbol}';"
+  - "SELECT symbol, period_label, revenue, expenses, operating_profit, opm_pct, pat, eps FROM scores.quarterly_results WHERE symbol = '{symbol}' AND period_end = (SELECT MAX(period_end) FROM scores.quarterly_results WHERE symbol = '{symbol}');"
+  - "SELECT trade_date, open, high, low, close, volume FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND symbol = '{symbol}';"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all queries use the latest available date for each table as specified."
+  - "Use only approved join conditions for any table joins."
+  - "Verify that all SQL templates use parameterized inputs for security."
+synthesis_guidance: "['Combine company snapshot with the latest financial trends and technical setups.', 'Identify valuation gaps or market mispricing based on available data.', 'Summarize the investment thesis and outline potential risks.', 'Present findings in a research-only format suitable for institutional investors.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:22"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

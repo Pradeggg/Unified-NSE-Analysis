@@ -1,0 +1,62 @@
+id: "portfolio_lab_paper_trading_review_1916_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1916"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for latest EOD: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as comparison matrix"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  plan: "Query required tables to retrieve paper trading signals and compare them against latest market conditions and stage snapshots."
+  evidence_design: "Use SQL to gather data for comparison matrices highlighting paper trading entries, exits, stop losses, and targets."
+  assumptions:
+    - "Latest EOD values are accurate reflections of current market conditions."
+    - "Signal log entries reflect true paper trading strategies without contamination from actual trades."
+sql_templates:
+  -
+    name: "fetch_paper_trading_signals"
+    description: "Retrieve latest paper trading signals for comparison."
+    query: "SELECT sl.symbol, sl.signal, sl.entry_low, sl.entry_high, sl.stop_loss, sl.target_1, sl.target_2, se.price, se.stage FROM signals.signal_log AS sl JOIN scores.stage_snapshots AS se ON sl.symbol = se.symbol WHERE sl.date_issued = (SELECT MAX(date_issued) FROM signals.signal_log) AND se.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    name: "fetch_latest_eod_data"
+    description: "Retrieve latest end-of-day market data."
+    query: "SELECT ee.symbol, ee.close, ee.volume FROM market.equity_eod AS ee WHERE ee.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "check"
+synthesis_guidance: "{'approach': 'Organize data into a clear comparison matrix to evaluate strategy effectiveness.', 'highlight': 'Focus on discrepancies between expected and actual outcomes based on current EOD data.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:30"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,67 @@
+id: "market_3m_rotation_swing_1373_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1373"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: pre market; response style: exceptions and gaps first."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as exceptions and gaps first"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  - "Identify the broad market regime using the index performance over the past 3 months."
+  - "Evaluate sector leadership by assessing index change data."
+  - "Determine stage 2 leadership from the stage snapshots."
+  - "Identify primary swing candidates from VCP picks."
+sql_templates:
+  index_returns:
+    template: "WITH three_months_data AS (\n    SELECT index_symbol, close as close_price, trade_date\n    FROM market.index_eod\n    WHERE trade_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE\n)\nSELECT index_symbol, \n       (SELECT close_price FROM three_months_data ORDER BY trade_date DESC LIMIT 1) / \n       (SELECT close_price FROM three_months_data ORDER BY trade_date ASC LIMIT 1) - 1 AS return_pct\nFROM three_months_data\nGROUP BY index_symbol\nLIMIT 100;"
+    description: "Calculates the percentage return of indexes over the past 3 months."
+  stage_distribution_change:
+    template: "SELECT sector, COUNT(*) as stage_2_count\nFROM scores.stage_snapshots\nWHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n  AND stage = 'STAGE_2'\nGROUP BY sector\nORDER BY stage_2_count DESC;"
+    description: "Determines the number of stage 2 stocks by sector."
+  leading_sectors:
+    template: "SELECT sector\nFROM scores.stage_snapshots\nWHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n  AND stage = 'STAGE_2'\nGROUP BY sector\nORDER BY COUNT(*) DESC\nLIMIT 3;"
+    description: "Finds leading sectors based on stage 2 stocks."
+  primary_candidates:
+    template: "SELECT symbol, company_name, vcp_score\nFROM scores.stage2_vcp_picks\nWHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)\nORDER BY vcp_score DESC\nLIMIT 10;"
+    description: "Selects top swing candidates based on VCP scores."
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL templates return results within the expected data range."
+  - "Check for null values in critical outputs such as index return calculations."
+  - "Verify that sector counts and leading sectors align with input constraints and filtering."
+synthesis_guidance: "['Focus responses on discrepancies first; highlight any missing data or irregularities.', 'Summarize evident trends or gaps in market regime or sector leadership for clarity.', 'Keep findings bounded to ensure a concise candidate list for swing trading.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

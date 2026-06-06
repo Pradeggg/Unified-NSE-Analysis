@@ -1,0 +1,51 @@
+id: "corporate_events_results_watchlist_1927_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1927"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: comparison matrix."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for last 5 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as comparison matrix"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Generate a report on corporate events and results from the past 5 sessions, focusing on sector-relative comparisons. Use relevant SQL templates to extract required data."
+sql_templates:
+  -
+    name: "Corporate Events and Results"
+    query: "WITH latest_stage_snapshots AS (SELECT symbol, sector FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT ce.symbol, ce.event_type, ce.event_date, ra.verdict, ss.sector FROM signals.corporate_events ce JOIN scores.results_analysis ra ON ce.symbol = ra.symbol JOIN latest_stage_snapshots ss ON ce.symbol = ss.symbol WHERE ce.event_date >= CURRENT_DATE - INTERVAL '5 days';"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all events are within the last 5 sessions."
+  - "Include only symbols with available analysis data."
+synthesis_guidance: "Create a comparison matrix focusing on sector-relative performance and event impacts."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

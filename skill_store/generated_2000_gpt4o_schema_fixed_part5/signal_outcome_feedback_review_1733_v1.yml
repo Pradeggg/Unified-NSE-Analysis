@@ -1,0 +1,54 @@
+id: "signal_outcome_feedback_review_1733_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1733"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for last 20 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as QA checklist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh-follow-up"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Perform a comprehensive review of recent signal activities and outcomes to identify patterns and improvements."
+sql_templates:
+  -
+    description: "Select latest signal outcomes for the last 20 trading days."
+    template: "SELECT id, date_issued, symbol, signal, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= (CURRENT_DATE - INTERVAL '20 days');"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure returned results are not empty."
+  - "Verify that all signal entries have associated outcomes."
+synthesis_guidance: "['Summarize successful signals and identify common patterns with hit targets.', 'Analyze failed signals to determine frequent failure points.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

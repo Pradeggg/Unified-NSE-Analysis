@@ -1,0 +1,60 @@
+id: "signal_outcome_feedback_review_0039_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0039"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: concise table."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for last 20 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as concise table"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Analyze signal logs for last 20 sessions."
+  - "Identify patterns in hit targets and stops."
+  - "Contrast successful and failed signals."
+  - "Suggest improvements for route selection."
+sql_templates:
+  -
+    template: "SELECT symbol, signal, date_issued, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= (CURRENT_DATE - INTERVAL '20 days')"
+    description: "Extract relevant signal outcomes from last 20 sessions."
+  -
+    template: "WITH latest_stage AS (SELECT symbol, stage, snapshot_date FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT sl.symbol, sl.signal, sl.hit_target, sl.hit_stop, ss.stage FROM signals.signal_log sl JOIN latest_stage ss ON sl.symbol = ss.symbol WHERE sl.date_issued >= (CURRENT_DATE - INTERVAL '20 days')"
+    description: "Join signal outcomes with latest stage context."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure signal and outcome data align with the last 20 sessions."
+  - "Verify target and stop hits are correctly identified."
+  - "Synthesize patterns from successful signals."
+synthesis_guidance: "['Condense outcome data into a clear summary table.', 'Highlight dominant patterns in winning and losing signals.', 'Suggest actionable route improvements based on findings.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

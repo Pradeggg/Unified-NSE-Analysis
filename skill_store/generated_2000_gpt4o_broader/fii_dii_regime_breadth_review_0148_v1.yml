@@ -1,0 +1,69 @@
+id: "fii_dii_regime_breadth_review_0148_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0148"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for last 3 months: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as narrative plus evidence"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Combine flow, regime, breadth, and index evidence to narratively assess market risk context."
+sql_templates:
+  -
+    query: "SELECT trade_date, fii_net_today, dii_net_today, fii_trend, dii_trend, days_in_window, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= DATE_SUB(NOW(), INTERVAL 3 MONTH)"
+    description: "Fetch FII/DII flow data for the last 3 months."
+  -
+    query: "SELECT trade_date, regime, confidence, days_in_regime FROM signals.regime_history WHERE trade_date >= DATE_SUB(NOW(), INTERVAL 3 MONTH)"
+    description: "Fetch regime data for the last 3 months."
+  -
+    query: "SELECT trade_date, advances, declines, net_ad, ad_oscillator, market_sentiment FROM breadth.market_daily WHERE trade_date >= DATE_SUB(NOW(), INTERVAL 3 MONTH)"
+    description: "Fetch market breadth data for the last 3 months."
+  -
+    query: "SELECT trade_date, close, change_pct, rsi, momentum_50d FROM market.index_eod WHERE index_symbol = 'NIFTY50' AND trade_date >= DATE_SUB(NOW(), INTERVAL 3 MONTH)"
+    description: "Fetch NIFTY 50 index data for the last 3 months."
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all data retrieved is within the last 3 months."
+  - "Check for data consistency across different datasets."
+  - "Ensure narrative synthesis is based on supporting evidence."
+synthesis_guidance: "Combine quantitative evidence with qualitative analysis to construct a coherent narrative around market risk context."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:51"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.date_sub is not approved"
+  - "breadth.market_daily.month is not approved"
+  - "breadth.market_daily.now is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "market.index_eod.now is not approved"
+  - "signals.fii_dii_flows.date_sub is not approved"
+  - "signals.fii_dii_flows.month is not approved"
+  - "signals.fii_dii_flows.now is not approved"
+  - "signals.regime_history.date_sub is not approved"
+  - "signals.regime_history.month is not approved"
+  - "signals.regime_history.now is not approved"

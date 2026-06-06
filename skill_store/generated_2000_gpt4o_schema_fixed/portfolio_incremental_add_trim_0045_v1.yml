@@ -1,0 +1,55 @@
+id: "portfolio_incremental_add_trim_0045_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0045"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: last 3 months; response style: concise table."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for last 3 months: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as concise table"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "last_3_months"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  description: "Analyze current holdings against latest stage and scores for incremental actions."
+  steps:
+    - "Join portfolio holdings with stage snapshots using symbol."
+    - "Filter for latest snapshot date."
+    - "Evaluate stocks for add or trim based on trend signals."
+sql_templates:
+  -
+    title: "Fetch Latest Stage Snapshot and Holdings"
+    template: "SELECT h.symbol, h.qty, h.avg_cost, s.company_name, s.sector, s.stage, s.trading_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all `symbol` values in results are unique."
+  - "Validate existence of all mandatory fields in outputs."
+synthesis_guidance: "{'description': 'Create a concise table summarizing add/trim recommendations.', 'required_fields': ['symbol', 'company_name', 'trading_signal']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

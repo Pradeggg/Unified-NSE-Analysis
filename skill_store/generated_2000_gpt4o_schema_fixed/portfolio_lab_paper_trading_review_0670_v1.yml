@@ -1,0 +1,60 @@
+id: "portfolio_lab_paper_trading_review_0670_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0670"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: TradingView export; timeframe: post results; response style: debug trace."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "TradingView export for post results: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as debug trace"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "TradingView_export"
+  - "post_results"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  step: "Analyze the datasets to extract critical insights for paper trading strategies."
+  tool: "SQL"
+  query:
+    -
+      purpose: "Identify latest paper trading signals and outcomes."
+      sql: "SELECT signal_log.symbol, signal_log.signal, signal_log.price_at_issue, signal_log.stop_loss, signal_log.target_1, signal_log.target_2, signal_log.hit_target, signal_log.hit_stop, stage_snapshots.stage, stage_snapshots.snapshot_date FROM signals.signal_log AS signal_log JOIN scores.stage_snapshots AS stage_snapshots ON signal_log.symbol = stage_snapshots.symbol WHERE signal_log.date_resolved = (SELECT MAX(date_resolved) FROM signals.signal_log) AND stage_snapshots.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 10;"
+sql_templates:
+  -
+    type: "READ_ONLY"
+    purpose: "Extract latest trading signals for specific strategies."
+    query: "SELECT s.symbol, s.signal, s.setup_class, s.price_at_issue, s.stop_loss, s.target_1, e.close FROM signals.signal_log s JOIN market.equity_eod e ON s.symbol = e.symbol WHERE s.date_resolved IS NOT NULL AND e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all SQL outputs align with the output_contract structure."
+  - "Entries, exits, and targets should match signal setup criteria."
+synthesis_guidance: "['Interpret results in the context of paper trading objectives.', 'Highlight discrepancies between expected and actual outcomes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:30"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

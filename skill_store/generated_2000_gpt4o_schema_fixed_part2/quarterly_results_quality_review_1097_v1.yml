@@ -1,0 +1,50 @@
+id: "quarterly_results_quality_review_1097_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1097"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: sector-relative comparison; timeframe: weekly review; response style: concise table."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "sector-relative comparison for weekly review: latest quarterly results analysis"
+  - "which companies had strong quarterly results as concise table"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Query evidence tables for latest quarterly results, revenue trends, and margin analysis. Aggregate into a sector-relative comparison table."
+sql_templates:
+  -
+    description: "Fetch latest quarterly results with revenue and PAT growth for companies."
+    template: "WITH latest_quarterly AS (\n  SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.period_end, qr.revenue, qr.pat, ra.growth_yoy_revenue_pct, ra.growth_yoy_pat_pct\n  FROM scores.quarterly_results qr\n  JOIN scores.results_analysis ra ON ra.symbol = qr.symbol AND ra.period_end = qr.period_end\n  ORDER BY qr.symbol, qr.period_end DESC NULLS LAST, qr.fetched_at DESC\n)\nSELECT sqr.symbol, sqr.company_name, sqr.industry, sqr.revenue as latest_revenue, sqr.pat as latest_pat, ra.growth_yoy_revenue_pct, ra.growth_yoy_pat_pct\nFROM latest_quarterly lq\nJOIN scores.stage_snapshots sqr ON sqr.symbol = lq.symbol\nWHERE lq.period_end > CURRENT_DATE - INTERVAL '3 months'\nORDER BY sqr.industry, ra.growth_yoy_revenue_pct DESC\nLIMIT 100;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Limit result to 100 entries."
+  - "Fetch the latest period data based on period_end and fetched_at."
+  - "Ensure proper JOINs between tables using approved _join_rules."
+synthesis_guidance: "Synthesize the information into a concise table format with emphasis on sector-relative performance."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:12"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.industry is not approved"
+  - "scores.stage_snapshots.pat is not approved"
+  - "scores.stage_snapshots.revenue is not approved"

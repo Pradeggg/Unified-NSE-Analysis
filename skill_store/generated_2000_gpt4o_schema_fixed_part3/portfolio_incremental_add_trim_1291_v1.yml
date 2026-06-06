@@ -1,0 +1,62 @@
+id: "portfolio_incremental_add_trim_1291_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1291"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: weekly review; response style: ranked candidates."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Analyze portfolio holdings to identify potential add or trim candidates based on current market stages and signals."
+sql_templates:
+  latest_stage_snapshot: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+python_tools:
+  -
+    id: "run_evaluation_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      context: "recent_stage_snapshots"
+    outputs:
+      - "ranked_candidates"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    # Process data for ranked candidate selection.\n    # Placeholder for complex evaluation logic.\n    ranked_candidates = []\n    return ranked_candidates"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure latest snapshot is used for stage evaluation."
+  - "Ensure only constructive buy-signal stocks are considered for adding."
+  - "Rank candidates based on technical and stage scores."
+synthesis_guidance: "['Use latest signals and staged snapshots to identify strong buy candidates.', 'Assess risk based on price change and technical indicators over 1 week and 1 month.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:09"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_evaluation_tool: inputs must be a list"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_evaluation_tool: inputs must be a list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

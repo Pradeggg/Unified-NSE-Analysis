@@ -1,0 +1,53 @@
+id: "sector_breadth_rotation_watchlist_0293_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0293"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: ranked candidates."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for weekly review: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as ranked candidates"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "GENERATED"
+sql_templates:
+  -
+    description: "Get latest sector breadth with Stage 2 participation for ranking."
+    sql: "WITH latest_sector_breadth AS (SELECT bd.sector, bd.pct_above_50dma, bd.breadth_signal, bd.change_5d, ma.stage2_pct FROM breadth.sector_daily bd JOIN breadth.ma_pct_above ma ON bd.snapshot_date = ma.snapshot_date WHERE bd.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)), latest_stage_data AS (SELECT sector, COUNT(symbol) as stage2_count FROM scores.stage_snapshots WHERE stage = 'STAGE_2' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector) SELECT lsb.sector, lsb.pct_above_50dma, lsb.breadth_signal, lsb.change_5d, lsb.stage2_pct, lsd.stage2_count FROM latest_sector_breadth lsb JOIN latest_stage_data lsd ON lsb.sector = lsd.sector ORDER BY lsb.stage2_pct DESC, lsb.pct_above_50dma DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all listed sectors have recent breadth signals."
+  - "Verify Stage 2 participation counts align with the latest sector data."
+synthesis_guidance: "['Focus on the combination of breadth metrics and Stage 2 counts for sector ranking.', 'Use the SQL template to guide manual checks on latest dates and data integrity.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

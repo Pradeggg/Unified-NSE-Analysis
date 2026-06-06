@@ -1,0 +1,66 @@
+id: "market_3m_rotation_swing_1107_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1107"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: today; response style: narrative plus evidence."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as narrative plus evidence"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "today"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  evidence_gaps:
+
+  sql_templates:
+    -
+      name: "sector_leading_indices"
+      sql: "SELECT index_symbol, MAX(change_pct) AS change_3m_pct FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 months') GROUP BY index_symbol ORDER BY change_3m_pct DESC LIMIT 5"
+    -
+      name: "stage_2_leaders"
+      sql: "SELECT symbol, company_name, sector, price, relative_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY relative_strength DESC, technical_score DESC LIMIT 10"
+    -
+      name: "swing_candidates"
+      sql: "SELECT symbol, company_name, price, change_1w_pct, relative_strength FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC, rank ASC LIMIT 10"
+  python_tools:
+
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Integrate SQL query results into a coherent narrative, emphasizing trends and sector rotation effect on market regimes. Provide strategic insights on potential swing trading opportunities in identified sectors."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:55:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

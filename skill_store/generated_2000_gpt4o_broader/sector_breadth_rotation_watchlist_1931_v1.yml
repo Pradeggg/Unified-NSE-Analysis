@@ -1,0 +1,73 @@
+id: "sector_breadth_rotation_watchlist_1931_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1931"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for last 20 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as comparison matrix"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Fetch recent sector breadth and stage participation data for ranking."
+    template: "WITH recent_breadth AS ( SELECT sector, AVG(pct_above_50dma) AS avg_pct_above_50dma, AVG(stage2_pct) AS avg_stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date > (CURRENT_DATE - INTERVAL '20 days') GROUP BY sector ) SELECT s.sector, d.breadth_signal, r.avg_pct_above_50dma, r.avg_stage2_pct FROM breadth.sector_daily s JOIN recent_breadth r ON s.sector = r.sector WHERE s.snapshot_date > (CURRENT_DATE - INTERVAL '20 days') ORDER BY r.avg_stage2_pct DESC, r.avg_pct_above_50dma DESC;"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+
+    outputs:
+      - "sector_ranks"
+      - "improving_sectors"
+      - "candidate_symbols"
+      - "tradingview_symbols"
+    approved_tables:
+      - "breadth.sector_daily"
+      - "breadth.ma_pct_above"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Sample implementation for a read-only Python tool in the context\n    # Gathering additional insights if required from the selected tables.\n    pass"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:26"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "run: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

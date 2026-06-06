@@ -1,0 +1,58 @@
+id: "insider_bulk_deal_signal_review_1144_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1144"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for last 3 months: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as narrative plus evidence"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Gather data from insider alerts and bulk/block deals tables for the last 3 months."
+    - "Join this data with the latest scores and technical setups from stage_snapshots."
+    - "Filter for positive technical score and insider or institutional accumulation indicators."
+    - "Compile ranked list of symbols suitable for watchlist creation."
+sql_templates:
+  -
+    description: "Fetch insider alerts and bulk/block deals for watchlist creation."
+    template: "SELECT ia.symbol, ia.entity, ia.alert_date, bd.deal_date, bd.qty, ss.technical_score\nFROM signals.insider_alerts ia\nJOIN signals.bulk_block_deals bd ON ia.symbol = bd.symbol\nJOIN scores.stage_snapshots ss ON ia.symbol = ss.symbol\nWHERE ia.alert_date >= CURRENT_DATE - INTERVAL '3 months'\nAND bd.deal_date >= CURRENT_DATE - INTERVAL '3 months'\nAND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nAND ss.technical_score > 0\nLIMIT 100;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure alerts and deals are within the timeframe."
+  - "Validate technical scores are positive."
+  - "Check data alignment and integrity in JOINs."
+synthesis_guidance: "['Narrative should explain market context and specific insider actions.', 'Highlight technical confirmations as signs of accumulation.', 'Rank symbols based on criteria such as technical strength and volume.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:45"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

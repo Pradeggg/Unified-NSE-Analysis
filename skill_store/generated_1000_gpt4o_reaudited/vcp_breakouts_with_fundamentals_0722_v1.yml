@@ -1,0 +1,69 @@
+created_at: "2026-06-06T12:51:04"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: QA checklist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0722_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    symbol = context['symbol']\n    price_date = context['price_date']\n    # Perform analysis based on symbol and price date\n    analysis_result = {}\n    # Placeholder for logic to analyze the stock\n    return analysis_result"
+    id: "stock_analysis_tool"
+    inputs:
+      - "symbol"
+      - "price_date"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "fundamental_analysis"
+sql_templates:
+  -
+    description: "Query for screening stocks that are VCP breakouts or have strong fundamentals in the Indian market."
+    query: "SELECT e.symbol, e.trade_date, e.close, s.fundamental_score, s.enhanced_fund_score, v.vcp_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol JOIN scores.stage2_vcp_picks v ON e.symbol = v.symbol WHERE e.trade_date >= CURRENT_DATE - INTERVAL '5 days' AND (v.vcp_score >= 80 OR s.fundamental_score >= 85) ORDER BY v.vcp_score DESC, e.close DESC"
+status: "test_failed"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "QA_checklist"
+title: "VCP Breakouts With Fundamentals Variant 0722"
+tool_plan_template:
+
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+version: 1
+validation_errors:
+  - "stock_analysis_tool: execution failed: KeyError: 'symbol'"
+review:
+  status: "needs_heal"
+  findings:
+    - "stock_analysis_tool: execution failed: KeyError: 'symbol'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

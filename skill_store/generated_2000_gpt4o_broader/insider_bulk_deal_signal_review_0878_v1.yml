@@ -1,0 +1,52 @@
+id: "insider_bulk_deal_signal_review_0878_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0878"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for pre market: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as action watchlist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Evaluate alert signals with deal details and technical scores."
+sql_templates:
+  -
+    description: "Get recent insider alerts and bulk deals for pre-market analysis."
+    template: "SELECT a.symbol, a.alert_type, a.qty, a.value_cr, b.deal_type, b.price, s.technical_score FROM signals.insider_alerts a JOIN signals.bulk_block_deals b ON a.symbol = b.symbol JOIN scores.stage_snapshots s ON a.symbol = s.symbol WHERE a.alert_date = CURRENT_DATE - INTERVAL '1 day' AND b.deal_date = CURRENT_DATE - INTERVAL '1 day';"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure results align with the latest pre-market data."
+  - "Cross-validate insider alerts with technical confirmations."
+synthesis_guidance: "['Focus on actionable signals with potential for accumulation.', 'Use technical scores to prioritize stocks for watchlist.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:59"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

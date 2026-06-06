@@ -1,0 +1,64 @@
+id: "signal_outcome_feedback_review_1929_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Focus on source-trail validation for the last 5 sessions."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze signal outcomes focusing on target hits and stop losses in the past 5 sessions."
+sql_templates:
+  -
+    template_name: "select_outcomes"
+    sql: "SELECT date_issued, symbol, company, signal, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '5 days';"
+python_tools:
+  -
+    id: "tool_01"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      query_results: "Results from select_outcomes query"
+    outputs:
+      - "outcome_summary"
+      - "winner_patterns"
+      - "failure_patterns"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context):\n    results = context['query_results']\n    summary = {\n        'total_signals': len(results),\n        'hits': sum(1 for r in results if r['hit_target']),\n        'stops': sum(1 for r in results if r['hit_stop'])\n    }\n    return {'outcome_summary': summary}"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure query results include all necessary columns for outcome analysis."
+  - "Verify that return_pct calculations are consistent."
+synthesis_guidance: "Focus on actionable insights linking signal attributes with outcomes to refine strategies."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:28"
+generation_model: "gpt-4o"
+validation_errors:
+  - "tool_01: inputs must be a list"
+review:
+  status: "needs_heal"
+  findings:
+    - "tool_01: inputs must be a list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

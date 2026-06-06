@@ -1,0 +1,69 @@
+id: "sector_breadth_rotation_watchlist_1819_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1819"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for latest EOD: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as action watchlist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Select latest sector snapshots and evaluate breadth, stage 2 participation, and price momentum."
+sql_templates:
+  -
+    name: "latest_sector_breadth"
+    template: "WITH latest_breadth AS ( SELECT sd.sector, sd.breadth_signal, ma.stage2_pct FROM breadth.sector_daily sd JOIN breadth.ma_pct_above ma ON sd.snapshot_date = ma.snapshot_date WHERE sd.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) ) SELECT s.symbol, s.company_name, s.stage, s.trading_signal FROM scores.stage_snapshots s JOIN latest_breadth lb ON s.sector = lb.sector WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.stage = 'STAGE_2' AND s.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 50;"
+python_tools:
+  -
+    id: "tool_1"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "snapshot_date"
+      - "sector"
+      - "stage"
+    outputs:
+      - "ranked_sectors"
+    approved_tables:
+      - "breadth.sector_daily"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # This function is mockup in read-only mode\n    ranked_sectors = []  # Replace with actual logic using context\n    return ranked_sectors"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all queries are read-only and use the approved schema."
+  - "Use latest snapshot filters for data freshness."
+  - "Cross-verify sector and stage data with breadth signals."
+synthesis_guidance: "['Rank sectors based on breadth and Stage 2 participation.', 'Highlight sectors with improving breadth signals.', 'List candidate symbols for TradingView watchlist.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "tool_1: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "tool_1: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

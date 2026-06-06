@@ -1,0 +1,69 @@
+created_at: "2026-06-06T12:50:15"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: latest EOD; response style: debug trace."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0616_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for latest EOD: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Example logic for freshness auditing\n    latest_run_date = context['run_metadata']['analysis_date']\n    stock_entries = context['filtered_stock_data']\n    is_data_fresh = all(entry['day_change_pct'] != None for entry in stock_entries)\n    return {\n        'findings': f'Latest run date: {latest_run_date}',\n        'freshness_report': 'Data is fresh' if is_data_fresh else 'Data is stale'\n    }"
+    id: "data_freshness_audit"
+    inputs:
+      - "run_metadata"
+      - "filtered_stock_data"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "findings"
+      - "freshness_report"
+sql_templates:
+  -
+    description: "Retrieve the latest enhanced report run metadata for EOD."
+    sql: "SELECT * FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+  -
+    description: "Fetch details of filtered stocks for the latest run."
+    sql: "WITH latest_run AS (SELECT MAX(run_id) AS run_id FROM report.enhanced_runs) SELECT * FROM report.enhanced_filtered_stocks WHERE run_id = (SELECT run_id FROM latest_run);"
+status: "test_failed"
+synthesis_guidance: "Compile findings and propose actionable items for remediation. Verification steps to ensure links and data presence must be documented."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "latest_EOD"
+  - "debug_trace"
+title: "Enhanced Report Data Validation Variant 0616"
+tool_plan_template: "Conduct a data validation audit using the latest EOD data. Ensure links function and stock data appears, with focus on freshness."
+validation_rules:
+  - "Ensure SQL templates use approved columns and tables only."
+  - "SQL is read-only, performing no updates or writes."
+  - "Ensure output adheres to expected contract format."
+version: 1
+validation_errors:
+  - "data_freshness_audit: execution failed: KeyError: 'run_metadata'"
+review:
+  status: "needs_heal"
+  findings:
+    - "data_freshness_audit: execution failed: KeyError: 'run_metadata'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

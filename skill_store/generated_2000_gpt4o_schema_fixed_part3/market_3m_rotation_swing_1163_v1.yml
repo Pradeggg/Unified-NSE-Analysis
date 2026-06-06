@@ -1,0 +1,50 @@
+id: "market_3m_rotation_swing_1163_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1163"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates for the past three months."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as narrative plus evidence"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze the market regime and sector leadership using provided tables over the last 3 months. Identify primary swing candidates and assess the overall risks with narrative support."
+sql_templates:
+  index_returns: "SELECT index_symbol, AVG(change_pct) as avg_return FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol"
+  stage_distribution_change: "SELECT sector, COUNT(symbol) as num_stage2 FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector"
+  leading_sectors: "SELECT sector, AVG(relative_strength) as avg_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY avg_strength DESC LIMIT 5"
+  primary_candidates: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 10"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure the result includes valid and relevant data for Indian markets."
+  - "All averages and aggregates should be double-checked for computation accuracy."
+synthesis_guidance: "Summarize findings with a focus on how sector rotations and current stage 2 leaders impact swing trade opportunities. Discuss potential risks and opportunities based on the latest data."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:56:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_return is not approved"

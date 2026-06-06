@@ -1,0 +1,69 @@
+id: "portfolio_lab_paper_trading_review_1636_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1636"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for last 20 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as debug trace"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review paper trading strategies using approved data sources and methodologies. Ensure strict adherence to freshness audit for the last 20 sessions."
+sql_templates:
+  -
+    description: "Select the latest stage snapshots for all symbols in paper trading."
+    template: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol IN (SELECT symbol FROM signals.signal_log WHERE date_issued > CURRENT_DATE - INTERVAL '1 month')"
+  -
+    description: "Retrieve EOD price data for paper trading symbols over the last 20 sessions."
+    template: "SELECT * FROM market.equity_eod WHERE trade_date > (SELECT MAX(trade_date) - INTERVAL '19 days' FROM market.equity_eod) AND symbol IN (SELECT symbol FROM signals.signal_log WHERE date_issued > CURRENT_DATE - INTERVAL '1 month')"
+python_tools:
+  -
+    id: "analyze_signals"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol_data"
+      - "signal_data"
+    outputs:
+      - "aggregated_insights"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context):\n    symbol_insights = {}\n    for symbol, data in context['symbol_data'].items():\n        insights = analyze_trends(data, context['signal_data'])\n        symbol_insights[symbol] = insights\n    return symbol_insights"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all queries remain read-only."
+  - "Ensure outputs are consistent with debug trace expectations."
+synthesis_guidance: "Synthesize outputs by analyzing strategy state and exposure based on recent signals and price trends."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:30"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analyze_signals: execution failed: KeyError: 'symbol_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "analyze_signals: execution failed: KeyError: 'symbol_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

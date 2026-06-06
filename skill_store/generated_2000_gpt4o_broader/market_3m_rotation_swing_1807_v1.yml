@@ -1,0 +1,70 @@
+id: "market_3m_rotation_swing_1807_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1807"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Tool plan for running 3-month market rotation assessment"
+sql_templates:
+  -
+    template_id: "index_returns"
+    description: "Calculate index returns over the last 3 months"
+    query: "SELECT index_symbol, 100 * (MAX(close) - MIN(close)) / MIN(close) AS return_pct FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol"
+  -
+    template_id: "stage_distribution_change"
+    description: "Determine stage distribution change over the last 3 months"
+    query: "WITH stage_counts AS (SELECT stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY stage) SELECT stage, count, 100.0 * count / SUM(count) OVER () AS percent_change FROM stage_counts"
+  -
+    template_id: "leading_sectors"
+    description: "Identify leading sectors based on relative strength"
+    query: "SELECT sector, AVG(relative_strength) AS avg_rs FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_rs DESC"
+python_tools:
+  -
+    id: "select_primary_candidates"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "scores.stage2_vcp_picks"
+    outputs:
+      - "primary_candidates"
+    approved_tables:
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    # List top VCP candidates based on VCP scores and recent performance metrics\n    candidate_list = context['scores.stage2_vcp_picks']\n    sorted_candidates = sorted(candidate_list, key=lambda x: (x['vcp_score'], x['relative_strength']), reverse=True)\n    top_candidates = sorted_candidates[:10]  # Select top 10\n    return {'primary_candidates': top_candidates}"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure SQL queries pull data within the last 3 months"
+  - "Verify stage distribution percentages sum to 100"
+  - "Check that leading sectors and candidates reflect top RS scores"
+synthesis_guidance: "Compile findings from stage snapshots and index data to produce a sector-relative action watchlist."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:13"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.return_pct is not approved"
+  - "scores.stage_snapshots.avg_rs is not approved"

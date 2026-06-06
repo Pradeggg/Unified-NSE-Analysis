@@ -1,0 +1,58 @@
+created_at: "2026-06-06T12:52:08"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: quarter to date; response style: action watchlist."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0851_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as action watchlist"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+  -
+    name: "Sector Exposure"
+    template: "SELECT sector, SUM(qty * live_price) AS exposure_value FROM portfolio.holdings JOIN scores.stage_snapshots ON portfolio.holdings.symbol = scores.stage_snapshots.symbol WHERE snapshot_date = CURRENT_DATE GROUP BY sector ORDER BY exposure_value DESC;"
+  -
+    name: "Add Candidates"
+    template: "SELECT symbol, company_name, stage, stage_score FROM scores.stage_snapshots WHERE stage = 'Stage 1' AND stage_score > 60 ORDER BY stage_score DESC;"
+  -
+    name: "Trim Candidates"
+    template: "SELECT symbol, company_name, stage, stage_score FROM scores.stage_snapshots WHERE stage = 'Stage 4' AND stage_score < 40 ORDER BY stage_score ASC;"
+status: "validated"
+synthesis_guidance: "Provide a concise summary of sector exposure and clear actionable recommendations for adds and trims based on current market signals."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "action_watchlist"
+title: "Portfolio Incremental Add Trim Review Variant 0851"
+tool_plan_template:
+  action: "Analyze"
+  scope: "Quarter to date portfolio assessment with add/trim recommendations."
+validation_rules:
+  - "Ensure all data points are from the current quarter."
+  - "Cross-validate sector exposure amounts with current holdings."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

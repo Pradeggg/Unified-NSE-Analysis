@@ -1,0 +1,71 @@
+id: "portfolio_lab_paper_trading_review_0362_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0362"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: post results; response style: exceptions and gaps first."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for post results: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "post_results"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Generates a detailed review of paper trading strategies, focusing on exceptions and gaps, using an Indian market context."
+sql_templates:
+  -
+    id: "latest_stage_snapshots"
+    template: "SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    description: "Fetch latest stage and trading signal for entities."
+  -
+    id: "check_portfolio_holding"
+    template: "SELECT symbol, qty, avg_cost FROM portfolio.holdings WHERE symbol IN (SELECT symbol FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots));"
+    description: "Check portfolio holdings with latest stage data."
+python_tools:
+  -
+    id: "calculate_strategy_impact"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "strategy_data"
+    outputs:
+      - "impact_analysis"
+    approved_tables:
+
+    code: "def run(strategy_data):\n    return {'impact_analysis': 'Functionality not implemented'}"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all SQL usage is read-only."
+  - "Use approved tables and columns only for SQL queries."
+  - "Parameterize all user inputs to the queries."
+synthesis_guidance: "['Focus on identifying exceptions and gaps first in the strategy review.', 'Use latest data snapshots for accurate contextual reviews.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:37"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_strategy_impact: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_strategy_impact: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

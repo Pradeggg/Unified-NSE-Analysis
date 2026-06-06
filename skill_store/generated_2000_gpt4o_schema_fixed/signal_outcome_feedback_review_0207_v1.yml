@@ -1,0 +1,51 @@
+id: "signal_outcome_feedback_review_0207_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0207"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: today; response style: ranked candidates."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for today: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as ranked candidates"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "today"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Assess signal outcomes for patterns and errors; compare across sectors for today's recommendations."
+sql_templates:
+  -
+    name: "sector_performance"
+    template: "SELECT sl.sector, COUNT(*) AS total_signals, SUM(CASE WHEN sl.hit_target THEN 1 ELSE 0 END) AS targets_hit, SUM(CASE WHEN sl.hit_stop THEN 1 ELSE 0 END) AS stops_hit FROM signals.signal_log sl WHERE sl.date_resolved IS NOT NULL GROUP BY sl.sector LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure latest signals are used for today's comparison."
+  - "Rank candidates based on performance metrics."
+synthesis_guidance: "['Focus on deriving actionable insights for improving future signal selections.', 'Emphasize sector-relative performance differentials.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:13"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.sl is not approved"
+  - "signals.signal_log.stops_hit is not approved"
+  - "signals.signal_log.targets_hit is not approved"
+  - "signals.signal_log.total_signals is not approved"

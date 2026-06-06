@@ -1,0 +1,87 @@
+id: "data_freshness_readiness_audit_1309_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1309"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: today; response style: exceptions and gaps first."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for today: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as exceptions and gaps first"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "today"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    description: "Evaluate data freshness considering today's date for relevant market and score tables, identifying exceptions or gaps that may block data readiness."
+sql_templates:
+  -
+    domain: "data_quality"
+    template: "SELECT COUNT(*) FROM market.index_eod WHERE trade_date = CURRENT_DATE;"
+  -
+    domain: "data_quality"
+    template: "SELECT COUNT(*) FROM market.equity_eod WHERE trade_date = CURRENT_DATE;"
+  -
+    domain: "data_quality"
+    template: "SELECT COUNT(*) FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    domain: "data_quality"
+    template: "SELECT COUNT(*) FROM breadth.market_daily WHERE trade_date = CURRENT_DATE;"
+  -
+    domain: "data_quality"
+    template: "SELECT COUNT(*) FROM report.enhanced_runs WHERE analysis_date = CURRENT_DATE;"
+python_tools:
+  -
+    id: "data_freshness_python_tool_01"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "trade_date"
+      - "table_counts"
+    outputs:
+      - "freshness_report"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "breadth.market_daily"
+      - "report.enhanced_runs"
+    code: "def run(context):\n    freshness_report = {}\n    for table, count in context['table_counts'].items():\n        if count == 0:\n            freshness_report[table] = 'Missing data'\n        else:\n            freshness_report[table] = 'Data fresh'\n    return freshness_report"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all SQL queries return expected row counts or gaps for today's date."
+  - "Identify any missing data sources by analyzing current counts."
+  - "Highlight any critical data blocking gaps within today's data load."
+synthesis_guidance: "Synthesize results to show which data sources are lagging in freshness and indicate any critical steps needed to resolve exceptions."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:38"
+generation_model: "gpt-4o"
+validation_errors:
+  - "data_freshness_python_tool_01: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "data_freshness_python_tool_01: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

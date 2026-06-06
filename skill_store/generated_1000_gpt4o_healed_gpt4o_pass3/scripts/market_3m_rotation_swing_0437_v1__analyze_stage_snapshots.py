@@ -1,0 +1,1 @@
+def run(context): return context['scores.stage_snapshots'].sort_values(by='stage_score', ascending=False).head(5)

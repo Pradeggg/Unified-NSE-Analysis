@@ -1,0 +1,57 @@
+created_at: "2026-06-06T12:51:16"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: quarter to date; response style: QA checklist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0758_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Selects stocks creating new highs."
+    statement: "SELECT symbol, high FROM market.equity_eod WHERE trade_date = CURRENT_DATE AND high >= week52_high ORDER BY high DESC"
+    template_id: "new_highs_selector"
+  -
+    description: "Selects current top VCP breakout stocks."
+    statement: "SELECT symbol, company_name, price, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE AND vcp_score > 80 ORDER BY vcp_score DESC"
+    template_id: "vcp_breakout_selector"
+status: "validated"
+synthesis_guidance: "Prioritize candidates with both high VCP breakout scores and robust fundamental measures. Use TradingView symbols where applicable."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "QA_checklist"
+title: "VCP Breakouts With Fundamentals Variant 0758"
+tool_plan_template: "Analyze stocks that meet VCP breakout criteria with strong fundamentals."
+validation_rules:
+  - "Ensure stocks meet minimum liquidity requirements."
+  - "Verify composite fundamental scores above required threshold."
+version: 1

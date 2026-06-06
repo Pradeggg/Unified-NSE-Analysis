@@ -1,0 +1,67 @@
+id: "portfolio_incremental_add_trim_0885_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0885"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for intraday context: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as action watchlist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Conduct a risk-first review of current holdings within the Agent Adda Indian market framework."
+sql_templates:
+  -
+    description: "Fetch latest stage and score data for portfolio symbols."
+    sql: "SELECT h.symbol, h.qty, h.avg_cost, h.buy_date, s.sector, s.price, s.change_1d_pct, s.stage, s.trading_signal, s.stage_score, s.technical_score FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    description: "Identify add candidates based on trading signals and stage."
+    sql: "SELECT h.symbol FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+  -
+    description: "Identify trim candidates based on negative trend signals."
+    sql: "SELECT h.symbol FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal = 'SELL' LIMIT 10;"
+python_tools:
+  -
+    id: "portfolio_risk_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "portfolio_data"
+    outputs:
+      - "risk_flags"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    # Placeholder for risk analysis logic.\n    return {'risk_flags': []}"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure output includes no more than 10 add candidates."
+  - "Ensure output includes no more than 10 trim candidates."
+synthesis_guidance: "Compile a summarized watchlist indicating potential add and trim actions for each holding, with a focus on intraday trading signals."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

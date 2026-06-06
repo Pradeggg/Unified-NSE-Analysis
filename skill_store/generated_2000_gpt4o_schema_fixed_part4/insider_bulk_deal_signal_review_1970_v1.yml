@@ -1,0 +1,56 @@
+id: "insider_bulk_deal_signal_review_1970_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1970"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: post results; response style: comparison matrix."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for post results: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as comparison matrix"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "post_results"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    sql_templates:
+      -
+        template_id: "insider_bulk_deal_summary"
+        description: "Fetches insider alerts along with bulk deal information and technical confirmation."
+        sql: "SELECT ia.symbol, ia.entity, ia.alert_date, ia.alert_type, ia.qty, ia.value_cr, bbd.deal_date, bbd.side, bbd.price, st.trading_signal, st.stage FROM signals.insider_alerts ia JOIN signals.bulk_block_deals bbd ON ia.symbol = bbd.symbol JOIN scores.stage_snapshots st ON ia.symbol = st.symbol WHERE ia.alert_date > CURRENT_DATE - INTERVAL '3 months' AND bbd.deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals WHERE symbol = ia.symbol) AND st.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots WHERE symbol = ia.symbol) AND st.trading_signal IN ('BUY', 'STRONG_BUY') AND st.stage = 'STAGE_2' ORDER BY ia.alert_date DESC LIMIT 100"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure fetched data aligns with the latest trading signals and stages."
+  - "The output should be ordered by most recent alert dates."
+synthesis_guidance: "['Create a comparison matrix showcasing insider deals, bulk deal side and prices, and confirm with tech signals.', 'Focus on highlighting stocks with repeated accumulation signals post-results.', 'Consolidate narratives around accumulation signals supported by quantitative data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

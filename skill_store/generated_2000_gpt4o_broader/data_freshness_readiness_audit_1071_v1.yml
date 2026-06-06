@@ -1,0 +1,71 @@
+id: "data_freshness_readiness_audit_1071_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1071"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: pre market; response style: concise table."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for pre market: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as concise table"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "pre_market"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "For auditing data freshness, create a concise table using the following evidence sources focusing on the readiness and any missing approved history in the pre-market phase."
+sql_templates:
+  -
+    template_id: "freshness_check_index_eod"
+    sql: "SELECT MAX(trade_date) AS latest_date FROM market.index_eod"
+  -
+    template_id: "freshness_check_equity_eod"
+    sql: "SELECT MAX(trade_date) AS latest_date FROM market.equity_eod"
+  -
+    template_id: "freshness_check_stage_snapshots"
+    sql: "SELECT MAX(snapshot_date) AS latest_date FROM scores.stage_snapshots"
+  -
+    template_id: "freshness_check_market_daily"
+    sql: "SELECT MAX(trade_date) AS latest_date FROM breadth.market_daily"
+  -
+    template_id: "freshness_check_ma_pct_above"
+    sql: "SELECT MAX(snapshot_date) AS latest_date FROM breadth.ma_pct_above"
+  -
+    template_id: "freshness_check_enhanced_runs"
+    sql: "SELECT MAX(run_ts) AS latest_date FROM report.enhanced_runs"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all queries have reviewed and valid MAX date logic."
+  - "Validate whether the latest dates meet pre-defined freshness thresholds."
+synthesis_guidance: "Aggregate and synthesize the latest data points into a summary table indicating readiness status and identify any source gaps."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:06"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.latest_date is not approved"
+  - "breadth.market_daily.latest_date is not approved"
+  - "market.equity_eod.latest_date is not approved"
+  - "market.index_eod.latest_date is not approved"
+  - "report.enhanced_runs.latest_date is not approved"
+  - "scores.stage_snapshots.latest_date is not approved"

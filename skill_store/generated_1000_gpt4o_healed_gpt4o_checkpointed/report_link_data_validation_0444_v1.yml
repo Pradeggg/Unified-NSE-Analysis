@@ -1,0 +1,74 @@
+created_at: "2026-06-06T12:48:07"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: last 3 months; response style: portfolio-aware output."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0444_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for last 3 months: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    sql: "SELECT run_id, run_ts, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+    template_id: "validate_report_links"
+  -
+    sql: "SELECT run_id, symbol FROM report.enhanced_filtered_stocks WHERE current_price IS NULL OR volume IS NULL;"
+    template_id: "missing_stock_data"
+status: "validated"
+synthesis_guidance:
+  - "Synthesize findings into portfolio-aware insights."
+  - "Provide actionable remediation recommendations."
+  - "Highlight key trends or patterns relevant to the Indian market."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "portfolio-aware_output"
+title: "Enhanced Report Data Validation Variant 0444"
+tool_plan_template:
+  python_tools:
+    -
+      approved_tables:
+        - "report.enhanced_runs"
+        - "report.enhanced_filtered_stocks"
+      code: "def run(context):\n    runs = context.get_table('report.enhanced_runs')\n    stocks = context.get_table('report.enhanced_filtered_stocks')\n    summary = []\n    for run in runs:\n        for stock in stocks:\n            if stock['run_id'] == run['run_id']:\n                summary.append(f\"Analysis of {stock['symbol']} on {run['run_ts']}\")\n    return {'analysis_summary': summary}"
+      id: "run_context_analysis"
+      inputs:
+        - "run_id"
+        - "run_ts"
+        - "symbol"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "analysis_summary"
+validation_errors:
+  - "report.enhanced_runs.now is not approved"
+validation_rules:
+  - "Ensure all report links are functional."
+  - "Verify data completeness in stock HTML files."
+  - "Check for missing or incomplete data in report outputs."
+version: 1
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"

@@ -1,0 +1,50 @@
+id: "vcp_breakouts_with_fundamentals_1360_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1360"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Identify VCP and breakout stocks with strong fundamentals and export for TradingView."
+sql_templates:
+  purpose: "Fetch VCP and breakout stocks with strong fundamentals for TradingView export."
+  template: "WITH latest_eod AS (\n    SELECT *\n    FROM market.equity_eod\n    WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)\n        AND series = 'EQ'\n),\nlatest_stage_snapshots AS (\n    SELECT *\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n    AND (trading_signal IN ('BUY', 'STRONG_BUY'))\n),\nlatest_vcp_picks AS (\n    SELECT *\n    FROM scores.stage2_vcp_picks\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)\n)\nSELECT le.symbol, le.close, ls.stage, lv.vcp_score, lv.enhanced_fund_score\nFROM latest_eod le\nJOIN latest_stage_snapshots ls ON le.symbol = ls.symbol\nJOIN latest_vcp_picks lv ON le.symbol = lv.symbol\nORDER BY lv.vcp_score DESC, lv.enhanced_fund_score DESC\nLIMIT 100;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "candidates_length"
+synthesis_guidance: "{'emphasize': 'Priority is given to the gaps and exceptions in fundamentals.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,50 @@
+created_at: "2026-06-06T12:40:52"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: today; response style: concise table."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0003_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for today: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as concise table"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select current holdings with relevant stage and score data."
+    template: "SELECT h.symbol, h.qty, h.avg_cost, s.stage, s.stage_score, s.trend_signal, s.trading_signal, s.change_1d_pct, s.sector FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE;"
+status: "validated"
+synthesis_guidance: "Create a concise table summarizing potential add/trim actions focusing on stage and trend signals."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "concise_table"
+title: "Portfolio Incremental Add Trim Review Variant 0003"
+tool_plan_template: "Review current portfolio holdings; analyze by sector, stage, and score to identify add/trim candidates based on daily changes."
+validation_rules:
+  - "Ensure only current date data is used."
+  - "Limit analysis to approved tables and columns."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

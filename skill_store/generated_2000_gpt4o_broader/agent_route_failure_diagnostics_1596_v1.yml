@@ -1,0 +1,51 @@
+id: "agent_route_failure_diagnostics_1596_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1596"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for weekly review: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as research-only summary"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Assess agent route failures using existing evidence. Verify fresh data availability and inspect sequence discrepancies."
+sql_templates:
+  -
+    name: "recent_runs_audit"
+    template: "WITH LatestRuns AS (SELECT run_id, MAX(run_ts) as latest_run_ts FROM report.enhanced_runs GROUP BY run_id) SELECT e.run_id, e.run_ts, e.analysis_date, e.universe_size FROM report.enhanced_runs e JOIN LatestRuns l ON e.run_id = l.run_id AND e.run_ts = l.latest_run_ts WHERE e.run_ts > CURRENT_DATE - INTERVAL '7 days';"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Status must be generated."
+  - "Only use read-only SQL templates."
+synthesis_guidance: "Summarize the findings focusing on route stability and any gaps in tool availability."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:16"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

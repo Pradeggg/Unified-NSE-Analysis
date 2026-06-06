@@ -1,0 +1,54 @@
+id: "corporate_events_results_watchlist_1339_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1340"
+description: "Find recent corporate events and results with a focus on stage and technical analysis. Variant focus: exceptions and gaps; timeframe: last 20 sessions."
+input_patterns:
+  - "recent results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event-driven stocks to watch after results"
+  - "source-trail validation for last 20 sessions: recent results and corporate events watchlist"
+  - "event-driven stocks to watch after results as exceptions and gaps first"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Assess corporate event-driven opportunities with recent results and stage context; synthesize findings with a focus on exceptions."
+sql_templates:
+  -
+    template_id: "stage_and_event_driven_analysis_v1340"
+    sql_code: "WITH latest_stage AS (SELECT symbol, stage, stage_score, technical_score, snapshot_date FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_events AS (SELECT symbol, event_type, event_date, detail, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '20 days' AND event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM')) SELECT e.symbol, e.event_type, e.event_date, e.detail, e.source, s.stage, s.stage_score, s.technical_score FROM latest_stage s JOIN latest_events e ON s.symbol = e.symbol WHERE s.stage = 'STAGE_2' ORDER BY e.event_date DESC LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure that the stage label aligns with the latest snapshot."
+  - "Verify the event date range covers the last 20 sessions."
+  - "Confirm that results and stage context reflect the exceptions and gaps explicitly."
+synthesis_guidance: "Highlight deviations and identify gaps in stage and technical indicators alongside event announcements."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:54"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

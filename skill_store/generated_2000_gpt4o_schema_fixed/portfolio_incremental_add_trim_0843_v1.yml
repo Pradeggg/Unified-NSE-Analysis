@@ -1,0 +1,68 @@
+id: "portfolio_incremental_add_trim_0843_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0843"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: action watchlist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for last 3 months: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as action watchlist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  sql_templates:
+    -
+      description: "Identify potential add candidates based on strong buy signals and latest stage data."
+      template: "SELECT h.symbol, h.qty, s.sector, s.trading_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal IN ('BUY', 'STRONG_BUY') AND s.stage = 'STAGE_2' LIMIT 10;"
+    -
+      description: "Identify potential trim candidates based on weak hold or sell signals."
+      template: "SELECT h.symbol, h.qty, s.sector, s.trading_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal IN ('WEAK_HOLD', 'SELL') LIMIT 10;"
+  python_tools:
+    -
+      id: "analyze_risk_flags"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "s"
+      outputs:
+        - "risk_flags"
+      approved_tables:
+        - "scores.stage_snapshots"
+      code: "def run(context):\n    risk_flags = []\n    for row in context['s']:\n        if row['rsi'] > 70:\n            risk_flags.append({'symbol': row['symbol'], 'risk': 'Overbought'})\n        if row['financial_strength'] < 50:\n            risk_flags.append({'symbol': row['symbol'], 'risk': 'Weak Financials'})\n    return risk_flags"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all generated SQL is read-only and follows global SQL rules."
+  - "Python tools must be read-only and cannot interact with external resources."
+  - "Use approved schemas and join rules for all queries."
+synthesis_guidance: "Frame the results in an actionable watchlist format suitable for decision-making in the Indian market context."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:33"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

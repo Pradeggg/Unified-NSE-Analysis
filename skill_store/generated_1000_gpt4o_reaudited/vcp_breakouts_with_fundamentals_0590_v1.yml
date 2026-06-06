@@ -1,0 +1,51 @@
+created_at: "2026-06-06T12:49:55"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: intraday context; response style: research-only summary."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0590_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  - "WITH new_highs AS (SELECT symbol, high FROM market.equity_eod WHERE high = week52_high), \n     vcp_picks AS (SELECT symbol, vcp_score, vcp_breakout_pct, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE vcp_score > 0), \n     filtered_stocks AS (SELECT nh.symbol, sp.enhanced_fund_score FROM new_highs nh JOIN vcp_picks vp ON nh.symbol = vp.symbol \n     JOIN scores.stage_snapshots sp ON nh.symbol = sp.symbol WHERE sp.fundamental_score > 7) \nSELECT symbol, enhanced_fund_score FROM filtered_stocks"
+status: "validated"
+synthesis_guidance: "['Summarize patterns and trends', 'Highlight any risks observed in stock patterns']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "intraday_context"
+  - "research-only_summary"
+title: "VCP Breakouts With Fundamentals Variant 0590"
+tool_plan_template:
+  draft: "Research the Indian market using provided tables to identify stocks forming VCP or breakouts with strong fundamentals. Summarize for intraday trades."
+validation_rules:
+  - "Ensure symbols are from approved lists"
+  - "Only include stocks with positive price changes"
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

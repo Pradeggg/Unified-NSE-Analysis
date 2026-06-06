@@ -1,0 +1,56 @@
+id: "market_3m_rotation_swing_1401_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1401"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Use appropriate evidence tables to assess the recent market regime and identify swing candidates."
+sql_templates:
+  index_returns: "SELECT trade_date, index_symbol, close FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY trade_date DESC;"
+  stage_distribution_change: "SELECT sector, stage, COUNT(*) AS stage_count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector, stage;"
+  leading_sectors: "SELECT sector, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector ORDER BY count DESC LIMIT 5;"
+  primary_candidates: "SELECT s.symbol, s.company_name, s.sector, s.price, s.trading_signal FROM scores.stage2_vcp_picks s INNER JOIN market.equity_eod e ON s.symbol = e.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY s.vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+synthesis_guidance: "Summarize findings into a cohesive market overview suitable for swing trading strategies."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

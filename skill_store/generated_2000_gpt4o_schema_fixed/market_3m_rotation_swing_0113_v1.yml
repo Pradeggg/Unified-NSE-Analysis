@@ -1,0 +1,57 @@
+id: "market_3m_rotation_swing_0113_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0113"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: latest EOD; response style: narrative plus evidence."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as narrative plus evidence"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "latest_EOD"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Retrieve index returns over the last 3 months."
+    query: "\nSELECT trade_date, index_symbol, close, change_pct \nFROM market.index_eod \nWHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' \nAND trade_date = (SELECT MAX(trade_date) FROM market.index_eod) \nORDER BY trade_date DESC;"
+  -
+    description: "Identify Stage 2 leadership changes over the last 3 months."
+    query: "\nSELECT snapshot_date, sector, COUNT(*) AS count_stage2 \nFROM scores.stage_snapshots \nWHERE stage = 'STAGE_2' \nAND snapshot_date >= CURRENT_DATE - INTERVAL '3 months' \nGROUP BY snapshot_date, sector \nORDER BY snapshot_date DESC;"
+  -
+    description: "Fetch liquid swing candidates with strong buy signals."
+    query: "\nSELECT symbol, company_name, sector, price, trading_signal \nFROM scores.stage2_vcp_picks \nWHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) \nAND trading_signal IN ('BUY', 'STRONG_BUY') \nORDER BY vcp_score DESC, rank ASC \nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "index_returns"
+  - "stage_distribution_change"
+  - "primary_candidates"
+synthesis_guidance: "{'narrative': 'Compile findings into a cohesive overview of market regime and sector leadership.', 'evidence': 'Include patterns and notable exceptions supported by data.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:00"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.count_stage2 is not approved"

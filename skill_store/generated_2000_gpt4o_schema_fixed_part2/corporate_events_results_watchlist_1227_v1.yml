@@ -1,0 +1,51 @@
+id: "corporate_events_results_watchlist_1227_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1227"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: ranked candidates."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for last 5 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as ranked candidates"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "For sector-relative comparisons over the last five sessions, join corporate event data with results analysis and stage snapshots. Emphasize sector comparisons and rank eligible stocks by performance markers or corporate action potentials."
+sql_templates:
+  -
+    description: "Select upcoming or recent corporate events for sectors to analyze sector-relative performance and ranking."
+    sql: "WITH recent_events AS ( SELECT c.symbol, c.event_type, c.event_date, s.sector, s.stage, s.stage_score, s.change_1d_pct, s.relative_strength FROM signals.corporate_events c JOIN scores.stage_snapshots s ON c.symbol = s.symbol WHERE c.event_date >= CURRENT_DATE - INTERVAL '5 sessions' AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ) SELECT * FROM recent_events ORDER BY sector, stage_score DESC NULLS LAST, change_1d_pct DESC NULLS LAST LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Check for NULL values in critical columns such as symbol, event_type, and sector."
+  - "Ensure event dates are within the expected last 5 sessions window."
+synthesis_guidance: "['Focus on generating insights from corporate events relative to industry performance.', 'Prioritize securities with significant stage improvements or strong technical signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

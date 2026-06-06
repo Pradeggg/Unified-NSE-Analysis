@@ -1,0 +1,60 @@
+id: "vcp_breakouts_with_fundamentals_1010_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1010"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: today; response style: concise table."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  python_tools:
+
+  evidence_gaps:
+    - "real-time price data"
+    - "future market forecasts"
+  sql_templates:
+    -
+      description: "Select stocks meeting criteria for new highs, VCP breakouts, and strong fundamentals."
+      query: "WITH high_stocks AS (SELECT symbol, high, market_cap_cr FROM market.equity_eod WHERE trade_date = CURRENT_DATE AND high = week52_high), vcp_stocks AS (SELECT symbol, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE AND vcp_score > 85), strong_fundamentals AS (SELECT symbol, fundamental_score FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE AND enhanced_fund_score > 80) SELECT hs.symbol FROM high_stocks hs JOIN vcp_stocks vs ON hs.symbol = vs.symbol JOIN strong_fundamentals sf ON vs.symbol = sf.symbol;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure data is for today."
+  - "Symbols should exist in TradingView."
+  - "Check cross-references for data accuracy."
+synthesis_guidance: "Focus on conciseness and relevance to TradingView users. Highlight liquidity and market cap insights."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

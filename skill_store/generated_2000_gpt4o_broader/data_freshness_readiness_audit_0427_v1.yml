@@ -1,0 +1,72 @@
+id: "data_freshness_readiness_audit_0427_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0427"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for last 5 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as portfolio-aware output"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "For data freshness verification, begin with sector-relative analysis across the last 5 sessions using approved tables. Prepare results as a portfolio-aware matrix."
+sql_templates:
+  -
+    query: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '5 days' ORDER BY trade_date DESC;"
+    description: "Retrieve closing values and percentage changes for indices over the last 5 sessions."
+  -
+    query: "WITH latest_stage AS (SELECT symbol, MAX(snapshot_date) as max_date FROM scores.stage_snapshots GROUP BY symbol) SELECT ss.symbol, ss.snapshot_date, ss.price, ss.sector FROM scores.stage_snapshots ss JOIN latest_stage ls ON ss.symbol = ls.symbol AND ss.snapshot_date = ls.max_date WHERE ss.snapshot_date >= CURRENT_DATE - INTERVAL '5 days';"
+    description: "Collect the latest stage scores for equities over the last 5 sessions with sector details."
+python_tools:
+  -
+    id: "sa_check_data_freshness"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "trade_date"
+      - "close"
+    outputs:
+      - "freshness_report"
+    approved_tables:
+      - "market.index_eod"
+    code: "def run(context):\n    from datetime import datetime, timedelta\n    recent_dates = [datetime.now().date() - timedelta(days=i) for i in range(5)]\n    fresh_data = [date for date in context['trade_date'] if date in recent_dates]\n    freshness_report = {'fresh_count': len(fresh_data), 'expected_count': 5}\n    return freshness_report"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all evidence tables contribute to the analysis."
+  - "Use portfolio context to prioritize freshness issues."
+  - "Identify any missing data sources or blocking gaps."
+synthesis_guidance: "Focus on sector-relative trends and portfolio alignment when assessing data freshness. Identify readiness gaps and suggest prioritized loader actions."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:12"
+generation_model: "gpt-4o"
+validation_errors:
+  - "sa_check_data_freshness: execution failed: ImportError: __import__ not found"
+review:
+  status: "needs_heal"
+  findings:
+    - "sa_check_data_freshness: execution failed: ImportError: __import__ not found"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

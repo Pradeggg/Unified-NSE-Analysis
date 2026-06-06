@@ -1,0 +1,75 @@
+id: "company_360_research_report_0860_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Generated Company 360 Research Report 0860"
+description: "This card provides a comprehensive company research overview focused on Indian market contexts, featuring fundamentals, technical context, and narrative analysis for the stock symbol. Highlights quarter to date performance with TradingView export capability."
+input_patterns:
+  - "/research TCS comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "TradingView export for quarter to date: /research TCS comprehensive report"
+  - "institutional grade 360 research for stock as action watchlist"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  sql_templates:
+    -
+      name: "fetch_latest_stage_snapshot"
+      template: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol = :symbol"
+    -
+      name: "fetch_quarterly_results"
+      template: "SELECT DISTINCT ON (symbol) * FROM scores.quarterly_results WHERE symbol = :symbol ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC"
+  python_tools:
+    -
+      id: "calculate_financial_ratios"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "quarterly_results"
+      outputs:
+        - "financial_ratios"
+      approved_tables:
+        - "scores.quarterly_results"
+      code: "def run(context):\n    # Implement financial ratio calculations\n    return {'financial_ratios': []}"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL templates are read-only and respect approved schema joins."
+  - "Verify output structure against specified output contract."
+  - "Python tools must only use read-only operations and respect approved tables."
+synthesis_guidance: "['Integrate the latest stage snapshot and quarterly results to build a comprehensive narrative.', 'Focus on quarter to date analysis and generate standardized outputs for TradingView use.', 'Identify and address any valuation gaps with thesis and risk commentary.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:45"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

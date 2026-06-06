@@ -1,0 +1,57 @@
+id: "company_360_research_report_0510_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Comprehensive Company Research Card"
+description: "Generates a detailed company research report including financial overview, technical analysis, and narrative evidence for the Indian market."
+input_patterns:
+  - "/research {symbol} comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "TradingView_export"
+  - "today"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  name: "GenerateCompanyResearch"
+  steps:
+    - "Retrieve company overview from scores.stage_snapshots."
+    - "Fetch quarterly and annual financials from scores.quarterly_results and scores.annual_results."
+    - "Analyze balance sheet, cash flow data from scores.balance_sheet and scores.cash_flow."
+    - "Compose technical analysis using market.equity_eod."
+    - "Synthesize narrative analysis from scores.results_analysis."
+sql_templates:
+  - "WITH company_financials AS (SELECT * FROM scores.quarterly_results WHERE symbol = '{symbol}'), annual_financials AS (SELECT * FROM scores.annual_results WHERE symbol = '{symbol}') SELECT * FROM company_financials UNION SELECT * FROM annual_financials;"
+  - "SELECT * FROM market.equity_eod WHERE symbol = '{symbol}' AND trade_date = CURDATE();"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure that the company data is up-to-date for today's trading context."
+  - "Verify completeness of financial and narrative evidence for synthesis."
+synthesis_guidance: "['Ensure balanced coverage across financials, technicals, and narrative.', 'Highlight any significant valuation gaps or risks identified.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:57"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.curdate is not approved"

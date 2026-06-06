@@ -1,0 +1,57 @@
+id: "signal_outcome_feedback_review_1929_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1929"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: last 5 sessions; response style: comparison matrix."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for last 5 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as comparison matrix"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    summary: "Prepare a matrix comparing signal outcomes over the last 5 sessions."
+    steps:
+      - "1. Review signals from signals.signal_log to find those hitting target or stop."
+      - "2. Join market.equity_eod for price history around signal dates."
+      - "3. Join scores.stage_snapshots for context scores and stages."
+      - "4. Analyze patterns in winning and losing signals based on technical and investment scores."
+sql_templates:
+  - "WITH recent_signals AS (SELECT * FROM signals.signal_log WHERE date_issued >= (SELECT MAX(date_issued) FROM signals.signal_log) - INTERVAL '5 sessions'),\njoined_data AS (\n    SELECT rs.*, eod.close AS close_price, ss.stage, ss.technical_score, ss.investment_score\n    FROM recent_signals rs\n    JOIN market.equity_eod eod ON rs.symbol = eod.symbol AND eod.trade_date BETWEEN rs.date_issued AND rs.date_resolved\n    JOIN scores.stage_snapshots ss ON rs.symbol = ss.symbol AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n)\nSELECT symbol, COUNT(*) AS signal_count, SUM(CASE WHEN hit_target THEN 1 ELSE 0 END) AS target_hits, SUM(CASE WHEN hit_stop THEN 1 ELSE 0 END) AS stop_hits, AVG(return_pct) AS avg_return,\nAVG(technical_score) AS avg_technical_score, AVG(investment_score) AS avg_investment_score\nFROM joined_data\ngroup by symbol\nORDER BY signal_count DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure only signals from the last 5 sessions are considered."
+  - "Confirm that summary includes target, stop outcomes, and additional statistical data."
+synthesis_guidance: "['Translate the raw data from SQL queries into actionable insights.', 'Highlight unique patterns or trends from both successful and unsuccessful signals.', 'Use a comparison matrix to effectively summarize insights.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:51"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

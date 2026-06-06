@@ -1,0 +1,52 @@
+id: "agent_route_failure_diagnostics_1190_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1190"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: intraday context; response style: narrative plus evidence."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for intraday context: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as narrative plus evidence"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "intraday_context"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze the route failures with a focus on identifying missing tools and incorrect symbol resolutions. Use enhanced report data to extract necessary context and evidence for diagnosis, ensuring results adhere to approved schema constraints."
+sql_templates:
+  -
+    template: "SELECT r.run_id, r.run_ts, r.universe_size, s.symbol, s.score, s.recommendation FROM report.enhanced_runs r INNER JOIN report.enhanced_filtered_stocks s ON r.run_id = s.run_id WHERE r.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) LIMIT 50;"
+    description: "Fetch recent enhanced report stocks with recommendations to analyze route integrity."
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "sql_script_math_operators"
+  - "sql_limit_clause"
+  - "schema_alignment"
+synthesis_guidance: "Frame route diagnostics in a narrative format, derived from the latest enhanced reports and stock recommendations. Combine quantitative evidence with qualitative insights. Highlight critical path failures and missing tools, specifying areas for immediate resolution."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:41:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

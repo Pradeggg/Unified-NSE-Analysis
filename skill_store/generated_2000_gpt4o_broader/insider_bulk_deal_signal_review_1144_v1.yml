@@ -1,0 +1,61 @@
+id: "insider_bulk_deal_signal_review_1144_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1144"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for last 3 months: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as narrative plus evidence"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  insight: "Analyze recent insider alerts and bulk deals to identify promising stock setups."
+  deliverable: "Create a watchlist with narrative and technical evidence for the Indian market."
+sql_templates:
+  recent_insider_alerts:
+    template: "SELECT symbol, alert_date, entity, qty, value_cr FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '3 months' AND category = 'buy';"
+    description: "Fetch recent insider buy alerts for the last 3 months."
+  bulk_deal_summary:
+    template: "SELECT symbol, deal_date, entity, side, qty, price FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '3 months' AND deal_type = 'bulk' AND side = 'buy';"
+    description: "Fetch recent bulk deals where buying occurred in the last 3 months."
+  technical_analysis:
+    template: "SELECT symbol, stage, technical_score, rsi, supertrend_state FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' AND technical_score > 70;"
+    description: "Analyze technical indicators for symbols with high technical scores in the last 3 months."
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Check that insider alerts detail insider buying signals."
+  - "Confirm that bulk deals reflect significant buying activity."
+  - "Validate technical analysis against preset criteria."
+synthesis_guidance: "['Integrate insider and bulk deal data with technical scores to narrate potential accumulation stories.', 'Prioritize symbols with consistent patterns across data points.', 'Provide a balanced perspective on potential risks and opportunities.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:47"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

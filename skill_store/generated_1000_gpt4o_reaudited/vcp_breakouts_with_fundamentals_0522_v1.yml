@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:48:44"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: research-only summary."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0522_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    query: "WITH recent_sessions AS (SELECT symbol, MAX(trade_date) as last_trade_date FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '5 days' GROUP BY symbol), vcp_picks AS (SELECT s2vp.symbol FROM scores.stage2_vcp_picks s2vp JOIN recent_sessions rs ON s2vp.symbol = rs.symbol WHERE vcp_score > 70 AND enhanced_fund_score > 70) SELECT eod.symbol, eod.trade_date, eod.close, eod.high, sss.company_name, sss.sector, sss.market_cap_cat, sss.enhanced_fund_score FROM market.equity_eod eod JOIN scores.stage_snapshots sss ON eod.symbol = sss.symbol WHERE eod.symbol IN (SELECT symbol FROM vcp_picks) AND trade_date = (SELECT last_trade_date FROM recent_sessions WHERE symbol = eod.symbol) AND eod.close > eod.week52_high;"
+    type: "READ_ONLY"
+status: "validated"
+synthesis_guidance: "Synthesize research findings into concise insights, emphasizing the VCP methodology and institutional drivers in the last 5 sessions. Highlight risks linked to market volatility."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "research-only_summary"
+title: "VCP Breakouts With Fundamentals Variant 0522"
+tool_plan_template: "Review VCP breakout stocks with fundamentals for the Indian market, focusing on institutional interest over the past 5 sessions. Utilize evidence tables for comprehensive analysis."
+validation_rules:
+  - "must_include_tables"
+  - "must_have_readonly_operations"
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

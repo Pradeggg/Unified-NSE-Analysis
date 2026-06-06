@@ -1,0 +1,53 @@
+id: "corporate_events_results_watchlist_1983_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1983"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for intraday context: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as comparison matrix"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  python:
+
+  sql:
+    - "SELECT e.symbol, e.event_type, e.event_date, ra.verdict, ss.stage, ss.trading_signal, e.source \nFROM signals.corporate_events e \nJOIN scores.results_analysis ra ON e.symbol = ra.symbol \nJOIN scores.stage_snapshots ss ON e.symbol = ss.symbol \nWHERE e.event_date >= CURRENT_DATE \nORDER BY e.event_date \nLIMIT 10;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event types are allowed: RESULTS, DIVIDEND, SPLIT, BONUS, AGM."
+  - "Use latest stage snapshot from scores.stage_snapshots."
+synthesis_guidance: "Use events and analysis together to create a watchlist matrix."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:51"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

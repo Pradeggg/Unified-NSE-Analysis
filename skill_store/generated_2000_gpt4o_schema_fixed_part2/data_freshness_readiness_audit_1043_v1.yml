@@ -1,0 +1,98 @@
+id: "data_freshness_readiness_audit_1043_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1043"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: concise table."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for last 3 months: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as concise table"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  action: "generate_freshness_audit"
+  requires_input: true
+  inputs:
+    -
+      name: "timeframe"
+      description: "Timeframe to audit data freshness, e.g., last 3 months."
+      example: "Use CURRENT_DATE - INTERVAL '3 months' for timeframe."
+  outputs:
+    - "freshness_matrix"
+    - "missing_sources"
+    - "blocking_gaps"
+    - "loader_actions"
+    - "verification_queries"
+sql_templates:
+  -
+    template: "SELECT trade_date, MAX(updated_at) as last_updated FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY trade_date ORDER BY trade_date;"
+    description: "Check freshness for index EOD data in the last 3 months."
+    params:
+
+  -
+    template: "SELECT trade_date, MAX(updated_at) as last_updated FROM market.equity_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY trade_date ORDER BY trade_date;"
+    description: "Check freshness for equity EOD data in the last 3 months."
+    params:
+
+  -
+    template: "SELECT snapshot_date, MAX(updated_at) as last_updated FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY snapshot_date ORDER BY snapshot_date;"
+    description: "Check freshness for stage snapshots in the last 3 months."
+    params:
+
+python_tools:
+  -
+    id: "data_freshness_tool_001"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      context:
+        schemas:
+          - "market.index_eod"
+          - "market.equity_eod"
+          - "scores.stage_snapshots"
+        timeframe: "last 3 months"
+    outputs:
+      data: "Generated data table showing results."
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze data freshness based on the context provided.\n    pass"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure that the queries return data for each date in the specified timeframe."
+  - "Verify that each evidence table has recent updates in line with expected data feeds."
+synthesis_guidance: "[\"Summarize data freshness in a tabular format with columns for 'Source', 'Last Updated', 'Expected Frequency', 'Status'.\", 'Identify gaps where data is outdated or missing and suggest follow-up actions.', 'Include queries evidencing any identified data gaps.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:32"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.last_updated is not approved"
+  - "market.equity_eod.updated_at is not approved"
+  - "market.index_eod.last_updated is not approved"
+  - "market.index_eod.updated_at is not approved"
+  - "scores.stage_snapshots.last_updated is not approved"
+  - "scores.stage_snapshots.updated_at is not approved"

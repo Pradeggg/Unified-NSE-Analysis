@@ -1,0 +1,61 @@
+id: "sector_breadth_rotation_watchlist_0335_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0335"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: risk-first review; timeframe: last 20 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "risk-first review for last 20 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as exceptions and gaps first"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "risk-first_review"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  tasks:
+    -
+      task: "Identify sectors with improving breadth"
+      description: "Evaluate sectors with increased participation above 50DMA and strong 5-day changes."
+    -
+      task: "Determine stage 2 sector participation"
+      description: "Analyze sectors with significant Stage 2 stock presence."
+sql_templates:
+  -
+    description: "Rank sectors by latest breadth improvement and Stage 2 participation."
+    query: "WITH latest_breadth AS (SELECT sector, pct_above_50dma, change_5d FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)), latest_stage AS (SELECT sector, COUNT(*) AS stage2_count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector) SELECT b.sector, b.pct_above_50dma, b.change_5d, s.stage2_count FROM latest_breadth b JOIN latest_stage s ON b.sector = s.sector ORDER BY b.change_5d DESC, s.stage2_count DESC;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all used columns are from approved schema."
+  - "Use approved join rules only."
+  - "Adhere to global SQL rules for date filters."
+synthesis_guidance: "Focus on sectors with the highest stage 2 participation and positive breadth change. Prioritize transparency of major gaps."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

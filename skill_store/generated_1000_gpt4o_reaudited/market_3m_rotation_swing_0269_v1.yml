@@ -1,0 +1,67 @@
+created_at: "2026-06-06T12:43:59"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: post results; response style: ranked candidates."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0269_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.index_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze and validate trends from input data\n    pass"
+    id: "trend_validation_tool"
+    inputs:
+      - "index_performance"
+      - "leading_sectors"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "validated_trends"
+sql_templates:
+  index_performance:
+    description: "Fetch index performance for the last 3 months."
+    sql: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= (current_date - interval '3 months')"
+  leading_sectors:
+    description: "Identify leading sectors over the last 3 months."
+    sql: "SELECT sector, AVG(change_1m_pct) as avg_monthly_change FROM scores.stage_snapshots WHERE snapshot_date >= (current_date - interval '3 months') GROUP BY sector ORDER BY avg_monthly_change DESC"
+  stage2_leaders:
+    description: "Select top 10 Stage 2 VCP candidates."
+    sql: "SELECT symbol, company_name, sector FROM scores.stage2_vcp_picks WHERE snapshot_date >= (current_date - interval '3 months') ORDER BY vcp_score DESC LIMIT 10"
+status: "test_failed"
+synthesis_guidance: "Integrate SQL results to highlight strongest market sectors and swing trading candidates with validation."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "post_results"
+  - "ranked_candidates"
+title: "3M Market Rotation Swing Assessment Variant 0269"
+tool_plan_template: "Read-only analysis for recent market trends, sector performance, and swing opportunities."
+validation_rules:
+  - "Ensure all data is within the last 3 months."
+  - "Verify sector performance rankings are above a defined threshold."
+version: 1
+validation_errors:
+  - "scores.stage_snapshots.avg_monthly_change is not approved"

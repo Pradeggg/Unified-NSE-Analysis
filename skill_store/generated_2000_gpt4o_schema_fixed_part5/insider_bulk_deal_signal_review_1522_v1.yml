@@ -1,0 +1,55 @@
+id: "insider_bulk_deal_signal_review_1522_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1522"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: research-only summary."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for last 5 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as research-only summary"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Review insights from the last 5 sessions focusing on insider alerts and bulk/block deals."
+  - "Validate technical confirmations using stage snapshots and market EOD data."
+  - "Provide a research-only summary of findings."
+sql_templates:
+  -
+    id: "insider_bulk_deal_analysis"
+    query: "WITH latest_stage AS ( SELECT symbol, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ), latest_eod AS ( SELECT symbol, close FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) ) SELECT ia.symbol, ia.entity, ia.qty, ia.value_cr, bb.deal_date, bb.price, ss.stage, ss.stage_score, ee.close FROM signals.insider_alerts ia JOIN signals.bulk_block_deals bb ON ia.symbol = bb.symbol JOIN latest_stage ss ON ia.symbol = ss.symbol JOIN latest_eod ee ON ia.symbol = ee.symbol WHERE ia.alert_date >= CURRENT_DATE - INTERVAL '5 days' AND bb.deal_date >= CURRENT_DATE - INTERVAL '5 days' AND ss.stage = 'STAGE_2' ORDER BY bb.deal_date DESC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all fetched symbols are present across all relevant tables."
+  - "Validate data freshness by comparing dates with the latest available."
+synthesis_guidance: "['Summarize insights focusing on accumulation or distribution signals.', 'Highlight any discrepancies or risks noted from technical perspectives.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:56"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

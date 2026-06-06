@@ -1,0 +1,66 @@
+created_at: "2026-06-06T12:53:06"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 3 months; response style: comparison matrix."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0946_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  - "WITH latest_prices AS (\n    SELECT symbol, max(trade_date) as latest_trade_date\n    FROM market.equity_eod\n    WHERE close = week52_high\n    GROUP BY symbol\n),\nselected_snapshots AS (\n    SELECT s.symbol, s.company_name, s.market_cap_cat, e.market_cap_cr, s.can_slim_score, s.minervini_score, s.fundamental_score, s.enhanced_fund_score\n    FROM scores.stage_snapshots s\n    JOIN latest_prices p ON s.symbol = p.symbol\n    JOIN market.equity_eod e ON e.symbol = s.symbol AND e.trade_date = p.latest_trade_date\n    WHERE s.stage = 'Stage 2' AND e.close > e.week52_high * 0.95\n)\nSELECT * FROM selected_snapshots ORDER BY enhanced_fund_score DESC"
+status: "validated"
+synthesis_guidance: "{'emphasis': 'Focus on stocks with the strongest fundamental scores and recent VCP breakouts.', 'direction': 'Create a comparison matrix highlighting the relative strengths based on selected metrics.'}"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_3_months"
+  - "comparison_matrix"
+title: "VCP Breakouts With Fundamentals Variant 0946"
+tool_plan_template:
+  evidence_gaps:
+    - "Liquidity assessment"
+    - "Full freshness audit"
+  python_tools:
+    -
+      approved_tables:
+        - "market.equity_eod"
+      code: "def run(context):\n    # Calculate freshness based on trade dates\n    return {symbol: max(trade_dates) for symbol, trade_dates in context['symbol_list'].items()}"
+      id: "calculate_freshness_audit"
+      inputs:
+        - "latest_trade_date"
+        - "symbol_list"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "freshness_score"
+validation_rules:
+  - "Ensure symbols have valid market data"
+  - "Check alignment with reported VCP patterns"
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,78 @@
+id: "corporate_events_results_watchlist_0079_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0079"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: pre market; response style: concise table."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for pre market: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as concise table"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "pre_market"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  evidence_gaps:
+    notes:
+      - "No SQL available for aligning event_date to filing_date or period_end if not specified in input."
+  python_tools:
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    required_fields:
+      - "id"
+      - "language"
+      - "mode"
+      - "inputs"
+      - "outputs"
+      - "approved_tables"
+      - "code"
+    approved_tables:
+      - "signals.corporate_events"
+      - "scores.results_analysis"
+      - "scores.stage_snapshots"
+    code: "# Purpose: Read and process corporate events and results.\n\nimport pandas as pd\n\ndef run(context):\n    # Extract relevant signals from corporate_events table\n    df_events = context['signals.corporate_events']\n    df_results = context['scores.results_analysis']\n    df_stage = context['scores.stage_snapshots']\n\n    # Merge datasets based on symbol\n    df_merged = pd.merge(df_events, df_results, on='symbol', how='inner')\n    df_merged = pd.merge(df_merged, df_stage, on='symbol', how='inner')\n\n    # Filter for relevant events and results\n    df_filtered = df_merged[(df_merged['event_date'] >= pd.Timestamp.today())]\n\n    return df_filtered[['symbol', 'event_type', 'event_date', 'source_trail']].to_json(orient='records')\n"
+sql_templates:
+  -
+    name: "corporate_events_results_watchlist"
+    description: "Fetch upcoming corporate events and related results with stage context."
+    sql: "WITH latest_stage AS (\n    SELECT DISTINCT ON (symbol) symbol, stage\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n), \nlatest_results AS (\n    SELECT DISTINCT ON (symbol) symbol, period_end, filing_date, score, source_trail\n    FROM scores.results_analysis\n    ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC\n)\nSELECT e.symbol, e.event_type, e.event_date, ls.stage, lr.filing_date, lr.source_trail\nFROM signals.corporate_events e\nJOIN latest_stage ls ON e.symbol = ls.symbol\nJOIN latest_results lr ON e.symbol = lr.symbol\nWHERE e.event_date >= CURRENT_DATE\nORDER BY e.event_date\nLIMIT 100;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "status"
+  - "constraints"
+synthesis_guidance: "['Design concise tables for easy human consumption.', 'Ensure source-trail evidence supports verification.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:29"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

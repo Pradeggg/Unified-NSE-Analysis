@@ -1,0 +1,55 @@
+id: "insider_bulk_deal_signal_review_0010_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0010"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: today; response style: concise table."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for today: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as concise table"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Combine insider alerts, bulk deals, and stage snapshots to check for accumulation signals."
+  - "Relevant filters and sorts should focus on today's data from the latest stage snapshots."
+  - "Use only selected columns for concise tabular output."
+sql_templates:
+  -
+    purpose: "Fetch relevant insider alerts and bulk deals with technical confirmations."
+    template: "WITH latest_stage AS (SELECT symbol, stage, trading_signal, snapshot_date FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), insider_deals AS (SELECT ia.symbol, ia.alert_date, ia.entity, ia.qty, ia.value_cr, ia.insider_score, bb.deal_date, bb.side, bb.qty AS deal_qty, bb.price FROM signals.insider_alerts ia JOIN signals.bulk_block_deals bb ON ia.symbol = bb.symbol AND ia.alert_date = bb.deal_date WHERE ia.alert_date = CURRENT_DATE AND bb.deal_date = CURRENT_DATE) SELECT id.symbol, id.alert_date, id.entity, id.qty, id.value_cr, id.insider_score, id.deal_date, id.side, id.deal_qty, id.price, ls.stage, ls.trading_signal FROM insider_deals id JOIN latest_stage ls ON id.symbol = ls.symbol WHERE ls.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY id.value_cr DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure input pattern segments map to join and filter conditions."
+  - "Check that the SQL queries align with the described evidence scenario and constraints."
+synthesis_guidance: "['Focus on constructing a table with top-ranked symbols based on insider scores and deal values.', 'Summarize findings in concise notes with insights into accumulation or distribution patterns.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:17:47"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

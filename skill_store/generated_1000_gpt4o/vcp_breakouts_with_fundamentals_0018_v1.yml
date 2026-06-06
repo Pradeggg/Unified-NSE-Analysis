@@ -1,0 +1,53 @@
+id: "vcp_breakouts_with_fundamentals_0018_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0018"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: latest EOD; response style: concise table."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Select stocks with new highs or VCP breakouts with strong fundamentals"
+    query: "WITH latest_eod AS (SELECT symbol, trade_date, high FROM market.equity_eod ORDER BY trade_date DESC LIMIT 1), vcp_candidates AS (SELECT symbol, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE vcp_score >= 7 AND enhanced_fund_score >= 80) SELECT e.symbol FROM latest_eod e JOIN vcp_candidates v ON e.symbol = v.symbol WHERE e.high >= e.week52_high;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Check for nulls in key columns"
+  - "Ensure scores are within valid range"
+  - "Symbols should exist in all datasets"
+synthesis_guidance: "['Consolidate breakout and fundamental data into a single table.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:41:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table e.high"
+  - "unknown table e.symbol"
+  - "unknown table e.week52_high"
+  - "unknown table v.symbol"

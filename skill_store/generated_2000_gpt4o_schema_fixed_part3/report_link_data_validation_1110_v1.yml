@@ -1,0 +1,60 @@
+id: "report_link_data_validation_1110_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Validate TradingView Report Links for Today"
+description: "Check the validity and data health of TradingView exported report links for today's timeframe."
+input_patterns:
+  - "review report links not working for TradingView export today"
+  - "validate today's TradingView report links and data"
+  - "confirm today's TradingView report data and link functionality"
+tags:
+  - "report_qa"
+  - "links"
+  - "TradingView_export"
+  - "today"
+  - "data_validation"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  plans:
+    -
+      description: "Query the latest enhanced report runs and associated filtered stocks for analysis on potential data or link issues."
+      task: "Verify existence of enhanced report data for today's market analysis timeframe."
+      tools:
+        -
+          type: "sql"
+          template:
+            queries:
+              -
+                description: "Fetch today's enhanced report runs and verify populated stock data."
+                sql: "SELECT er.run_id, er.run_ts, er.stocks_analyzed, er.stocks_filtered FROM report.enhanced_runs er WHERE er.analysis_date = CURRENT_DATE;"
+              -
+                description: "Check filtered stock details for today's runs in the enhanced_filtered_stocks table."
+                sql: "WITH latest_run_ids AS (SELECT er.run_id FROM report.enhanced_runs er WHERE er.analysis_date = CURRENT_DATE) SELECT efs.symbol, efs.score, efs.recommendation FROM report.enhanced_filtered_stocks efs JOIN latest_run_ids lr ON efs.run_id = lr.run_id;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure today's analysis data is available and correctly joined."
+  - "Verify report links are functioning and include populated stock data."
+  - "Confirm that SQL templates abide by global rules and join regulations."
+synthesis_guidance: "Compile narrative and evidence on the report links' status for today's TradingView export. Focus on data accuracy and integrity with a user-friendly summary."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:55:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

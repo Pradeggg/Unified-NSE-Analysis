@@ -1,0 +1,63 @@
+id: "vcp_breakouts_with_fundamentals_0654_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0654"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "VCP_Breakouts_With_Fundamentals"
+    description: "Select stocks with new highs, VCP breakouts, and strong fundamentals."
+    sql: "WITH latest_snapshots AS (SELECT symbol, MAX(snapshot_date) AS snapshot_date FROM scores.stage_snapshots GROUP BY symbol) SELECT e.symbol, e.trade_date, e.close, s.company_name, s.sector, s.market_cap_cat, s.trading_signal, s.fundamental_score FROM market.equity_eod e JOIN latest_snapshots ls ON e.symbol = ls.symbol JOIN scores.stage_snapshots s ON ls.symbol = s.symbol AND ls.snapshot_date = s.snapshot_date WHERE e.close = e.week52_high OR s.trading_signal = 'buy' AND s.fundamental_score > 75 ORDER BY e.trade_date DESC;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:50:28"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table e.close"
+  - "unknown table e.symbol"
+  - "unknown table e.trade_date"
+  - "unknown table e.week52_high"
+  - "unknown table ls.snapshot_date"
+  - "unknown table ls.symbol"
+  - "unknown table s.company_name"
+  - "unknown table s.fundamental_score"
+  - "unknown table s.market_cap_cat"
+  - "unknown table s.sector"
+  - "unknown table s.snapshot_date"
+  - "unknown table s.symbol"
+  - "unknown table s.trading_signal"

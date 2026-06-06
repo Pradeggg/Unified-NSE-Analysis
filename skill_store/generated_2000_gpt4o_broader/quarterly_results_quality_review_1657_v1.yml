@@ -1,0 +1,73 @@
+id: "quarterly_results_quality_review_1657_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1657"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "sector-relative comparison for quarter to date: latest quarterly results analysis"
+  - "which companies had strong quarterly results as debug trace"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  status: "generated"
+  operational_steps:
+    - "Fetch latest quarterly results data"
+    - "Assess revenue and PAT growth trends"
+    - "Analyze margin movements"
+    - "Compare sector-relative performance"
+    - "Compile debug trace for findings"
+sql_templates:
+  -
+    status: "generated"
+    query: "SELECT symbol, company_name, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct, opm_delta_pp, verdict FROM scores.results_analysis WHERE period_label = 'quarter_to_date' AND audited = true ORDER BY growth_yoy_pat_pct DESC"
+    description: "Fetch and rank companies based on Year-over-Year PAT growth for current quarter."
+python_tools:
+  -
+    id: "debug_trace_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "debug_trace_data"
+    outputs:
+      - "detailed_analysis"
+    approved_tables:
+      - "scores.results_analysis"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n  # Extract and analyze debug trace information\n  return detailed_analysis"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure data relevance to current quarter"
+  - "Rank companies by revenue and PAT growth"
+  - "Provide debug trace narrative"
+synthesis_guidance: "Provide a detailed sector-relative analysis with emphasis on debugging traces to understand the reasons behind the performance."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "debug_trace_analysis: execution failed: NameError: name 'detailed_analysis' is not defined"
+review:
+  status: "needs_heal"
+  findings:
+    - "debug_trace_analysis: execution failed: NameError: name 'detailed_analysis' is not defined"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

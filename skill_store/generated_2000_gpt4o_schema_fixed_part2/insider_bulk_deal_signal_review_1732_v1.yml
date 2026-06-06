@@ -1,0 +1,60 @@
+id: "insider_bulk_deal_signal_review_1732_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1732"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for last 20 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as QA checklist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+  python_tools:
+
+tool_plan_template: "Review the latest insider and bulk deal alerts, integrating technical confirmations to assess accumulation or distribution signals in stocks over the last 20 sessions."
+sql_templates:
+  insider_bulk_technical:
+    query: "WITH latest_stage AS (SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), insider_deals AS (SELECT ia.symbol, ia.qty, ia.value_cr, ia.insider_score, bb.deal_date, bb.price FROM signals.insider_alerts ia JOIN signals.bulk_block_deals bb ON ia.symbol = bb.symbol WHERE ia.alert_date >= CURRENT_DATE - INTERVAL '20 days' AND bb.deal_date >= CURRENT_DATE - INTERVAL '20 days') SELECT id.symbol, SUM(id.qty) AS total_qty, SUM(id.value_cr) AS total_value, AVG(id.insider_score) AS avg_score, ls.stage, ls.trading_signal FROM insider_deals id JOIN latest_stage ls ON id.symbol = ls.symbol GROUP BY id.symbol, ls.stage, ls.trading_signal ORDER BY total_value DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  -
+    id: "check_complete_output"
+    type: "assert_fields"
+    required_fields:
+      - "deal_summary"
+      - "insider_context"
+      - "technical_confirmation"
+      - "ranked_symbols"
+      - "risk_notes"
+synthesis_guidance: "Summarize insider and institutional activity, highlight key technical factors, and provide a ranked list of symbols with completion checks."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:25"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

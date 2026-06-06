@@ -1,0 +1,66 @@
+id: "portfolio_lab_paper_trading_review_0852_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0852"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: quarter to date; response style: action watchlist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for quarter to date: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as action watchlist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  inputs:
+
+  rules:
+
+  evidence_outcome:
+
+sql_templates:
+  -
+    name: "LatestStageAndScores"
+    template: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+  -
+    name: "PortfolioHoldingsWithLatestPrice"
+    template: "SELECT portfolio.holdings.symbol, portfolio.holdings.qty, portfolio.holdings.avg_cost, market.equity_eod.close AS latest_price FROM portfolio.holdings JOIN market.equity_eod ON portfolio.holdings.symbol = market.equity_eod.symbol WHERE market.equity_eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+  -
+    name: "OpenTradingSignals"
+    template: "SELECT * FROM signals.signal_log WHERE date_resolved IS NULL"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Generate a detailed analysis of paper trading strategies, focusing on distinct separation from real holdings, and compile an action-oriented watchlist for institutional review."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:32"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,83 @@
+id: "sector_breadth_rotation_watchlist_0713_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0713"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: latest EOD; response style: QA checklist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for latest EOD: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as QA checklist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "latest_EOD"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  inputs:
+    - "snapshot_date"
+    - "sector"
+    - "index_name"
+    - "pct_above_50dma"
+    - "change_5d"
+    - "stage2_pct"
+    - "stage_score"
+    - "relative_strength"
+  outputs:
+    - "sector_ranks"
+    - "improving_sectors"
+    - "candidate_symbols"
+    - "tradingview_symbols"
+    - "evidence"
+sql_templates:
+  -
+    name: "Sector Ranking"
+    query: "SELECT sector, AVG(pct_above_50dma) AS avg_pct_above_50dma, AVG(stage2_pct) AS avg_stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.ma_pct_above) GROUP BY sector ORDER BY avg_pct_above_50dma DESC, avg_stage2_pct DESC"
+  -
+    name: "Improving Sectors"
+    query: "SELECT sector, change_5d FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) AND change_5d > 0 ORDER BY change_5d DESC"
+python_tools:
+  -
+    id: "evidence_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "snapshot_data"
+    outputs:
+      - "sector_analysis"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze snapshot data to determine sector trends\n    return {'sector_analysis': analyzed_data}"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sectors are ranked by breadth metrics and stage participation."
+  - "Identify sectors with positive 5-day change."
+synthesis_guidance: "Aggregate data to produce an actionable sector watchlist. Focus on improving sectors and identify candidate symbols for TradingView listing."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "evidence_analysis_tool: execution failed: NameError: name 'analyzed_data' is not defined"
+review:
+  status: "needs_heal"
+  findings:
+    - "evidence_analysis_tool: execution failed: NameError: name 'analyzed_data' is not defined"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

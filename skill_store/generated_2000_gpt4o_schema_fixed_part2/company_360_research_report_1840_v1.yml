@@ -1,0 +1,57 @@
+id: "company_360_research_report_1840_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Agent Adda Company Research Skill"
+description: "Create a structured JSON report of company analysis including stage, financials, and technical aspects."
+input_patterns:
+  - "/research COMPANY comprehensive report"
+  - "full company report with all details"
+tags:
+  - "research"
+  - "financial_analysis"
+  - "technical_analysis"
+  - "snapshot"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "market.equity_eod"
+tool_plan_template:
+  plan: "Collect latest data for the company, including financials and technical scores. Generate a comprehensive analysis report in JSON format."
+sql_templates:
+  -
+    query: "SELECT * FROM scores.stage_snapshots WHERE symbol = :symbol AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+    description: "Retrieve latest stage snapshot for the given symbol."
+  -
+    query: "SELECT DISTINCT ON (symbol) * FROM scores.quarterly_results WHERE symbol = :symbol ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC"
+    description: "Fetch the latest quarterly results for the company."
+  -
+    query: "SELECT DISTINCT ON (symbol) * FROM scores.annual_results WHERE symbol = :symbol ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC"
+    description: "Fetch the latest annual results for the company."
+  -
+    query: "SELECT * FROM market.equity_eod WHERE symbol = :symbol AND trade_date >= (CURRENT_DATE - INTERVAL '20 days')"
+    description: "Fetch the last 20 trading sessions for the company."
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure snapshot_date and symbol are valid for stage_snapshots."
+  - "Ensure all financial values are numeric and not null."
+synthesis_guidance: "Compile the financial and technical data into a clear and concise report. Highlight the company's stage, trend, and any notable financial discrepancies."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:35"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

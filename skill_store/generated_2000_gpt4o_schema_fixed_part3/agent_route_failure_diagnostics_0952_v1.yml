@@ -1,0 +1,75 @@
+id: "agent_route_failure_diagnostics_0952_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0952"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for quarter to date: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as comparison matrix"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "Collect recent enhanced run data for diagnostics."
+  - "Identify filtering issues using joined tables."
+  - "Highlight symbols with missing stage data or tool gaps."
+  - "Suggest regression tests and system fixes."
+sql_templates:
+  -
+    template: "SELECT ers.run_id, ers.stocks_analyzed, ers.notes FROM report.enhanced_runs AS ers WHERE ers.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)"
+    description: "Fetch the latest run details for diagnostic purposes."
+  -
+    template: "SELECT efs.symbol, efs.score, ss.trading_signal FROM report.enhanced_filtered_stocks AS efs LEFT JOIN scores.stage_snapshots AS ss ON efs.symbol = ss.symbol WHERE efs.run_id = (SELECT run_id FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 1) AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+    description: "Identify discrepancies in stock data versus latest stage snapshots."
+python_tools:
+  -
+    id: "run_diagnostics_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "recent_run_data"
+      - "filtered_stock_data"
+      - "stage_snapshot_data"
+    outputs:
+      - "diagnostic_results"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Extract diagnostic data and generate comparison matrix\n    return diagnostic_results"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure SQL templates are strictly read-only."
+  - "Validate output against evidence_required.constraints."
+  - "Confirm all joins adhere to _join_rules."
+synthesis_guidance: "{'strategy': 'Compare latest successful runs against current diagnostics to identify trends and patterns of failure.', 'formatted_style': 'Comparison matrix highlighting discrepancies and recommendations.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:38"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_diagnostics_tool: execution failed: NameError: name 'diagnostic_results' is not defined"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_diagnostics_tool: execution failed: NameError: name 'diagnostic_results' is not defined"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

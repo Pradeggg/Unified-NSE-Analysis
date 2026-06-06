@@ -1,0 +1,67 @@
+id: "vcp_breakouts_with_fundamentals_0570_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0570"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    step: "Identify VCP and breakout stocks"
+    details: "Use the scores.stage2_vcp_picks table to select stocks with a positive trading_signal and vcp_score."
+  -
+    step: "Filter by fundamentals"
+    details: "Select stocks with strong enhanced_fund_score and financial_strength from scores.stage_snapshots."
+  -
+    step: "Ensure liquidity"
+    details: "Check that selected stocks have sufficient volume and turnover using market.equity_eod."
+sql_templates:
+  -
+    name: "Select_VCP_Breakout_Stocks"
+    sql: "SELECT symbol, company_name, sector, price, vcp_score FROM scores.stage2_vcp_picks WHERE trading_signal > 0 AND vcp_score > 0 ORDER BY vcp_score DESC;"
+  -
+    name: "Select_Strong_Fundamentals"
+    sql: "SELECT symbol, company_name, enhanced_fund_score, financial_strength FROM scores.stage_snapshots WHERE enhanced_fund_score > 70 AND financial_strength > 70;"
+  -
+    name: "Ensure_Liquidity"
+    sql: "SELECT symbol, volume, turnover_cr FROM market.equity_eod WHERE volume > 1000000 AND turnover_cr > 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all selected stocks have strong fundamentals and liquidity."
+  - "Cross-verify the stocks listed in TradingView exports."
+synthesis_guidance: "['Summarize the stocks identified in terms of VCP and breakout potential.', 'Highlight key fundamental strengths and liquidity metrics.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:49:13"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

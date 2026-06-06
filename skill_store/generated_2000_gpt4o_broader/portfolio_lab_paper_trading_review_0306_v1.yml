@@ -1,0 +1,54 @@
+id: "portfolio_lab_paper_trading_review_0306_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0306"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: today; response style: exceptions and gaps first."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for today: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "today"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze the paper trading portfolio by reviewing trading strategies from the signal log, ensuring separation from actual holdings, and performing a freshness audit for today's date."
+sql_templates:
+  strategy_state: "SELECT symbol, signal, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued = CURRENT_DATE"
+  open_trades: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings WHERE buy_date = CURRENT_DATE"
+  entry_exit_rules: "SELECT id, symbol, entry_low, entry_high, stop_loss, target_1, target_2, hit_target, hit_stop FROM signals.signal_log WHERE hit_target IS NULL AND hit_stop IS NULL"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure no mixing of real and paper portfolios."
+  - "Check for missing entries in signal logs."
+  - "Audit freshness by ensuring all data is for current date."
+synthesis_guidance: "Focus on identifying gaps or exceptions in trade outcomes and strategy conformity to pre-defined rules, emphasizing today's trades."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:45"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,56 @@
+id: "portfolio_incremental_add_trim_0263_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0263"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: post results; response style: ranked candidates."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for post results: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Identify candidates for addition or trimming by analyzing current holdings against stage and technical scores."
+sql_templates:
+  -
+    name: "fetch_holdings_with_scores"
+    type: "SELECT"
+    template: "WITH latest_scores AS (SELECT symbol, company_name, sector, stage, stage_score, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), holdings_data AS (SELECT h.symbol, h.qty, h.avg_cost, ls.company_name, ls.sector, ls.stage, ls.stage_score, ls.technical_score FROM portfolio.holdings h JOIN latest_scores ls ON h.symbol = ls.symbol) SELECT * FROM holdings_data;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all required keys are present."
+  - "SQL queries must be read-only."
+  - "Output must match the specified contract."
+synthesis_guidance: "Prioritize holding candidates for addition with strong technical scores and holding candidates for trimming with declining stage scores."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:43:59"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table h.avg_cost"
+  - "unknown table h.qty"
+  - "unknown table h.symbol"
+  - "unknown table ls.company_name"
+  - "unknown table ls.sector"
+  - "unknown table ls.stage"
+  - "unknown table ls.stage_score"
+  - "unknown table ls.symbol"
+  - "unknown table ls.technical_score"

@@ -1,0 +1,63 @@
+id: "sector_breadth_rotation_watchlist_0125_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0125"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: risk-first review; timeframe: last 5 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "risk-first review for last 5 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as narrative plus evidence"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "risk-first_review"
+  - "last_5_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  sector_ranks: "Identify top sectors based on breadth performance over last 5 sessions."
+  improving_sectors: "Detect sectors showing improvement in their breadth signals and Stage 2 entries."
+  candidate_symbols: "List symbols from improving sectors meeting technical and fundamental criteria."
+  tradingview_symbols: "Format selected symbols into TradingView compatible list."
+  evidence: "Compile narrative based on the SQL evidence templates provided."
+sql_templates:
+  -
+    description: "Select top sectors by breadth change over last 5 days."
+    template: "WITH recent_breadth AS (SELECT sector, change_5d FROM breadth.sector_daily WHERE snapshot_date >= CURRENT_DATE - INTERVAL '5 days') SELECT sector, AVG(change_5d) as avg_change_5d FROM recent_breadth GROUP BY sector ORDER BY avg_change_5d DESC;"
+  -
+    description: "Filter sectors with strong Stage 2 participation."
+    template: "SELECT sector, stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date = CURRENT_DATE ORDER BY stage2_pct DESC LIMIT 5;"
+  -
+    description: "Find candidate symbols within improving sectors."
+    template: "SELECT symbol, sector, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE AND stage = 'Stage 2' AND sector IN ('Technology', 'Energy') ORDER BY stage_score DESC;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+synthesis_guidance: "Combine SQL results into a narrative explaining sector strengths and potential stock candidates; provide formatted TradingView list."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.sector is not approved"

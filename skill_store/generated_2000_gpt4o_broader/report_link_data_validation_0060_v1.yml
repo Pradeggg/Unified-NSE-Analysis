@@ -1,0 +1,56 @@
+id: "report_link_data_validation_0060_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0060"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: quarter to date; response style: concise table."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for quarter to date: review report links not working"
+  - "validate generated report links and missing data as concise table"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  - "Analyze report links and stock data for missing information."
+  - "Compile findings into a concise table presentation."
+  - "Highlight any data discrepancies for remediation."
+sql_templates:
+  -
+    description: "Retrieve metadata for enhanced report runs for the current quarter."
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered, indices_analyzed, market_composite_score, market_sentiment, notes FROM report.enhanced_runs WHERE analysis_date >= '2023-01-01';"
+  -
+    description: "Select filtered stock data with key technical indicators."
+    template: "SELECT run_id, symbol, score, recommendation, current_price, day_change_pct, rsi, macd_signal FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE analysis_date >= '2023-01-01');"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure SQL templates only use SELECT and WHERE clauses."
+  - "validate the presence and correctness of the output data structure."
+synthesis_guidance: "['Integrate outputs from SQL templates to cross-reference against known TradingView discrepancies.', 'Summarize any data gaps or inconsistencies as actionable insights.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

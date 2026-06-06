@@ -1,0 +1,52 @@
+id: "signal_outcome_feedback_review_1341_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1341"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: quick scan; timeframe: last 3 months; response style: exceptions and gaps first."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for last 3 months: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as exceptions and gaps first"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Review the performance of signals in the last 3 months, focusing on targets, stops, and outcomes. Identify exceptions and gaps."
+sql_templates:
+  -
+    template_name: "QuickScanLast3MonthsPerformance"
+    template: "WITH recent_signals AS (SELECT id, symbol, signal, date_issued, price_at_issue, target_1, stop_loss, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_issued >= CURDATE() - INTERVAL 3 MONTH) SELECT symbol, COUNT(*) AS total_signals, SUM(CASE WHEN hit_target THEN 1 ELSE 0 END) AS targets_hit, SUM(CASE WHEN hit_stop THEN 1 ELSE 0 END) AS stops_hit FROM recent_signals GROUP BY symbol;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Each skill card must maintain status=generated"
+synthesis_guidance: "['Focus on summarizing patterns that lead to successful and unsuccessful outcomes.', 'Identify gaps in data and execution.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:17"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

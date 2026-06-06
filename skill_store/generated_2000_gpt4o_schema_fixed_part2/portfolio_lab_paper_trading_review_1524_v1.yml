@@ -1,0 +1,69 @@
+id: "portfolio_lab_paper_trading_review_1524_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1524"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: last 5 sessions; response style: research-only summary."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for last 5 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as research-only summary"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "last_5_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "1. Gather recent signals and current stage information for symbols in paper trading."
+  - "2. Validate entries, exits, stops, and targets within the last 5 sessions."
+  - "3. Generate research-only summary."
+sql_templates:
+  -
+    id: "paper_trading_review_signals"
+    description: "Retrieve paper trading signals within the last 5 sessions."
+    sql: "SELECT * FROM signals.signal_log WHERE date_issued >= (SELECT MAX(date_issued) FROM signals.signal_log) - INTERVAL '5 days';"
+python_tools:
+  -
+    id: "generate_watchlist"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signal_data"
+    outputs:
+      - "watchlist"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context): return generate_watchlist(context['inputs']['signal_data'])"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all signals have appropriate entry/exit evaluations."
+  - "Check for adherence to stop-loss and target rules."
+synthesis_guidance: "['Synthesize data to provide a clear overview of strategy performance.', 'Highlight successful trades and areas for improvement.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "generate_watchlist: execution failed: NameError: name 'generate_watchlist' is not defined"
+review:
+  status: "needs_heal"
+  findings:
+    - "generate_watchlist: execution failed: NameError: name 'generate_watchlist' is not defined"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

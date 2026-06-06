@@ -1,0 +1,74 @@
+id: "signal_outcome_feedback_review_0711_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Skill"
+description: "Skill to evaluate and learn from past trading signal outcomes. Focuses on quick analysis for latest EOD data using QA checklist format."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for latest EOD: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as QA checklist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "latest_EOD"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+    -
+      required_function: "run(context)"
+      language: "python"
+      mode: "read_only"
+      blocked_capabilities:
+        - "network"
+        - "subprocess"
+        - "filesystem_write"
+        - "db_write"
+        - "broker_api"
+      required_fields:
+        - "id"
+        - "language"
+        - "mode"
+        - "inputs"
+        - "outputs"
+        - "approved_tables"
+        - "code"
+sql_templates:
+  -
+    type: "outcome_summary"
+    template: "SELECT symbol, date_issued, signal, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log) LIMIT 100;"
+  -
+    type: "stage_snapshot_context"
+    template: "SELECT s.symbol, s.snapshot_date, s.stage, s.technical_score FROM scores.stage_snapshots s JOIN signals.signal_log l ON s.symbol = l.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND l.date_issued = (SELECT MAX(date_issued) FROM signals.signal_log) LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure SQL queries align with latest EOD and stage snapshot data."
+  - "Validate Python tool policies for read-only compliance."
+synthesis_guidance: "['Leverage outcome feedback to identify improvement routes.', 'Focus on QA checklist format for clear communication.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

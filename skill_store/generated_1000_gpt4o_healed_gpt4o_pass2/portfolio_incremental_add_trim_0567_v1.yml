@@ -1,0 +1,50 @@
+created_at: "2026-06-06T12:49:11"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: post results; response style: research-only summary."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0567_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for post results: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as research-only summary"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Select current portfolio holdings with necessary details for analysis."
+    sql: "SELECT p.symbol, p.qty, p.avg_cost, s.sector, s.change_1m_pct, s.trend_signal FROM portfolio.holdings p JOIN scores.stage_snapshots s ON p.symbol = s.symbol;"
+status: "validated"
+synthesis_guidance: "Summarize research findings without recommending actions outside the Indian market context."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "research-only_summary"
+title: "Portfolio Incremental Add Trim Review Variant 0567"
+tool_plan_template: "Perform a sector-relative review; compare holdings to decide on incremental adds/trims."
+validation_rules:
+  - "Ensure output is aligned with current market data."
+  - "Do not suggest actions without sector-relative context."
+version: 1

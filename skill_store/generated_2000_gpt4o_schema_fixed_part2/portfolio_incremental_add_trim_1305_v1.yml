@@ -1,0 +1,80 @@
+id: "portfolio_incremental_add_trim_1305_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1305"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: today; response style: exceptions and gaps first."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for today: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "today"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  status: "generated"
+  tool_purpose: "Research how incremental add/trim decisions can be improved based on latest portfolio and stage data."
+  tool_inputs:
+    - "Portfolio holdings and their current quantities."
+    - "Stage snapshot for symbols in portfolio."
+  tool_outputs:
+    - "Add candidates for increasing exposure."
+    - "Trim candidates for reducing exposure."
+  constraints:
+    - "Use latest data only."
+    - "Highlight exceptions and gaps first."
+sql_templates:
+  -
+    id: "latest_stage_snapshots"
+    template: "SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    description: "Fetch latest stage snapshot data for each symbol."
+    status: "generated"
+python_tools:
+  -
+    id: "risk_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      holdings_data: "portfolio.holdings"
+      snapshot_data: "latest_stage_snapshots"
+    outputs:
+      add_candidates: "List of symbols recommended for increased exposure."
+      trim_candidates: "List of symbols recommended for reduced exposure."
+    approved_tables:
+      - "portfolio.holdings"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Perform risk-based analysis to determine add/trim candidates\n    pass"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure response includes analysis on exceptions and gaps."
+  - "Validate that add/trim recommendations respect risk-first orientation."
+synthesis_guidance: "['Focus on risk management when evaluating add/trim actions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:53"
+generation_model: "gpt-4o"
+validation_errors:
+  - "risk_analysis: inputs must be a list"
+  - "risk_analysis: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "risk_analysis: inputs must be a list"
+    - "risk_analysis: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

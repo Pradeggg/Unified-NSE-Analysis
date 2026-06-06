@@ -1,0 +1,62 @@
+created_at: "2026-06-06T12:43:29"
+created_by: "llm_generated"
+description: "Identify stocks reaching new highs or showing VCP breakouts with robust fundamentals over the last 5 sessions. This variant emphasizes a comprehensive institutional review, providing a ranked list of candidates."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "agent_skill_vcp_breakouts_0223_0222_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+output_contract:
+  -
+    filters:
+      - "Latest 5 sessions"
+      - "Ranked by fundamentals and VCP score"
+  -
+    candidates: "List of symbols with detailed breakout analysis"
+  -
+    tradingview_symbols: "Symbols ready for TradingView integration"
+  -
+    evidence: "Compiled from extracted and processed market and scores data"
+  -
+    risks:
+      - "Limited timeframe analysis"
+      - "Dependent on quality of input data"
+python_tools:
+
+sql_templates:
+  -
+    name: "vcp_breakout_candidates"
+    query: "WITH latest_vcp AS (SELECT symbol, company_name, sector, price, vcp_score, rankings.rank FROM scores.stage2_vcp_picks WHERE snapshot_date >= current_date - interval '5 days') SELECT e.symbol, e.trade_date, e.high, e.close, s.enhanced_fund_score, s.investment_score FROM market.equity_eod e JOIN latest_vcp s ON e.symbol = s.symbol WHERE e.high = e.week52_high"
+status: "validated"
+synthesis_guidance: "['Focus on integrating both VCP breakout and robust fundamental selection criteria', 'Prioritize ranking by enhanced fundamental score']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "ranked_candidates"
+title: "VCP Breakouts With Fundamentals Variant 0223"
+tool_plan_template:
+
+validation_rules:
+  - "Ensure inputs match specified patterns"
+  - "Validate existence of necessary tables and columns"
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

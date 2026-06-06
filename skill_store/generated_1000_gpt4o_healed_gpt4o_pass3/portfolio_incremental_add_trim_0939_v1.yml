@@ -1,0 +1,58 @@
+created_at: "2026-06-06T12:52:59"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: comparison matrix."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0939_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for last 20 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Evaluate exposure by sector in portfolio holdings."
+    name: "sector_exposure"
+    template: "SELECT h.symbol, s.sector, SUM(h.qty * s.live_price) AS total_value FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date IN (SELECT DISTINCT snapshot_date FROM scores.stage_snapshots ORDER BY snapshot_date DESC LIMIT 20) GROUP BY s.sector"
+  -
+    description: "Identify potential stocks to add based on stage and trend signals."
+    name: "add_candidates"
+    template: "WITH recent_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date IN (SELECT DISTINCT snapshot_date FROM scores.stage_snapshots ORDER BY snapshot_date DESC LIMIT 20)) SELECT symbol FROM recent_snapshots WHERE stage_score > 7 AND trend_signal = 'UP'"
+  -
+    description: "Identify stocks for potential trimming based on negative trends or scores."
+    name: "trim_candidates"
+    template: "WITH recent_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date IN (SELECT DISTINCT snapshot_date FROM scores.stage_snapshots ORDER BY snapshot_date DESC LIMIT 20)) SELECT symbol FROM recent_snapshots WHERE stage_score < 4 OR trend_signal = 'DOWN'"
+status: "validated"
+synthesis_guidance: "Create a comparison matrix based on sector exposure and add/trim candidates."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "comparison_matrix"
+title: "Portfolio Incremental Add Trim Review Variant 0939"
+tool_plan_template: "JSON must contain schema-safe read-only actions."
+validation_rules:
+  - "outputs"
+version: 1

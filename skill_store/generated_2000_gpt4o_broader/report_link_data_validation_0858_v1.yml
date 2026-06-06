@@ -1,0 +1,57 @@
+id: "report_link_data_validation_0858_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Report Link Data Validation"
+description: "Validate report links and identify missing data for enhanced stock reports in the Indian market."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for quarter to date: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  validation_steps:
+    - "Collect link metadata from enhanced report runs."
+    - "Identify and list broken links."
+    - "Audit missing data across stock HTML files."
+sql_templates:
+  -
+    description: "Fetch metadata for report runs."
+    template: "SELECT run_id, run_ts, universe_size, stocks_analyzed, market_composite_score FROM report.enhanced_runs WHERE analysis_date >= CURRENT_DATE - INTERVAL '1 quarter';"
+  -
+    description: "Check filtered stocks and identify missing data."
+    template: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE CURRENT_DATE - INTERVAL '1 quarter';"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure data consistency within 'report.enhanced_runs'."
+  - "Verify completeness of 'report.enhanced_filtered_stocks'."
+synthesis_guidance: "Prioritize issues with direct impact on market assessments."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:51"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

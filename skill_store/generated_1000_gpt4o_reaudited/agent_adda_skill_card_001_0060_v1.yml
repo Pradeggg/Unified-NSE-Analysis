@@ -1,0 +1,68 @@
+created_at: "2026-06-06T12:41:30"
+created_by: "llm_generated"
+description: "Skill to validate report links and data correctness for TradingView export quarter to date."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_card_001_0060_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for quarter to date: review report links not working"
+  - "validate generated report links and missing data as concise table"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    broken_links = []\n    missing_data = []\n    for report in context['enhanced_runs_data']:\n        if 'http' not in report['notes'] or report['stocks_analyzed'] == 0:\n            broken_links.append(report['run_id'])\n    for stock in context['filtered_stocks_data']:\n        if stock['current_price'] is None:\n            missing_data.append(stock['symbol'])\n    return {'broken_links': broken_links, 'missing_data': missing_data}"
+    id: "verify_data_integrity"
+    inputs:
+      - "enhanced_runs_data"
+      - "filtered_stocks_data"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "broken_links"
+      - "missing_data"
+sql_templates:
+  -
+    description: "Select metadata for the most recent report run."
+    sql: "SELECT * FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 1;"
+  -
+    description: "Fetch filtered stock data for the recent run."
+    sql: "WITH latest_run AS (SELECT run_id FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 1) SELECT * FROM report.enhanced_filtered_stocks WHERE run_id = (SELECT run_id FROM latest_run);"
+status: "test_failed"
+synthesis_guidance: "Synthesize the findings into a concise table highlighting issues such as broken links or missing data points."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "concise_table"
+title: "TradingView Export Link Validation"
+tool_plan_template: "Leveraging available tables to validate report links and entries."
+validation_rules:
+  - "Ensure all fetch operations use approved tables and columns."
+  - "Only use read-only SQL operations."
+version: 1
+validation_errors:
+  - "verify_data_integrity: execution failed: KeyError: 'enhanced_runs_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "verify_data_integrity: execution failed: KeyError: 'enhanced_runs_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

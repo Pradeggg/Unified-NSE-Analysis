@@ -1,0 +1,60 @@
+id: "agent_route_failure_diagnostics_1652_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1652"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for quarter to date: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as debug trace"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  -
+    template: "SELECT * FROM report.enhanced_runs WHERE run_ts >= (CURRENT_DATE - INTERVAL '3 months');"
+    description: "Fetches the enhanced report runs for the previous quarter."
+python_tools:
+  - "required_function"
+  - "language"
+  - "mode"
+  - "blocked_capabilities"
+  - "required_fields"
+  - "approved_tables"
+  - "code"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure that all output structures conform to the schema requirements."
+  - "Verify date constraints per quarter-to-date criteria."
+synthesis_guidance: "['Use debug trace style to document the step-by-step diagnostic process.', 'Highlight any missing tools or symbols explicitly.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:40"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

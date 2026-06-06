@@ -1,0 +1,54 @@
+id: "agent_route_failure_diagnostics_1960_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1960"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for quarter to date: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as comparison matrix"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Diagnose route failures by analyzing stocks from enhanced runs with notable discrepancies in signals."
+    plan: "Use run timestamps to identify mismatches in daily and weekly signals from the enhanced_filtered_stocks table compared to historical data in stage_snapshots."
+sql_templates:
+  -
+    description: "Identify discrepancies in daily signals."
+    sql: "SELECT efs.symbol, efs.daily_signal, ss.trading_signal, efs.run_id FROM report.enhanced_filtered_stocks efs JOIN scores.stage_snapshots ss ON efs.symbol = ss.symbol WHERE efs.daily_signal != ss.trading_signal AND efs.run_id = (SELECT MAX(run_id) FROM report.enhanced_runs WHERE analysis_date = CURRENT_DATE)"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "logical_check"
+  - "symbol_resolution_check"
+synthesis_guidance: "{'approach': 'Create a comparison matrix to evaluate differences in signals.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

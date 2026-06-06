@@ -1,0 +1,64 @@
+id: "portfolio_incremental_add_trim_0885_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0885"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for intraday context: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as action watchlist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Review portfolio holdings for potential add and trim actions by analyzing the latest stage snapshots and holdings data."
+sql_templates:
+  -
+    code: "SELECT p.symbol, p.qty, s.sector, s.trading_signal, s.price, s.live_price, s.stage, s.relative_strength FROM portfolio.holdings p JOIN scores.stage_snapshots s ON p.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 20;"
+    description: "Identify symbols to consider adding based on strong buy signals in the latest data."
+    contract:
+      - "symbol"
+      - "trading_signal"
+      - "qty"
+      - "price"
+  -
+    code: "SELECT p.symbol, p.qty, s.sector, s.trading_signal, s.price, s.live_price, s.rsi FROM portfolio.holdings p JOIN scores.stage_snapshots s ON p.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal = 'SELL' LIMIT 20;"
+    description: "Identify symbols to consider trimming based on sell signals in the latest data."
+    contract:
+      - "symbol"
+      - "trading_signal"
+      - "qty"
+      - "price"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  -
+    name: "Ensure unique symbols in add_candidates and trim_candidates."
+    description: "Validate that symbols do not appear in both lists simultaneously."
+synthesis_guidance: "Focus on constructing an action-oriented watchlist based on current portfolio data, utilizing stage snapshots to guide add/trim decisions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

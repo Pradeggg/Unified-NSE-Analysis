@@ -1,0 +1,71 @@
+id: "report_link_data_validation_1824_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data QA Validation"
+description: "Validate the creation and data integrity of enhanced report run metadata for the latest sessions, specifically focusing on watchlist accuracy and data completeness."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  - "Validate enhanced report data using SQL templates to check report links, data completeness, and stock filtering over the last five report sessions."
+sql_templates:
+  -
+    query: "WITH latest_runs AS (SELECT run_id, MAX(run_ts) AS latest_run_ts FROM report.enhanced_runs GROUP BY run_id)\nSELECT ers.run_id, ers.run_ts, ers.stocks_filtered, efs.symbol, efs.recommendation, efs.current_price\nFROM report.enhanced_runs ers\nJOIN report.enhanced_filtered_stocks efs ON ers.run_id = efs.run_id\nJOIN latest_runs lr ON ers.run_id = lr.run_id AND ers.run_ts = lr.latest_run_ts\nWHERE ers.run_ts >= (CURRENT_DATE - INTERVAL '5 days')\nORDER BY ers.run_ts DESC, efs.rank ASC;"
+    description: "Identifies the report runs and associated filtered stocks data for the last 5 days, focusing on data integrity and completeness."
+python_tools:
+  -
+    id: "data_validation_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+      - "symbol"
+    outputs:
+      - "findings"
+      - "broken_links"
+      - "missing_data"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code:
+      - "def run(context):"
+      - "    findings = []"
+      - "    # Logic for validation goes here"
+      - "    return {'findings': findings, 'broken_links': [], 'missing_data': []}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure SQL queries are read-only."
+  - "Check Python code for read-only mode compliance."
+synthesis_guidance: "['Focus on the context of the last five report sessions.', 'Emphasize data links integrity and reporting completeness.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:33"
+generation_model: "gpt-4o"
+validation_errors:
+  - "data_validation_tool: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "data_validation_tool: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

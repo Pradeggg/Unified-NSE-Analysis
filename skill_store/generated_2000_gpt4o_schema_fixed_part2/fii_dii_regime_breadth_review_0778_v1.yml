@@ -1,0 +1,54 @@
+id: "fii_dii_regime_breadth_review_0778_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0778"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: pre market; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for pre market: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "pre_market"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    title: "Gather Latest Market and Flow Signals"
+    template: "WITH latest_flows AS (SELECT * FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows)), latest_regime AS (SELECT * FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history)), latest_breadth AS (SELECT * FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily)), latest_index AS (SELECT * FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND index_symbol = 'Nifty 50') SELECT lf.trade_date, lf.flow_signal, lf.fii_trend, lf.dii_trend, lr.regime, lr.confidence, lb.ad_signal, lb.trin_signal, mi.trading_signal FROM latest_flows lf JOIN latest_regime lr ON lf.trade_date = lr.trade_date JOIN latest_breadth lb ON lf.trade_date = lb.trade_date JOIN latest_index mi ON lf.trade_date = mi.trade_date;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure correct SQL syntax."
+  - "Validate column existence in SQL queries."
+  - "Check for data type consistency in SQL queries."
+synthesis_guidance: "['Integrate selected SQL outputs into a cohesive market analysis.', 'Generate QA checklist based on SQL results.', 'Align synthesis with Indian market research guidelines.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

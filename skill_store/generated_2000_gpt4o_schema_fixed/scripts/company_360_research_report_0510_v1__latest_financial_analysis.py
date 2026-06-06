@@ -1,0 +1,1 @@
+def run(context): # Analyze financial trends based on the latest quarter data

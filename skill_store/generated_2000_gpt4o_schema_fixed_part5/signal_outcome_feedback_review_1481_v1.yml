@@ -1,0 +1,58 @@
+id: "signal_outcome_feedback_review_1481_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1481"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: quick scan; timeframe: intraday context; response style: portfolio-aware output."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for intraday context: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as portfolio-aware output"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    tools:
+      -
+        tool_name: "signal_feedback_analysis"
+        tool_description: "Analyze signal outcomes to identify winning and failing patterns."
+    input_format: "SQL Queries: Perform selected read-only operations."
+sql_templates:
+  -
+    name: "evaluate_signal_outcomes"
+    query: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), signal_evaluation AS (SELECT s.symbol, s.signal, s.hit_target, s.hit_stop, s.return_pct, l.stage FROM signals.signal_log s JOIN latest_snapshots l ON s.symbol = l.symbol WHERE s.date_resolved IS NOT NULL) SELECT * FROM signal_evaluation WHERE hit_target OR hit_stop;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure that result sets are bounded."
+  - "Verify compliance with evidence constraints."
+synthesis_guidance: "Summarize patterns and outcomes succinctly for rapid intraday decisions."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

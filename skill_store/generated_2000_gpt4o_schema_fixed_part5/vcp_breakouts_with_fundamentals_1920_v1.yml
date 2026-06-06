@@ -1,0 +1,57 @@
+id: "vcp_breakouts_with_fundamentals_1920_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1920"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    filters:
+      - "Select stocks with the series 'EQ' for cash-equity."
+      - "Use snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) for latest stage data."
+      - "Filter for stocks in 'STAGE_2' with 'BUY' or 'STRONG_BUY' trading signal."
+      - "Ensure snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) for latest VCP picks."
+    sql_templates:
+      -
+        query: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_picks AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)) SELECT eod.symbol, eod.close, eod.volume, ss.company_name, ss.fundamental_score, ss.minervini_score FROM market.equity_eod eod INNER JOIN latest_snapshots ss ON eod.symbol = ss.symbol INNER JOIN latest_picks picks ON eod.symbol = picks.symbol WHERE eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND eod.series = 'EQ' AND ss.stage = 'STAGE_2' AND ss.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY picks.vcp_score DESC LIMIT 10;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "{'fields': [{'name': 'filters', 'type': 'string', 'description': 'Applied filters for selecting breakout candidates.'}, {'name': 'candidates', 'type': 'array', 'description': 'List of candidate stocks with breakout potential.'}, {'name': 'tradingview_symbols', 'type': 'array', 'description': 'List of symbols formatted for TradingView.'}, {'name': 'evidence', 'type': 'json', 'description': 'Evidence and data details used for selection.'}, {'name': 'risks', 'type': 'string', 'description': 'Potential risks associated with the selected stocks.'}]}"
+validation_rules:
+  - "Ensure only series EQ is processed."
+  - "Limit the results to 10 candidates per query execution."
+  - "Candidate stocks must have STAGE_2 and either BUY or STRONG_BUY signal."
+  - "SQL queries must be read-only and parameterized."
+synthesis_guidance: "['Create a comparison matrix based on VCP and financial fundamentals.', 'Format the output for TradingView compatibility.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:31"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

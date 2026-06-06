@@ -1,0 +1,60 @@
+created_at: "2026-06-06T12:41:54"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: weekly review; response style: concise table."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0098_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    template: "SELECT eod.symbol, eod.high, eod.close, eod.volume, snapshots.company_name, snapshots.market_cap_cat, snapshots.fundamental_score, snapshots.enhanced_fund_score FROM market.equity_eod eod JOIN scores.stage_snapshots snapshots ON eod.symbol = snapshots.symbol WHERE eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND eod.close >= eod.week52_high * 0.95 AND snapshots.stage_score > 70 AND snapshots.fundamental_score > 60 ORDER BY eod.volume DESC LIMIT 10"
+status: "validated"
+synthesis_guidance: "{'guidance': 'Ensure outputs are concise, aimed at Indian market VCP and breakout strategies.'}"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "concise_table"
+title: "VCP Breakouts With Fundamentals Variant 0098"
+tool_plan_template:
+  candidates:
+    instructions: "Present results as a concise table matching the input pattern."
+  evidence:
+    instructions: "Provide supporting data from approved tables."
+  filters:
+    instructions: "Identify VCP stocks with new-highs or breakouts and strong fundamentals for position-sizing context and weekly review."
+  risks:
+    instructions: "Highlight potential risks in selected candidates."
+  tradingview_symbols:
+    instructions: "Format output suitable for TradingView symbols and alerts."
+validation_rules:
+  - "rules"
+version: 1

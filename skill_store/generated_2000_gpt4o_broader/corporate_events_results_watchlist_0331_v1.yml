@@ -1,0 +1,61 @@
+id: "corporate_events_results_watchlist_0331_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0331"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: last 20 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for last 20 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as exceptions and gaps first"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  evidence_gaps:
+    - "No table for session-specific filtering."
+sql_templates:
+  -
+    description: "Select recent corporate events for the last 20 sessions."
+    table_name: "signals.corporate_events"
+    template: "SELECT id, symbol, event_type, event_date, purpose_raw, detail, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '20 days' ORDER BY event_date DESC"
+  -
+    description: "Fetch results analysis for recent filings."
+    table_name: "scores.results_analysis"
+    template: "SELECT symbol, period_end, company_name, growth_yoy_revenue_pct, growth_qoq_revenue_pct, eps_yoy_pct, verdict FROM scores.results_analysis WHERE filing_date >= CURRENT_DATE - INTERVAL '20 days' ORDER BY filing_date DESC"
+  -
+    description: "Stage snapshots of stocks for watchlist."
+    table_name: "scores.stage_snapshots"
+    template: "SELECT symbol, company_name, market_cap_cat, stage, stage_score, trend_signal, trading_signal FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '20 days' ORDER BY snapshot_date DESC"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "event_date_range"
+synthesis_guidance: "{'overview': 'Aggregate data from recent corporate events and result analyses to compile a watchlist.', 'steps': ['Fetch recent corporate events.', 'Analyze filings and results', 'Evaluate stage snapshots', 'Focus on exceptions and outliers to generate insights.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

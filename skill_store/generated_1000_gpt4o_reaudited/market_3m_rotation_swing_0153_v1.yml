@@ -1,0 +1,70 @@
+created_at: "2026-06-06T12:42:27"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: narrative plus evidence."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0153_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as narrative plus evidence"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    query_name: "index_returns"
+    template: "SELECT index_symbol, AVG(change_pct) AS avg_return FROM market.index_eod WHERE trade_date >= DATEADD(month, -3, GETDATE()) GROUP BY index_symbol;"
+  -
+    query_name: "leading_sectors"
+    template: "SELECT sector, AVG(stage_score) AS avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date >= DATEADD(month, -3, GETDATE()) AND stage = 2 GROUP BY sector ORDER BY avg_stage_score DESC;"
+  -
+    query_name: "stage_distribution_change"
+    template: "SELECT stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date >= DATEADD(month, -3, GETDATE()) GROUP BY stage;"
+  -
+    query_name: "primary_candidates"
+    template: "SELECT symbol, company_name, sector FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATEADD(month, -3, GETDATE()) AND vcp_score > 0.8 ORDER BY vcp_score DESC;"
+status: "test_failed"
+synthesis_guidance: "['Provide narrative insights from the SQL query results.', 'Identify any gaps from the provided evidence.', 'Maintain focus on swing trading opportunities.']"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+title: "3M Market Rotation Swing Assessment Variant 0153"
+tool_plan_template:
+
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "SQL templates must only utilize SELECT/WITH statements."
+  - "Interpretation must align with Indian market context."
+version: 1
+validation_errors:
+  - "market.index_eod.avg_return is not approved"
+  - "market.index_eod.dateadd is not approved"
+  - "market.index_eod.getdate is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage2_vcp_picks.dateadd is not approved"
+  - "scores.stage2_vcp_picks.getdate is not approved"
+  - "scores.stage2_vcp_picks.month is not approved"
+  - "scores.stage_snapshots.avg_stage_score is not approved"
+  - "scores.stage_snapshots.dateadd is not approved"
+  - "scores.stage_snapshots.getdate is not approved"
+  - "scores.stage_snapshots.month is not approved"

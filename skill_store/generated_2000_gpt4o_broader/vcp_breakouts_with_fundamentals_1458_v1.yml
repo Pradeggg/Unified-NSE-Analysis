@@ -1,0 +1,48 @@
+id: "vcp_breakouts_with_fundamentals_1458_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1458"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Find stocks meeting VCP breakout conditions with strong fundamentals for the Indian market."
+sql_templates:
+  -
+    template: "SELECT symbol, company_name, sector, price, vcp_score, enhanced_fund_score, market_cap_cr FROM scores.stage2_vcp_picks WHERE vcp_score > 70 AND enhanced_fund_score > 80 AND price > 500"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "All outputs must align with the approved schema."
+  - "SQL templates must be read-only."
+  - "Ensure data privacy and no network access."
+synthesis_guidance: "Focus on high VCP scores and strong fundamentals. Ensure output is actionable and portfolio-aware."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:59"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.market_cap_cr is not approved"

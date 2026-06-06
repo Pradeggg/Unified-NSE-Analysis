@@ -1,0 +1,60 @@
+created_at: "2026-06-06T12:50:03"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: today; response style: debug trace."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0610_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Select high VCP scoring stocks with strong fundamentals."
+    statement: "SELECT symbol, company_name, sector, price, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE vcp_score > 80 AND enhanced_fund_score > 75 ORDER BY vcp_score DESC;"
+  -
+    description: "Filter for recent price action related to new highs or VCP breakouts."
+    statement: "WITH recent_prices AS (SELECT symbol, close, week52_high FROM market.equity_eod WHERE trade_date = CURRENT_DATE) SELECT s.symbol, s.company_name, r.close, r.week52_high FROM scores.stage2_vcp_picks s JOIN recent_prices r ON s.symbol = r.symbol WHERE r.close >= r.week52_high * 0.95;"
+status: "validated"
+synthesis_guidance: "['Focus on stocks with compelling technical and fundamental profiles.', 'Ensure clear communication for TradingView export readiness.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "today"
+  - "debug_trace"
+title: "VCP Breakouts With Fundamentals Variant 0610"
+tool_plan_template:
+  steps:
+    - "Retrieve stocks from scores.stage2_vcp_picks with high vcp_score and enhanced_fund_score."
+    - "Cross-reference market.equity_eod for recent prices and volume."
+    - "Filter for stocks at new 52-week highs or recent VCP breakout signals."
+validation_rules:
+  - "Ensure all filters match the intended criteria for VCP breakouts with strong fundamentals."
+  - "Verify that SQL selects are read-only and do not cause mutations."
+  - "Confirm adherence to TradingView export standards and debug trace format."
+version: 1

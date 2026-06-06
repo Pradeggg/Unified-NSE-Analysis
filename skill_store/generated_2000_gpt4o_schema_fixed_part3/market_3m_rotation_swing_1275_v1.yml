@@ -1,0 +1,65 @@
+id: "market_3m_rotation_swing_1275_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1275"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: pre market; response style: ranked candidates."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze 3M market data using pre-market risk-first review to identify swing candidates with stage 2 leadership."
+sql_templates:
+  -
+    name: "index_performance"
+    description: "Calculate index performance over the last 3 months."
+    sql: "SELECT index_symbol, AVG(change_pct) AS avg_return FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol;"
+  -
+    name: "stage_distribution"
+    description: "Analyze stage distribution changes in the last 3 months."
+    sql: "SELECT stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY stage;"
+  -
+    name: "leading_sectors"
+    description: "Identify leading sectors with Stage 2 stocks."
+    sql: "SELECT sector, COUNT(*) AS count FROM scores.stage_snapshots WHERE stage = 'STAGE_2' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY count DESC LIMIT 5;"
+  -
+    name: "swing_candidates"
+    description: "Identify top swing candidates based on VCP picks."
+    sql: "SELECT symbol, company_name FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC, rank ASC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+synthesis_guidance: "Focus on presenting clear, ranked data insights about market regime and sector leadership. Highlight swing candidates and associated risks for a pre-market review."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_return is not approved"

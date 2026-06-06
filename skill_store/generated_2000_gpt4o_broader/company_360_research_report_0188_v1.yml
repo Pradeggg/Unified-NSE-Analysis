@@ -1,0 +1,80 @@
+id: "company_360_research_report_0188_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0188"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: position-sizing context; timeframe: intraday context; response style: narrative plus evidence."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "position-sizing context for intraday context: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as narrative plus evidence"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  required_function: "run(context)"
+  language: "python"
+  mode: "read_only"
+  inputs:
+
+  outputs:
+
+  approved_tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+  code: ""
+sql_templates:
+  -
+    name: "CompanyOverview"
+    template: "SELECT company_name, sector, market_cap_cat, price, live_price FROM scores.stage_snapshots WHERE symbol = '{{symbol}}' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots WHERE symbol = '{{symbol}}');"
+  -
+    name: "FinancialTrends"
+    template: "WITH AnnualRevenue AS (SELECT period_end, revenue FROM scores.annual_results WHERE symbol = '{{symbol}}' ORDER BY period_end DESC LIMIT 4) SELECT AVG(revenue) AS average_annual_revenue FROM AnnualRevenue;"
+  -
+    name: "TechnicalSetup"
+    template: "SELECT trade_date, close, volume FROM market.equity_eod WHERE symbol = '{{symbol}}' ORDER BY trade_date DESC LIMIT 20;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

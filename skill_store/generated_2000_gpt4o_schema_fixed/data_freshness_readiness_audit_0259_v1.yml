@@ -1,0 +1,86 @@
+id: "data_freshness_readiness_audit_0259_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0259"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: quarter to date; response style: ranked candidates."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for quarter to date: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as ranked candidates"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  constraints:
+    - "Status must be generated."
+    - "SQL templates, if any, must be read-only SELECT/WITH templates."
+    - "Python evidence tools are allowed only when SQL would become complex; keep them read-only and quarantined."
+    - "Use only these approved tables and columns; do not invent tables, aliases, or columns."
+    - "Use approved_schema._join_rules for joins; do not invent join conditions."
+    - "Use approved_schema._global_rules for latest-date filters, stage labels, and PostgreSQL date syntax."
+    - "Use column_details for data types, value examples, and semantic meaning before writing SQL."
+    - "If a required concept is missing from the approved schema, place it in evidence_gaps instead of inventing SQL."
+    - "Use evidence_required.tables exactly; do not use primary_tables or required_tables."
+  python_tool_policy:
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    required_fields:
+      - "id"
+      - "language"
+      - "mode"
+      - "inputs"
+      - "outputs"
+      - "approved_tables"
+      - "code"
+sql_templates:
+  -
+    template: "WITH latest_index AS (SELECT MAX(trade_date) AS latest_date FROM market.index_eod) SELECT * FROM market.index_eod WHERE trade_date = (SELECT latest_date FROM latest_index) LIMIT 10;"
+    description: "Fetch the latest index data for validation."
+  -
+    template: "SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND series = 'EQ' LIMIT 10;"
+    description: "Fetch latest equity data for the series EQ."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Verify all columns in SQL templates are from approved schema."
+  - "Ensure the latest date filters adhere to global_sql_rules."
+synthesis_guidance: "['Frame the results within an Indian market context.', 'Provide ranked candidate actions based on data freshness readiness.', 'Identify critical missing data that affects readiness.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:50"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

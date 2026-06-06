@@ -1,0 +1,78 @@
+id: "company_360_research_report_0174_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0174"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: watchlist creation; timeframe: pre market; response style: narrative plus evidence."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "watchlist creation for pre market: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as narrative plus evidence"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "watchlist_creation"
+  - "pre_market"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  status: "generated"
+  steps:
+    - "Fetch point-in-time technical and fundamental scores."
+    - "Extract recent quarterly and annual results."
+    - "Analyze balance sheet and cash flow statements."
+    - "Review recent price movements and volumes."
+sql_templates:
+  -
+    status: "generated"
+    template: "SELECT snapshot_date, symbol, company_name, market_cap_cat, price, change_1d_pct, stage_score FROM scores.stage_snapshots WHERE symbol = 'RELIANCE';"
+  -
+    status: "generated"
+    template: "SELECT period_label, revenue, expenses, operating_profit, eps FROM scores.quarterly_results WHERE symbol = 'RELIANCE';"
+  -
+    status: "generated"
+    template: "SELECT period_label, revenue, expenses, operating_profit, eps, dividend_payout_pct FROM scores.annual_results WHERE symbol = 'RELIANCE';"
+  -
+    status: "generated"
+    template: "SELECT period_label, equity_capital, reserves, borrowings, total_liabilities, total_assets FROM scores.balance_sheet WHERE symbol = 'RELIANCE';"
+  -
+    status: "generated"
+    template: "SELECT period_label, operating_cf, investing_cf, financing_cf FROM scores.cash_flow WHERE symbol = 'RELIANCE';"
+  -
+    status: "generated"
+    template: "SELECT trade_date, close, volume, week52_high, week52_low FROM market.equity_eod WHERE symbol = 'RELIANCE' ORDER BY trade_date DESC LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "field_presence"
+  - "consistency_checks"
+synthesis_guidance: "{'overview': 'Summarize key findings with a focus on developing a comprehensive narrative for watchlist creation.', 'technical_analysis': 'Highlight technical indicators like stage and price trends.', 'financial_summary': 'Discuss quarterly and annual results emphasizing revenue and EPS growth.', 'risk_assessment': 'Identify key risks using results analysis data.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,51 @@
+id: "agent_route_failure_diagnostics_0546_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0546"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: last 3 months; response style: research-only summary."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for last 3 months: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as research-only summary"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "last_3_months"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze failures by locating corresponding timestamps and stock data that demonstrate errors."
+sql_templates:
+  -
+    name: "fetch_recent_failures"
+    template: "SELECT run_id, run_ts, notes FROM report.enhanced_runs WHERE run_ts >= DATE_SUB(CURRENT_DATE(), INTERVAL 3 MONTH)"
+  -
+    name: "fetch_symbol_resolution_issues"
+    template: "WITH recent_runs AS (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= DATE_SUB(CURRENT_DATE(), INTERVAL 3 MONTH)) SELECT S.symbol, S.rsi, S.weekly_signal FROM report.enhanced_filtered_stocks S JOIN recent_runs R ON S.run_id = R.run_id WHERE S.weekly_signal IS NULL OR S.rsi IS NULL"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all SQL queries are read-only and within the last 3 months timeframe."
+  - "Verify completeness of evidence based on SQL results."
+synthesis_guidance: "['Aggregate SQL results to identify common failure patterns.', 'Summarize data indicating missing tools or symbol resolution errors.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:48:20"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.date_sub is not approved"
+  - "report.enhanced_runs.month is not approved"

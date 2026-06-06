@@ -1,0 +1,62 @@
+id: "quarterly_results_quality_review_1363_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1363"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: daily refresh follow-up; timeframe: post results; response style: exceptions and gaps first."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "daily refresh follow-up for post results: latest quarterly results analysis"
+  - "which companies had strong quarterly results as exceptions and gaps first"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Plan and validate the inputs and logic carefully before running database queries."
+sql_templates:
+  -
+    name: "latest_quarterly_results"
+    query: "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.period_end, qr.revenue, qr.pat, qr.opm_pct FROM scores.quarterly_results qr WHERE qr.period_type = 'quarter' ORDER BY qr.symbol, qr.period_end DESC NULLS LAST, qr.fetched_at DESC;"
+  -
+    name: "results_analysis_comparison"
+    query: "SELECT ra.symbol, ra.growth_yoy_revenue_pct, ra.growth_yoy_pat_pct, ra.opm_delta_pp, ra.verdict FROM scores.results_analysis ra JOIN scores.quarterly_results qr ON ra.symbol = qr.symbol AND ra.period_end = qr.period_end WHERE ra.verdict IN ('beat', 'miss') ORDER BY ra.symbol, ra.period_end DESC NULLS LAST, ra.updated_at DESC;"
+  -
+    name: "stage_snapshot_context"
+    query: "SELECT DISTINCT ON (ss.symbol) ss.symbol, ss.stage, ss.trading_signal FROM scores.stage_snapshots ss WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY ss.symbol, ss.snapshot_date DESC;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Check that periods match in joined tables"
+  - "Ensure snapshots are the latest"
+  - "Verify that the verdicts are categorized correctly"
+synthesis_guidance: "Prioritize exceptions and gaps in results first. Summarize key drivers behind earnings and margin movements, focusing on recent performance."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.quarterly_results.qr is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "scores.quarterly_results.qr is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,62 @@
+id: "data_freshness_readiness_audit_1295_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1295"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: risk-first review; timeframe: weekly review; response style: ranked candidates."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "risk-first review for weekly review: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as ranked candidates"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "risk-first_review"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    description: "Determine freshness thresholds and identify missing data for Agent Adda daily snapshots. Return ranked audit items."
+sql_templates:
+  - "SELECT symbol, MAX(trade_date) as latest_trade_date FROM market.equity_eod GROUP BY symbol HAVING MAX(trade_date) < CURRENT_DATE - INTERVAL '7 days';"
+  - "SELECT index_symbol, MAX(trade_date) as latest_index_date FROM market.index_eod GROUP BY index_symbol HAVING MAX(trade_date) < CURRENT_DATE - INTERVAL '7 days';"
+  - "SELECT * FROM scores.stage_snapshots WHERE snapshot_date < CURRENT_DATE - INTERVAL '7 days';"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure that all SQL queries use the appropriate latest_date_column for freshness checks."
+  - "Enforce a 7-day freshness threshold for all primary evidence tables."
+  - "Rank missing data sources based on impact on workflows."
+synthesis_guidance: "Synthesize data freshness readiness insights, focusing on risk-first review parameters."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:57"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_trade_date is not approved"
+  - "market.index_eod.latest_index_date is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "market.equity_eod.latest_trade_date is not approved"
+    - "market.index_eod.latest_index_date is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

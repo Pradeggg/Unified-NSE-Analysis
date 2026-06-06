@@ -1,0 +1,62 @@
+id: "portfolio_incremental_add_trim_0367_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0367"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: post results; response style: exceptions and gaps first."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for post results: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Review current holdings alongside stage and sector data to identify potential add/trim actions."
+sql_templates:
+  -
+    description: "Gather stage and sector scores while matching current holdings."
+    template: "SELECT h.symbol, h.qty, h.avg_cost, s.sector, s.stage, s.stage_score FROM portfolio.holdings AS h JOIN scores.stage_snapshots AS s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots WHERE symbol = h.symbol);"
+python_tools:
+  -
+    id: "python_tool_01"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "processed_data"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    # Example read-only operation\n    return processed_data"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "status"
+synthesis_guidance: "Identify discrepancies and incomplete areas first before suggesting actions."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:22"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python_tool_01: execution failed: NameError: name 'processed_data' is not defined"
+review:
+  status: "needs_heal"
+  findings:
+    - "python_tool_01: execution failed: NameError: name 'processed_data' is not defined"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

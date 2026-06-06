@@ -1,0 +1,54 @@
+id: "portfolio_lab_paper_trading_review_1020_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1020"
+description: "Review paper trading strategies separately from real holdings for latest EOD: focus on TradingView exports with concise data presentation."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "TradingView export for latest EOD: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as concise table"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Get the latest EOD paper trading performance and context."
+    query: "SELECT s.symbol, s.date_issued, s.signal, s.entry_low, s.entry_high, s.stop_loss, s.target_1, s.target_2, m.close, m.trade_date FROM signals.signal_log AS s JOIN market.equity_eod AS m ON s.symbol = m.symbol WHERE m.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND s.date_issued = (SELECT MAX(date_issued) FROM signals.signal_log)"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure the data correctly reflects latest EOD findings."
+  - "Cross-check the signal and market data alignment by date."
+synthesis_guidance: "['Focus on separating paper trades from actual holdings for clarity.', 'Use concise tables to enhance readability of results.', 'Ensure mappings and alignments are accurate in terms of dates and entries.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:16"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,76 @@
+id: "corporate_events_results_watchlist_1899_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1899"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as action watchlist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  sql_templates:
+    -
+      query: "WITH upcoming_events AS (SELECT symbol, event_type, event_date, detail FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY event_date), results_info AS (SELECT symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct, verdict, source_trail FROM scores.results_analysis WHERE period_end >= CURRENT_DATE - INTERVAL '7 days'), weekly_performance AS (SELECT symbol, change_1w_pct, stage, trend_signal FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE) SELECT ue.symbol, ue.event_type, ue.event_date, ri.growth_yoy_revenue_pct, ri.growth_qoq_revenue_pct, ri.verdict, wp.change_1w_pct, wp.stage, wp.trend_signal, ri.source_trail FROM upcoming_events ue LEFT JOIN results_info ri ON ue.symbol = ri.symbol LEFT JOIN weekly_performance wp ON ue.symbol = wp.symbol;"
+      read_only: true
+  evidence_required:
+    python_tools:
+      -
+        id: "run_context_analysis"
+        language: "python"
+        mode: "read_only"
+        inputs:
+          - "symbol"
+          - "event_type"
+          - "event_date"
+          - "growth_yoy_revenue_pct"
+          - "growth_qoq_revenue_pct"
+          - "verdict"
+          - "change_1w_pct"
+          - "stage"
+          - "trend_signal"
+        outputs:
+          - "symbol_watchlist"
+          - "result_context"
+          - "action_bucket"
+        approved_tables:
+
+        code: "def run(context):\n    # Analyzes the context to determine watchlist actions\n    symbols = [entry['symbol'] for entry in context if entry['change_1w_pct'] > 0]\n    result_context = [{'symbol': entry['symbol'], 'verdict': entry['verdict']} for entry in context]\n    action_bucket = [{'symbol': entry['symbol'], 'action': 'watch' if entry['change_1w_pct'] > 0 else 'review'} for entry in context]\n    return {\n        'symbol_watchlist': symbols,\n        'result_context': result_context,\n        'action_bucket': action_bucket\n    }"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure SQL statements are read-only."
+  - "Validate source-trail integrity with evidence tables."
+synthesis_guidance: "['Focus on Indian markets.', 'Prioritize recent events and strong changes.', 'Ensure the action watchlist reflects weekly trends.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:11"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,55 @@
+id: "portfolio_incremental_add_trim_1599_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1599"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as research-only summary"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  allowed_tools:
+    - "SQL"
+    - "Python (read_only)"
+sql_templates:
+  sector_exposure: "SELECT sector, SUM(qty) as total_qty FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE GROUP BY sector;"
+  add_candidates: "SELECT symbol, company_name, market_cap_cat, stage_score, trend_signal FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE AND trend_signal = 'positive' AND stage_score > 80;"
+  trim_candidates: "SELECT symbol, company_name, market_cap_cat, stage_score, trend_signal FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE AND trend_signal = 'negative' AND stage_score < 50;"
+  risk_flags: "SELECT symbol, company_name, stage, rsi FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE AND rsi > 70 OR rsi < 30;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure SQL templates adhere to SELECT/WITH read-only constraints"
+  - "Validate that all queries are correctly utilizing approved tables and columns"
+  - "Check for correctness in calculation and logic for add/trim candidates"
+synthesis_guidance: "Prepare a summary on incremental add/trim decisions based on current portfolio exposure, stage analysis, and trend signals."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:15"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

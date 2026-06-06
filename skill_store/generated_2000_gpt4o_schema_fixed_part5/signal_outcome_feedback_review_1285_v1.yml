@@ -1,0 +1,78 @@
+id: "signal_outcome_feedback_review_1285_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1285"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for intraday context: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as ranked candidates"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    step: "Extract relevant signals"
+    description: "Identify signals that have been resolved, focusing on whether they hit targets or stops."
+  -
+    step: "Candidate ranking"
+    description: "Rank strategies based on performance and outcome to determine strongest patterns."
+sql_templates:
+  rank_signals:
+    description: "Rank signals by performance."
+    template: "SELECT signal_log.symbol, signal_log.signal, signal_log.date_issued, signal_log.hit_target, signal_log.hit_stop, signal_log.return_pct FROM signals.signal_log WHERE signal_log.date_resolved IS NOT NULL ORDER BY signal_log.return_pct DESC LIMIT 10;"
+  signal_outcomes:
+    description: "Summarize signal outcomes."
+    template: "SELECT COUNT(*) AS total_signals, SUM(CASE WHEN hit_target THEN 1 ELSE 0 END) AS targets_hit, SUM(CASE WHEN hit_stop THEN 1 ELSE 0 END) AS stops_hit FROM signals.signal_log WHERE date_resolved IS NOT NULL;"
+python_tools:
+  -
+    id: "calculate_performance_metrics"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signals_data"
+    outputs:
+      - "performance_summary"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context):\n    signals = context['signals_data']\n    performance_summary = {\n        'total_signals': len(signals),\n        'targets_hit': sum(s['hit_target'] for s in signals),\n        'stops_hit': sum(s['hit_stop'] for s in signals)\n    }\n    return performance_summary"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "{'outcome_summary': 'Must summarize signal performance in terms of targets and stops hit.', 'winner_patterns': 'Identify top-performing signal parameters.', 'failure_patterns': 'Identify common patterns in failed signals.', 'route_improvements': 'Outline actionable insights for future signals.', 'next_checks': 'Suggest areas for further research and validation.'}"
+synthesis_guidance: "Focus on actionable insights for improving future signal selections, emphasizing risk mitigation."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:15"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_performance_metrics: execution failed: process exited 1"
+  - "signals.signal_log.stops_hit is not approved"
+  - "signals.signal_log.targets_hit is not approved"
+  - "signals.signal_log.total_signals is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_performance_metrics: execution failed: process exited 1"
+    - "signals.signal_log.stops_hit is not approved"
+    - "signals.signal_log.targets_hit is not approved"
+    - "signals.signal_log.total_signals is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

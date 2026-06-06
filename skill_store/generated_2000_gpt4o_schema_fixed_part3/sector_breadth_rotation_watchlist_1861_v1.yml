@@ -1,0 +1,53 @@
+id: "sector_breadth_rotation_watchlist_1861_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1861"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for post results: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as action watchlist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Combine sector breadth and stage analysis to identify top-performing sectors and stocks."
+sql_templates:
+  -
+    template_name: "sector_breadth_analysis"
+    sql: "WITH latest_breadth AS (SELECT sector, pct_above_50dma FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)),\nlatest_stage AS (SELECT sector, COUNT(*) AS stage2_count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector)\nSELECT lb.sector, lb.pct_above_50dma, ls.stage2_count FROM latest_breadth lb JOIN latest_stage ls ON lb.sector = ls.sector ORDER BY ls.stage2_count DESC, lb.pct_above_50dma DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure SQL syntax is PostgreSQL-compliant."
+  - "Limit result sets to enhance performance."
+synthesis_guidance: "['Focus on sectors with high participation in Stage 2.', 'Prioritize stocks with strong breadth signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:37"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:46:20"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: latest EOD; response style: portfolio-aware output."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0416_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for latest EOD: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    sql: "SELECT * FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)"
+    template_name: "Fetch Latest EOD Report Metadata"
+  -
+    sql: "SELECT * FROM report.enhanced_filtered_stocks WHERE run_id = (SELECT run_id FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 1)"
+    template_name: "Fetch EOD Filtered Stocks"
+status: "validated"
+synthesis_guidance: "Cross-verify SQL outputs with the tags and input patterns to ensure validity of report links and completeness of data. Highlight any discrepancies found during the freshness audit."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "latest_EOD"
+  - "portfolio-aware_output"
+title: "Enhanced Report Data Validation Variant 0416"
+tool_plan_template: "Use the available data tables to perform a freshness audit on the latest End of Day reports. The output should be portfolio-aware and focus on validation of report links and data completeness."
+validation_rules:
+  - "Ensure all report links are functional."
+  - "Verify the presence of data in stock HTML files."
+  - "Assess freshness by checking the latest run timestamp."
+  - "Review completeness of the portfolio-aware output."
+version: 1

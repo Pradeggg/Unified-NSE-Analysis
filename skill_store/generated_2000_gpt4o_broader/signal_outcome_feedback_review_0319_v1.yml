@@ -1,0 +1,78 @@
+id: "signal_outcome_feedback_review_0319_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0319"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: latest EOD; response style: exceptions and gaps first."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for latest EOD: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as exceptions and gaps first"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  overview: "Analyze prior signal performance and identify patterns of success and failure in the Indian market."
+  steps:
+    - "Validate data consistency across signal logs and market data."
+    - "Identify signals that hit targets or stop loss and classify them."
+    - "Analyze technical and investment score patterns."
+    - "Highlight exceptions and gaps in data or performance."
+sql_templates:
+  -
+    name: "Review_Signal_Outcomes"
+    description: "Fetch signals that hit target or stop loss."
+    sql: "SELECT id, date_issued, symbol, signal, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_resolved IS NOT NULL;"
+  -
+    name: "Analyze_Market_Conditions"
+    description: "Analyze the market conditions for resolved signals."
+    sql: "SELECT s.symbol, s.sector, s.investment_score, s.technical_score, m.close, m.trade_date FROM signals.signal_log s JOIN market.equity_eod m ON s.symbol = m.symbol WHERE s.date_resolved = m.trade_date;"
+python_tools:
+  -
+    id: "analyze_signal_patterns"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signal_outcomes"
+      - "market_data"
+    outputs:
+      - "patterns_analysis"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Analyze patterns within the signal outcomes\n    outcomes = context['signal_outcomes']\n    market_data = context['market_data']\n    patterns = {'success': [], 'failures': []}\n    for outcome in outcomes:\n        if outcome['hit_target']:\n            patterns['success'].append(outcome)\n        elif outcome['hit_stop']:\n            patterns['failures'].append(outcome)\n    return {'patterns_analysis': patterns}"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure data alignment between signals and market data."
+  - "Identify gaps where data is unavailable or inconsistent."
+synthesis_guidance: "Focus on identifying actionable insights and improvements for skill store based on previous signal outcomes."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:59"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analyze_signal_patterns: execution failed: KeyError: 'signal_outcomes'"
+review:
+  status: "needs_heal"
+  findings:
+    - "analyze_signal_patterns: execution failed: KeyError: 'signal_outcomes'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

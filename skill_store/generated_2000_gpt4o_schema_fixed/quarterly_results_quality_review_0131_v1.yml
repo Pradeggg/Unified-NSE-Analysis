@@ -1,0 +1,71 @@
+id: "quarterly_results_quality_review_0131_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0131"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: last 20 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for last 20 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as narrative plus evidence"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "last_20_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  steps:
+    - "Retrieve latest quarterly results for companies with significant revenue and PAT growth."
+    - "Assess margin movement and identify any significant trends related to operating profit margin."
+    - "Determine the filing freshness by checking recentness of report URLs."
+    - "Synthesize the narrative quality using key strengths, risks, and any analyst commentary."
+sql_templates:
+  -
+    title: "Latest Quarterly Results Retrieval"
+    description: "Selects the latest quarterly results with significant revenue and PAT growth."
+    template: "WITH latest_results AS (SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.period_label, qr.period_end, qr.revenue, qr.pat, ra.growth_yoy_revenue_pct, ra.growth_yoy_pat_pct FROM scores.quarterly_results qr JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end WHERE qr.period_type = 'quarter' AND qr.period_end >= CURRENT_DATE - INTERVAL '3 months' ORDER BY qr.symbol, qr.period_end DESC NULLS LAST, qr.fetched_at DESC) SELECT * FROM latest_results WHERE growth_yoy_revenue_pct > 0 AND growth_yoy_pat_pct > 0 LIMIT 100;"
+python_tools:
+  -
+    id: "synthetic_narrative_generation"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "financial_metrics"
+    outputs:
+      - "narrative_summaries"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+    code: "def run(context): pass # Placeholder for narrative generation logic"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure all selected rows align with the latest period as per '_global_rules'."
+  - "Verify revenue and PAT growth are positive."
+  - "Validate that all output fields are present in results."
+synthesis_guidance: "['Combine key financial metrics such as revenue growth, PAT growth, and OPM delta with narrative evidence.', 'Ensure narratives provide a quick and concise summary of company performance.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:11"
+generation_model: "gpt-4o"
+validation_errors:
+  - "synthetic_narrative_generation: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "synthetic_narrative_generation: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

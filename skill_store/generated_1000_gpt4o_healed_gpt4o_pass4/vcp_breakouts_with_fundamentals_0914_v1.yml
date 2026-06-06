@@ -1,0 +1,133 @@
+created_at: "2026-06-06T12:52:42"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: latest EOD; response style: comparison matrix."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0914_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage2_vcp_picks"
+    code: "# Placeholder for Python read-only logic to compile comparison matrix based on latest EOD and VCP picks.\n\ndef run(context):\n    latest_eod_data = context['market.equity_eod']\n    vcp_picks = context['scores.stage2_vcp_picks']\n    # Sample logic for processing\n    comparison_matrix = []\n    for pick in vcp_picks:\n        symbol_data = next((item for item in latest_eod_data if item['symbol'] == pick['symbol']), None)\n        if symbol_data:\n            entry = {\n                'symbol': pick['symbol'],\n                'price': symbol_data['close'],\n                'vcp_score': pick['vcp_score'],\n                'fund_score': pick['enhanced_fund_score']\n            }\n            comparison_matrix.append(entry)\n    return comparison_matrix"
+    inputs:
+      - "market.equity_eod"
+      - "scores.stage2_vcp_picks"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "comparison_matrix"
+    required_function: "run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: execution failed: KeyError: 'market.equity_eod'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    description: "Identify stocks that are recent VCP breakout candidates with strong fundamentals, latest EOD."
+    template: "WITH vcp_candidates AS (SELECT symbol, price, sector, vcp_score FROM scores.stage2_vcp_picks WHERE vcp_breakout_pct > 0 ORDER BY vcp_score DESC) SELECT e.symbol, e.high, e.low, e.close, s.enhanced_fund_score FROM market.equity_eod e JOIN vcp_candidates s ON e.symbol = s.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND e.close > e.prev_close"
+status: "test_failed"
+synthesis_guidance: "Compile this data into a comparison matrix for easy decision-making."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "comparison_matrix"
+title: "VCP Breakouts With Fundamentals Variant 0914"
+tool_plan_template: "use VCP breakout and fundamental analysis to identify quality stocks for the watchlist."
+validation_errors:
+  - "<missing-id>: execution failed: KeyError: 'market.equity_eod'"
+validation_rules:
+  - "Ensure all selected stocks have valid enhanced_fund_score."
+  - "Check VCP breakout percentage is above zero."
+version: 1
+card:
+  created_at: "2026-06-06T12:52:42"
+  created_by: "llm_generated"
+  description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: latest EOD; response style: comparison matrix."
+  domain: "screening"
+  evidence_required:
+    tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "vcp_breakouts_with_fundamentals_0914_v1"
+  input_patterns:
+    - "stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "VCP breakout stocks for TradingView"
+    - "quality breakouts with strong fundamentals"
+    - "watchlist creation for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "quality breakouts with strong fundamentals as comparison matrix"
+  output_contract:
+    - "filters"
+    - "candidates"
+    - "tradingview_symbols"
+    - "evidence"
+    - "risks"
+  python_tools:
+    -
+      approved_tables:
+        - "market.equity_eod"
+        - "scores.stage2_vcp_picks"
+      code: "# Placeholder for Python read-only logic to compile comparison matrix based on latest EOD and VCP picks.\n\ndef run(context):\n    latest_eod_data = context['market.equity_eod']\n    vcp_picks = context['scores.stage2_vcp_picks']\n    # Sample logic for processing\n    comparison_matrix = []\n    for pick in vcp_picks:\n        symbol_data = next((item for item in latest_eod_data if item['symbol'] == pick['symbol']), None)\n        if symbol_data:\n            entry = {\n                'symbol': pick['symbol'],\n                'price': symbol_data['close'],\n                'vcp_score': pick['vcp_score'],\n                'fund_score': pick['enhanced_fund_score']\n            }\n            comparison_matrix.append(entry)\n    return comparison_matrix"
+      inputs:
+        - "market.equity_eod"
+        - "scores.stage2_vcp_picks"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "comparison_matrix"
+      required_function: "run(context)"
+  review:
+    attempts: 3
+    findings:
+      - "<missing-id>: execution failed: KeyError: 'market.equity_eod'"
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "needs_heal"
+  sql_templates:
+    -
+      description: "Identify stocks that are recent VCP breakout candidates with strong fundamentals, latest EOD."
+      template: "WITH vcp_candidates AS (SELECT symbol, price, sector, vcp_score FROM scores.stage2_vcp_picks WHERE vcp_breakout_pct > 0 ORDER BY vcp_score DESC) SELECT e.symbol, e.high, e.low, e.close, s.enhanced_fund_score FROM market.equity_eod e JOIN vcp_candidates s ON e.symbol = s.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND e.close > e.prev_close"
+  status: "generated"
+  synthesis_guidance: "Compile this data into a comparison matrix for easy decision-making."
+  tags:
+    - "vcp"
+    - "breakout"
+    - "new_high"
+    - "fundamentals"
+    - "tradingview"
+    - "watchlist_creation"
+    - "latest_EOD"
+    - "comparison_matrix"
+  title: "VCP Breakouts With Fundamentals Variant 0914"
+  tool_plan_template: "use VCP breakout and fundamental analysis to identify quality stocks for the watchlist."
+  validation_errors:
+    - "<missing-id>: execution failed: KeyError: 'market.equity_eod'"
+  validation_rules:
+    - "Ensure all selected stocks have valid enhanced_fund_score."
+    - "Check VCP breakout percentage is above zero."
+  version: 1

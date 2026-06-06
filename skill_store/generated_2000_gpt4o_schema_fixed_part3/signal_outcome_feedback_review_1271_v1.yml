@@ -1,0 +1,67 @@
+id: "signal_outcome_feedback_review_1271_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1271"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: quick scan; timeframe: pre market; response style: ranked candidates."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for pre market: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as ranked candidates"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze outcome feedback for signals issued and resolved within the last three months."
+sql_templates:
+  -
+    template_name: "latest_signal_outcomes"
+    template: "SELECT symbol, date_issued, date_resolved, price_at_issue, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months' AND date_resolved IS NOT NULL"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      symbols: "list of symbols"
+      date_range: "tuple of start_date, end_date"
+    outputs:
+      symbol_performance: "json"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context): return {'symbol_performance': 'mock_data'}"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all outcome summaries identify trends and significant patterns."
+  - "Ensure ranked candidates align with winner patterns."
+synthesis_guidance: "Use rank to prioritize high-return patterns over others."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:50"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run: inputs must be a list"
+  - "run: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "run: inputs must be a list"
+    - "run: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

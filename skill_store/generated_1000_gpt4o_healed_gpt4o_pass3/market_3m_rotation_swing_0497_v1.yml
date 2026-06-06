@@ -1,0 +1,163 @@
+created_at: "2026-06-06T12:48:36"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: weekly review; response style: portfolio-aware output."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0497_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for weekly review: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+
+    code: "def run(context):\n    # Placeholder for interpreting market rotation based on SQL results.\n    return {'analysis_results': {}}"
+    id: "interpret_market_rotation"
+    inputs:
+
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "analysis_results"
+review:
+  status: "needs_heal"
+  findings:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    name: "Index Performance"
+    template: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY trade_date DESC;"
+  -
+    name: "Sector Leadership"
+    template: "SELECT sector, AVG(rsi) as avg_rsi FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_rsi DESC;"
+  -
+    name: "Stage Distribution Change"
+    template: "SELECT stage, COUNT(symbol) as count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY stage;"
+status: "test_failed"
+synthesis_guidance: "Use evidence from SQL queries to assess leading sectors and potential swing candidates, tailoring the results towards a portfolio-aware output."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "portfolio-aware_output"
+title: "3M Market Rotation Swing Assessment Variant 0497"
+tool_plan_template: "SQL and optional Python evidence tools"
+validation_errors:
+  - "description is required"
+  - "domain is required"
+  - "evidence_required is required"
+  - "id is required"
+  - "input_patterns is required"
+  - "output_contract is required"
+  - "tags is required"
+  - "title is required"
+  - "validation_rules is required"
+  - "version is required"
+  - "version must be a positive integer"
+validation_rules:
+  - "Ensure all date calculations use a 3-month window from the current date."
+  - "Verify sector-relative comparison reflects average RSI order."
+version: 1
+card:
+  created_at: "2026-06-06T12:48:36"
+  created_by: "llm_generated"
+  description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: weekly review; response style: portfolio-aware output."
+  domain: "market_analysis"
+  evidence_required:
+    tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "market_3m_rotation_swing_0497_v1"
+  input_patterns:
+    - "last 3 months market analysis"
+    - "find swing candidates from recent sector rotation"
+    - "market regime and stage 2 leadership over 3 months"
+    - "sector-relative comparison for weekly review: last 3 months market analysis"
+    - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+  output_contract:
+    - "as_of_date"
+    - "index_returns"
+    - "stage_distribution_change"
+    - "leading_sectors"
+    - "primary_candidates"
+    - "risks"
+  python_tools:
+    -
+      approved_tables:
+
+      code: "def run(context):\n    # Placeholder for interpreting market rotation based on SQL results.\n    return {'analysis_results': {}}"
+      id: "interpret_market_rotation"
+      inputs:
+
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "analysis_results"
+  review:
+    attempts: 3
+    findings:
+
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "needs_heal"
+  sql_templates:
+    -
+      name: "Index Performance"
+      template: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY trade_date DESC;"
+    -
+      name: "Sector Leadership"
+      template: "SELECT sector, COUNT(symbol) as symbol_count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY symbol_count DESC;"
+    -
+      name: "Stage Distribution Change"
+      template: "SELECT stage, COUNT(symbol) as count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY stage;"
+  status: "generated"
+  synthesis_guidance: "Use evidence from SQL queries to assess leading sectors and potential swing candidates, tailoring the results towards a portfolio-aware output."
+  tags:
+    - "market_regime"
+    - "sector_rotation"
+    - "stage_analysis"
+    - "swing_trading"
+    - "sector-relative_comparison"
+    - "weekly_review"
+    - "portfolio-aware_output"
+  title: "3M Market Rotation Swing Assessment Variant 0497"
+  tool_plan_template: "SQL and optional Python evidence tools"
+  validation_errors:
+
+  validation_rules:
+    - "Ensure all date calculations use a 3-month window from the current date."
+    - "Verify sector-relative comparison reflects the correct order."
+  version: 1

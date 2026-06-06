@@ -1,0 +1,71 @@
+id: "fii_dii_regime_breadth_review_0456_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0456"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for quarter to date: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as portfolio-aware output"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Combine evidence from FII/DII flows, regime history, market breadth, and index EOD to provide a comprehensive analysis."
+sql_templates:
+  fii_dii_flows: "SELECT trade_date, fii_net_today, dii_net_today, fii_net_5d, dii_net_5d, flow_signal, fii_trend, dii_trend FROM signals.fii_dii_flows WHERE trade_date >= :start_date AND trade_date <= :end_date"
+  regime_history: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date >= :start_date AND trade_date <= :end_date"
+  market_breadth: "SELECT trade_date, advances, declines, adv_volume, dec_volume, net_ad, ad_signal, market_sentiment FROM breadth.market_daily WHERE trade_date >= :start_date AND trade_date <= :end_date"
+  index_eod: "SELECT trade_date, index_symbol, open, close, change_pct, volume, trend_signal FROM market.index_eod WHERE trade_date >= :start_date AND trade_date <= :end_date"
+python_tools:
+  -
+    id: "run_breadth_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "fii_dii_data"
+      - "regime_data"
+      - "breadth_data"
+      - "index_data"
+    outputs:
+      - "analysis_summary"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context):\n    # Example python code to process data\n    # This is a read-only operation\n    fii_trend = context['fii_dii_data']['fii_trend']\n    regime_confidence = context['regime_data']['confidence']\n    breadth_signal = context['breadth_data']['ad_signal']\n    index_trend = context['index_data']['trend_signal']\n    # Analyze and synthesize the inputs\n    summary = {\n        'regime': regime_confidence,\n        'flow_context': fii_trend,\n        'breadth_context': breadth_signal,\n        'index_confirmation': index_trend,\n        'risk_flags': 'Assessed based on integrated signals.'\n    }\n    return summary"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all SELECT queries are within the approved schema."
+  - "Verify that all dates are within the quarter-to-date timeframe."
+synthesis_guidance: "['Combine flow trends with regime confidence to assess overall market sentiment.', 'Integrate market breadth indicators to determine market direction strength.', 'Correlate index performance with institutional flows for confirmation.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_breadth_analysis: execution failed: KeyError: 'fii_dii_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_breadth_analysis: execution failed: KeyError: 'fii_dii_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

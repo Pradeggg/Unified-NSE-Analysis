@@ -1,0 +1,56 @@
+id: "corporate_events_results_watchlist_1367_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1367"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: post results; response style: exceptions and gaps first."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for post results: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as exceptions and gaps first"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Evaluate corporate events against recent results and current stages."
+sql_templates:
+  read_only:
+    -
+      description: "Fetch upcoming and recent corporate events."
+      sql: "SELECT symbol, event_type, event_date, detail FROM signals.corporate_events WHERE event_date >= CURRENT_DATE OR event_date >= CURRENT_DATE - INTERVAL '1 month' AND event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM') ORDER BY event_date ASC LIMIT 50;"
+    -
+      description: "Fetch latest results analysis and stage snapshot."
+      sql: "WITH latest_analysis AS (SELECT DISTINCT ON (symbol) symbol, verdict, updated_at FROM scores.results_analysis ORDER BY symbol, updated_at DESC), latest_stage AS (SELECT symbol, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT ce.symbol, ce.event_type, ra.verdict, ss.stage FROM signals.corporate_events ce JOIN latest_analysis ra ON ce.symbol = ra.symbol JOIN latest_stage ss ON ce.symbol = ss.symbol WHERE ce.event_date >= CURRENT_DATE ORDER BY ce.event_date ASC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure SQL is read-only."
+  - "Results must align with the specified output contract."
+  - "Adhere strictly to approved schema and tables."
+synthesis_guidance: "Focus on highlighting exceptions and gaps first in the post-results environment."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

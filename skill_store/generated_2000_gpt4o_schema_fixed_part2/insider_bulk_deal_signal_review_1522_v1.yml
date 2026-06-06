@@ -1,0 +1,70 @@
+id: "insider_bulk_deal_signal_review_1522_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1522"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: research-only summary."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for last 5 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as research-only summary"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tool_policy:
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    required_fields:
+      - "id"
+      - "language"
+      - "mode"
+      - "inputs"
+      - "outputs"
+      - "approved_tables"
+      - "code"
+sql_templates:
+  -
+    template_id: "insider_bulk_deal_info"
+    query: "WITH latest_stage_snapshots AS (SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT i.symbol, i.alert_date, i.entity AS insider_entity, b.deal_date, b.entity AS deal_entity, b.qty AS deal_qty, b.price AS deal_price, s.stage, s.trading_signal FROM signals.insider_alerts AS i JOIN signals.bulk_block_deals AS b ON i.symbol = b.symbol JOIN latest_stage_snapshots AS s ON i.symbol = s.symbol WHERE i.alert_date >= CURRENT_DATE - INTERVAL '5 days' AND b.deal_date >= CURRENT_DATE - INTERVAL '5 days' AND s.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure output includes deal_summary, insider_context, technical_confirmation, ranked_symbols, and risk_notes."
+  - "Validate SQL execution does not result in errors and respects approved_schema."
+synthesis_guidance: "['Focus on generating a research-only summary based on recent insider and bulk deal activities.', 'Highlight any technical confirmations or significant market positions by institutional or insider actions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

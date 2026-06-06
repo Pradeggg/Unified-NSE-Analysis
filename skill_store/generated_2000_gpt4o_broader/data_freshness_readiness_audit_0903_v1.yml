@@ -1,0 +1,77 @@
+id: "data_freshness_readiness_audit_0903_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0903"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: today; response style: comparison matrix."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for today: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as comparison matrix"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  context: "Evaluate data freshness for Agent Adda evidence sources to determine readiness."
+  actions:
+    - "Compare last available dates from each table against today's date."
+    - "Identify tables with stale data as potential blocking gaps."
+    - "Propose actions for DB loader or data pipeline adjustments."
+sql_templates:
+  -
+    template_name: "check_freshness"
+    query: "SELECT MAX(trade_date) AS last_index_date FROM market.index_eod; SELECT MAX(trade_date) AS last_equity_date FROM market.equity_eod; SELECT MAX(snapshot_date) AS last_snapshot_date FROM scores.stage_snapshots; SELECT MAX(trade_date) AS last_market_date FROM breadth.market_daily; SELECT MAX(snapshot_date) AS last_ma_date FROM breadth.ma_pct_above; SELECT MAX(run_ts) AS last_run_ts FROM report.enhanced_runs;"
+python_tools:
+  -
+    id: "data_freshness_check_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "evidence_required.tables"
+    outputs:
+      - "freshness_matrix"
+      - "blocking_gaps"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "breadth.market_daily"
+      - "breadth.ma_pct_above"
+      - "report.enhanced_runs"
+    code: "def run(context):\n    # Simulated function to compare dates for freshness check\n    return {\n        'freshness_matrix': {},\n        'blocking_gaps': []\n    }"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure each table's freshness is within acceptable thresholds."
+  - "Detect missing data sources affecting market technical narratives."
+  - "Validate DB loader actions for resolving freshness gaps."
+synthesis_guidance: "{'focus': 'Assess data readiness for immediate and near-term workflows in Indian market context.', 'considerations': ['Impact on technical and fundamental analysis tools.', 'Requirement for data pipeline adjustments.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:17"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,72 @@
+id: "data_freshness_readiness_audit_1911_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1911"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for latest EOD: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as comparison matrix"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    operation: "SELECT"
+    description: "Check latest trade dates for data freshness."
+    tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "breadth.market_daily"
+      - "breadth.ma_pct_above"
+    fields:
+      - "MAX(market.index_eod.trade_date) as latest_index_date"
+      - "MAX(market.equity_eod.trade_date) as latest_equity_date"
+      - "MAX(scores.stage_snapshots.snapshot_date) as latest_stage_date"
+      - "MAX(breadth.market_daily.trade_date) as latest_breadth_date"
+      - "MAX(breadth.ma_pct_above.snapshot_date) as latest_ma_date"
+    conditions:
+
+sql_templates:
+  freshness_check:
+    template: "WITH latest_dates AS (\n    SELECT \n        MAX(market.index_eod.trade_date) as latest_index_date,\n        MAX(market.equity_eod.trade_date) as latest_equity_date,\n        MAX(scores.stage_snapshots.snapshot_date) as latest_stage_date,\n        MAX(breadth.market_daily.trade_date) as latest_breadth_date,\n        MAX(breadth.ma_pct_above.snapshot_date) as latest_ma_date\n    FROM\n        market.index_eod,\n        market.equity_eod,\n        scores.stage_snapshots,\n        breadth.market_daily,\n        breadth.ma_pct_above\n)\nSELECT * FROM latest_dates;"
+    notes: "Retrieve the latest available dates for each dataset to assess data freshness."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Verify that the latest dates are within acceptable thresholds as defined by business rules."
+  - "Ensure completeness of data for EOD processing."
+synthesis_guidance: "['Summarize findings into the comparison matrix format.', 'Highlight any gaps or missing data sources.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:32"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,69 @@
+id: "portfolio_incremental_add_trim_0115_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0115"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: latest EOD; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for latest EOD: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "latest_EOD"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Construct a narrative combining risk-first analysis using the latest EOD data. Extract sector breakdown and highlight areas for potential incremental additions or trims based on current scores and holdings."
+sql_templates:
+  -
+    template_id: "latest_stage_snapshot"
+    sql: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    template_id: "current_holdings"
+    sql: "SELECT * FROM portfolio.holdings;"
+python_tools:
+  -
+    id: "evaluate_add_trim_candidates"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "latest_stage_snapshot"
+      - "current_holdings"
+    outputs:
+      - "add_candidates"
+      - "trim_candidates"
+      - "risk_flags"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    # Implement logic to evaluate add/trim candidates\n    snapshots = context['latest_stage_snapshot']\n    holdings = context['current_holdings']\n    # Process data to identify candidates using risk-first evaluation\n    add_candidates = []\n    trim_candidates = []\n    risk_flags = []\n    # Logic here\n    return {\n        'add_candidates': add_candidates,\n        'trim_candidates': trim_candidates,\n        'risk_flags': risk_flags\n    }"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure that all sectors are accurately represented in output."
+  - "Confirm that recommendations for add/trim are supported by EOD analysis."
+synthesis_guidance: "Combine the latest snapshot data with current holdings to evaluate stage scores and trends. Focus on identifying high-risk areas and suggesting appropriate add/trim actions."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:42:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "evaluate_add_trim_candidates: execution failed: KeyError: 'latest_stage_snapshot'"
+review:
+  status: "needs_heal"
+  findings:
+    - "evaluate_add_trim_candidates: execution failed: KeyError: 'latest_stage_snapshot'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

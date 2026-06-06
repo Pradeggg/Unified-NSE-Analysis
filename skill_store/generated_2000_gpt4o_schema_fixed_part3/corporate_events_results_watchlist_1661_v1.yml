@@ -1,0 +1,51 @@
+id: "corporate_events_results_watchlist_1661_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1661"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: post results; response style: debug trace."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for post results: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as debug trace"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "post_results"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Identify relevant events and results for stocks using approved schemas. Construct a watchlist with source-trail evidence."
+sql_templates:
+  -
+    template: "SELECT ce.symbol, ce.event_type, ce.event_date, ra.verdict, ss.stage\nFROM signals.corporate_events ce\nJOIN scores.results_analysis ra ON ce.symbol = ra.symbol\nJOIN scores.stage_snapshots ss ON ce.symbol = ss.symbol\nWHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nAND ra.verdict IN ('beat', 'miss')\nAND ce.event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM')\nORDER BY ce.event_date DESC\nLIMIT 10;"
+    description: "Retrieve recent corporate events and results-related stocks with significant verdicts."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event types and verdicts are accurately filtered."
+  - "Check latest snapshot date usage is correct."
+synthesis_guidance: "Use retrieved data to construct a detailed event-based watchlist for users, including significant results and corporate events."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

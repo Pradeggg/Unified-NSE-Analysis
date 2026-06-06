@@ -1,0 +1,52 @@
+id: "portfolio_lab_paper_trading_review_0726_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Agent Adda Portfolio Lab Review"
+description: "Assesses paper trading strategies within the Agent Adda framework without affecting real-holdings analysis. Focus: entry/exit coherence, stop-loss adherence, and overall exposure for the last 5 market sessions."
+input_patterns:
+  - "Separate tab for paper trading review methods"
+  - "Follow entries, exits, stop-loss, targets in strategy contexts"
+  - "Keep paper trading and real holdings distinct"
+  - "Review last 5 sessions in paper trading for proper audit"
+  - "Checklist for QA of paper trades"
+tags:
+  - "portfolio"
+  - "strategy_lab"
+  - "paper_trading"
+  - "freshness_audit"
+  - "QA"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+tool_plan_template: "Review strategies for paper trading over the last five sessions, focusing on entry/exit alignment and exposure. Use recent data and ensure distinct analysis from real holdings."
+sql_templates:
+  -
+    name: "latest_stage_data"
+    query: "SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+  -
+    name: "signal_outcome_review"
+    query: "SELECT symbol, date_issued, signal, price_at_issue, target_1, target_2, stop_loss, return_pct FROM signals.signal_log WHERE date_issued > (CURRENT_DATE - INTERVAL '5 days')"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure latest market stage data is up to date for the analysis."
+  - "Check that the signal outcome review covers all recent entries, exits, and declared stops."
+synthesis_guidance: "['Summarize paper trading strategy adjustments over recent sessions.', 'Ensure all stop-loss and target-based exits are matched with reported outcomes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:03"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

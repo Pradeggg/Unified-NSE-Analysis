@@ -1,0 +1,75 @@
+id: "report_link_data_validation_1684_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1684"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: intraday context; response style: debug trace."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for intraday context: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  name: "report_link_data_validation_1684"
+  steps:
+    -
+      action: "Identify the latest report runs for intraday context"
+      sql_template: "SELECT * FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '1 day' ORDER BY run_ts DESC LIMIT 5;"
+    -
+      action: "Verify filtered stock entries for these runs"
+      sql_template: "SELECT * FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '1 day') ORDER BY rank ASC;"
+sql_templates:
+  -
+    description: "Retrieve latest intraday enhanced report runs"
+    statement: "SELECT * FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '1 day' ORDER BY run_ts DESC LIMIT 5;"
+  -
+    description: "Retrieve filtered stock data for recent enhanced report runs"
+    statement: "SELECT * FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '1 day') ORDER BY rank ASC;"
+python_tools:
+  -
+    id: "run_report_validation"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_data"
+      - "stock_data"
+    outputs:
+      - "validation_result"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run_report_validation(run_data, stock_data):\n    validation_result = {}\n    # Implement validation logic here\n    return validation_result"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure retrieved run_ids have corresponding stock entries in enhanced_filtered_stocks."
+  - "Check stocks_filtered matches the count of entries in enhanced_filtered_stocks linked by run_id."
+synthesis_guidance: "['Synthesize findings into a report format highlighting issues with report links or missing data.', 'Provide clear remediation steps based on debug trace analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:00"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_report_validation: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_report_validation: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

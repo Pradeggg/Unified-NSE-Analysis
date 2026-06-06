@@ -1,0 +1,54 @@
+id: "sector_breadth_rotation_watchlist_1441_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1441"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for last 3 months: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as portfolio-aware output"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Create a plan using the provided input patterns to generate insights based on the latest available data."
+sql_templates:
+  sector_breadth_rotation: "WITH recent_sector_data AS (\n    SELECT \n        sd.sector, \n        sd.pct_above_50dma, \n        ma.stage2_pct\n    FROM breadth.sector_daily sd\n    JOIN breadth.ma_pct_above ma ON sd.snapshot_date = ma.snapshot_date\n    WHERE sd.snapshot_date >= CURRENT_DATE - INTERVAL '3 months'\n    ORDER BY sd.snapshot_date DESC\n),\nlatest_stage_data AS (\n    SELECT \n        s.symbol, \n        s.sector,\n        s.trading_signal,\n        s.stage\n    FROM scores.stage_snapshots s\n    WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) \n    AND s.stage = 'STAGE_2'\n    AND s.trading_signal IN ('BUY', 'STRONG_BUY')\n),\ncombined_data AS (\n    SELECT \n        recent_sector_data.sector,\n        AVG(recent_sector_data.pct_above_50dma) AS avg_pct_above_50dma,\n        AVG(recent_sector_data.stage2_pct) AS avg_stage2_pct\n    FROM recent_sector_data\n    GROUP BY recent_sector_data.sector\n)\nSELECT \n    cd.sector,\n    cd.avg_pct_above_50dma,\n    cd.avg_stage2_pct,\n    array_agg(lsd.symbol) as candidate_symbols\nFROM combined_data cd\nJOIN latest_stage_data lsd ON cd.sector = lsd.sector\nGROUP BY cd.sector, cd.avg_pct_above_50dma, cd.avg_stage2_pct\nORDER BY cd.avg_stage2_pct DESC\nLIMIT 5;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Focus on sector performance metrics that indicate potential for improvement. Provide a top-level overview for quick decision-making."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:14"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

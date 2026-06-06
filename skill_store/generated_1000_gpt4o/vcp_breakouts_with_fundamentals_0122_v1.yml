@@ -1,0 +1,67 @@
+id: "vcp_breakouts_with_fundamentals_0122_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0122"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters:
+    - "Identify stocks forming new highs or VCP patterns with strong fundamental support."
+    - "Select stocks with strong liquidity within the last 5 sessions."
+  candidates:
+    - "List of stock symbols matching VCP or breakout criteria with fundamental strength."
+  tradingview_symbols:
+    - "Formatted symbols for TradingView display."
+  evidence:
+    - "Detailed evidence from market data and scores tables to support findings."
+  risks:
+    - "Identify potential risks associated with breakout and VCP stocks."
+sql_templates:
+  fetch_candidates: "SELECT eod.symbol, eod.close, eod.volume, scores.fundamental_score, scores.vcp_score FROM market.equity_eod AS eod JOIN scores.stage2_vcp_picks AS scores ON eod.symbol = scores.symbol WHERE eod.trade_date > DATE_SUB(CURDATE(), INTERVAL 5 DAY) AND (scores.vcp_score > 70 OR eod.high = eod.week52_high) AND scores.fundamental_score > 80;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure evidence aligns with provided schema."
+  - "All SQL queries must be read-only."
+synthesis_guidance: "['Synthesize narrative using market data and fundamental scores.', 'Highlight both opportunities and risks for investors.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:42:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.fundamental_score is not approved"
+  - "scores.stage2_vcp_picks.stage2_vcp_picks is not approved"
+  - "unknown table eod.close"
+  - "unknown table eod.high"
+  - "unknown table eod.symbol"
+  - "unknown table eod.trade_date"
+  - "unknown table eod.volume"
+  - "unknown table eod.week52_high"
+  - "unknown table scores.fundamental_score"
+  - "unknown table scores.symbol"
+  - "unknown table scores.vcp_score"

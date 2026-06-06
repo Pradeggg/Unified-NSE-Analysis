@@ -1,0 +1,58 @@
+created_at: "2026-06-06T12:43:26"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: last 5 sessions; response style: ranked candidates."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0221_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for last 5 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Fetch market index performance over the last 5 trading sessions."
+    sql: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '5 days';"
+    template_id: "recent_market_performance"
+  -
+    description: "Identify top Stage 2 VCP candidates over the last 3 months."
+    sql: "SELECT symbol, company_name, sector, price, rsi, relative_strength FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY rank ASC LIMIT 10;"
+    template_id: "stage2_leaders"
+status: "validated"
+synthesis_guidance: "Synthesize insights by combining recent market indices returns with identified top sectors and stage 2 candidates to form a ranked list of swing opportunities in the Indian market over the past 3 months."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "last_5_sessions"
+  - "ranked_candidates"
+title: "3M Market Rotation Swing Assessment Variant 0221"
+tool_plan_template: "Plan the extraction of recent market regime and performance metrics to identify key sector movements and swing trading candidates. Then, use ranked output to present candidates."
+validation_rules:
+  - "Ensure data is from the last 5 trading days for index performance."
+  - "Top 10 Stage 2 candidates should be identified using rank."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

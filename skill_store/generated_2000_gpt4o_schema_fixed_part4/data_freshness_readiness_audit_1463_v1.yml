@@ -1,0 +1,62 @@
+id: "data_freshness_readiness_audit_1463_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1463"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for post results: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as portfolio-aware output"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    description: "Ensure all EOD and stage snapshot data are updated to the latest date as per Agent Adda's requirements."
+sql_templates:
+  -
+    description: "Check latest EOD data freshness for indices and equities."
+    template: "SELECT MAX(trade_date) as latest_trade_date FROM market.index_eod UNION SELECT MAX(trade_date) FROM market.equity_eod;"
+  -
+    description: "Verify the latest point-in-time stage snapshot data."
+    template: "SELECT MAX(snapshot_date) as latest_snapshot_date FROM scores.stage_snapshots;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure required evidence tables are accessed."
+  - "Maintain only read-only permissions for SQL operations."
+synthesis_guidance: "['Summarize data freshness in context of portfolio readiness.', 'Identify gaps in data or potential staleness issues, flagged under blocking_gaps and missing_sources.', 'List actionable insights in the loader_actions field.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:50"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.latest_snapshot_date is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "scores.stage_snapshots.latest_snapshot_date is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

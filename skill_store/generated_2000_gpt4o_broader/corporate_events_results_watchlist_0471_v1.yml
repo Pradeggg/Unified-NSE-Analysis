@@ -1,0 +1,54 @@
+id: "corporate_events_results_watchlist_0471_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0471"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: pre market; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for pre market: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "pre_market"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Use corporate events and results data to identify stocks with significant upcoming or recent activities that should be on a watchlist. Focus on events affecting portfolio strategies before market opening."
+sql_templates:
+  -
+    description: "Query upcoming corporate events and results"
+    query: "SELECT symbol, event_type, event_date, purpose_raw, detail FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY event_date"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+synthesis_guidance: "Concentrate efforts on the significance of events and results, maintaining a balance between technical and fundamental factors impacting the portfolio."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:41"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

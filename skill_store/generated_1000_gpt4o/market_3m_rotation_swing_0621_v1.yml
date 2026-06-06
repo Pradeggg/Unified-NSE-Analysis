@@ -1,0 +1,56 @@
+id: "market_3m_rotation_swing_0621_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0621"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: last 5 sessions; response style: debug trace."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for last 5 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "last_5_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  index_returns: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date > DATEADD(day, -5, CURRENT_DATE);"
+  stage_distribution_change: "SELECT snapshot_date, stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date > DATEADD(day, -90, CURRENT_DATE) GROUP BY snapshot_date, stage;"
+  leading_sectors: "SELECT sector, AVG(relative_strength) AS avg_relative_strength FROM scores.stage_snapshots WHERE snapshot_date > DATEADD(day, -90, CURRENT_DATE) GROUP BY sector ORDER BY avg_relative_strength DESC LIMIT 5;"
+  primary_candidates: "SELECT symbol, company_name FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND vcp_score > 75;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:50:13"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.dateadd is not approved"
+  - "market.index_eod.day is not approved"
+  - "scores.stage_snapshots.avg_relative_strength is not approved"
+  - "scores.stage_snapshots.dateadd is not approved"
+  - "scores.stage_snapshots.day is not approved"

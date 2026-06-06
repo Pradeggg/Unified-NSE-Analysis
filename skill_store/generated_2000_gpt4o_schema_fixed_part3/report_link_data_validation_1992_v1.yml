@@ -1,0 +1,68 @@
+id: "report_link_data_validation_1992_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1992"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: weekly review; response style: comparison matrix."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for weekly review: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Execute required queries within the approved_schema to validate report data, noting any broken links or missing data. Synthesize findings into a comparison matrix for deep institutional review."
+sql_templates:
+  -
+    query: "WITH latest_runs AS ( SELECT run_id, run_ts FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) ) SELECT ers.run_id, ers.stocks_filtered, efs.symbol, efs.recommendation FROM report.enhanced_runs ers JOIN report.enhanced_filtered_stocks efs ON ers.run_id = efs.run_id WHERE ers.run_id IN (SELECT run_id FROM latest_runs) AND (efs.recommendation IS NULL OR efs.symbol IS NULL);"
+    description: "Find missing symbols or recommendations in the latest enhanced filtered stocks."
+python_tools:
+  -
+    id: "run_data_verification"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      run_id: "Latest run ID from enhanced_runs"
+      stock_list: "Extracted stock symbols from enhanced_filtered_stocks"
+    outputs:
+      - "verified_stocks"
+      - "missing_reports"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "# Example Python tool for validation\nimport pandas as pd\n\ndef run(context):\n    report_data = pd.DataFrame(context['report.enhanced_runs'])\n    stock_data = pd.DataFrame(context['report.enhanced_filtered_stocks'])\n    verified_stocks = stock_data[stock_data['recommendation'].notnull()]\n    missing_reports = report_data[~report_data['run_id'].isin(stock_data['run_id'])]\n    return {\n        'verified_stocks': verified_stocks,\n        'missing_reports': missing_reports\n    }"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure enhanced report data integrity by validating run metadata and filtered stock rows."
+  - "Identify and document broken report links and missing underlying stock data."
+  - "Use approved join rules and global rules to maintain query integrity and consistency."
+synthesis_guidance: "Synthesize the data validation findings into a comparison matrix to support deep institutional reviews, ensuring all evidence is cross-verified with report metadata for accuracy."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:53"
+generation_model: "gpt-4o"
+validation_errors:
+  - "import pandas is not allowed"
+  - "run_data_verification: inputs must be a list"
+review:
+  status: "needs_heal"
+  findings:
+    - "import pandas is not allowed"
+    - "run_data_verification: inputs must be a list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

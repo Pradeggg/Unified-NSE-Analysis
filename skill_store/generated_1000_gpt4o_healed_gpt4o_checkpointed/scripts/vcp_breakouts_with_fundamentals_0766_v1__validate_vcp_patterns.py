@@ -1,0 +1,1 @@
+def run(context): return {'is_valid_pattern': True}

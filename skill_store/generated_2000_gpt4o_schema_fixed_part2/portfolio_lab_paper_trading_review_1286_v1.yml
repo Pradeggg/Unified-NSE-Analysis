@@ -1,0 +1,87 @@
+id: "portfolio_lab_paper_trading_review_1286_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1286"
+description: "Review paper trading strategies separately from real holdings, focusing on entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for intraday context: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as ranked candidates"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+  tool_plan_template:
+    -
+      task: "Paper Trading Review"
+      goal: "Separate paper trading strategies from real account holdings and evaluate entries, exits, and performance in intraday context."
+      steps:
+        - "Extract current holdings and their latest stage snapshots."
+        - "Analyze signal logs to identify paper trading entries and exits."
+        - "Review intraday equity data for trading activity verification."
+        - "Focus on freshness of data to ensure strategies reflect current trading conditions."
+        - "Rank strategies based on performance and adherence to specified targets and stop-loss rules."
+  sql_templates:
+    -
+      description: "Query to get the latest paper trading signals and their corresponding scores."
+      sql_query: "SELECT sl.symbol, sl.signal, sl.entry_low, sl.entry_high, sl.stop_loss, sl.target_1, sl.price_at_issue, ss.stage, ss.stage_score FROM signals.signal_log sl JOIN scores.stage_snapshots ss ON sl.symbol = ss.symbol WHERE sl.date_issued = (SELECT MAX(date_issued) FROM signals.signal_log) AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND sl.signal IN ('BUY', 'WATCH') LIMIT 10;"
+    -
+      description: "Query to get the latest equity EOD data."
+      sql_query: "SELECT e.symbol, e.close, e.change_pct FROM market.equity_eod e WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND e.symbol IN (SELECT symbol FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log)) LIMIT 10;"
+  output_contract:
+    - "strategy_state"
+    - "open_trades"
+    - "entry_exit_rules"
+    - "exposure"
+    - "exceptions"
+  validation_rules:
+    - "Ensure no real holdings are mixed in the review."
+    - "Validate that all strategies are audited for freshness using the latest available data."
+    - "Cross-check entries and exits against provided targets and stop-loss values."
+  synthesis_guidance:
+    - "Rank strategies based on their compliance with target and stop-loss rules."
+    - "Highlight any deviations affecting strategy effectiveness."
+    - "Include results in a format suitable for paper trading portfolio adjustment."
+  evidence_gaps:
+
+  status: "generated"
+tool_plan_template:
+
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

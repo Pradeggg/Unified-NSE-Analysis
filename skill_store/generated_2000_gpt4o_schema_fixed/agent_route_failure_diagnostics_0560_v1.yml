@@ -1,0 +1,71 @@
+id: "agent_route_failure_diagnostics_0560_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0560"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: quarter to date; response style: research-only summary."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for quarter to date: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as research-only summary"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  query_plan:
+    -
+      name: "Run Analysis"
+      description: "Analyze recent routes and diagnostics."
+sql_templates:
+  diagnostic_summary:
+    template: "WITH latest_runs AS (\n    SELECT run_id, run_ts, stocks_analyzed, market_sentiment \n    FROM report.enhanced_runs\n    WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months'\n),\nlatest_stocks AS (\n    SELECT symbol, score, recommendation\n    FROM report.enhanced_filtered_stocks \n    WHERE run_id IN (SELECT run_id FROM latest_runs)\n)\nSELECT lr.run_id, lr.stocks_analyzed, lr.market_sentiment, ls.symbol, ls.score, ls.recommendation\nFROM latest_runs lr\nJOIN latest_stocks ls ON lr.run_id = ls.run_id\nORDER BY lr.run_ts DESC\nLIMIT 50"
+    description: "Provides diagnostic summary for the latest quarter."
+python_tools:
+  -
+    id: "run_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id_list"
+    outputs:
+      - "diagnostic_report"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code:
+      - "def run(context):"
+      - "    # Simulated analysis function"
+      - "    return {'diagnostic_report': 'Sample Analysis Result'}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "column_restrictions"
+  - "join_restrictions"
+synthesis_guidance: "{'logical_consistency': ['Ensure timely updates and inclusion of the latest run data.', 'Prioritize comprehensiveness in diagnostic reporting.'], 'completeness': ['Cross-verify findings with similar diagnostics from previous quarters.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:25:18"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_analysis: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_analysis: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

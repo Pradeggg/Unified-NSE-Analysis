@@ -1,0 +1,89 @@
+id: "company_360_research_report_1280_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1280"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: TradingView export; timeframe: pre market; response style: ranked candidates."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "TradingView export for pre market: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as ranked candidates"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "TradingView_export"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Step 1: Fetch latest stage, technical, and fundamental scores"
+  - "Step 2: Compile latest quarterly and annual financial results"
+  - "Step 3: Analyze latest balance sheet and cash flow data"
+  - "Step 4: Derive narrative insights and thesis"
+sql_templates:
+  -
+    description: "Fetch latest company stage and technical scores"
+    sql: "SELECT symbol, company_name, sector, stage, stage_score, technical_score, trading_signal, relative_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol = $1 LIMIT 1;"
+  -
+    description: "Fetch latest quarterly results"
+    sql: "SELECT symbol, period_end, revenue, expenses, operating_profit, opm_pct, eps FROM scores.quarterly_results WHERE period_end = (SELECT MAX(period_end) FROM scores.quarterly_results WHERE symbol = $1) AND symbol = $1 LIMIT 1;"
+  -
+    description: "Fetch latest annual results"
+    sql: "SELECT symbol, period_end, revenue, eps, pat, dividend_payout_pct FROM scores.annual_results WHERE period_end = (SELECT MAX(period_end) FROM scores.annual_results WHERE symbol = $1) AND symbol = $1 LIMIT 1;"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      symbol: "NSE symbol input by user"
+    outputs:
+      symbol_stage_data: "Technical and stage scores"
+      quarterly_data: "Latest quarterly financials"
+      annual_data: "Latest annual financials"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "scores.quarterly_results"
+      - "scores.annual_results"
+      - "scores.balance_sheet"
+      - "scores.cash_flow"
+      - "scores.results_analysis"
+      - "market.equity_eod"
+    code: "def run(context): \n    # Fetch data as per SQL Templates\n    # Analyze and rank candidates\n    pass"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure fetched records match the provided NSE symbol"
+  - "Verify stage and financial data are from the latest periods"
+synthesis_guidance: "['Rank candidates based on technical scores and recent financial performance', 'Highlight any identified valuation gaps or risks']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:21"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

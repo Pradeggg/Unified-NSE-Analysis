@@ -1,0 +1,65 @@
+created_at: "2026-06-06T12:49:03"
+created_by: "llm_generated"
+description: "Analyze the broad market regime, sector leadership, stages, and liquid swing candidates for the last three months. Focus is on source-trail validation with a research-only summary."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0549_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as research-only summary"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 3
+  findings:
+    - "market.index_eod.total_return is not approved"
+    - "scores.stage_snapshots.avg_rsi is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    name: "index_returns"
+    query: "SELECT index_symbol, SUM(change_pct) AS total_return FROM market.index_eod WHERE trade_date >= '2023-07-01' GROUP BY index_symbol"
+  -
+    name: "stage_distribution_change"
+    query: "SELECT stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date >= '2023-07-01' GROUP BY stage"
+  -
+    name: "leading_sectors"
+    query: "SELECT sector, AVG(rsi) AS avg_rsi FROM scores.stage_snapshots WHERE snapshot_date >= '2023-07-01' GROUP BY sector ORDER BY avg_rsi DESC LIMIT 5"
+  -
+    name: "primary_candidates"
+    query: "SELECT symbol, company_name, sector FROM scores.stage2_vcp_picks WHERE snapshot_date >= '2023-07-01' AND vcp_score > 0.7"
+status: "test_failed"
+synthesis_guidance: "Summarize the findings into a coherent market analysis report."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "research-only_summary"
+title: "3M Market Rotation Swing Assessment Variant 0549"
+tool_plan_template: "Gather EOD and stage data to analyze market rotation trends and identify potential swing trading candidates."
+validation_errors:
+  - "market.index_eod.total_return is not approved"
+  - "scores.stage_snapshots.avg_rsi is not approved"
+validation_rules:
+  - "Ensure queries do not mutate the database."
+version: 1

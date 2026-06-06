@@ -1,0 +1,69 @@
+id: "agent_route_failure_diagnostics_1610_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1610"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: today; response style: debug trace."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for today: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as debug trace"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "today"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Plan evidence gathering using SQL and optional Python tools to diagnose route failures. Ensure non-intrusive, read-only operations."
+sql_templates:
+  -
+    description: "Gather latest run details and stock analysis scores."
+    template: "WITH latest_run AS (SELECT run_id, universe_size FROM report.enhanced_runs WHERE run_id = (SELECT MAX(run_id) FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs))), stock_scores AS (SELECT efs.symbol, efs.score FROM report.enhanced_filtered_stocks efs JOIN latest_run lr ON efs.run_id = lr.run_id WHERE efs.score > 0) SELECT lr.run_id, lr.universe_size, ss.symbol, ss.score FROM latest_run lr JOIN stock_scores ss ON lr.run_id = ss.run_id;"
+  -
+    description: "Filter stocks by stage for the most recent data."
+    template: "SELECT symbol, stage, stage_score, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY');"
+python_tools:
+  -
+    id: "debug_trace_generator"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+      - "symbol"
+    outputs:
+      - "debug_trace"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Simulate debug trace generation using input context\n    run_id = context['run_id']\n    symbol = context['symbol']\n    debug_trace = f'Debug trace for run {run_id} and symbol {symbol}'\n    return {'debug_trace': debug_trace}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure use of approved tables and columns only."
+  - "Verify SQL templates adhere to global and schema-specific SQL rules."
+  - "Validate tools are non-intrusive as per Python tool policy."
+synthesis_guidance: "['Ensure debug traces are clear and actionable.', 'Map route failures to specific evidence paths.', 'Identify any missing tools or configurations clearly.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "debug_trace_generator: execution failed: KeyError: 'run_id'"
+review:
+  status: "needs_heal"
+  findings:
+    - "debug_trace_generator: execution failed: KeyError: 'run_id'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

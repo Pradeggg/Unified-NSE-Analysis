@@ -1,0 +1,49 @@
+id: "fii_dii_regime_breadth_review_1688_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1688"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: intraday context; response style: debug trace."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for intraday context: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as debug trace"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "SELECT * FROM (SELECT fih.trade_date, fih.fii_net_today, fih.dii_net_today, fih.flow_signal, rh.regime, rh.confidence, md.advances, md.declines, i.index_symbol, i.close FROM signals.fii_dii_flows fih JOIN signals.regime_history rh ON fih.trade_date = rh.trade_date JOIN breadth.market_daily md ON fih.trade_date = md.trade_date JOIN market.index_eod i ON fih.trade_date = i.trade_date WHERE i.index_symbol = '{{index_symbol}}' AND fih.trade_date = (SELECT MAX(trade_date) FROM market.index_eod)) AS latest"
+sql_templates:
+  - "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history);"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure 'trade_date' is the latest entry from the tables"
+synthesis_guidance: "Integrate evidence from multiple data points to derive insights on market regime and institutional flow impacts on market breadth."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:57"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

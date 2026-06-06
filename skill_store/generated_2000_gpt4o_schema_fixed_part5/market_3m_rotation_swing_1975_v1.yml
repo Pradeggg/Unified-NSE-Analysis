@@ -1,0 +1,63 @@
+id: "market_3m_rotation_swing_1975_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1975"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: pre market; response style: comparison matrix."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "pre_market"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    sql_templates:
+      -
+        name: "latest_index_returns"
+        query: "SELECT index_symbol, change_pct FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+      -
+        name: "stage_distribution"
+        query: "SELECT sector, COUNT(*) AS stage_2_count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector;"
+      -
+        name: "leading_vcp_candidates"
+        query: "SELECT symbol, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 5;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

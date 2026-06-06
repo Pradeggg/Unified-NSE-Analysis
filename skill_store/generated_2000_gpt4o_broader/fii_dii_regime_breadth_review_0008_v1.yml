@@ -1,0 +1,65 @@
+id: "fii_dii_regime_breadth_review_0008_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0008"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: today; response style: concise table."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for today: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as concise table"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  id: "tool_plan_0008"
+  description: "Plan to extract and analyze FII/DII flows, market regime, breadth, and index data for risk context."
+sql_templates:
+  fii_dii_flow_summary:
+    query: "SELECT trade_date, fii_net_today, dii_net_today, flow_signal FROM signals.fii_dii_flows WHERE trade_date = CURRENT_DATE;"
+    description: "Selects net FII/DII flows and flow signal for today."
+  market_regime_summary:
+    query: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date = CURRENT_DATE;"
+    description: "Selects market regime and confidence for today."
+  breadth_summary:
+    query: "SELECT trade_date, advances, declines, ad_signal FROM breadth.market_daily WHERE trade_date = CURRENT_DATE;"
+    description: "Selects market breadth and AD signal for today."
+  index_confirmation_summary:
+    query: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date = CURRENT_DATE;"
+    description: "Selects index closing data and trend signal for today."
+python_tools:
+  - "run"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "consistency"
+  - "completeness"
+synthesis_guidance: "{'approach': 'Compare FII/DII flows with market regime and breadth to identify risk-on or risk-off status.', 'risk_evaluation': 'Examine trend signals and AD signals for alignment with institutional flows.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:12"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

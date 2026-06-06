@@ -1,0 +1,76 @@
+id: "fii_dii_regime_breadth_review_1450_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1451"
+description: "Synthesize FII/DII flow trends, market regime, breadth, and index evidence to evaluate market risk context over the last 3 months. Variant focus: Portfolio consideration."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for last 3 months: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as portfolio consideration"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "last_3_months"
+  - "portfolio-consideration"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  - "Gather data from the last 3 months leveraging approved schema."
+  - "Merge FII/DII flows with regime and breadth data for synthesis."
+  - "Apply filters as per evolving market conditions."
+  - "Focus on potential risk-on and risk-off indicators for portfolios."
+sql_templates:
+  -
+    template: "WITH recent_data AS (SELECT fii.trade_date, fii.flow_signal, reg.regime, br.ad_signal, idx.trend_signal FROM signals.fii_dii_flows AS fii JOIN signals.regime_history AS reg ON fii.trade_date = reg.trade_date JOIN breadth.market_daily AS br ON fii.trade_date = br.trade_date JOIN market.index_eod AS idx ON fii.trade_date = idx.trade_date WHERE fii.trade_date >= CURRENT_DATE - INTERVAL '3 months' AND idx.index_symbol = 'Nifty 50') SELECT * FROM recent_data;"
+    description: "Fetches the combined regime, flow, breadth, and index data for the last 3 months."
+python_tools:
+  -
+    id: "compute_market_trends"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "trade_date"
+      - "flow_signal"
+      - "regime"
+      - "ad_signal"
+      - "trend_signal"
+    outputs:
+      - "risk_categorization"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context):\\n    # Analyze interactions among trends\\n    risk_categorization = []\\n    for row in context:\\n        if row['regime'] == 'BULL' and row['flow_signal'] == 'STRONG_BUY':\\n            risk_categorization.append('Risk-On')\\n        else:\\n            risk_categorization.append('Risk-Off')\\n    return risk_categorization"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data spans full 3-month timeline."
+  - "Verify that all joins respect join rules from schema."
+  - "Each output field must have supporting evidence from input data."
+synthesis_guidance: "['Assess regime labels in context of flow signals for risk analysis.', 'Broadly compare breadth indicators such as advances/declines.', 'Align index movements with regime and flow indicators.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "compute_market_trends: python syntax error: unexpected character after line continuation character"
+review:
+  status: "needs_heal"
+  findings:
+    - "compute_market_trends: python syntax error: unexpected character after line continuation character"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

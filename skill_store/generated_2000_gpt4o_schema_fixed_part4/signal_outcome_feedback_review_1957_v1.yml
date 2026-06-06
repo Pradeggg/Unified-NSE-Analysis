@@ -1,0 +1,61 @@
+id: "signal_outcome_feedback_review_1957_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1957"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for quarter to date: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as comparison matrix"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+  freshness:
+    max_eod_age_days: 3
+tool_plan_template:
+  -
+    objective: "Analyze the performance of trading signals for comparison across sectors and timeframes."
+    steps:
+      - "Fetch signal outcomes over the quarter-to-date period."
+      - "Compare outcomes against sector performance metrics."
+      - "Identify patterns in successful and unsuccessful trades."
+sql_templates:
+  fetch_signal_outcomes: "SELECT s.symbol, s.sector, s.signal, s.hit_target, s.hit_stop, s.return_pct FROM signals.signal_log s WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months';"
+  sector_performance: "SELECT ss.sector, AVG(ss.change_1m_pct) AS avg_change_1m_pct FROM scores.stage_snapshots ss WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY ss.sector;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all signals are included for review."
+  - "Verify sector comparisons use correct date alignment."
+synthesis_guidance: "['Focus on which sectors had the highest success rates for signals.', 'Identify and describe patterns contributing to successful trades.', 'Highlight failed strategies and suggest potential improvements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.s is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "signals.signal_log.s is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

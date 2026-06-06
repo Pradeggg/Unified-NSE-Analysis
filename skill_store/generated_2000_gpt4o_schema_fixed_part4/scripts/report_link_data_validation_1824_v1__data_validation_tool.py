@@ -1,0 +1,1 @@
+['def run(context):', '    findings = []', '    # Logic for validation goes here', "    return {'findings': findings, 'broken_links': [], 'missing_data': []}"]

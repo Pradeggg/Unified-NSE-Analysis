@@ -1,0 +1,48 @@
+id: "portfolio_lab_paper_trading_review_1804_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Watchlist for Today - Variant 1804"
+description: "Generate a watchlist for today focusing on paper trading strategies. Review entries, exits, stop losses, and targets without mixing with real holdings."
+input_patterns:
+  - "watchlist creation for today"
+  - "generate today's paper trading watchlist"
+  - "action watchlist from paper trading strategies"
+tags:
+  - "portfolio"
+  - "watchlist"
+  - "paper_trading"
+  - "strategy"
+  - "entry_exit"
+  - "today"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Generate today's watchlist applying buy/sell strategies and technical indicators from signal logs and stage snapshots."
+sql_templates:
+  -
+    type: "watchlist_query"
+    query: "WITH latest_eod AS (SELECT symbol, close FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)), latest_stages AS (SELECT symbol, stage, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), strategic_signals AS (SELECT symbol, action_bucket, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log)) SELECT ss.symbol, ss.stage, ss.technical_score, sl.action_bucket, sl.entry_low, sl.entry_high, sl.stop_loss, sl.target_1, sl.target_2, le.close AS latest_price FROM strategic_signals sl JOIN latest_stages ss ON sl.symbol = ss.symbol JOIN latest_eod le ON sl.symbol = le.symbol WHERE ss.stage = 'STAGE_2' AND sl.action_bucket IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exceptions"
+validation_rules:
+  - "Ensure results filter correctly for today's date and focus on paper trading strategies."
+  - "Limit watchlist to high potential symbols with clear entry and exit points."
+synthesis_guidance: "['Synthesize strategy recommendations based on technical scores and recent actions.', 'Highlight strongest BUY signals with clear entry/exit criteria in the watchlist.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:55"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,78 @@
+created_at: "2026-06-06T12:51:07"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: QA checklist."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0723_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for last 5 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    for row in context['snapshot_data']:\n        if row['stage_score'] > 80 and row['technical_score'] > 80:\n            row['action'] = 'Add Candidate'\n        elif row['stage_score'] < 40 or row['technical_score'] < 40:\n            row['action'] = 'Trim Candidate'\n    return context"
+    id: "check_stage_and_technical_score"
+    inputs:
+      - "symbol"
+      - "stage_score"
+      - "technical_score"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "action"
+sql_templates:
+  -
+    statement: "SELECT symbol, sector, stage, stage_score, technical_score, trading_signal, change_1w_pct FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '5 days';"
+    task: "Fetch recent score snapshots."
+    type: "SELECT"
+  -
+    statement: "SELECT symbol, qty, avg_cost FROM portfolio.holdings;"
+    task: "Retrieve portfolio holdings."
+    type: "SELECT"
+status: "test_failed"
+synthesis_guidance: "{'approach': 'Compile information for a QA style checklist, ensuring that all sectors and stocks are covered for incremental add/trim decisions.'}"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "last_5_sessions"
+  - "QA_checklist"
+title: "Portfolio Incremental Add Trim Review Variant 0723"
+tool_plan_template:
+  steps:
+    - "Extract holdings and their current standing from portfolio.holdings."
+    - "Evaluate technical and fundamental scores from scores.stage_snapshots."
+    - "Identify sectors with over/under concentration."
+    - "Prepare recommendations for adding or trimming positions."
+  task: "Analyze the portfolio for add/trim decisions."
+validation_rules:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+version: 1
+validation_errors:
+  - "check_stage_and_technical_score: execution failed: KeyError: 'snapshot_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "check_stage_and_technical_score: execution failed: KeyError: 'snapshot_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

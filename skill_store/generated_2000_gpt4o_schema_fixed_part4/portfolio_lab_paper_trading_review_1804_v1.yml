@@ -1,0 +1,50 @@
+id: "portfolio_lab_paper_trading_review_1804_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Agent Adda Skill Card: Daily Paper Trading Strategy Watchlist"
+description: "Generate a watchlist for paper trading strategies identified today without mixing with actual portfolio holdings."
+input_patterns:
+  - "paper trading strategy watchlist for today"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "watchlist_creation"
+  - "today"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Evaluate today's signals to create a prepared action watchlist focusing on paper trading strategies."
+sql_templates:
+  -
+    description: "Fetch today's paper trading signals marked as 'BUY' or 'STRONG_BUY'."
+    template: "SELECT symbol, company, signal, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued = CURRENT_DATE AND signal IN ('BUY', 'STRONG_BUY') LIMIT 20;"
+  -
+    description: "Retrieve the latest stage and scores for symbols in today's watchlist."
+    template: "SELECT s.symbol, s.stage, s.technical_score, s.investment_score FROM scores.stage_snapshots s JOIN (SELECT DISTINCT symbol FROM signals.signal_log WHERE date_issued = CURRENT_DATE AND signal IN ('BUY', 'STRONG_BUY')) sl ON s.symbol = sl.symbol WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 20;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure each symbol in the watchlist has today's date for issued signals."
+  - "Match today's date for the latest stage snapshot."
+synthesis_guidance: "[\"Focus on highlighting actionable signals for today's trading session.\", 'Provide context for each trade using score data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:19"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,51 @@
+id: "corporate_events_results_watchlist_0877_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0877"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for pre market: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as action watchlist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Gather necessary corporate event and result data to construct a pre-market watchlist, focusing on sector-relative comparisons and ensuring evidence backtrace."
+sql_templates:
+  -
+    query: "WITH latest_stage AS (SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_results AS (SELECT DISTINCT ON (symbol) symbol, period_end, filing_date, eps_yoy_pct FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC) SELECT ce.symbol, ce.event_date, ce.event_type, ls.stage, ls.trading_signal, lr.eps_yoy_pct FROM signals.corporate_events ce JOIN latest_stage ls ON ce.symbol = ls.symbol JOIN latest_results lr ON ce.symbol = lr.symbol WHERE ce.event_date >= CURRENT_DATE ORDER BY ce.event_date ASC LIMIT 50;"
+    description: "Fetch upcoming events with latest stage and result analysis for watchlist."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event_date is within the upcoming period."
+  - "Ensure symbols have valid stage and results data."
+synthesis_guidance: "Provide a concise summary of upcoming corporate events in relation to sector performance and trading signals."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

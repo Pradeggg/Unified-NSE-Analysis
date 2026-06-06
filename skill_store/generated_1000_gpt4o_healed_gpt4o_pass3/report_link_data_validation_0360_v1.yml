@@ -1,0 +1,59 @@
+created_at: "2026-06-06T12:45:53"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: quarter to date; response style: exceptions and gaps first."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0360_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for quarter to date: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+
+status: "validated"
+synthesis_guidance: "['Summarize findings prioritizing exceptions related to missing and broken data links.', 'Detail specific remediation steps.']"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+title: "Enhanced Report Data Validation Variant 0360"
+tool_plan_template:
+  python_tools:
+
+  sql_templates:
+    -
+      sql: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= DATE_TRUNC('quarter', CURRENT_DATE)"
+      template_description: "Validate metadata of enhanced report runs for consistency and completeness."
+      template_id: "validate_runs_data"
+    -
+      sql: "SELECT run_id, symbol FROM report.enhanced_filtered_stocks WHERE day_change_pct IS NULL OR symbol IS NULL"
+      template_description: "Check for missing or incomplete data in filtered stock rows."
+      template_id: "validate_filtered_stocks_data"
+validation_rules:
+  - "consistency_checks"
+  - "completeness_checks"
+version: 1

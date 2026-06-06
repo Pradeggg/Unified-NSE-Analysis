@@ -1,0 +1,70 @@
+id: "report_link_data_validation_0802_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0802"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for today: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  plan:
+    - "Investigate the enhanced report run metadata for today to identify issues in generated links or missing data."
+    - "Utilize the SQL template to query relevant tables and gather required evidence."
+    - "Report findings focusing on broken links, missing data, and suggested remediation actions."
+sql_templates:
+  -
+    description: "Check for broken or missing report links and validate enhanced report data."
+    query: "WITH latest_run AS (SELECT run_id, run_ts FROM report.enhanced_runs WHERE run_ts = CURRENT_DATE LIMIT 1) SELECT efr.rank, efr.symbol, efr.score, efr.recommendation FROM report.enhanced_filtered_stocks efr JOIN latest_run lr ON efr.run_id = lr.run_id ORDER BY efr.rank;"
+python_tools:
+  -
+    id: "validate_report_links"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+      - "report.enhanced_filtered_stocks"
+    outputs:
+      - "findings"
+      - "broken_links"
+      - "validation"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Validate report links and gather broken ones\n    pass"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure the SQL query only reads data and does not modify database records."
+  - "Cross-verify findings with multiple data sources available within the approved_schema."
+synthesis_guidance: "['Analyze and synthesize the data to highlight actionable insights on report link issues and data quality.', \"Provide a clear action watchlist for issues identified during today's institutional review.\"]"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:09"
+generation_model: "gpt-4o"
+validation_errors:
+  - "validate_report_links: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "validate_report_links: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

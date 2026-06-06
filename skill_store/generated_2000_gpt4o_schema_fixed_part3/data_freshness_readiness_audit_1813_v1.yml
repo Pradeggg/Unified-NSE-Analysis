@@ -1,0 +1,77 @@
+id: "data_freshness_readiness_audit_1813_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1813"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for latest EOD: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as action watchlist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  steps:
+    -
+      objective: "Verify the latest data freshness for EOD and report data sources."
+      tables:
+        - "market.index_eod"
+        - "market.equity_eod"
+        - "report.enhanced_runs"
+      actions:
+        - "Query the latest trade_date from market.index_eod and market.equity_eod."
+        - "Query the latest run_ts from report.enhanced_runs."
+sql_templates:
+  -
+    name: "latest_trade_date_check"
+    description: "Retrieve the latest EOD trading date for index and equity data."
+    sql: "SELECT MAX(trade_date) AS latest_date FROM market.index_eod UNION SELECT MAX(trade_date) FROM market.equity_eod;"
+  -
+    name: "latest_report_run_check"
+    description: "Retrieve the most recent report generation timestamp."
+    sql: "SELECT MAX(run_ts) AS latest_run FROM report.enhanced_runs;"
+python_tools:
+  -
+    id: "data_freshness_verification_1"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sql_results"
+    outputs:
+      - "action_watchlist"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "report.enhanced_runs"
+    code: "def run(context):\n    latest_dates = context['sql_results']\n    # Monitor and flag any dates older than expected thresholds\n    watchlist = []\n    for result in latest_dates:\n        if result['latest_date'] < allowed_date_threshold:\n            watchlist.append('Stale data detected.')\n    return watchlist"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all latest EOD and report data timestamps are within daily freshness thresholds."
+synthesis_guidance: "['Analyze the results to identify any missing or stale data points.', 'Compile an action watchlist for critical freshness issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:54"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.latest_run is not approved"

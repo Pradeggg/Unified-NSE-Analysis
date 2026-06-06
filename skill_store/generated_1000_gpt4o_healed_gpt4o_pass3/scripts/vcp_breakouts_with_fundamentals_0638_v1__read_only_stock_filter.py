@@ -1,0 +1,1 @@
+def run(context): return {'candidates': [stock for stock in context if stock['vcp_score'] > 75 and stock['enhanced_fund_score'] > 70]}

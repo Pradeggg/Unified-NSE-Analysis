@@ -1,0 +1,64 @@
+id: "market_3m_rotation_swing_1737_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1737"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for last 20 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    description: "\nAnalyze market regime using index EOD data. Identify sector rotation and leading candidates with stage snapshots, and potential swing trades using VCP picks.\n"
+sql_templates:
+  -
+    description: "Retrieve latest index return data."
+    sql: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months' ORDER BY trade_date DESC LIMIT 20;"
+  -
+    description: "Assess stage distribution change over the past three months."
+    sql: "SELECT snapshot_date, sector, stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY snapshot_date, sector, stage ORDER BY snapshot_date DESC;"
+  -
+    description: "Extract leading sectors and Stage 2 candidates."
+    sql: "SELECT sector, symbol, company_name, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' ORDER BY stage_score DESC LIMIT 10;"
+  -
+    description: "Fetch primary swing trade candidates from VCP picks."
+    sql: "SELECT symbol, company_name, vcp_score, trading_signal FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL queries comply with the approved schema and join rules."
+  - "Output contracts must be fulfilled as per the given structure."
+synthesis_guidance: "['Summarize index trends and leading sectors.', 'Highlight top Stage 2 and VCP candidates.', 'Identify any significant risks or downturns.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:19"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

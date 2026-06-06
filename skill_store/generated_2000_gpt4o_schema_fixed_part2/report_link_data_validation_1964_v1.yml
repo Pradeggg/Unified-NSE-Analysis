@@ -1,0 +1,50 @@
+id: "report_link_data_validation_1964_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Agent Adda Skill Card for Data Validation"
+description: "Validates the integrity of enhanced report data, focusing on the creation of watchlists and validation of report links post-results."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for post results: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "post_results"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "The task focuses on validating the metadata, filtered stock rows, and source trails for the enhanced reports. A comparison matrix is prepared for watchlist creation post-results."
+sql_templates:
+  -
+    description: "Retrieve broken report links and validate missing stock data."
+    template: "SELECT er.run_id, ef.symbol, ef.recommendation, er.analysis_date FROM report.enhanced_runs er LEFT JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id WHERE ef.symbol IS NULL OR ef.recommendation IS NULL;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "schema_join_rules"
+  - "global_sql_rules"
+synthesis_guidance: "Ensure the queries remain non-destructive and use parameterized templates. Validate findings against established schemas before final assessment."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:03"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

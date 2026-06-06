@@ -1,0 +1,63 @@
+id: "data_freshness_readiness_audit_1925_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1925"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: risk-first review; timeframe: last 5 sessions; response style: comparison matrix."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "risk-first review for last 5 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as comparison matrix"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "risk-first_review"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    description: "Perform data freshness analysis using risk-first review approach considering last 5 sessions as comparison matrix."
+sql_templates:
+  -
+    description: "Check the freshness of market index End of Day data for the latest 5 sessions."
+    sql: "SELECT trade_date, index_symbol, close FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '5 days'"
+  -
+    description: "Check the freshness of market equity End of Day data for the latest 5 sessions."
+    sql: "SELECT trade_date, symbol, close FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '5 days' AND series = 'EQ'"
+  -
+    description: "Retrieve the most recent stage snapshots for analysis."
+    sql: "SELECT snapshot_date, symbol, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all latest date filters are applied according to the global rules."
+  - "Check that series='EQ' is applied for equity EOD data when applicable."
+synthesis_guidance: "['Create a comparison matrix highlighting the freshness status of various data sources.', 'Identify any missing data or historical gaps that could impact data quality.', 'Suggest actions for loaders based on findings.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:49"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

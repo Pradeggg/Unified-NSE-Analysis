@@ -1,0 +1,55 @@
+id: "report_link_data_validation_1754_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report QA: Missing Data and Broken Links"
+description: "Identifies and validates missing data and broken links in enhanced reports for the Indian market. Focus is on creating a watchlist for the quarter to date."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for quarter to date: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Document steps to identify missing data and verify working report links for reports generated this quarter."
+sql_templates:
+  -
+    name: "Check Missing Stock Data"
+    type: "SELECT"
+    template: "SELECT s.run_id, s.symbol FROM report.enhanced_filtered_stocks AS s LEFT JOIN report.enhanced_runs AS r ON s.run_id = r.run_id WHERE r.run_ts >= CURRENT_DATE - INTERVAL '3 months' AND s.current_price IS NULL;"
+  -
+    name: "Identify Broken Links"
+    type: "SELECT"
+    template: "SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months' AND notes LIKE '%broken link%';"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure templates do not create, update, or delete data."
+  - "Verify that JOIN conditions and date filters comply with schema and global rules."
+synthesis_guidance: "Summarize findings and suggest remediations for QA issues related to data and links in a quarterly report context."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:51"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

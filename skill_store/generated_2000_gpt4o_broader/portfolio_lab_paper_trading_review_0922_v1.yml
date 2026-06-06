@@ -1,0 +1,68 @@
+id: "portfolio_lab_paper_trading_review_0922_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0922"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: comparison matrix."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for last 5 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as comparison matrix"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Extract signals and compare performance of strategies over the last 5 sessions."
+    - "Analyze entry and exit points from signal logs."
+    - "Review current market conditions from EOD data."
+sql_templates:
+  -
+    description: "Retrieve signal logs for the last 5 sessions"
+    query: "SELECT * FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '5 days';"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signals.signal_log"
+      - "market.equity_eod"
+    outputs:
+      - "comparison_matrix"
+    approved_tables:
+      - "signals.signal_log"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Placeholder for analysis logic on signal log and market EOD data\n    return {'comparison_matrix': []}"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "must_include"
+synthesis_guidance: "{'approach': 'Compare and analyze the performance of each strategy distinctly.', 'context': 'Focus on paper trading outcomes in relation to current market conditions.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

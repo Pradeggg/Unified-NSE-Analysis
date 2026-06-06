@@ -1,0 +1,78 @@
+created_at: "2026-06-06T12:50:24"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: last 3 months; response style: debug trace."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0641_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+    code: "def run(context):\n    trade_data = context.get('trade_data', [])\n    processed_results = []\n    for entry in trade_data:\n        processed_entry = {\n            'trade_date': entry.get('trade_date'),\n            'change_pct': entry.get('change_pct')\n        }\n        processed_results.append(processed_entry)\n    return {'processed_results': processed_results}"
+    id: "python_tool_001"
+    inputs:
+      - "trade_data"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "processed_results"
+review:
+  attempts: 3
+  findings:
+    - "scores.stage_snapshots.average_change is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  index_returns:
+    description: "Fetch index returns for the past 3 months."
+    query: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY trade_date DESC;"
+  leading_sectors:
+    description: "Identify leading sectors over the past 3 months."
+    query: "SELECT sector, AVG(change_1m_pct) AS average_change FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY average_change DESC LIMIT 3;"
+  primary_candidates:
+    description: "Fetch primary swing trading candidates with buy signals."
+    query: "SELECT symbol, company_name, price, trading_signal FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' AND trading_signal = 'BUY';"
+  stage_distribution_change:
+    description: "Fetch stage distribution changes over the last 3 months."
+    query: "SELECT snapshot_date, stage, COUNT(symbol) AS count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY snapshot_date, stage;"
+status: "test_failed"
+synthesis_guidance:
+  blend_historical_and_technical: "Synthesize historical trends with current technical indicators."
+  highlight_trends_and_anomalies: "Emphasize both trends and detected anomalies in market regime."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "last_3_months"
+  - "debug_trace"
+title: "3M Market Rotation Swing Assessment Variant 0641"
+tool_plan_template: "{inputs} | Run market rotation swing analysis using SQL templates."
+validation_errors:
+  - "scores.stage_snapshots.average_change is not approved"
+validation_rules:
+  - "index_returns_must_be_recognized"
+  - "stages_must_cover_all_phases"
+  - "sectors_must_include_leading_trend"
+version: 1

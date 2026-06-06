@@ -1,0 +1,69 @@
+id: "fii_dii_regime_breadth_review_1842_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1842"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: last 3 months; response style: action watchlist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for last 3 months: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as action watchlist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Fetch latest FII/DII flows, regime, breadth, and index data for analysis."
+    query: "SELECT f.trade_date, f.fii_net_today, f.dii_net_today, f.flow_signal, f.fii_trend, f.dii_trend, r.regime, r.confidence, b.advances, b.declines, b.ad_signal, m.close, m.trend_signal FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date JOIN breadth.market_daily b ON f.trade_date = b.trade_date JOIN market.index_eod m ON f.trade_date = m.trade_date WHERE f.trade_date >= CURRENT_DATE - INTERVAL '3 months' AND m.index_symbol = 'Nifty 50';"
+python_tools:
+  -
+    id: "analyze_flows_and_regime"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "flow_data"
+      - "regime_data"
+    outputs:
+      - "risk_context"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context):\n    # Integration logic for flows and regime analysis\n    flow_data = context['flow_data']\n    regime_data = context['regime_data']\n    # Compute risk_context from data\n    risk_context = 'generated context'\n    return risk_context"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all fetched data is from the last 3 months."
+  - "Check the consistency of signals across evidence types."
+synthesis_guidance: "['Use fetched data to synthesize a comprehensive view of the current market regime.', 'Highlight any discrepancies in the data and potential risk flags.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:39"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analyze_flows_and_regime: execution failed: KeyError: 'flow_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "analyze_flows_and_regime: execution failed: KeyError: 'flow_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,65 @@
+created_at: "2026-06-06T12:50:14"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, and liquid swing candidates. Variant focus: source-trail validation; timeframe: last 5 sessions; response style: debug trace."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0629_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for last 5 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 2
+sql_templates:
+  -
+    description: "Calculate index changes over the last 5 sessions for market regime insights."
+    name: "index_changes_last_5_sessions"
+    template: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod ORDER BY trade_date DESC LIMIT 5;"
+  -
+    description: "Identify leading sectors based on change in stage distribution."
+    name: "sector_leadership"
+    template: "SELECT sector FROM scores.stage_snapshots WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '3 MONTHS') GROUP BY sector ORDER BY AVG(stage_score) DESC;"
+  -
+    description: "Find equities with strong indicators for swing trading."
+    name: "leading_equities_stage_2"
+    template: "SELECT symbol, company_name, change_1w_pct, relative_strength, trading_signal FROM scores.stage2_vcp_picks WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '3 MONTHS') ORDER BY change_1w_pct DESC LIMIT 10;"
+status: "validated"
+synthesis_guidance: "Collate information from validated SQL extracts and identify overarching market themes and potential trading opportunities based on debug trace findings."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "debug_trace"
+title: "3M Market Rotation Swing Assessment Variant 0629"
+tool_plan_template: "The plan involves using SQL to collect, verify, and synthesize information about the market regime, sector performance, and potential swing trade candidates."
+validation_errors:
+
+validation_rules:
+  - "Ensure all selected dates align with the evidence_required timeframes."
+  - "Verify that sector leadership metrics are correctly extracted."
+  - "Validate that equities selected for swing trading meet the specified criteria."
+version: 1

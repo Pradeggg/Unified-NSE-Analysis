@@ -1,0 +1,61 @@
+id: "agent_route_failure_diagnostics_1386_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1386"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: intraday context; response style: exceptions and gaps first."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for intraday context: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as exceptions and gaps first"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "intraday_context"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  tools:
+    - "sql"
+    - "python"
+  steps:
+    - "Perform a freshness audit by examining the latest timestamps."
+    - "Identify route failures by analyzing missing tool validations."
+    - "Assess symbol resolution errors and diagnostics in reported data."
+sql_templates:
+  -
+    purpose: "Check for the latest stage snapshot data."
+    template: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    purpose: "Identify missing or broken enhanced report stock data."
+    template: "SELECT * FROM report.enhanced_runs WHERE run_id NOT IN (SELECT DISTINCT run_id FROM report.enhanced_filtered_stocks);"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all analyses use the latest available data."
+  - "Route fixes must address noted gaps and failures."
+synthesis_guidance: "['Emphasize exceptions and unresolved gaps first.', 'Focus on intraday context and freshness of data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,67 @@
+id: "insider_bulk_deal_signal_review_1844_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1844"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: last 3 months; response style: action watchlist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for last 3 months: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as action watchlist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  sql_templates:
+    -
+      template: "SELECT symbol, entity, qty, alert_date FROM signals.insider_alerts WHERE alert_date >= NOW() - INTERVAL '3 MONTHS' AND alert_type = 'buy';"
+      usage: "Retrieve insider buying alerts for the last 3 months."
+    -
+      template: "SELECT symbol, entity, qty, deal_date FROM signals.bulk_block_deals WHERE deal_date >= NOW() - INTERVAL '3 MONTHS' AND side = 'buy';"
+      usage: "Retrieve bulk and block deals for buying in the last 3 months."
+    -
+      template: "SELECT symbol, technical_score, rsi FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND technical_score > 70 AND rsi < 70;"
+      usage: "Retrieve symbols with strong technical scores and RSI confirmation."
+  validation_rules:
+    rule_set_name: "Basic Signal Validation"
+    rules:
+      - "Ensure all returned symbols have corresponding insider or bulk deal activity."
+      - "Technical scores must be above a threshold for inclusion."
+  synthesis_guidance: "Combine data on insider alerts, bulk deals, and technical scores to create a ranked watchlist based on accumulation signals."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,73 @@
+created_at: "2026-06-06T12:51:04"
+created_by: "llm_generated"
+description: "Skill card to validate enhanced report data focusing on position-sizing context for the last 5 sessions."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_card_001_0728_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_runs"
+    code: "def run(context):\n    return [{'run_id': 1, 'analysis_date': '2026-06-01', 'universe_size': 500, 'stocks_analyzed': 480, 'stocks_filtered': 50, 'market_composite_score': 75.5}]"
+    id: "fetch_recent_reports"
+    inputs:
+
+    language: "python"
+    mode: "read_only"
+    outputs:
+      analysis_date: "2026-06-01"
+      market_composite_score: 75.5
+      run_id: 1
+      stocks_analyzed: 480
+      stocks_filtered: 50
+      universe_size: 500
+review:
+  status: "needs_heal"
+  findings:
+    - "fetch_recent_reports: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    description: "Fetch last 5 sessions report run summaries."
+    template: "SELECT run_id, analysis_date, universe_size, stocks_analyzed, stocks_filtered, market_composite_score FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 5;"
+  -
+    description: "Identify filtered stocks missing data for the last 5 sessions."
+    template: "SELECT run_id, symbol, recommendation FROM report.enhanced_filtered_stocks WHERE rs_score IS NULL OR macd_signal IS NULL ORDER BY run_id DESC LIMIT 5;"
+status: "test_failed"
+synthesis_guidance:
+  - "Focus on position-sizing context."
+  - "Prioritize data integrity and completeness for analysis."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "QA_checklist"
+title: "Agent Adda Skill Card: Enhanced Report Data Validation"
+tool_plan_template: "{evidence_required.tables=optional, approved_tools=optional, required_tools=optional}"
+validation_errors:
+  - "fetch_recent_reports: outputs must be a non-empty list"
+validation_rules:
+  - "Ensure all report links are active and load data."
+  - "Verify that all necessary stock data is populated for the last 5 sessions."
+  - "Check if position sizing aligns with the QA checklist."
+version: 1

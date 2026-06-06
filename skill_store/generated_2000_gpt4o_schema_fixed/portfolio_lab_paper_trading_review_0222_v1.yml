@@ -1,0 +1,52 @@
+id: "portfolio_lab_paper_trading_review_0222_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Deep Institutional Strategy Review - Last 5 Sessions"
+description: "Conducts a deep review of paper trading strategies without mixing real holdings. Focuses on entries, exits, stops, targets, and exposure over the past five sessions. Presents results as ranked candidates."
+input_patterns:
+  - "paper trading strategy lab analysis"
+  - "deep institutional review for last 5 sessions with separate tab"
+  - "strategy lab review: entries, exits, stop loss, targets"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "strategy_entries_exits"
+    query: "SELECT s.symbol, s.date_issued, s.signal, s.return_pct, e.close, e.change_pct FROM signals.signal_log s JOIN market.equity_eod e ON s.symbol = e.symbol WHERE s.date_issued >= (CURRENT_DATE - INTERVAL '5 days') AND e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) ORDER BY s.return_pct DESC LIMIT 10;"
+    description: "Fetches top strategies based on returns over the last 5 sessions."
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "rules"
+synthesis_guidance: "['Present data as strategies ranked by returns.', 'Include entry, exit, and P&L analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

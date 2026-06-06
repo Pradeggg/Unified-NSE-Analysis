@@ -1,0 +1,76 @@
+id: "company_360_research_report_0300_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0301"
+description: "Generate a company research card with a comprehensive overview including financials, technical analysis, and narrative evidence. Focus on TradingView export with weekly review format."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "TradingView export for weekly review: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as ranked candidates"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "TradingView_export"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    name: "company_snapshot"
+    query: "SELECT company_name, sector, market_cap_cat, price, change_1w_pct FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' ORDER BY snapshot_date DESC LIMIT 1;"
+  -
+    name: "financial_trends"
+    query: "SELECT period_end, revenue, pat, eps FROM scores.annual_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 3;"
+  -
+    name: "technical_setup"
+    query: "SELECT close, rsi, trend_signal FROM market.equity_eod WHERE symbol = 'RELIANCE' ORDER BY trade_date DESC LIMIT 5;"
+  -
+    name: "valuation_gaps"
+    query: "SELECT opm_pct, tax_pct, dividend_payout_pct FROM scores.annual_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1;"
+  -
+    name: "thesis"
+    query: "SELECT business_summary, key_strengths, verdict FROM scores.results_analysis WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1;"
+  -
+    name: "risks"
+    query: "SELECT key_risks, insider_activity_note, fii_dii_context FROM scores.results_analysis WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1;"
+sql_templates:
+  -
+    name: "company_snapshot"
+    template: "SELECT * FROM scores.stage_snapshots WHERE symbol = '{{symbol}}';"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Status must be generated."
+  - "Ensure read-only templates for SQL."
+  - "Adhere strictly to approved schema."
+synthesis_guidance: "['Capture current company stage and market position.', 'Highlight financial performance trends.', 'Analyze recent technical indicators.', 'Identify valuation considerations.', 'Summarize strategic thesis and risks.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:35"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

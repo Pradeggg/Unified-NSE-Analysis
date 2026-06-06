@@ -1,0 +1,73 @@
+id: "quarterly_results_quality_review_1685_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1685"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: risk-first review; timeframe: intraday context; response style: debug trace."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "risk-first review for intraday context: latest quarterly results analysis"
+  - "which companies had strong quarterly results as debug trace"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "risk-first_review"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Use the latest data from approved tables to assess quarterly results. Focus on revenue and PAT growth, margin movement, and compare narratives."
+sql_templates:
+  -
+    evidence: "quarterly_results_latest"
+    template: "SELECT DISTINCT ON (symbol) symbol, period_label, period_end, revenue, pat, opm_pct FROM scores.quarterly_results WHERE period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC;"
+  -
+    evidence: "results_analysis_latest"
+    template: "SELECT DISTINCT ON (symbol) symbol, growth_yoy_revenue_pct, growth_yoy_pat_pct, opm_delta_pp, verdict FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC;"
+python_tools:
+  -
+    id: "results_narrative_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "quarterly_results_latest"
+      - "results_analysis_latest"
+    outputs:
+      - "beat_miss_summary"
+      - "margin_drivers"
+      - "risks"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+    code: "def run(context):\n    # Analyze latest quarterly data and result narratives.\n    latest_results = context['quarterly_results_latest']\n    analysis = context['results_analysis_latest']\n    # Process to generate summary and highlight risks.\n    beat_miss_summary = {}  # Stubbed logic\n    margin_drivers = {}  # Stubbed logic\n    risks = {}  # Stubbed logic\n    return beat_miss_summary, margin_drivers, risks"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure templates follow the approved schema."
+  - "Do not write queries that attempt to modify data."
+  - "Queries must align with required evidence tables."
+synthesis_guidance: "Integrate evidence from SQL results into insights on filing freshness, revenue and PAT growth trends, and margin movement. Use narrative analysis to identify risks."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:53"
+generation_model: "gpt-4o"
+validation_errors:
+  - "results_narrative_tool: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "results_narrative_tool: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

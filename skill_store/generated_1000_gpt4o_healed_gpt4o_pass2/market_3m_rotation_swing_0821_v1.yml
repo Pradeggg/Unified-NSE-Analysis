@@ -1,0 +1,68 @@
+created_at: "2026-06-06T12:51:56"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: last 5 sessions; response style: action watchlist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0821_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for last 5 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Extract necessary data from context\n    stage_data = context['scores.stage_snapshots']\n    # Perform calculations (mock example)\n    stage_distribution_change = {'stage_1': 0.1, 'stage_2': 0.3, 'stage_3': -0.2, 'stage_4': -0.2}\n    # Return the mock calculation results\n    return {'stage_distribution_change': stage_distribution_change}"
+    id: "calculate_stage_change"
+    inputs:
+      - "stage_score_data"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "stage_distribution_change"
+review:
+  attempts: 3
+  findings:
+    - "calculate_stage_change: execution failed: KeyError: 'scores.stage_snapshots'"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    description: "Fetch index performance of the last 5 sessions."
+    template: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date > (CURRENT_DATE - INTERVAL '5 days') ORDER BY trade_date DESC;"
+  -
+    description: "Identify leading sectors with positive momentum."
+    template: "WITH sector_summary AS (SELECT sector, AVG(change_1w_pct) AS avg_change FROM scores.stage_snapshots WHERE snapshot_date > (CURRENT_DATE - INTERVAL '1 month') GROUP BY sector) SELECT sector FROM sector_summary WHERE avg_change > 0 ORDER BY avg_change DESC LIMIT 5;"
+status: "test_failed"
+synthesis_guidance: "Combine fetched data to outline market trends and sector strength, forming a concise action watchlist for swing trading candidates."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "last_5_sessions"
+  - "action_watchlist"
+title: "3M Market Rotation Swing Assessment Variant 0821"
+tool_plan_template: "Conduct a quick scan using the latest data from the past 5 sessions, focusing on market regime and sector leadership. Identify promising swing trading candidates within stage 2 stocks."
+validation_errors:
+  - "calculate_stage_change: execution failed: KeyError: 'scores.stage_snapshots'"
+validation_rules:
+  - "Ensure date fields use consistent formats."
+  - "All percentage changes should round to two decimal places."
+version: 1

@@ -1,0 +1,55 @@
+id: "portfolio_incremental_add_trim_1837_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1837"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for last 20 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as action watchlist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  - "Execute SQL query to get latest stage snapshot and holdings."
+  - "Determine add/trim candidates based on trading signals and sector exposure."
+sql_templates:
+  -
+    description: "Select latest stage snapshot and holdings for analysis."
+    template: "WITH latest_snapshot AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), portfolio_data AS (SELECT * FROM portfolio.holdings) SELECT ls.symbol, ls.company_name, ls.sector, ls.trading_signal, ls.relative_strength, ph.qty, ph.avg_cost FROM latest_snapshot ls JOIN portfolio_data ph ON ls.symbol = ph.symbol WHERE ls.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY ls.relative_strength DESC LIMIT 100;"
+  -
+    description: "Select potential trim candidates based on weak signals."
+    template: "SELECT ls.symbol, ls.company_name, ls.sector, ls.trading_signal, ph.qty FROM scores.stage_snapshots ls JOIN portfolio.holdings ph ON ls.symbol = ph.symbol WHERE ls.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ls.trading_signal IN ('SELL') ORDER BY ls.trading_signal DESC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure snapshot_date usage aligns with the latest date."
+  - "Confirm trading_signal values match the specified buy/trim categories."
+synthesis_guidance: "['Focus on constructing an actionable watchlist based on sector-relative comparison.', 'Highlight any significant changes in sector exposure or stage.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:16"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

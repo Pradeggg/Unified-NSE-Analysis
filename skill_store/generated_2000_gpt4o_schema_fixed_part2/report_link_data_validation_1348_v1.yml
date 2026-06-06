@@ -1,0 +1,66 @@
+id: "report_link_data_validation_1348_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Agent Adda Report Link Validation"
+description: "Validate report links and data for position-sizing context over the last 3 months, focusing on exceptions and gaps first."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for last 3 months: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Apply read-only cross-verification between report metadata and filtered stocks using last 3 months of data. Highlight exceptions first."
+sql_templates:
+  -
+    type: "select"
+    query: "WITH rec AS (SELECT r.run_id, MAX(r.run_ts) AS latest_run_ts FROM report.enhanced_runs r WHERE r.run_ts >= CURRENT_DATE - INTERVAL '3 months' GROUP BY r.run_id) SELECT r.run_id, r.run_ts, r.universe_size, COUNT(s.symbol) AS filtered_count FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks s ON r.run_id = s.run_id JOIN rec ON r.run_id = rec.run_id WHERE r.run_ts = rec.latest_run_ts GROUP BY r.run_id, r.run_ts, r.universe_size HAVING COUNT(s.symbol) != r.stocks_filtered;"
+python_tools:
+  -
+    id: "discrepancy_checker"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+      - "expected_count"
+      - "actual_count"
+    outputs:
+      - "discrepancy_report"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    discrepancies = []\n    for entry in context['data']:\n        if entry['expected_count'] != entry['actual_count']:\n            discrepancies.append({\n                'run_id': entry['run_id'],\n                'issue': 'Mismatch in filtered stock count',\n                'expected': entry['expected_count'],\n                'actual': entry['actual_count']\n            })\n    return {'discrepancy_report': discrepancies}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Check for discrepancies in filtered stock counts versus metadata."
+  - "Ensure that all report links generated within the last 3 months are functional."
+  - "Highlight any gaps in data with an emphasis on exceptions."
+synthesis_guidance: "Focus on identifying discrepancies and inconsistencies over the past 3 months."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:22"
+generation_model: "gpt-4o"
+validation_errors:
+  - "discrepancy_checker: execution failed: KeyError: 'data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "discrepancy_checker: execution failed: KeyError: 'data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,50 @@
+id: "report_link_data_validation_1012_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Report Link Data Validation"
+description: "Validates data within enhanced reports, focusing on metadata, links, and stock data."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  steps:
+    - "Identify latest enhanced report data using approved schema and global rules."
+    - "Confirm join conditions using schema join rules."
+    - "Validate report links and check for data presence."
+    - "Present findings in a concise table."
+sql_templates:
+  -
+    step: "Identify latest enhanced report data"
+    template: "SELECT * FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)"
+  -
+    step: "Validate report links and check for data presence"
+    template: "SELECT ers.run_id, erfs.symbol, ers.stocks_analyzed, erfs.current_price FROM report.enhanced_runs ers JOIN report.enhanced_filtered_stocks erfs ON ers.run_id = erfs.run_id WHERE ers.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'guidelines': ['Focus on broken links and missing data within the latest reports.', 'Use concise tabular format for presenting results.', 'Do not infer or introduce data not accounted for in the schema.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

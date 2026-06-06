@@ -1,0 +1,53 @@
+id: "sector_breadth_rotation_watchlist_1049_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1049"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: last 3 months; response style: concise table."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for last 3 months: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as concise table"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Create sector-relative watchlist focusing on breadth and stage migration."
+sql_templates:
+  -
+    description: "Retrieve sectors with Stage 2 participation and improving breadth over the last 3 months."
+    sql: "WITH recent_breadth AS (SELECT sector, AVG(pct_above_50dma::numeric) AS avg_pct_above_50dma, AVG(change_5d::numeric) AS avg_change_5d FROM breadth.sector_daily WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector), recent_stage AS (SELECT sector, COUNT(*) AS stage2_count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector) SELECT rb.sector, rb.avg_pct_above_50dma, rb.avg_change_5d, rs.stage2_count FROM recent_breadth rb JOIN recent_stage rs ON rb.sector = rs.sector ORDER BY stage2_count DESC, avg_pct_above_50dma DESC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure the SQL only retrieves data based on approved tables and columns."
+  - "Output must comply with the defined structure in output_contract."
+synthesis_guidance: "Focus on concise tabular representation of sector ranks and improvement potential, suitable for export to TradingView."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:24"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

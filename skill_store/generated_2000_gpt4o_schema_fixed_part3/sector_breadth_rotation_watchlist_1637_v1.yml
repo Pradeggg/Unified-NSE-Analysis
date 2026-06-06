@@ -1,0 +1,72 @@
+id: "sector_breadth_rotation_watchlist_1637_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1637"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for last 20 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as debug trace"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+    -
+      id: "sector_analysis_debug"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        sector_data: "fetch sector data"
+        snapshot_date: "latest from scores.stage_snapshots"
+      outputs:
+        sector_ranks: "Ranked list of sectors"
+        improving_sectors: "List of improving sectors"
+        candidate_symbols: "Symbols to watch"
+      approved_tables:
+        - "breadth.sector_daily"
+        - "scores.stage_snapshots"
+      code: "def run(context): pass"
+  sql_templates:
+    -
+      template_name: "sector_breadth_analysis"
+      template: "SELECT sector, AVG(pct_above_50dma) AS avg_pct_above_50dma, AVG(stage2_pct) AS avg_stage2_pct FROM breadth.sector_daily INNER JOIN breadth.ma_pct_above ON breadth.sector_daily.snapshot_date = breadth.ma_pct_above.snapshot_date GROUP BY sector ORDER BY avg_stage2_pct DESC LIMIT 5;"
+      description: "Retrieve top 5 sectors by average Stage 2 percentage and percentage above 50 DMA over the last 20 sessions."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure data completeness for required sessions."
+  - "Verify symbol list matches TradingView compatibility."
+synthesis_guidance: "['Present rankings as a list.', 'Document improving sectors for TradingView integration.', 'Highlight top candidate symbols in context.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:19"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

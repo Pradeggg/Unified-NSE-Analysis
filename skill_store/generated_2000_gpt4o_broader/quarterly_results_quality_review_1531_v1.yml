@@ -1,0 +1,73 @@
+id: "quarterly_results_quality_review_1531_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1531"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: last 20 sessions; response style: research-only summary."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for last 20 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as research-only summary"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Using {input_patterns}, gather evidence from {evidence_required.tables} and perform a comprehensive analysis of quarterly results."
+sql_templates:
+  -
+    template: "SELECT symbol, period_label, revenue, pat, opm_pct FROM scores.quarterly_results WHERE period_end >= DATE_SUB(CURDATE(), INTERVAL 20 DAY);"
+    description: "Fetch the latest quarterly results for the last 20 sessions."
+  -
+    template: "SELECT symbol, company_name, growth_yoy_revenue_pct, growth_yoy_pat_pct, opm_delta_pp FROM scores.results_analysis WHERE period_end >= DATE_SUB(CURDATE(), INTERVAL 20 DAY);"
+    description: "Analyze year-over-year growth and margin movements."
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    required_fields:
+      - "id"
+      - "language"
+      - "mode"
+      - "inputs"
+      - "outputs"
+      - "approved_tables"
+      - "code"
+    code: "# Code to aggregate and summarize results, ensuring read-only mode"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure no SQL statements have WRITE capabilities."
+  - "Limit the evidence gathering to approved tables and columns."
+synthesis_guidance: "Synthesize evidence into brief, research-only summaries highlighting revenue growth, profit trends, and significant company performances within the designated timeframe."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:09:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.quarterly_results.curdate is not approved"
+  - "scores.quarterly_results.date_sub is not approved"
+  - "scores.quarterly_results.day is not approved"
+  - "scores.results_analysis.curdate is not approved"
+  - "scores.results_analysis.date_sub is not approved"
+  - "scores.results_analysis.day is not approved"

@@ -1,0 +1,53 @@
+id: "portfolio_lab_paper_trading_review_0922_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0922"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: comparison matrix."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for last 5 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as comparison matrix"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Use available evidence from the specified tables to construct a thorough deep institutional review of paper trading strategies over the past 5 market sessions. Generate a comparison matrix analyzing strategies in isolation from real holdings."
+sql_templates:
+  -
+    label: "Recent Trading Signals Review"
+    query: "SELECT symbol, date_issued, signal, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued >= (CURRENT_DATE - INTERVAL '5' DAY)"
+  -
+    label: "Latest Stage Snapshot"
+    query: "SELECT symbol, stage, stage_score, technical_score, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Verify date ranges for recent activity."
+  - "Assess correlation of trading signals with stage snapshots."
+  - "Ensure isolation of paper trading data from real portfolios."
+synthesis_guidance: "['Create a comparison matrix focusing on strategy efficiency over past 5 sessions.', 'Highlight any patterns or anomalies in strategy signals.', 'Discuss potential exposure and risk management based on strategy rules.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:42"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.day is not approved"

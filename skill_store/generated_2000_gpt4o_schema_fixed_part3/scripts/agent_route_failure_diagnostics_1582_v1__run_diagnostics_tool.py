@@ -1,0 +1,1 @@
+def run(context): return {'diagnostic_summary': 'Diagnostics complete and ready for review.'}

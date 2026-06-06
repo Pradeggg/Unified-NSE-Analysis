@@ -1,0 +1,63 @@
+id: "sector_breadth_rotation_watchlist_1091_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1091"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: weekly review; response style: concise table."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for weekly review: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as concise table"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "weekly_review"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  status: "generated"
+  sql_templates:
+    -
+      template: "SELECT sector, AVG(pct_above_50dma) as avg_pct_above_50dma, AVG(change_5d) as avg_change_5d FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) GROUP BY sector ORDER BY avg_pct_above_50dma DESC;"
+      description: "Get average percentage above 50DMA and 5-day change for each sector."
+    -
+      template: "SELECT sector, COUNT(*) as stage2_count FROM breadth.ma_pct_above WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.ma_pct_above) AND stage2_pct > 50 GROUP BY sector;"
+      description: "Count of sectors with significant Stage 2 participation."
+    -
+      template: "SELECT symbol, sector, stage, stage_score, change_1w_pct FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 2 ORDER BY stage_score DESC LIMIT 10;"
+      description: "Top 10 symbols in Stage 2 by stage score and weekly performance."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sector average percentage above 50DMA is used for ranking."
+  - "Check sectors with significant Stage 2 participation."
+  - "Symbols are filtered by Stage 2 status and ranked by stage score."
+synthesis_guidance: "['Summarize sector performance and highlight improving sectors.', 'List candidate symbols for TradingView based on analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:12"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

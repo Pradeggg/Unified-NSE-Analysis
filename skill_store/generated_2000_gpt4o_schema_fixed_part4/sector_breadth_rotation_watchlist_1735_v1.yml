@@ -1,0 +1,64 @@
+id: "sector_breadth_rotation_watchlist_1735_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1735"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: risk-first review; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "risk-first review for last 20 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as QA checklist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "risk-first_review"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    python_tools:
+
+sql_templates:
+  sector_leader_select:
+    template: "SELECT sector, AVG(pct_above_50dma::numeric) as avg_pct_above_50dma, AVG(change_5d::numeric) as avg_change_5d, COUNT(*) as num_days FROM breadth.sector_daily WHERE snapshot_date >= CURRENT_DATE - INTERVAL '20 days' GROUP BY sector ORDER BY avg_pct_above_50dma DESC LIMIT 5;"
+    description: "Query to get top 5 sectors based on average 50DMA participation and 5-day change over the last 20 sessions."
+  stage_two_candidates:
+    template: "SELECT s.symbol, s.company_name, s.sector, s.stage_score, s.relative_strength FROM scores.stage_snapshots s JOIN breadth.sector_daily bs ON s.sector = bs.sector WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.stage = 'STAGE_2' AND s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY s.relative_strength DESC LIMIT 10;"
+    description: "Query to select symbols in Stage 2 with strong trading signals, ordered by relative strength."
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "{'sql_read_only': True, 'python_read_only': True, 'status': 'generated'}"
+synthesis_guidance: "Use QA checklist to ensure sectors with top breadth and improving trends are highlighted for inclusion in TradingView watchlists."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.sector_daily.avg_change_5d is not approved"
+  - "breadth.sector_daily.avg_pct_above_50dma is not approved"
+  - "breadth.sector_daily.num_days is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "breadth.sector_daily.avg_change_5d is not approved"
+    - "breadth.sector_daily.avg_pct_above_50dma is not approved"
+    - "breadth.sector_daily.num_days is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

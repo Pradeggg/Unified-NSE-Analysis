@@ -1,0 +1,70 @@
+id: "signal_outcome_feedback_review_1089_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1089"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: intraday context; response style: concise table."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for intraday context: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as concise table"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  id: "signal_feedback_review_plan"
+  name: "Signal Feedback Review Plan"
+  description: "Plan to fetch and analyze signal log data for outcome feedback review with intraday context."
+  steps:
+    - "Fetch latest signal log data with target and stop outcomes."
+    - "Join with latest stage snapshots to get context for each signal."
+    - "Generate concise table summarizing outcomes, identifying success and failure patterns."
+sql_templates:
+  signal_outcome_query: "SELECT s.id, s.symbol, s.date_issued, s.signal, s.hit_target, s.hit_stop, s.return_pct, t.trading_signal, t.stage FROM signals.signal_log s JOIN scores.stage_snapshots t ON s.symbol = t.symbol WHERE s.date_resolved IS NOT NULL AND t.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.date_issued >= CURRENT_DATE - INTERVAL '3 months' LIMIT 100;"
+python_tools:
+  -
+    id: "analyze_signal_outcomes"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "outcome_data"
+    outputs:
+      - "outcome_summary"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+    code: "def run(context): data = context['outcome_data'] analyze_outcomes(data) return generate_summary(data)"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure data consistency between signal log and stage snapshots."
+  - "Verify intraday contexts align with outcome data."
+synthesis_guidance: "['Focus on recent intraday outcomes.', 'Identify key patterns and opportunities for skill improvement.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analyze_signal_outcomes: python syntax error: invalid syntax"
+review:
+  status: "needs_heal"
+  findings:
+    - "analyze_signal_outcomes: python syntax error: invalid syntax"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

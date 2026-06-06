@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:52:18"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: post results; response style: action watchlist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0870_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select stocks with high VCP scores and strong fundamentals"
+    sql: "WITH latest_vcp AS (SELECT symbol, MAX(snapshot_date) AS latest_date FROM scores.stage2_vcp_picks GROUP BY symbol) SELECT p.symbol, p.company_name, p.price, p.vcp_score, s.enhanced_fund_score, s.financial_strength FROM scores.stage2_vcp_picks p JOIN latest_vcp lv ON p.symbol = lv.symbol AND p.snapshot_date = lv.latest_date JOIN scores.stage_snapshots s ON p.symbol = s.symbol AND p.snapshot_date = s.snapshot_date WHERE p.vcp_score > 80 AND s.enhanced_fund_score > 80;"
+status: "validated"
+synthesis_guidance: "Create a focused analysis on actionable Indian stock picks using criteria from VCP, breakout patterns, and strong fundamentals for TradingView export."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "post_results"
+  - "action_watchlist"
+title: "VCP Breakouts With Fundamentals Variant 0870"
+tool_plan_template: "Use evidence from Indian markets to find actions based on new highs, VCP, breakouts, and strong fundamentals."
+validation_rules:
+  - "Ensure SQL statements are read-only."
+  - "Only use columns and tables from the approved schema."
+  - "Do not alter the structure of the schema."
+  - "Gather action watchlist based on Indian market data."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

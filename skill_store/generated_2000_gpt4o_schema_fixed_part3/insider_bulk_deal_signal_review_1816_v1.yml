@@ -1,0 +1,52 @@
+id: "insider_bulk_deal_signal_review_1816_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1816"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for latest EOD: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as action watchlist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Generate a watchlist of potential stocks for accumulation using the latest insider alerts and bulk deals with positive technical setup."
+sql_templates:
+  -
+    description: "Fetch latest insider alerts and bulk deals with positive technical confirmation."
+    sql: "SELECT eod.symbol, eod.close, s.stage, s.technical_score, b.qty, i.insider_score FROM market.equity_eod eod JOIN signals.bulk_block_deals b ON eod.symbol = b.symbol JOIN signals.insider_alerts i ON eod.symbol = i.symbol JOIN scores.stage_snapshots s ON eod.symbol = s.symbol AND eod.trade_date = s.snapshot_date WHERE eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND s.trading_signal in ('BUY', 'STRONG_BUY') LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure symbols in the result have strong buy signals and substantial deal quantities."
+  - "Validate that technical scores are above a certain threshold."
+synthesis_guidance: "Focus on providing a concise watchlist with technical background and highlight any potential risks related to insider activity."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,49 @@
+id: "portfolio_incremental_add_trim_1991_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1991"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: weekly review; response style: comparison matrix."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "weekly_review"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Generate a structured plan to analyze holdings for incremental add/trim actions based on stage and signal data. Use evidence from scores.stage_snapshots and portfolio.holdings."
+sql_templates:
+  latest_stages: "SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+  holdings_analysis: "SELECT h.symbol, h.qty, h.avg_cost, s.stage, s.trading_signal FROM portfolio.holdings AS h JOIN scores.stage_snapshots AS s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure the set intersection of holdings with strong buy signals and positive relative strength are flagged for addition."
+  - "Flag holdings with sell signals and negative relative strength for reduction."
+synthesis_guidance: "['Compile a list of symbols with recommended actions.', 'Prioritize actions based on stage and signal strength.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

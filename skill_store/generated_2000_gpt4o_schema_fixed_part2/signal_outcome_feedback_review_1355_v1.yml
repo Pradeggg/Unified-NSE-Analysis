@@ -1,0 +1,49 @@
+id: "signal_outcome_feedback_review_1355_v1"
+version: 1
+status: "validated"
+domain: "signal_review"
+title: "Quarterly Signal Outcome Analysis"
+description: "Analyze trading signal outcomes for the past quarter, focusing on risk assessment and performance improvement."
+input_patterns:
+  - "Analyze performance of last quarter's signals"
+  - "Which signals reached targets or stops?"
+  - "What can be learned from last quarter's signal outcomes?"
+tags:
+  - "signal_performance"
+  - "risk_assessment"
+  - "quarterly_review"
+  - "target_analysis"
+  - "stop_loss_analysis"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Conduct a quarterly review of signal outcomes, focusing on those that hit the target or stop-loss levels."
+sql_templates:
+  -
+    description: "Identify signals that hit their targets in the last quarter."
+    query: "SELECT symbol, signal, date_issued, hit_target, return_pct FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months' AND hit_target = TRUE;"
+  -
+    description: "Identify signals that hit their stop-loss levels in the last quarter."
+    query: "SELECT symbol, signal, date_issued, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months' AND hit_stop = TRUE;"
+python_tools:
+
+output_contract:
+  - "outcomes_summary"
+  - "target_hit_patterns"
+  - "stop_hit_patterns"
+  - "strategic_improvements"
+validation_rules:
+  - "Ensure at least one signal with hit_target = TRUE is present."
+  - "Ensure at least one signal with hit_stop = TRUE is present."
+synthesis_guidance: "Focus on summarizing patterns that led to successful targets and avoided stops, proposing strategies to improve future signal performance."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:31"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

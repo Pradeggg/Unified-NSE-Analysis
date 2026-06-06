@@ -1,0 +1,58 @@
+id: "fii_dii_regime_breadth_review_0050_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0050"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: last 3 months; response style: concise table."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for last 3 months: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as concise table"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "last_3_months"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  purpose: "Analyze the FII/DII cash flows, market regime, and breadth to describe the current market condition."
+  steps:
+    - "Retrieve FII/DII flows data for the last 3 months."
+    - "Retrieve market regime history for the same period."
+    - "Fetch market breadth details, focusing on advances and declines."
+    - "Get index performance data to confirm trends."
+    - "Aggregate information into a concise format to identify risk flags."
+sql_templates:
+  fii_dii_flows: "SELECT trade_date, fii_net_today, dii_net_today, fii_trend, dii_trend, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '3 months';"
+  regime_history: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '3 months';"
+  market_breadth: "SELECT trade_date, net_ad, ad_signal, trin, market_sentiment FROM breadth.market_daily WHERE trade_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '3 months';"
+  index_eod: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '3 months' AND index_symbol = 'NIFTY 50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "ensure_non_empty"
+synthesis_guidance: "{'emphasize_points': ['Flow trends vs. regime consistency.', 'Breadth in context of market sentiment.', 'Index trend confirmation.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.date_trunc is not approved"
+  - "market.index_eod.date_trunc is not approved"
+  - "signals.fii_dii_flows.date_trunc is not approved"
+  - "signals.regime_history.date_trunc is not approved"

@@ -1,0 +1,50 @@
+id: "vcp_breakouts_with_fundamentals_0806_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0806"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  default: "WITH temp_vcp AS (SELECT symbol, max(close) as max_close FROM market.equity_eod WHERE trade_date = CURRENT_DATE GROUP BY symbol), selected AS (SELECT s.symbol FROM scores.stage2_vcp_picks s JOIN temp_vcp t ON s.symbol = t.symbol WHERE vcp_breakout_pct > 0.1 AND enhanced_fund_score > 80 AND live_price > t.max_close) SELECT symbol, company_name, sector, live_price, enhanced_fund_score FROM selected;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:51:40"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table s.symbol"
+  - "unknown table t.max_close"
+  - "unknown table t.symbol"

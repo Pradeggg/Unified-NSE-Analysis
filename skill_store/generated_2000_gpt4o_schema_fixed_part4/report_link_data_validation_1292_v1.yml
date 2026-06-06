@@ -1,0 +1,53 @@
+id: "report_link_data_validation_1292_v1"
+version: 1
+status: "review_pending"
+domain: "market_data_validation"
+title: "Weekly Enhanced Report Data Validation"
+description: "This skill card validates the data quality of weekly enhanced market reports, focusing on broken report links, missing data, and stock analysis discrepancies in the Indian market."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for weekly review: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    description: "Use report.enhanced_runs and join with report.enhanced_filtered_stocks to validate data integrity weekly. Check for missing stocks and discrepancies in data attributes."
+sql_templates:
+  -
+    query: "SELECT er.run_id, er.analysis_date, es.symbol, es.current_price, es.day_change_pct FROM report.enhanced_runs er INNER JOIN report.enhanced_filtered_stocks es ON er.run_id = es.run_id WHERE er.run_ts >= CURRENT_DATE - INTERVAL '1 week' ORDER BY er.run_ts DESC LIMIT 100;"
+    purpose: "Fetch recent report data for validation."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure run_ts covers the past week."
+  - "Check for missing stock symbols in filtered results."
+  - "Verify integrity of price data and change percentages."
+synthesis_guidance: "Cross-reference report links with known issues identified in the last week's analysis to prioritize remediation efforts."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:56"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

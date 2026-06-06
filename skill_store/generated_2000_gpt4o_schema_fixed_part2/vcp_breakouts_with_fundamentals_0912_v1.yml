@@ -1,0 +1,72 @@
+id: "vcp_breakouts_with_fundamentals_0912_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0912"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  status: "generated"
+  filters:
+    - "Use snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) for latest stage data."
+    - "Use snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) for latest VCP picks."
+    - "Use trading_signal IN ('BUY', 'STRONG_BUY') for constructive buy-signal filters."
+  sql_templates:
+    -
+      name: "latest_vcp_picks"
+      sql: "SELECT symbol, company_name, sector, vcp_score, trading_signal, enhanced_fund_score, earnings_quality, sales_growth, financial_strength FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY vcp_score DESC, rank ASC LIMIT 10"
+    -
+      name: "latest_price_trend"
+      sql: "SELECT market.equity_eod.symbol, market.equity_eod.trade_date, market.equity_eod.close, market.equity_eod.volume, scores.stage_snapshots.stage, scores.stage_snapshots.trading_signal FROM market.equity_eod JOIN scores.stage_snapshots ON market.equity_eod.symbol = scores.stage_snapshots.symbol WHERE market.equity_eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND scores.stage_snapshots.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND scores.stage_snapshots.trading_signal = 'BUY'"
+  evidence:
+    evidence_gaps:
+
+  validation_rules:
+    - "Ensure trading_signal values are 'BUY' or 'STRONG_BUY'."
+    - "Ensure snapshot_date is the latest available."
+  synthesis_guidance:
+    - "Focus on VCP patterns with strong fundamental scores."
+    - "Provide institutional review with a comparison matrix."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:11"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

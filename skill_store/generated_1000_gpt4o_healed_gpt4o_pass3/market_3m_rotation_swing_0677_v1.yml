@@ -1,0 +1,51 @@
+created_at: "2026-06-06T12:50:41"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: pre market; response style: debug trace."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0677_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  - "WITH sector_performance AS (SELECT sector, AVG(change_pct) as avg_change FROM market.equity_eod WHERE trade_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) GROUP BY sector), sector_leaders AS (SELECT s.symbol, s.company_name, s.sector, s.stage, s.stage_score FROM scores.stage_snapshots s INNER JOIN sector_performance sp ON s.sector = sp.sector WHERE s.stage = 2 AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT * FROM sector_leaders ORDER BY stage_score DESC;"
+status: "validated"
+synthesis_guidance: "Emphasize sector-relative comparison and stage 2 dynamics."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "debug_trace"
+title: "3M Market Rotation Swing Assessment Variant 0677"
+tool_plan_template: "Analyze using recent sector rotations with a focus on stage 2 leadership."
+validation_rules:
+  - "Ensure stage 2 leadership focuses on top stage_score."
+  - "Verify sectors' average changes over the period."
+version: 1

@@ -1,0 +1,51 @@
+id: "quarterly_results_quality_review_1573_v1"
+version: 1
+status: "review_pending"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1573"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: daily refresh follow-up; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "daily refresh follow-up for pre market: latest quarterly results analysis"
+  - "which companies had strong quarterly results as research-only summary"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "For assessing the latest quarterly results with a focus on revenue and PAT growth, margin movements, filing timeliness, and narrative quality, our approach on the Indian market involves querying the structured evidence from quarterly reports and cross-referencing it with results analysis narratives. Follow a templated research-only summary style, highlighting each pattern:\n\n1. **Filing Window**: Calculate and highlight companies with timely filing.\n2. **Beat/Miss Summary**: Identify companies with significant positive or negative results in terms of earnings and PAT growth.\n3. **Margin Drivers**: Extract commentary from the analysis table on margin movements.\n4. **Ranked Companies**: Use scores to rank companies on latest performance.\n5. **Risks**: Note key risks from the analysis to identify potential concerns. \n\nEnsure distinct clarity when drafting pre-market reports."
+sql_templates:
+  - "WITH latest_results AS (SELECT DISTINCT ON (q.symbol) q.symbol, q.revenue, q.pat, q.opm_pct, ra.verdict, ra.pl_commentary FROM scores.quarterly_results q JOIN scores.results_analysis ra ON q.symbol = ra.symbol AND q.period_end = ra.period_end ORDER BY q.symbol, q.period_end DESC NULLS LAST, q.fetched_at DESC) SELECT * FROM latest_results WHERE ra.verdict IN ('beat', 'miss') LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure the SQL queries align with the approved schema and return expected fields."
+  - "Keep the response bounded to top candidates and ensure SQL is read-only."
+synthesis_guidance: "['Synthesize the data into concise summaries that provide valuable insights on company performance based on the latest quarterly results.', 'Focus on delivering a research-only summary with clear indicators and evidence-backed insights.', 'Prioritize key performance indicators such as revenue growth, PAT growth, and significant margin changes for analysis discussions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:22"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:41:20"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 3 months; response style: concise table."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0042_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Fetch securities with strong fundamentals in the last 3 months."
+    template: "SELECT e.symbol, e.trade_date, e.close, ss.fundamental_score, ss.institutional_backing FROM market.equity_eod e INNER JOIN scores.stage_snapshots ss ON e.symbol = ss.symbol WHERE e.trade_date > CURRENT_DATE - INTERVAL '3 months' AND ss.fundamental_score > 70"
+status: "validated"
+synthesis_guidance: "Highlight stocks with the highest fundamental scores and potential breakouts."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "concise_table"
+title: "VCP Breakouts With Fundamentals Variant 0042"
+tool_plan_template: "Review stocks creating new highs, VCPs, or breakouts with strong fundamentals. Use evidence from tables for institutional insights and filter with required scores."
+validation_rules:
+  - "SQL queries must not modify any data."
+  - "All table references must be to approved schema."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

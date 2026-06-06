@@ -1,0 +1,51 @@
+id: "report_link_data_validation_1670_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Validate Enhanced Report Links and Data"
+description: "This skill card deals with validating report links and ensuring there are no missing data issues in enhanced report exports for TradingView."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for post results: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "post_results"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  - "Ensure data for runs is consistent between tables and report completeness is evaluated using available run IDs."
+sql_templates:
+  -
+    name: "validate_report_data"
+    sql: "SELECT r.run_id, r.run_ts, count(fs.symbol) as stock_count\nFROM report.enhanced_runs r\nLEFT JOIN report.enhanced_filtered_stocks fs ON r.run_id = fs.run_id\nWHERE r.run_ts >= CURRENT_DATE - INTERVAL '3 months'\nGROUP BY r.run_id, r.run_ts\nHAVING count(fs.symbol) < r.stocks_filtered;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all reports within the last three months are evaluated."
+  - "Cross-check reported stocks_filtered with actual filtered stock counts in associated data."
+synthesis_guidance: "Focus on identifying discrepancies in URLs and missing HTML data related to stocks."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:39"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

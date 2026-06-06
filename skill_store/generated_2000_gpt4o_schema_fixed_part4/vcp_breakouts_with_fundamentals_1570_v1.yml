@@ -1,0 +1,63 @@
+id: "vcp_breakouts_with_fundamentals_1570_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1570"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    filters:
+      - "Use snapshot_date and trade_date for latest data alignment."
+      - "Stage should be 'STAGE_2'."
+      - "Use 'EQ' series for equity."
+    candidates:
+      - "Consider stocks with highest VCP scores and strong fundamentals."
+    tradingview_symbols:
+      - "Prepare symbols for TradingView export."
+    evidence:
+      - "Align EOD and stage data using approved joins and filters."
+    risks:
+      - "Volatility due to market conditions may impact breakout success."
+sql_templates:
+  latest_stage_2_vcp_picks: "SELECT sp.symbol, sp.vcp_score, sp.price FROM scores.stage2_vcp_picks sp JOIN scores.stage_snapshots ss ON sp.symbol = ss.symbol WHERE sp.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND ss.stage = 'STAGE_2' ORDER BY sp.vcp_score DESC LIMIT 10;"
+  strong_fundamentals: "SELECT symbol, enhanced_fund_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND enhanced_fund_score > 80;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "{'using_latest_dates': 'Ensure the use of the latest snapshot_date for any EOD or stage snapshot query.', 'correct_stage_usage': \"Stage should strictly be 'STAGE_2' when querying relevant data.\"}"
+synthesis_guidance: "{'post_results_analysis': 'Generate a research-only summary emphasizing the fundamental and VCP strength for potential breakouts.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:32"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

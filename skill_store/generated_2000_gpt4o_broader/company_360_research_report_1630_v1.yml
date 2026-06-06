@@ -1,0 +1,83 @@
+id: "company_360_research_report_1630_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1630"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: TradingView export; timeframe: last 5 sessions; response style: debug trace."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "TradingView export for last 5 sessions: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as debug trace"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  title: "Company 360 Research Execution Plan"
+  steps:
+    - "Fetch latest financial data for the last five sessions using market.equity_eod."
+    - "Compile quarterly and annual fundamental aspects from scores.quarterly_results, scores.annual_results."
+    - "Analyze technical scores and stages from scores.stage_snapshots."
+    - "Summarize narrative and risks from scores.results_analysis."
+sql_templates:
+  -
+    template: "SELECT symbol, company_name, price, change_1d_pct, change_1w_pct FROM scores.stage_snapshots WHERE symbol = ? AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots WHERE symbol = ?)"
+  -
+    template: "SELECT trade_date, open, high, low, close, volume FROM market.equity_eod WHERE symbol = ? ORDER BY trade_date DESC LIMIT 5"
+  -
+    template: "SELECT revenue, operating_profit, pat FROM scores.quarterly_results WHERE symbol = ? ORDER BY period_end DESC LIMIT 1"
+  -
+    template: "SELECT equity_capital, reserves, total_liabilities FROM scores.balance_sheet WHERE symbol = ? ORDER BY period_end DESC LIMIT 1"
+python_tools:
+  -
+    id: "gap_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "financial_data"
+      - "technical_data"
+    outputs:
+      - "valuation_gaps"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "scores.quarterly_results"
+    code: "def run(context):\n    # Analyze gaps in financial trends\n    pass"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all data used is within the last five trading sessions."
+  - "Verify that technical signals accurately reflect the latest stage_snapshot scores."
+  - "Confirm that all valuations and summaries are based on existing data only."
+synthesis_guidance: "['Maintain an objective tone, focusing on data-driven insights.', 'Highlight significant patterns and anomalies in trading and financial data.', 'Identify areas where further evidence or data could support a more robust analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:33"
+generation_model: "gpt-4o"
+validation_errors:
+  - "gap_analysis_tool: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "gap_analysis_tool: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,73 @@
+id: "corporate_events_results_watchlist_1493_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1493"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Analyze corporate events and results using SQL and Python evidence tools as needed under `python_tool_policy`. Use approved joins and filters."
+sql_templates:
+  -
+    name: "EventDrivenWatchlist"
+    type: "readonly"
+    sql: "SELECT ce.symbol, ce.event_type, ce.event_date, ss.stage, ss.trading_signal FROM signals.corporate_events AS ce INNER JOIN scores.stage_snapshots AS ss ON ce.symbol = ss.symbol WHERE ce.event_date >= CURRENT_DATE AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY ce.event_date ASC LIMIT 50;"
+python_tools:
+  -
+    required_function: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      context: "Data context with required schema"
+    outputs:
+      action_recommendations: "Generated portfolio-aware recommendations"
+    approved_tables:
+      - "signals.corporate_events"
+      - "scores.results_analysis"
+      - "scores.stage_snapshots"
+    code: "# Read-only analysis in Python tool\n# Placeholder for complex calculations if required beyond SQL scope"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure SQL uses approved schema."
+  - "Filter for upcoming events only."
+  - "Limit result set to 50 entries for performance."
+synthesis_guidance: "Focus on making the output portfolio-aware, considering both event triggers and technical signals."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:29"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: must define run(context)"
+  - "<missing-id>: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: must define run(context)"
+    - "<missing-id>: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

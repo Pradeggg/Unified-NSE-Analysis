@@ -1,0 +1,83 @@
+id: "sector_breadth_rotation_watchlist_1469_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1469"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for post results: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as portfolio-aware output"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    type: "agent_adda_sql"
+    policy: "query_first"
+    agents:
+      -
+        type: "SQL"
+        role: "sector_ranking"
+        details: "Query for latest sector breadth, segment migration, and ranking."
+        inputs:
+          latest_date:
+            use: "snapshot_date"
+            table: "breadth.sector_daily"
+          joined_key: "sector"
+        outputs:
+          - "sector_ranks"
+          - "improving_sectors"
+        notes: "Use breadth values and stage 2 screens to rank sectors."
+      -
+        type: "SQL"
+        role: "symbol_selection"
+        details: "Query and rank stocks from top sectors, using latest scores."
+        inputs:
+          latest_date:
+            use: "snapshot_date"
+            table: "scores.stage_snapshots"
+          joined_key: "symbol"
+        outputs:
+          - "candidate_symbols"
+          - "tradingview_symbols"
+        notes: "Use stage 2, RS, and momentum to derive candidate symbols."
+sql_templates:
+  sector_ranks:
+    template: "SELECT sector, pct_above_50dma, stage2_pct FROM breadth.sector_daily JOIN breadth.ma_pct_above ON breadth.sector_daily.snapshot_date = breadth.ma_pct_above.snapshot_date WHERE breadth.sector_daily.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) ORDER BY stage2_pct DESC, pct_above_50dma DESC LIMIT 5;"
+  candidate_symbols:
+    template: "SELECT symbol, company_name, change_1w_pct, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND sector IN (SELECT sector FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) ORDER BY stage2_pct DESC, pct_above_50dma DESC LIMIT 5) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY change_1w_pct DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "{'rules': ['Ensure input patterns match intended use cases.', 'All SQL templates must retrieve the latest data from tables.', 'Result sets must be bounded with LIMIT to ensure concise outputs.', 'Join conditions should align with _join_rules.']}"
+synthesis_guidance: "['Focus on sector ranks and intra-sector candidate selection using stage and signal.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:21"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

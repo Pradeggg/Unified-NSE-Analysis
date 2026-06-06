@@ -1,0 +1,63 @@
+id: "report_link_data_validation_1740_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1740"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    readOnlySQL:
+      code: "SELECT er.run_id, er.run_ts, ef.symbol, ef.current_price, ef.recommendation FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id WHERE er.run_ts > current_date - interval '30 days';"
+      approved_tables:
+        - "report.enhanced_runs"
+        - "report.enhanced_filtered_stocks"
+sql_templates:
+  -
+    name: "validate_report_links"
+    description: "Check for missing report data and invalid links in the last 20 sessions."
+    template: "SELECT er.run_id, COUNT(ef.symbol) as symbol_count FROM report.enhanced_runs er LEFT JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id WHERE er.run_ts > current_date - interval '20 days' GROUP BY er.run_id HAVING COUNT(ef.symbol) = 0;"
+  -
+    name: "check_report_metadata"
+    description: "Validate metadata consistency in recent report runs."
+    template: "SELECT er.run_id, er.universe_size, COUNT(ef.symbol) as symbol_count FROM report.enhanced_runs er LEFT JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id WHERE er.run_ts > current_date - interval '20 days' GROUP BY er.run_id, er.universe_size HAVING COUNT(ef.symbol) != er.stocks_filtered;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all tables in evidence_required are used in SQL templates."
+  - "Check joins use approved join rules from _join_rules."
+  - "Validate filters follow global_sql_rules, especially for recent data intervals."
+  - "Ensure output_contract fields are covered by evidence findings."
+synthesis_guidance: "['Synthesize findings based on the SQL queries to determine data consistency issues.', 'Focus on inconsistencies related to missing symbols or data discrepancies in the recent runs.', 'Prioritize issues with TradingView export setups in the outputs.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:29"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

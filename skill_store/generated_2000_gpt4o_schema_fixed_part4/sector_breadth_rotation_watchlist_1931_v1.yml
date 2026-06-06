@@ -1,0 +1,82 @@
+id: "sector_breadth_rotation_watchlist_1931_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1931"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for last 20 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as comparison matrix"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    type: "sql"
+    description: "Generate a SQL-based method for compiling sector breadth and stage participation data."
+sql_templates:
+  -
+    name: "sector_breadth_scan"
+    template: "WITH latest_stage AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_breadth AS (SELECT * FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)) SELECT b.sector, b.pct_above_50dma, b.change_5d, s.stage2_pct FROM latest_breadth b JOIN breadth.ma_pct_above s ON b.snapshot_date = s.snapshot_date ORDER BY s.stage2_pct DESC LIMIT 20;"
+python_tools:
+  -
+    run:
+      id: "tool_001"
+      language: "python"
+      mode: "read_only"
+      inputs:
+
+      outputs:
+
+      approved_tables:
+        - "breadth.sector_daily"
+        - "breadth.ma_pct_above"
+        - "scores.stage_snapshots"
+        - "market.equity_eod"
+      code: "# Python code placeholder for complex logic if SQL is insufficient"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure output is a valid JSON object."
+  - "Check SQL queries only use approved tables and columns."
+synthesis_guidance: "['Use gathered data to compile a comparison matrix of sector performance.', 'Highlight sectors with improving breadth and stage 2 participation.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:49"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: language must be python"
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: code is required"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: language must be python"
+    - "<missing-id>: mode must be read_only"
+    - "<missing-id>: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

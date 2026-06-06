@@ -1,0 +1,67 @@
+id: "fii_dii_regime_breadth_review_1254_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1254"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: quarter to date; response style: ranked candidates."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for quarter to date: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as ranked candidates"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Analyze FII/DII flow trends with market regime and breadth metrics."
+sql_templates:
+  -
+    name: "Quarter_to_date_trends"
+    body: "SELECT f.trade_date, f.fii_net_today, f.dii_net_today, r.regime, r.confidence, b.ad_signal, i.trend_signal FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date JOIN breadth.market_daily b ON f.trade_date = b.trade_date JOIN market.index_eod i ON f.trade_date = i.trade_date WHERE f.trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY f.trade_date DESC LIMIT 100"
+python_tools:
+  -
+    id: "calculate_flow_risk"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "fii_net_today"
+      - "dii_net_today"
+      - "regime"
+    outputs:
+      - "risk_rating"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+    code: "def run(context):\n    fii_net = context['fii_net_today']\n    dii_net = context['dii_net_today']\n    regime = context['regime']\n    risk_rating = 'Medium'\n    if fii_net > 1000 and regime == 'BULL':\n        risk_rating = 'Low'\n    elif dii_net < -1000 and regime == 'BEAR':\n        risk_rating = 'High'\n    return {'risk_rating': risk_rating}"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all table joins match approved _join_rules."
+  - "Adhere to _global_rules for filtering date ranges."
+synthesis_guidance: "['Rank candidates based on flow and breadth alignment with current regime.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:27"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_flow_risk: execution failed: KeyError: 'fii_net_today'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_flow_risk: execution failed: KeyError: 'fii_net_today'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,70 @@
+id: "market_3m_rotation_swing_0665_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0665"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: post results; response style: debug trace."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "post_results"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Assess the recent market regime by analyzing sector and stage distributions, and identify potential swing trading candidates using approved market data."
+sql_templates:
+  -
+    description: "Calculate index returns over the last 3 months."
+    template: "SELECT index_symbol, AVG(change_pct) as average_return FROM market.index_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY index_symbol;"
+  -
+    description: "Identify stage changes over the last 3 months."
+    template: "SELECT symbol, stage, COUNT(*) as occurrences FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY symbol, stage;"
+  -
+    description: "Find leading sectors based on stage 2 counts."
+    template: "SELECT sector, COUNT(*) as stage2_count FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY sector ORDER BY stage2_count DESC;"
+  -
+    description: "Identify primary candidates for swing trading."
+    template: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND vcp_score > 7 ORDER BY vcp_score DESC;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure index returns are calculated based on accurate data."
+  - "Sector leadership should reflect latest available data."
+  - "Swing candidates must have recent positive performance indicators."
+synthesis_guidance: "Focus on recent post-result data to identify emerging trends. Emphasize risk factors impacting market regime shifts."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:50:34"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.average_return is not approved"
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage2_vcp_picks.curdate is not approved"
+  - "scores.stage2_vcp_picks.date_sub is not approved"
+  - "scores.stage2_vcp_picks.month is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"
+  - "scores.stage_snapshots.occurrences is not approved"
+  - "scores.stage_snapshots.stage2_count is not approved"

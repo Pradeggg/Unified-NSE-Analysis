@@ -1,0 +1,51 @@
+id: "vcp_breakouts_with_fundamentals_1052_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1052"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: quarter to date; response style: concise table."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze latest quarter VCP breakouts with strong fundamentals using approved tables and columns. Ensure concise tabular output."
+sql_templates:
+  -
+    template_name: "vcp_breakouts_sql"
+    sql: "SELECT vcp.symbol, vcp.company_name, vcp.price, vcp.rsi, vcp.trading_signal, vcp.enhanced_fund_score FROM scores.stage2_vcp_picks AS vcp JOIN scores.stage_snapshots AS ss ON vcp.symbol = ss.symbol WHERE vcp.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND ss.enhanced_fund_score > 70 ORDER BY vcp.vcp_score DESC, vcp.rank ASC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'guides': ['Organize output in a concise table format highlighting VCP scores and trading signals.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

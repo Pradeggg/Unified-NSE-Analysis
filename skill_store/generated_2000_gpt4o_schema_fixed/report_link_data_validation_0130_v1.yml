@@ -1,0 +1,59 @@
+id: "report_link_data_validation_0130_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0130"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: last 5 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as narrative plus evidence"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  - "Step 1: Verify the existence of recent report runs from the last 5 sessions."
+  - "Step 2: Check for completeness and the presence of stock data in the reports."
+  - "Step 3: Identify broken report links."
+  - "Step 4: Analyze any missing data in the report runs."
+sql_templates:
+  -
+    step: "Step 1"
+    description: "Retrieve recent report runs."
+    sql: "SELECT run_id, run_ts FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '5 days';"
+  -
+    step: "Step 2"
+    description: "Verify filtered stocks presence."
+    sql: "SELECT DISTINCT ON (run_id) run_id, symbol FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '5 days');"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure run_id in enhanced_filtered_stocks corresponds to a valid run in enhanced_runs."
+  - "Reports must have entries in enhanced_filtered_stocks if they exist in enhanced_runs."
+synthesis_guidance: "['Discuss the state of report links and identify any broken aspects.', 'Narrate any missing data insights based on the stock filtering and inclusion criteria.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

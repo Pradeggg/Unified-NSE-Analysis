@@ -1,0 +1,69 @@
+id: "agent_route_failure_diagnostics_0210_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0210"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: today; response style: ranked candidates."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for today: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as ranked candidates"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "today"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze recent runs for symbol resolution failures using enhanced_runs and enhanced_filtered_stocks tables for today's TradingView export."
+sql_templates:
+  -
+    description: "Identify recent route failures where TradingView export goes off-rails."
+    template: "SELECT er.run_id, ef.symbol, ef.recommendation, ef.tech_score FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id WHERE er.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) AND ef.recommendation IS NULL LIMIT 50;"
+    purpose: "Identify missing recommendations."
+  -
+    description: "Check symbol resolution loops by analyzing stage snapshots."
+    template: "SELECT ss.symbol, ss.stage, ss.trading_signal FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal = 'HOLD' LIMIT 20;"
+    purpose: "Assess persistent HOLD signals."
+python_tools:
+  -
+    id: "symbol_resolution_checker"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol_data"
+    outputs:
+      - "unresolved_symbols"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context): unresolved = [symbol for symbol, data in context['symbol_data'].items() if data.get('stage') == 'UNKNOWN']; return unresolved;"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure SQL templates use approved join rules."
+  - "Check stage and signal labels as per global SQL rules."
+synthesis_guidance: "Rank candidates based on resolution difficulty and tool gaps identified."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "symbol_resolution_checker: execution failed: KeyError: 'symbol_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "symbol_resolution_checker: execution failed: KeyError: 'symbol_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

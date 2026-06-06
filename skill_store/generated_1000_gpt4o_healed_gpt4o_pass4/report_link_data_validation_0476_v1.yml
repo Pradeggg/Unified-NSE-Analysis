@@ -1,0 +1,60 @@
+created_at: "2026-06-06T12:48:24"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: pre market; response style: portfolio-aware output."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0476_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for pre market: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    sql: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '1 day'"
+    template_id: "validate_runs_freshness"
+  -
+    sql: "SELECT run_id, symbol FROM report.enhanced_filtered_stocks WHERE current_price IS NULL OR volume IS NULL"
+    template_id: "check_filtered_stocks_for_missing_data"
+status: "validated"
+synthesis_guidance:
+  - "Compile findings into a portfolio-aware output"
+  - "Propose strategies for remediation based on missing data patterns"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "pre_market"
+  - "portfolio-aware_output"
+title: "Enhanced Report Data Validation Variant 0476"
+tool_plan_template:
+  - "Analyze report links within enhanced report metadata."
+  - "Verify stock data integrity in filtered stock rows."
+  - "Perform freshness audit on report timestamps."
+validation_errors:
+  - "calculate_data_freshness: execution failed: ImportError: __import__ not found"
+validation_rules:
+  - "Ensure all report timestamps are from the last 24 hours"
+  - "Check that there are no missing prices or volume data in filtered stocks"
+version: 1

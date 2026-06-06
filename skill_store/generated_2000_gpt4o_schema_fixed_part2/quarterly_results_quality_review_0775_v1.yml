@@ -1,0 +1,51 @@
+id: "quarterly_results_quality_review_0775_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0775"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: risk-first review; timeframe: pre market; response style: QA checklist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "risk-first review for pre market: latest quarterly results analysis"
+  - "which companies had strong quarterly results as QA checklist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "risk-first_review"
+  - "pre_market"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Utilize SQL for retrieving latest quarterly data and assess revenue, PAT growth, and margin changes. Verify stage data for risk evaluation."
+sql_templates:
+  latest_results:
+    template: "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.period_label, qr.revenue, qr.pat, qr.opm_pct, ra.verdict FROM scores.quarterly_results qr JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end ORDER BY qr.symbol, qr.period_end DESC NULLS LAST, qr.fetched_at DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure SQL returns latest periods only."
+  - "Check revenue and PAT trends are included."
+  - "Verify margin movement is assessed."
+synthesis_guidance: "['Summarize risk factors prominently.', 'Use QA checklist format for clarity.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

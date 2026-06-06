@@ -1,0 +1,58 @@
+id: "signal_outcome_feedback_review_1789_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1789"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: intraday context; response style: QA checklist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for intraday context: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as QA checklist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Analyze signal outcomes using provided trading logs and scores to identify patterns and validate source trails within intraday contexts."
+sql_templates:
+  -
+    description: "Extract resolved signals and their outcomes."
+    template: "SELECT id, date_issued, symbol, signal, setup_class, price_at_issue, entry_low, entry_high, stop_loss, target_1, target_2, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_resolved IS NOT NULL"
+  -
+    description: "Join signals with latest stage snapshots for context."
+    template: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT sl.id, sl.symbol, sl.signal, ss.stage, ss.technical_score FROM signals.signal_log sl JOIN latest_snapshots ss ON sl.symbol = ss.symbol WHERE sl.date_resolved IS NOT NULL"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all required evidence tables are included."
+  - "Verify SQL constraints for date filters and joins are correctly applied."
+  - "Validate SQL templates against the approved schema for read-only compliance."
+synthesis_guidance: "Summarize outcomes with a focus on successful and unsuccessful signals. Identify improvements for signal generation and emphasize evidence-backed analytics."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

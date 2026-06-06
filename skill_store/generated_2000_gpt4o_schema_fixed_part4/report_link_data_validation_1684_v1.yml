@@ -1,0 +1,58 @@
+id: "report_link_data_validation_1684_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Intraday Watchlist Validation"
+description: "Validates the creation of watchlists for intraday context by checking for broken links and missing data in report generation."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for intraday context: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    goal: "Ensure report integrity by validating links and data presence for intraday watchlists."
+    approach:
+      - "Use SQL templates to query relevant tables."
+      - "Check for broken links and missing data."
+sql_templates:
+  -
+    description: "Select metadata for the latest enhanced report runs."
+    query: "SELECT run_id, run_ts, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '3 months';"
+  -
+    description: "Retrieve filtered stocks for report QA purposes."
+    query: "SELECT ef.run_id, ef.symbol, ef.score FROM report.enhanced_filtered_stocks ef JOIN report.enhanced_runs er ON er.run_id = ef.run_id WHERE er.run_ts > CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure SQL queries only perform SELECT operations."
+  - "Validate presence of run_id and symbol in both tables."
+synthesis_guidance: "['Document all data discrepancies identified.', 'Provide a debug trace to facilitate link and data verification.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

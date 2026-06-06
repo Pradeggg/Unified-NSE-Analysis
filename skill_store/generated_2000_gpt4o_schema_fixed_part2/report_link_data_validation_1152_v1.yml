@@ -1,0 +1,55 @@
+id: "report_link_data_validation_1152_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Agent Adda Report Link Validation"
+description: "Skill to validate report links and data availability in enhanced reports for the Indian market."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  purpose: "Validate report links and availability of stock data in enhanced reports for the Indian market."
+  approach: "Utilize metadata from enhanced report runs and check for missing stock data."
+  steps:
+    - "Fetch the latest report runs based on run_ts for the past quarter using PostgreSQL syntax."
+    - "Identify missing or broken report links and absent stock data from underlying HTML files."
+    - "Summarize findings in narrative form with supporting evidence."
+sql_templates:
+  -
+    description: "Retrieve recent enhanced report runs for the past quarter"
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months' ORDER BY run_ts DESC;"
+  -
+    description: "Check for missing stocks in the report"
+    template: "SELECT ers.run_id, COUNT(efs.symbol) AS missing_stocks FROM report.enhanced_runs AS ers LEFT JOIN report.enhanced_filtered_stocks AS efs ON ers.run_id = efs.run_id WHERE efs.symbol IS NULL GROUP BY ers.run_id;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure that SQL queries are read-only and adhere to the approved schema."
+  - "Use prepared templates for dates and limits."
+  - "Ensure narrative summaries are supported by SQL query outputs."
+synthesis_guidance: "Provide a comprehensive summary of findings explaining the state of report links and data completeness, backed by quantitative evidence from the SQL queries."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

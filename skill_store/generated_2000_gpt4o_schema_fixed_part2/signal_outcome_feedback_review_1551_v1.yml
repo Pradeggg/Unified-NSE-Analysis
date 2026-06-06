@@ -1,0 +1,57 @@
+id: "signal_outcome_feedback_review_1551_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1551"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: quick scan; timeframe: quarter to date; response style: research-only summary."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for quarter to date: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as research-only summary"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+tool_plan_template:
+  steps:
+    - "Summarize outcomes of prior signals given in the quarter-to-date period."
+    - "Identify patterns in successful and unsuccessful trades."
+    - "Propose improvements for signal generation and evaluation processes."
+sql_templates:
+  -
+    template: "SELECT symbol, date_issued, signal, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= (CURRENT_DATE - INTERVAL '3 months') AND (hit_target = TRUE OR hit_stop = TRUE);"
+    notes: "Extracts signals with outcomes (targets or stops hit) for the quarter-to-date period."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+synthesis_guidance: "{'style': 'Research-only summary emphasizing learning and improvement from past signals.', 'targets': 'Provide insights into signal performance and suggest actionable improvements.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

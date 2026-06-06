@@ -1,0 +1,67 @@
+id: "signal_outcome_feedback_review_0907_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0907"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: today; response style: comparison matrix."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for today: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as comparison matrix"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "today"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review recent signal outcomes for each sector and prepare a sector-relative comparison matrix focusing on signals that hit target or stop loss."
+sql_templates:
+  -
+    name: "SectorRelativePerformance"
+    description: "Gather sector-relative performance data for signals that hit target or stop within today."
+    sql: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_eod AS (SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)) SELECT slog.sector, slog.symbol, slog.company, slog.signal, slog.hit_target, slog.hit_stop, ss.technical_score, ss.investment_score, eod.change_pct FROM signals.signal_log slog JOIN latest_snapshots ss ON slog.symbol = ss.symbol JOIN latest_eod eod ON slog.symbol = eod.symbol WHERE slog.date_resolved = (SELECT MAX(date_resolved) FROM signals.signal_log) AND (slog.hit_target = TRUE OR slog.hit_stop = TRUE);"
+python_tools:
+  -
+    id: "analyze_patterns"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "raw_data"
+    outputs:
+      - "summary_insights"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    insights = {}  # Process the raw_data to extract insights.\n    # Implement logic here.\n    return insights"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure that all key sectors are represented in the output summary."
+  - "Verify all signals have corresponding technical and investment scores within the matrix."
+synthesis_guidance: "['Focus on comparative analysis across sectors.', 'Highlight signals with significant deviations from expected outcomes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:13"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analyze_patterns: missing output summary_insights"
+review:
+  status: "needs_heal"
+  findings:
+    - "analyze_patterns: missing output summary_insights"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

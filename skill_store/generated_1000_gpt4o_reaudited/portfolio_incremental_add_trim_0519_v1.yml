@@ -1,0 +1,66 @@
+created_at: "2026-06-06T12:48:42"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: latest EOD; response style: research-only summary."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0519_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for latest EOD: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as research-only summary"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    # Analyze portfolio and snapshot data to identify add/trim candidates\n    return {'analysis_results': []}"
+    id: "run_evidence_analysis"
+    inputs:
+      - "portfolio_data"
+      - "snapshot_data"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "analysis_results"
+sql_templates:
+  -
+    name: "Fetch Portfolio Holdings"
+    sql: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings"
+  -
+    name: "Fetch Stage Snapshots"
+    sql: "SELECT symbol, sector, stage, stage_score, price, change_1d_pct, change_1w_pct, trading_signal FROM scores.stage_snapshots"
+status: "validated"
+synthesis_guidance: "['Summarize insights into potential add or trim actions.', 'Evaluate sector exposure and potential risk flags.']"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "research-only_summary"
+title: "Portfolio Incremental Add Trim Review Variant 0519"
+tool_plan_template:
+
+validation_rules:
+  - "Ensure data consistency between holdings and snapshots."
+  - "Cross-verify stage and trading signals for add/trim decisions."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,65 @@
+id: "agent_route_failure_diagnostics_1036_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1036"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: last 20 sessions; response style: concise table."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as concise table"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Review evidence tables for the latest 20 sessions and identify diagnostic paths causing route failures."
+sql_templates:
+  -
+    id: "latest_runs_query"
+    description: "Get the latest 20 sessions from enhanced report runs."
+    query: "SELECT run_id, run_ts, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 20;"
+python_tools:
+  -
+    id: "run_symbol_check"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_ids"
+    outputs:
+      - "unresolved_symbols"
+    approved_tables:
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    run_ids = context['run_ids']\n    unresolved_symbols = []\n    # Placeholder logic to check for unresolved symbols.\n    # Assume fetching data using a read-only method.\n    for run_id in run_ids:\n        # Perform symbolic checks per run_id.\n        unresolved = check_symbols(run_id)  # assume check_symbols function exists\n        unresolved_symbols.extend(unresolved)\n    return {'unresolved_symbols': unresolved_symbols}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure the session freshness and completeness by auditing recent runs."
+  - "Validate the symbols in enhanced filtered stocks are properly resolved."
+  - "Check for tool gaps and resolution loops."
+synthesis_guidance: "['Focus on identifying areas for improvement in agent paths and routes.', 'Provide a concise summary table outlining potential failures and resolutions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:25"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_symbol_check: execution failed: KeyError: 'run_ids'"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_symbol_check: execution failed: KeyError: 'run_ids'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

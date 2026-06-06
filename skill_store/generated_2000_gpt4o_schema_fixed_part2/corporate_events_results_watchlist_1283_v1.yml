@@ -1,0 +1,76 @@
+id: "corporate_events_results_watchlist_1283_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1283"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for intraday context: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as ranked candidates"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  tasks:
+    - "Collect upcoming or recent corporate events and related results."
+    - "Extract symbols with dividends, splits, bonus, or AGM events."
+    - "Identify event-driven stocks to watch based on recent results."
+  constraints:
+    - "Conform to status=generated"
+    - "SQL must be read-only SELECT/WITH"
+    - "Use approved tables and columns only"
+sql_templates:
+  -
+    description: "Fetch recent corporate events"
+    template: "SELECT id, symbol, event_type, event_date, purpose_raw, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '7 days' AND event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM') ORDER BY event_date LIMIT 10;"
+  -
+    description: "Fetch latest results analysis"
+    template: "WITH latest_results AS (SELECT DISTINCT ON (symbol) symbol, period_end, verdict FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC) SELECT symbol, verdict FROM latest_results WHERE verdict IN ('beat', 'inline', 'miss') ORDER BY period_end LIMIT 10;"
+python_tools:
+  -
+    id: "analyze_event_impact"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "event_data"
+    outputs:
+      - "impact_score"
+    approved_tables:
+      - "signals.corporate_events"
+      - "scores.results_analysis"
+    code: "def run(context):\n    # Process context for ranking symbol based on events and results\n    pass"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all SQL templates are strictly read-only"
+  - "Check that the event_calendar includes recent and upcoming events"
+  - "Verify symbol_watchlist is populated with relevant symbols"
+synthesis_guidance: "['Prioritize events with recent impact on stock performance', 'Use stage data to refine symbol selections', 'Rank candidates based on result evaluations and corporate actions']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analyze_event_impact: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "analyze_event_impact: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

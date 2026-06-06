@@ -1,0 +1,71 @@
+id: "agent_route_failure_diagnostics_1358_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1358"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for quarter to date: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as exceptions and gaps first"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Analyze route failures using latest quarterly data, focusing on exceptions and tool gaps."
+sql_templates:
+  -
+    description: "Identify latest enhanced report runs with potential issues."
+    template: "SELECT run_id, universe_size, stocks_analyzed, notes FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) AND universe_size <> stocks_analyzed;"
+  -
+    description: "Check for stocks that are missing enhanced report data."
+    template: "SELECT efs.symbol, efs.current_price, efs.recommendation FROM report.enhanced_filtered_stocks efs LEFT JOIN report.enhanced_runs er ON efs.run_id = er.run_id WHERE er.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) AND efs.recommendation IS NULL;"
+python_tools:
+  -
+    id: "analyze_route_failures"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+      - "universe_size"
+      - "stocks_analyzed"
+      - "notes"
+    outputs:
+      - "failure_modes"
+    approved_tables:
+      - "report.enhanced_runs"
+    code: "def run(context):\n    # Analyze input for route failures\n    failure_modes = []\n    for row in context['inputs']:\n        if row['universe_size'] != row['stocks_analyzed']:\n            failure_modes.append({'run_id': row['run_id'], 'issue': 'Mismatch in universe size and analyzed stocks'})\n    return {'failure_modes': failure_modes}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure that the output includes fields for failure mode and proposed route fixes."
+  - "Verify the inputs match the expected patterns for symptom descriptions."
+synthesis_guidance: "['Focus on identifying root causes of route failures.', 'Highlight gaps in tool availability and missing report data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:04"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analyze_route_failures: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "analyze_route_failures: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,70 @@
+id: "signal_outcome_feedback_review_1187_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1187"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: intraday context; response style: narrative plus evidence."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for intraday context: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as narrative plus evidence"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "outcome_summary"
+      - "winner_patterns"
+      - "failure_patterns"
+      - "route_improvements"
+      - "next_checks"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "# Example python tool\n\ndef run(context):\n    # Extract required data from context, ensuring read-only mode\n    signals = context['signals.signal_log']\n    stages = context['scores.stage_snapshots']\n    market_data = context['market.equity_eod']\n    \n    # Analyze signals\n    outcome_summary = analyze_signals(signals, stages, market_data)\n    winner_patterns = find_winner_patterns(signals)\n    failure_patterns = identify_failure_patterns(signals)\n    route_improvements = suggest_route_improvements(signals)\n    next_checks = determine_next_checks(signals)\n    \n    return {\n        'outcome_summary': outcome_summary,\n        'winner_patterns': winner_patterns,\n        'failure_patterns': failure_patterns,\n        'route_improvements': route_improvements,\n        'next_checks': next_checks\n    }\n\n# Define helper functions\n\ndef analyze_signals(signals, stages, market_data):\n    # Complex analysis logic here...\n    return {}\n\ndef find_winner_patterns(signals):\n    # Logic to find successful patterns...\n    return []\n\ndef identify_failure_patterns(signals):\n    # Logic to identify where failures occurred...\n    return []\n\ndef suggest_route_improvements(signals):\n    # Suggest improvements...\n    return {}\n\ndef determine_next_checks(signals):\n    # Determine next checks to perform...\n    return []"
+sql_templates:
+  -
+    description: "Retrieve signal outcome data with context for analysis."
+    sql: "SELECT s.symbol, s.date_issued, s.signal, s.hit_target, s.hit_stop, eod.close as resolution_price FROM signals.signal_log s JOIN market.equity_eod eod ON s.symbol = eod.symbol AND eod.trade_date = s.date_resolved WHERE s.date_issued >= CURRENT_DATE - INTERVAL '3 months' AND s.hit_target IS NOT NULL AND eod.series = 'EQ';"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all SQL templates are read-only."
+  - "Python evidence tools, if used, must only read data."
+  - "Aligns with domain-specific input patterns and expected outcomes."
+synthesis_guidance: "['Focus on sector-relative comparisons and intraday context.', 'Combine narrative explanations with data-backed evidence.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:29"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

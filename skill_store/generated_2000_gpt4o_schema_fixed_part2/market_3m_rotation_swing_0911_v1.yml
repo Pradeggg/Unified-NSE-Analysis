@@ -1,0 +1,66 @@
+id: "market_3m_rotation_swing_0911_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0911"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Assess the last 3 months of market activity using the evidence tables to identify stage 2 candidates and sector leadership."
+sql_templates:
+  -
+    id: "index_returns_query"
+    description: "Calculate index returns over the last 3 months."
+    template: "SELECT index_symbol, (close - prev_close) / prev_close * 100 AS change_pct FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND trade_date >= CURRENT_DATE - INTERVAL '3 months'"
+  -
+    id: "stage_change_analysis"
+    description: "Identify changes in stage distribution."
+    template: "SELECT stage, COUNT(symbol) AS count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY stage"
+  -
+    id: "leading_sectors_query"
+    description: "Find leading sectors based on recent performance."
+    template: "SELECT sector, AVG(change_1m_pct) AS avg_change FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY avg_change DESC LIMIT 5"
+  -
+    id: "primary_candidates_query"
+    description: "Identify primary swing trade candidates."
+    template: "WITH stage2_candidates AS (SELECT symbol, stage_score FROM scores.stage_snapshots WHERE stage = 'STAGE_2' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT market.equity_eod.symbol, close FROM market.equity_eod JOIN stage2_candidates ON market.equity_eod.symbol = stage2_candidates.symbol WHERE market.equity_eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) ORDER BY stage_score DESC LIMIT 10"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure the latest EOD data is used for all queries."
+  - "Verify that the generated comparison matrix includes all required components."
+synthesis_guidance: "['Combine index returns, sector leadership, and stage 2 candidate analysis into a coherent narrative.', 'Emphasize the role of sector rotation in swing trading strategies.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

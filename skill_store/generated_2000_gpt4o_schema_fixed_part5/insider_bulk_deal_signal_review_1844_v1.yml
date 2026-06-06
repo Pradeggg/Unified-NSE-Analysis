@@ -1,0 +1,54 @@
+id: "insider_bulk_deal_signal_review_1844_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1844"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: last 3 months; response style: action watchlist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for last 3 months: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as action watchlist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Review data and generate action watchlist for insider activity and bulk deals in the last 3 months."
+sql_templates:
+  -
+    template_name: "insider_and_bulk_deal_matches"
+    template_sql: "WITH insider_activities AS (SELECT ia.symbol, ia.alert_date, ia.insider_score FROM signals.insider_alerts ia WHERE ia.alert_date >= CURRENT_DATE - INTERVAL '3 months'), bulk_deals AS (SELECT bbd.symbol, bbd.deal_date FROM signals.bulk_block_deals bbd WHERE bbd.deal_date >= CURRENT_DATE - INTERVAL '3 months'), latest_stage AS (SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY')) SELECT ia.symbol, MAX(ia.insider_score) AS max_insider_score FROM insider_activities ia JOIN bulk_deals bd ON ia.symbol = bd.symbol JOIN latest_stage ls ON ia.symbol = ls.symbol GROUP BY ia.symbol HAVING COUNT(*) > 1 LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure the symbols have at least one insider alert and one bulk deal in the last 3 months."
+  - "Apply latest stage and signal filter for actionable insights."
+synthesis_guidance: "Generate an actionable watchlist based on insider and bulk deal analysis, emphasizing technical confirmations."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

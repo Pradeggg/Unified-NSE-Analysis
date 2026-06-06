@@ -1,0 +1,63 @@
+id: "fii_dii_regime_breadth_review_1478_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1478"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: pre market; response style: portfolio-aware output."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for pre market: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as portfolio-aware output"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "pre_market"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+  freshness:
+    max_eod_age_days: 3
+tool_plan_template:
+  -
+    evidence_task: "retrieve_evidence"
+    tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    notes:
+      - "Combine FII/DII flows, market regime, and breadth evidence to derive market context."
+sql_templates:
+  -
+    template_id: "fii_dii_regime_breadth"
+    sql: "WITH latest_flows AS (SELECT * FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows)), latest_regime AS (SELECT * FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history)), latest_breadth AS (SELECT * FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily)), latest_index AS (SELECT * FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND index_symbol = 'Nifty 50') SELECT lf.trade_date, lr.regime, lr.confidence, lb.market_sentiment, li.change_pct FROM latest_flows lf JOIN latest_regime lr ON lf.trade_date = lr.trade_date JOIN latest_breadth lb ON lf.trade_date = lb.trade_date JOIN latest_index li ON lf.trade_date = li.trade_date;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Check if the latest date is within expected bounds."
+  - "Validate all required fields are populated in the dataset."
+synthesis_guidance: "['Cross-verify regime signals with breadth and flow contexts.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:21"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,63 @@
+created_at: "2026-06-06T12:46:33"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0446_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    # Example function for complex analysis\n    return {'result': []}"
+    id: "run"
+    inputs:
+      - "context"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "result"
+sql_templates:
+  recent_new_highs: "SELECT symbol, high, week52_high, market_cap_cr FROM market.equity_eod WHERE trade_date = CURRENT_DATE AND high >= week52_high;"
+  recent_vcp_breakouts: "SELECT symbol, company_name, price, vcp_breakout_pct, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months';"
+status: "validated"
+synthesis_guidance: "['Cross-reference candidates with fundamental scores.', 'Ensure liquidity checks based on turnover rate.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_3_months"
+  - "portfolio-aware_output"
+title: "VCP Breakouts With Fundamentals Variant 0446"
+tool_plan_template: "agent"
+validation_rules:
+  - "Ensure data freshness check covers the last 3 months."
+  - "Verify correct integration of fundamentals."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

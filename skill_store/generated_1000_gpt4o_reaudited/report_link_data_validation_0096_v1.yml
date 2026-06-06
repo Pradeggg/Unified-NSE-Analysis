@@ -1,0 +1,50 @@
+created_at: "2026-06-06T12:41:54"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: weekly review; response style: concise table."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0096_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for weekly review: review report links not working"
+  - "validate generated report links and missing data as concise table"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  check_missing_stock_data:
+    description: "Count stocks missing current price data for each report run."
+    template: "SELECT run_id, COUNT(symbol) as missing_data_count FROM report.enhanced_filtered_stocks WHERE current_price IS NULL GROUP BY run_id;"
+  validate_report_links_and_data:
+    description: "Retrieve recent report metadata for the last week."
+    template: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '7 days';"
+status: "test_failed"
+synthesis_guidance: "Summarize findings in a concise table indicating the freshness of report links and the extent of missing data."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "weekly_review"
+  - "concise_table"
+title: "Enhanced Report Data Validation Variant 0096"
+tool_plan_template: "Perform freshness audit by extracting data for the weekly review period using the given tables and columns. Present the status of report links and missing data in a concise table format."
+validation_rules:
+  - "Ensure run_ts is within the last week."
+  - "Current price data should not be null."
+version: 1
+validation_errors:
+  - "report.enhanced_filtered_stocks.missing_data_count is not approved"
+  - "report.enhanced_runs.now is not approved"

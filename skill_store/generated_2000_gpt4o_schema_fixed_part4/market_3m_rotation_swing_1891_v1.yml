@@ -1,0 +1,89 @@
+id: "market_3m_rotation_swing_1891_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1891"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for weekly review: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    description: "Analyze recent market conditions and identify swing trading opportunities based on sector rotation and Stage 2 leadership within the Indian market over the past three months."
+sql_templates:
+  index_returns: "SELECT index_symbol, SUM(change_pct) AS total_return FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol ORDER BY total_return DESC;"
+  stage_distribution_change: "SELECT stage, COUNT(*) AS num_symbols FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY stage;"
+  leading_sectors: "SELECT sector, AVG(relative_strength) AS avg_relative_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY avg_relative_strength DESC LIMIT 5;"
+  primary_candidates: "SELECT symbol, company_name, price FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY vcp_score DESC, rank ASC LIMIT 10;"
+  risks: "SELECT symbol, change_1m_pct FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND change_1m_pct < 0 ORDER BY change_1m_pct ASC LIMIT 10;"
+python_tools:
+  -
+    run:
+      id: "run_1891"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "index_returns"
+        - "stage_distribution_change"
+        - "leading_sectors"
+        - "primary_candidates"
+        - "risks"
+      outputs:
+        - "watchlist_report"
+      approved_tables:
+        - "market.index_eod"
+        - "scores.stage_snapshots"
+        - "scores.stage2_vcp_picks"
+      code: "# Sample pseudo-code for processing and generating a report\ndef run(context):\n    report = \"Swing Trading Watchlist:\\n\"\n    report += f\"As of {context['as_of_date']}\\n\"\n    report += \"Index Returns:\\n\" + str(context['index_returns']) + \"\\n\"\n    report += \"Sector Leaders:\\n\" + str(context['leading_sectors']) + \"\\n\"\n    report += \"Primary Candidates:\\n\" + str(context['primary_candidates']) + \"\\n\"\n    report += \"Risks:\\n\" + str(context['risks']) + \"\\n\"\n    return report"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure dates are filtered to the last 3 months and align with global rules."
+  - "Verify no updates are made to the database or external systems."
+  - "Ensure result sets match contract structure and format."
+synthesis_guidance: "Construct a coherent narrative identifying the top sectors and stocks poised for potential swing trading gains, while highlighting any associated risks."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:30"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: language must be python"
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: outputs must be a non-empty list"
+  - "market.index_eod.total_return is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: code is required"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: language must be python"
+    - "<missing-id>: mode must be read_only"
+    - "<missing-id>: outputs must be a non-empty list"
+    - "market.index_eod.total_return is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

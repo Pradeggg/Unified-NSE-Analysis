@@ -1,0 +1,63 @@
+id: "report_link_data_validation_1000_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1000"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: weekly review; response style: comparison matrix."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for weekly review: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "weekly_review"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  inputs:
+    - "run_id"
+    - "analysis_date"
+  outputs:
+    - "findings"
+    - "broken_links"
+    - "missing_data"
+    - "remediation"
+    - "verification"
+sql_templates:
+  -
+    description: "Fetch report run metadata for a specific analysis date."
+    template: "SELECT run_id, run_ts, universe_size, stocks_analyzed, stocks_filtered, market_composite_score, market_sentiment FROM report.enhanced_runs WHERE analysis_date = '{{ analysis_date }}';"
+  -
+    description: "Fetch filtered stock rows for a specific run."
+    template: "SELECT symbol, score, recommendation, current_price, day_change_pct, weekly_signal FROM report.enhanced_filtered_stocks WHERE run_id = '{{ run_id }}';"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "data_integrity"
+  - "link_functionality"
+  - "missing_data"
+synthesis_guidance: "Compare data integrity and link functionality against expected outputs and pre-set benchmarks."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:53:32"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

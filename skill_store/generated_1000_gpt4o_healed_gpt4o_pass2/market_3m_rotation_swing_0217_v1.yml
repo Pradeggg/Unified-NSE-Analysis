@@ -1,0 +1,151 @@
+card:
+  created_at: "2026-06-06T12:43:27"
+  created_by: "llm_generated"
+  description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: ranked candidates."
+  domain: "market_analysis"
+  evidence_required:
+    tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "market_3m_rotation_swing_0217_v1"
+  input_patterns:
+    - "last 3 months market analysis"
+    - "find swing candidates from recent sector rotation"
+    - "market regime and stage 2 leadership over 3 months"
+    - "sector-relative comparison for latest EOD: last 3 months market analysis"
+    - "market regime and stage 2 leadership over 3 months as ranked candidates"
+  output_contract:
+    - "as_of_date"
+    - "index_returns"
+    - "stage_distribution_change"
+    - "leading_sectors"
+    - "primary_candidates"
+    - "risks"
+  python_tools:
+    -
+      approved_tables:
+        - "scores.stage_snapshots"
+      code: "def run(context):\n    # Assume 'context' contains valid data\n    sector_counts = context.get('sector_stage_distribution', {}).value_counts()\n    leading_sectors = sector_counts.nlargest(3)\n    return leading_sectors.to_dict()"
+      id: "sector_leader_analysis"
+      inputs:
+        - "sector_stage_distribution"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "leading_sector_summary"
+  review:
+    attempts: 1
+    findings:
+
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "generated"
+  sql_templates:
+    index_performance: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY trade_date DESC;"
+    stage2_candidates: "SELECT snapshot_date, symbol, sector, stage, stage_score FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= CURRENT_DATE - INTERVAL '3 months';"
+  status: "generated"
+  synthesis_guidance:
+    headline_summary: "Summarize sector dominance and candidate ranking."
+    risk_assessment: "Highlight potential market risks based on data trends."
+  tags:
+    - "market_regime"
+    - "sector_rotation"
+    - "stage_analysis"
+    - "swing_trading"
+    - "sector-relative_comparison"
+    - "latest_EOD"
+    - "ranked_candidates"
+  title: "3M Market Rotation Swing Assessment Variant 0217"
+  tool_plan_template: "Analyze sector-relative positioning and swing candidates using EOD data and stage analysis."
+  validation_errors:
+
+  validation_rules:
+    - "check_as_of_date"
+    - "index_returns_format"
+  version: 1
+created_at: "2026-06-06T12:43:27"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: ranked candidates."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0217_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze the sector distribution and identify the leading sectors\n    sector_counts = context['sector_stage_distribution'].value_counts()\n    leading_sectors = sector_counts.nlargest(3)\n    return leading_sectors.to_dict()"
+    id: "sector_leader_analysis"
+    inputs:
+      - "sector_stage_distribution"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "leading_sector_summary"
+review:
+  attempts: 3
+  findings:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  index_performance: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY trade_date DESC;"
+  stage2_candidates: "SELECT snapshot_date, symbol, sector, stage, stage_score FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= CURRENT_DATE - INTERVAL '3 months';"
+status: "test_failed"
+synthesis_guidance: "{'headline_summary': 'Summarize sector dominance and candidate ranking.', 'risk_assessment': 'Highlight potential market risks based on data trends.'}"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "ranked_candidates"
+title: "3M Market Rotation Swing Assessment Variant 0217"
+tool_plan_template: "Analyze sector-relative positioning and swing candidates using EOD data and stage analysis."
+validation_errors:
+  - "description is required"
+  - "domain is required"
+  - "evidence_required is required"
+  - "id is required"
+  - "input_patterns is required"
+  - "output_contract is required"
+  - "tags is required"
+  - "title is required"
+  - "validation_rules is required"
+  - "version is required"
+  - "version must be a positive integer"
+validation_rules:
+  - "check_as_of_date"
+  - "index_returns_format"
+version: 1

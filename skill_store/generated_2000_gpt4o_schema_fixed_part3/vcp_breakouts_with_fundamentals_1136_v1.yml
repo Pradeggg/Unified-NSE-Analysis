@@ -1,0 +1,55 @@
+id: "vcp_breakouts_with_fundamentals_1136_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1136"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 20 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    type: "text"
+    content: "Extract stocks creating new highs or VCP or breakouts with strong fundamentals."
+sql_templates:
+  -
+    description: "Find top VCP candidates based on scores."
+    template: "WITH latest_vcp AS ( SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC, rank ASC LIMIT 10 ) SELECT lv.symbol, lv.company_name, lv.sector, lv.price, lv.trading_signal, lv.investment_score, ss.enhanced_fund_score FROM latest_vcp lv JOIN scores.stage_snapshots ss ON lv.symbol = ss.symbol AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) WHERE ss.trading_signal IN ('BUY', 'STRONG_BUY')"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure symbols exist in both latest VCP picks and stage snapshots."
+  - "Validate trading signals reflect current buy opportunities."
+synthesis_guidance: "['Use synthesized narrative to provide context about selected breakouts based on technical and fundamental criteria.', 'Ensure evidence supports narrative claims with verifiable data points.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:55:39"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

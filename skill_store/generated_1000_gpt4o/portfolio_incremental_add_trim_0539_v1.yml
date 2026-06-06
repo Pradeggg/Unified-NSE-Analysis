@@ -1,0 +1,60 @@
+id: "portfolio_incremental_add_trim_0539_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0539"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: research-only summary."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for last 20 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as research-only summary"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  sql_templates:
+    -
+      name: "get_recent_performance"
+      description: "Retrieve performance metrics for symbols in the last 20 sessions."
+      sql: "SELECT symbol, AVG(change_1d_pct) as avg_daily_change, AVG(change_1w_pct) as avg_weekly_change FROM scores.stage_snapshots WHERE snapshot_date > (CURRENT_DATE - INTERVAL '20 days') GROUP BY symbol"
+    -
+      name: "get_current_holdings"
+      description: "Retrieve current holdings details from the portfolio."
+      sql: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings"
+  python_tools:
+
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure SQL templates use only approved columns."
+  - "Ensure all responses are research-only and do not involve any execution of trades."
+  - "Validate timeframe compliance with last 20 sessions."
+synthesis_guidance: "Summarize performance indicators, portfolio state, and identify potential add/trim candidates based on recent performance data. Use research-only framing and avoid speculative or prescriptive advice."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:48:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

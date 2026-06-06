@@ -1,0 +1,91 @@
+id: "fii_dii_regime_breadth_review_1534_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1534"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: research-only summary."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as research-only summary"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    name: "Gather FII/DII Flow Signals"
+    target_table: "signals.fii_dii_flows"
+    filters:
+      - "trade_date BETWEEN CURRENT_DATE - INTERVAL '20 days' AND CURRENT_DATE"
+  -
+    name: "Assess Regime History"
+    target_table: "signals.regime_history"
+    filters:
+      - "trade_date BETWEEN CURRENT_DATE - INTERVAL '20 days' AND CURRENT_DATE"
+  -
+    name: "Evaluate Market Breadth"
+    target_table: "breadth.market_daily"
+    filters:
+      - "trade_date BETWEEN CURRENT_DATE - INTERVAL '20 days' AND CURRENT_DATE"
+  -
+    name: "Check Index EOD Details"
+    target_table: "market.index_eod"
+    filters:
+      - "trade_date BETWEEN CURRENT_DATE - INTERVAL '20 days' AND CURRENT_DATE"
+sql_templates:
+  -
+    name: "Flow, Regime, and Breadth Analysis"
+    sql: "SELECT A.trade_date, A.fii_net_today, A.dii_net_today, A.flow_signal, B.regime, C.ad_signal, D.trading_signal FROM signals.fii_dii_flows A JOIN signals.regime_history B ON A.trade_date = B.trade_date JOIN breadth.market_daily C ON A.trade_date = C.trade_date JOIN market.index_eod D ON A.trade_date = D.trade_date WHERE A.trade_date BETWEEN CURRENT_DATE - INTERVAL '20 days' AND CURRENT_DATE;"
+python_tools:
+  -
+    id: "summarize_market_context_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "flow_data"
+      - "regime_data"
+      - "breadth_data"
+      - "index_data"
+    outputs:
+      - "summary"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context):\n    flow_data = context['flow_data']\n    regime_data = context['regime_data']\n    breadth_data = context['breadth_data']\n    index_data = context['index_data']\n    # Simplified summary logic\n    return {'summary': 'Combine flow trends, regime states, and breadth signals for a cohesive market analysis.'}"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all columns retrieved are from approved schema."
+  - "All filters must remain within the last 20-day window."
+  - "Ensure no data modification occurs during analysis."
+synthesis_guidance: "['Integrate flow signals, regime labels, and breadth dynamics to describe the current market stage.', 'Summarize whether the environment supports a risk-on or risk-off watchlist creation effectively.', 'Provide a unified commentary that supports institutional flow context with democratic market evidence.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:12"
+generation_model: "gpt-4o"
+validation_errors:
+  - "summarize_market_context_tool: execution failed: KeyError: 'flow_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "summarize_market_context_tool: execution failed: KeyError: 'flow_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

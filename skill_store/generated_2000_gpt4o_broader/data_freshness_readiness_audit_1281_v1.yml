@@ -1,0 +1,71 @@
+id: "data_freshness_readiness_audit_1281_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1281"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for intraday context: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as ranked candidates"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Perform a quick scan on required evidence tables to assess data freshness readiness using approved methods."
+sql_templates:
+  -
+    query: "SELECT MAX(trade_date) AS last_trade_date FROM market.index_eod"
+    description: "Check last data update for index EOD."
+  -
+    query: "SELECT MAX(trade_date) AS last_trade_date FROM market.equity_eod"
+    description: "Check last data update for equity EOD."
+  -
+    query: "SELECT MAX(snapshot_date) AS last_snapshot_date FROM scores.stage_snapshots"
+    description: "Check last snapshot update in scores."
+  -
+    query: "SELECT MAX(trade_date) AS last_trade_date FROM breadth.market_daily"
+    description: "Check last update for market daily breadth data."
+  -
+    query: "SELECT MAX(snapshot_date) AS last_snapshot_date FROM breadth.ma_pct_above"
+    description: "Check last daily percentage update for stocks above moving averages."
+  -
+    query: "SELECT MAX(run_ts) AS last_run_timestamp FROM report.enhanced_runs"
+    description: "Check last report generation timestamp."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure data freshness is within acceptable range."
+  - "Rank missing sources by impact on workflows."
+synthesis_guidance: "['Prioritize sources impacting intraday context.', 'Provide actionable insights on missing data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:34"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.last_snapshot_date is not approved"
+  - "breadth.market_daily.last_trade_date is not approved"
+  - "market.equity_eod.last_trade_date is not approved"
+  - "market.index_eod.last_trade_date is not approved"
+  - "report.enhanced_runs.last_run_timestamp is not approved"
+  - "scores.stage_snapshots.last_snapshot_date is not approved"

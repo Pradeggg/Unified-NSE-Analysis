@@ -1,0 +1,1 @@
+def run(context): missing_symbols = [row['symbol'] for row in context if row['current_price'] is None]; return missing_symbols;

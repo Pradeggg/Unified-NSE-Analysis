@@ -1,0 +1,50 @@
+id: "portfolio_incremental_add_trim_1711_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1711"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: latest EOD; response style: QA checklist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for latest EOD: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "latest_EOD"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Use SQL to extract latest scores and holdings, cross-reference for add/trim decisions based on stage, signal, and exposure."
+sql_templates:
+  -
+    description: "Select latest stage snapshot data for current holdings."
+    sql: "SELECT sh.symbol, sh.sector, sh.stage, sh.trading_signal, ph.qty, sh.snapshot_date FROM portfolio.holdings ph INNER JOIN scores.stage_snapshots sh ON ph.symbol = sh.symbol WHERE sh.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure the latest snapshot date is used."
+  - "Verify stage and trading_signal values are valid as per definitions."
+synthesis_guidance: "Prioritize 'BUY', 'STRONG_BUY' signals for add candidates and any 'SELL' signals for trim candidates."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:14"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

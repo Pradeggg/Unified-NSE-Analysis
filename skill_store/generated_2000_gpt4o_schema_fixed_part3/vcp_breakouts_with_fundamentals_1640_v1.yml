@@ -1,0 +1,60 @@
+id: "vcp_breakouts_with_fundamentals_1640_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1640"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  inputs:
+    - "symbols"
+    - "timeframe"
+  steps:
+    -
+      description: "Filter stocks based on VCP patterns and fundamentals."
+      method: "sql"
+    -
+      description: "Format the output for TradingView export."
+      method: "format"
+sql_templates:
+  vcp_selection: "WITH latest_stage AS (SELECT symbol, max(snapshot_date) as snapshot_date FROM scores.stage_snapshots GROUP BY symbol) SELECT vcp.symbol, vcp.price, vcp.trading_signal FROM scores.stage2_vcp_picks vcp JOIN latest_stage ls ON vcp.symbol = ls.symbol WHERE vcp.snapshot_date = ls.snapshot_date AND vcp.trading_signal IN ('BUY', 'STRONG_BUY') AND vcp.enhanced_fund_score > 80 ORDER BY vcp.vcp_score DESC, vcp.rank ASC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Check that SQL query returns non-empty results."
+  - "Ensure symbols are correctly formatted for TradingView."
+synthesis_guidance: "['Focus on breakout patterns that align with strong fundamentals.', 'Provide explanation for each selected stock in the context of recent performance.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

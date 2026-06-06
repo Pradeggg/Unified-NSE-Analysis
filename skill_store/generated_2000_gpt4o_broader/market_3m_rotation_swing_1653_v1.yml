@@ -1,0 +1,59 @@
+id: "market_3m_rotation_swing_1653_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1653"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  tool_plan: "Evaluate market dynamics using the latest 3 months of data from approved tables."
+sql_templates:
+  -
+    description: "Retrieve index performance data for the last 3 months."
+    template: "SELECT trade_date, index_symbol, change_pct, trend_signal, relative_strength FROM market.index_eod WHERE trade_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) ORDER BY trade_date DESC;"
+  -
+    description: "Identify leading sectors based on recent performance."
+    template: "SELECT sector, AVG(change_1m_pct) AS avg_change_1m_pct FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) GROUP BY sector ORDER BY avg_change_1m_pct DESC LIMIT 5;"
+  -
+    description: "Fetch top Swing trading candidates based on stage 2 criteria."
+    template: "SELECT symbol, company_name, sector, stage, stage_score FROM scores.stage_snapshots WHERE stage = 'Stage 2' AND snapshot_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) ORDER BY stage_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "fields"
+synthesis_guidance: "Focus the synthesis on changes in index returns, sector leadership, and identification of swing candidates. Use debug trace style for detailed insights."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:53"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage_snapshots.avg_change_1m_pct is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"

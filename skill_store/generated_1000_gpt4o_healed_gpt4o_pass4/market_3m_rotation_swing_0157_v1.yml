@@ -1,0 +1,61 @@
+created_at: "2026-06-06T12:42:25"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates focusing on sector-relative comparison for quarter to date; response style: narrative plus evidence."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0157_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as narrative plus evidence"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  status: "needs_heal"
+  findings:
+    - "scores.stage_snapshots.avg_stage_score is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    name: "Sector_Leading_Indices"
+    query: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 MONTHS' ORDER BY change_pct DESC;"
+  -
+    name: "Sector_Leadership"
+    query: "SELECT sector, AVG(stage_score) as avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 MONTHS' GROUP BY sector ORDER BY sector ASC;"
+  -
+    name: "Swing_Candidates"
+    query: "SELECT symbol, company_name, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 MONTHS' ORDER BY vcp_score DESC;"
+status: "test_failed"
+synthesis_guidance: "Combine SQL results to create a holistic narrative of market regime, leadership stages, and swing trading opportunities."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+title: "3M Market Rotation Swing Assessment Variant 0157"
+tool_plan_template: "Analyze sector rotation and identify leading sectors and swing candidates based on regime and stage data."
+validation_errors:
+  - "scores.stage_snapshots.avg_stage_score is not approved"
+validation_rules:
+  - "Ensure dates are within the last 3 months."
+  - "Verify that sector scores are ranked correctly."
+version: 2

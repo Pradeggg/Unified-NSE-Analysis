@@ -1,0 +1,58 @@
+id: "vcp_breakouts_with_fundamentals_0826_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0826"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "This Agent Adda instance explores VCP breakouts and fundamentals in the Indian market, focusing on data freshness and action-ready insights."
+sql_templates:
+  -
+    name: "select_recent_candidates"
+    template: "WITH recent_eod AS (SELECT symbol, MAX(trade_date) AS max_date FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '5 days' GROUP BY symbol), vcp_candidates AS (SELECT p.symbol, p.price, p.fundamental_score FROM scores.stage2_vcp_picks p JOIN recent_eod e ON p.symbol = e.symbol WHERE p.snapshot_date = e.max_date AND p.vcp_score > <VCP_THRESHOLD> AND p.enhanced_fund_score > <FUND_THRESHOLD>) SELECT c.symbol FROM vcp_candidates c;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "Handle missing data with appropriate evidence_gaps."
+  - "Verify adherence to the approved schema."
+synthesis_guidance: "Focus on stocks with strong breakout characteristics according to the VCP methodology. Data freshness and integrity in the last 5 sessions are prioritized."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:52:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.fundamental_score is not approved"
+  - "unknown table c.symbol"
+  - "unknown table e.max_date"
+  - "unknown table e.symbol"
+  - "unknown table p.enhanced_fund_score"
+  - "unknown table p.fundamental_score"
+  - "unknown table p.price"
+  - "unknown table p.snapshot_date"
+  - "unknown table p.symbol"
+  - "unknown table p.vcp_score"

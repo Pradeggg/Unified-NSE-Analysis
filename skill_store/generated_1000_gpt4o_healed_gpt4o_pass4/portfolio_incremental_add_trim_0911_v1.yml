@@ -1,0 +1,60 @@
+created_at: "2026-06-06T12:52:43"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: latest EOD; response style: comparison matrix."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0911_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for latest EOD: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 3
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    id: "sector_exposure_query"
+    template: "SELECT sector, SUM(qty * live_price) AS total_value FROM scores.stage_snapshots JOIN portfolio.holdings ON scores.symbol = holdings.symbol WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector"
+  -
+    id: "add_candidates_query"
+    template: "SELECT symbol, company_name, sector FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage_score > 80 AND trend_signal = 'Bullish'"
+  -
+    id: "trim_candidates_query"
+    template: "SELECT symbol, company_name, sector FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage_score < 50 AND trend_signal = 'Bearish'"
+status: "validated"
+synthesis_guidance:
+  - "Compare sector exposure against market benchmarks."
+  - "Cross-reference add and trim candidates with recent trend signals."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "latest_EOD"
+  - "comparison_matrix"
+title: "Portfolio Incremental Add Trim Review Variant 0911"
+tool_plan_template: "Analyze the latest EOD data to identify potential add or trim candidates based on stages, technical scores, and sector exposure."
+validation_errors:
+
+validation_rules:
+  - "Ensure that sector exposure calculations align with current market data."
+  - "Add and trim candidates should reflect latest trend signals."
+version: 1

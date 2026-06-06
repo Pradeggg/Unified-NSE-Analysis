@@ -1,0 +1,58 @@
+id: "insider_bulk_deal_signal_review_1326_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1326"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for last 5 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as exceptions and gaps first"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Identify insider alerts and bulk deals from the last 5 sessions."
+  - "Verify technical confirmations using stage and technical scores."
+  - "Highlight exceptions and evidence gaps for manual review."
+sql_templates:
+  -
+    description: "Select insider alerts and bulk deals in the last 5 sessions."
+    template: "SELECT a.symbol, a.alert_date, a.entity, a.qty, a.value_cr, a.insider_score, b.deal_date, b.deal_type, b.qty AS deal_qty, b.price FROM signals.insider_alerts a JOIN signals.bulk_block_deals b ON a.symbol = b.symbol WHERE a.alert_date >= CURRENT_DATE - INTERVAL '5 days' AND b.deal_date >= CURRENT_DATE - INTERVAL '5 days'"
+  -
+    description: "Get technical confirmations from stage snapshots."
+    template: "SELECT symbol, snapshot_date, technical_score, trend_signal FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '5 days'"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all symbols have corresponding technical confirmation."
+  - "Identify discrepancies in alerts and bulk deal quantities."
+synthesis_guidance: "['Focus on gaps and exceptions in the data.', 'Prioritize symbols with high insider activity and strong technical signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,95 @@
+id: "data_freshness_readiness_audit_1337_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1337"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for last 20 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as exceptions and gaps first"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    description: "Evaluate data freshness across approved tables for sector-relative comparison over the last 20 sessions."
+sql_templates:
+  -
+    template: "SELECT MAX(trade_date) AS latest_trade_date, index_symbol FROM market.index_eod GROUP BY index_symbol"
+  -
+    template: "SELECT MAX(trade_date) AS latest_trade_date, symbol FROM market.equity_eod WHERE series = 'EQ' GROUP BY symbol"
+  -
+    template: "SELECT MAX(snapshot_date) AS latest_snapshot_date, sector FROM scores.stage_snapshots WHERE stage = 'STAGE_2' GROUP BY sector"
+  -
+    template: "SELECT MAX(trade_date) AS latest_trade_date FROM breadth.market_daily"
+  -
+    template: "SELECT MAX(snapshot_date) AS latest_snapshot_date FROM breadth.ma_pct_above"
+  -
+    template: "SELECT MAX(run_ts) AS latest_run_ts FROM report.enhanced_runs"
+python_tools:
+  -
+    id: "evaluate_freshness"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "freshness_data"
+    outputs:
+      - "analysis_report"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "breadth.market_daily"
+      - "breadth.ma_pct_above"
+      - "report.enhanced_runs"
+    code: "def run(context): pass"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure SQL templates only use approved tables and columns."
+  - "Verify use of JOIN rules and global rules as per definitions."
+synthesis_guidance: "Aggregate freshness data and identify gaps or delays in data across sectors. Highlight any blocking issues for sector comparisons."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:53"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.latest_snapshot_date is not approved"
+  - "breadth.market_daily.latest_trade_date is not approved"
+  - "evaluate_freshness: execution failed: process exited 1"
+  - "market.equity_eod.latest_trade_date is not approved"
+  - "market.index_eod.latest_trade_date is not approved"
+  - "report.enhanced_runs.latest_run_ts is not approved"
+  - "scores.stage_snapshots.latest_snapshot_date is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "breadth.ma_pct_above.latest_snapshot_date is not approved"
+    - "breadth.market_daily.latest_trade_date is not approved"
+    - "evaluate_freshness: execution failed: process exited 1"
+    - "market.equity_eod.latest_trade_date is not approved"
+    - "market.index_eod.latest_trade_date is not approved"
+    - "report.enhanced_runs.latest_run_ts is not approved"
+    - "scores.stage_snapshots.latest_snapshot_date is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

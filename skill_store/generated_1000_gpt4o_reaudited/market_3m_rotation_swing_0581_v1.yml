@@ -1,0 +1,63 @@
+created_at: "2026-06-06T12:49:17"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: intraday context; response style: research-only summary."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0581_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as research-only summary"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Get index returns for the last 3 months"
+    query: "SELECT index_symbol, AVG(change_pct) as avg_return FROM market.index_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY index_symbol;"
+  -
+    description: "Find stage distribution change over the last 3 months"
+    query: "WITH stage_counts AS (SELECT COUNT(*) as count, stage FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY stage) SELECT stage, count FROM stage_counts;"
+  -
+    description: "Identify leading sectors based on technical score"
+    query: "SELECT sector, AVG(technical_score) as avg_score FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY sector ORDER BY avg_score DESC LIMIT 5;"
+status: "test_failed"
+synthesis_guidance: "Synthesize SQL results into a brief market regime and sector leadership summary, including swing candidate identification."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "intraday_context"
+  - "research-only_summary"
+title: "3M Market Rotation Swing Assessment Variant 0581"
+tool_plan_template: "{ToolDirective} {ContextSummary}"
+validation_rules:
+  - "Validate that index returns are from the last 3 months"
+  - "Ensure stage distribution is correctly calculated"
+  - "Verify leading sectors are correctly identified"
+version: 1
+validation_errors:
+  - "market.index_eod.avg_return is not approved"
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage_snapshots.avg_score is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"

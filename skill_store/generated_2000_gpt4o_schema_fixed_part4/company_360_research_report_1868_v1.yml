@@ -1,0 +1,70 @@
+id: "company_360_research_report_1868_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1868"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: position-sizing context; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "position-sizing context for post results: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as action watchlist"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "position-sizing_context"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    goal: "Generate a comprehensive company research report."
+    steps:
+      - "Extract latest stage and technical scores using scores.stage_snapshots and market.equity_eod."
+      - "Analyze quarterly and annual financial results using scores.quarterly_results and scores.annual_results."
+      - "Summarize balance sheet and cash flow contexts using scores.balance_sheet and scores.cash_flow."
+      - "Synthesize narrative context using scores.results_analysis."
+sql_templates:
+  company_snapshot: "SELECT company_name, sector, market_cap_cat, price, change_1d_pct, change_1w_pct, change_1m_pct, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol = :symbol;"
+  financial_trends: "SELECT period_label, period_end, revenue, operating_profit, eps FROM scores.quarterly_results WHERE symbol = :symbol ORDER BY period_end DESC LIMIT 1;"
+  technical_setup: "SELECT close, change_pct, week52_high, week52_low, market_cap_cr FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND symbol = :symbol;"
+  valuation_gaps: "SELECT opm_pct, pat, equity_capital, reserves FROM scores.annual_results WHERE symbol = :symbol ORDER BY period_end DESC LIMIT 1;"
+  thesis: "SELECT business_summary, pl_commentary, bs_commentary, cf_commentary FROM scores.results_analysis WHERE symbol = :symbol AND period_end = (SELECT MAX(period_end) FROM scores.results_analysis WHERE symbol = :symbol);"
+  risks: "SELECT key_risks FROM scores.results_analysis WHERE symbol = :symbol AND period_end = (SELECT MAX(period_end) FROM scores.results_analysis WHERE symbol = :symbol);"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "{'format': 'Result sets should be JSON structured data.', 'bounds': 'Ensure LIMIT clauses are used in SQL queries for efficient processing.'}"
+synthesis_guidance: "{'style': 'Provide an action watchlist styled report.', 'context': 'Focus on post-results position-sizing context.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:00"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.annual_results.equity_capital is not approved"
+  - "scores.annual_results.reserves is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "scores.annual_results.equity_capital is not approved"
+    - "scores.annual_results.reserves is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,48 @@
+created_at: "2026-06-06T12:41:07"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: last 5 sessions; response style: concise table."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0021_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for last 5 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  index_performance: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date > ? ORDER BY trade_date DESC;"
+  stage_summary: "SELECT sector, COUNT(symbol) as count, AVG(stage_score) as avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date > ? AND stage = 'stage 2' GROUP BY sector;"
+status: "test_failed"
+synthesis_guidance: "Summarize findings into a concise table focusing on indices, sectors, and primary swing candidates."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "last_5_sessions"
+  - "concise_table"
+title: "3M Market Rotation Swing Assessment Variant 0021"
+tool_plan_template: "Use evidence from approved tables to generate concise market summaries."
+validation_rules:
+  - "ensure_date_format"
+  - "check_nonnegative"
+version: 1
+validation_errors:
+  - "scores.stage_snapshots.avg_stage_score is not approved"

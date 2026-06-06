@@ -1,0 +1,54 @@
+id: "sector_breadth_rotation_watchlist_0251_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0251"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: quarter to date; response style: ranked candidates."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for quarter to date: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as ranked candidates"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Use breadth metrics and stage analysis from the sector_daily and ma_pct_above tables to determine sector strength and participation in stage 2. Complement with individual stock scores from stage_snapshots and market context from equity_eod."
+sql_templates:
+  -
+    template_id: "sector_breadth_rank"
+    template: "SELECT sector, AVG(pct_above_50dma) AS avg_breadth, AVG(stage2_pct) AS avg_stage2 FROM breadth.sector_daily JOIN breadth.ma_pct_above ON sector_daily.snapshot_date = ma_pct_above.snapshot_date GROUP BY sector ORDER BY avg_breadth DESC, avg_stage2 DESC;"
+    description: "Ranks sectors by average percentage of stocks above 50DMA and Stage 2 participation."
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure avg_breadth and avg_stage2 calculations are based on the same date range."
+  - "Validate sector names match across data sources."
+synthesis_guidance: "Identify top sectors based on breadth and stage participation and suggest leading symbols for potential watchlist inclusion."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:04"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

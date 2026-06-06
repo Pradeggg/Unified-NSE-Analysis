@@ -1,0 +1,55 @@
+id: "report_link_data_validation_0876_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0876"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for pre market: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  name: "Enhanced Report Validation"
+  description: "Check the freshness and validity of links in enhanced reports."
+  steps:
+    - "Fetch the latest run details from the enhanced_runs table."
+    - "Verify the presence of stock data linked to each run."
+    - "Perform a freshness audit to ensure data is current for pre-market."
+sql_templates:
+  latest_run_details: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 1;"
+  validate_stock_data: "SELECT symbol, score FROM report.enhanced_filtered_stocks WHERE run_id = ?;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "freshness_threshold"
+  - "missing_data_tolerance"
+synthesis_guidance: "Focus on ensuring data is fresh and links are functional, emphasizing action points."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:52:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

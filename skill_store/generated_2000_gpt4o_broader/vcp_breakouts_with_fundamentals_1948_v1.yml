@@ -1,0 +1,67 @@
+id: "vcp_breakouts_with_fundamentals_1948_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1948"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  sql_templates:
+    -
+      description: "Select stocks with VCP and breakout characteristics over the last 3 months with strong fundamentals."
+      query: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 MONTHS'), latest_vcp AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 MONTHS') SELECT e.symbol, e.close, s.company_name, s.sector, s.enhanced_fund_score, s.minervini_score, s.trading_signal FROM market.equity_eod e JOIN latest_snapshots s ON e.symbol = s.symbol JOIN latest_vcp v ON e.symbol = v.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND s.enhanced_fund_score > 70 AND (v.vcp_score > 70 OR e.close = e.week52_high);"
+sql_templates:
+
+python_tools:
+  -
+    id: "fundamental_analysis_plugin"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      symbols: "List of symbols from SQL results"
+    outputs:
+      enhanced_fund_score: "Fundamental analysis scores"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # This is a placeholder function for gathering additional data.\n    pass"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "status"
+synthesis_guidance: "{'response_style': 'comparison_matrix', 'timeframe': 'last_3_months'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "fundamental_analysis_plugin: inputs must be a list"
+  - "fundamental_analysis_plugin: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "fundamental_analysis_plugin: inputs must be a list"
+    - "fundamental_analysis_plugin: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

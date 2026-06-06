@@ -1,0 +1,1 @@
+def run(context): return context['sector_data'].sort_values(['stage2_pct', 'avg_pct_above_50dma'], ascending=[False, False]).head(10)

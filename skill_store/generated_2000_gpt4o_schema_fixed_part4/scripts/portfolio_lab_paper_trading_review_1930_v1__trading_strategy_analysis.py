@@ -1,0 +1,1 @@
+def run(context): return analyze_trading_strategy(context['recent_trading_signals'], context['stage_contexts'])

@@ -1,0 +1,73 @@
+id: "fii_dii_regime_breadth_review_1408_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1408"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for today: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as portfolio-aware output"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    use_case: "Post-analysis synthesis"
+    python_usage: "allowed_with_restrictions"
+    sql_usage: "select_only"
+sql_templates:
+  -
+    purpose: "Fetch latest day's market data"
+    template: "SELECT fii.trade_date, fii.fii_net_today, fii.dii_net_today, fii.flow_signal, regime.regime, regime.confidence, breadth.net_ad, breadth.ad_signal, index_data.close as index_close FROM signals.fii_dii_flows AS fii JOIN signals.regime_history AS regime ON fii.trade_date = regime.trade_date JOIN breadth.market_daily AS breadth ON fii.trade_date = breadth.trade_date JOIN market.index_eod AS index_data ON fii.trade_date = index_data.trade_date WHERE index_data.index_symbol = %(index_symbol)s AND fii.trade_date = (SELECT MAX(trade_date) FROM market.index_eod) LIMIT 1;"
+python_tools:
+  -
+    id: "context_evaluator"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "data"
+      - "index_symbol"
+    outputs:
+      - "evaluation"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context): data = context['data']; result = {}; # Custom logic to evaluate the context; return result;"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "{'sql_template_syntax': 'Must adhere to template guidelines and SQL syntax.', 'input_pattern_matching': 'Patterns must match intended use cases.', 'output_contract_alignment': 'Aligned with client expectations and contract.'}"
+synthesis_guidance: "Draw on latest market regime and institutional flow evidence to articulate a coherent narrative about current market conditions with specific attention to position-sizing implications."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:41"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.market_daily is not approved"
+  - "context_evaluator: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "breadth.market_daily.market_daily is not approved"
+    - "context_evaluator: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

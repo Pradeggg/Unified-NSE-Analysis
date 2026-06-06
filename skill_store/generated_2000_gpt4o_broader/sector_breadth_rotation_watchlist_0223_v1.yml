@@ -1,0 +1,70 @@
+id: "sector_breadth_rotation_watchlist_0223_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0223"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: ranked candidates."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for last 5 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as ranked candidates"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "last_5_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "sector_breadth_ranking"
+    query: "WITH recent_breadth AS (SELECT sector, AVG(change_5d) AS avg_change_5d FROM breadth.sector_daily WHERE snapshot_date > (SELECT MAX(snapshot_date) - INTERVAL '5 days' FROM breadth.sector_daily) GROUP BY sector), moving_average_participation AS (SELECT sector, AVG(stage2_pct) AS avg_stage2 FROM breadth.ma_pct_above WHERE snapshot_date > (SELECT MAX(snapshot_date) - INTERVAL '5 days' FROM breadth.ma_pct_above) GROUP BY sector) SELECT rb.sector, rb.avg_change_5d, ma.avg_stage2 FROM recent_breadth rb JOIN moving_average_participation ma ON rb.sector = ma.sector ORDER BY rb.avg_change_5d DESC, ma.avg_stage2 DESC;"
+python_tools:
+  -
+    id: "calculate_sector_metrics"
+    language: "python"
+    mode: "read_only"
+    inputs:
+
+    outputs:
+
+    approved_tables:
+      - "breadth.sector_daily"
+      - "breadth.ma_pct_above"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    pass"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_sector_metrics: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_sector_metrics: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

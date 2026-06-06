@@ -1,0 +1,48 @@
+id: "portfolio_incremental_add_trim_0409_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Decision Maker"
+description: "Determine whether to add or trim positions based on stage and signal analysis with a focus on source-trail validation."
+input_patterns:
+  - "Should we add incrementally or reduce exposure?"
+  - "Portfolio position sizing by sector and stock"
+  - "Source-trail validation for today's add trim decisions"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Given input patterns about portfolio review and evidence from the approved tables, determine add or trim candidates using the latest stage and signal data."
+sql_templates:
+  -
+    description: "Fetch latest portfolio state with stage and signal information."
+    sql: "SELECT h.symbol, h.qty, h.avg_cost, s.stage, s.trading_signal, s.technical_score FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure candidate lists are bounded."
+  - "Validate symbols and dates against approved schema constraints."
+synthesis_guidance: "Use the fetched data to synthesize a decision on whether to add or trim positions today, with details provided for sector exposure and risk flags."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,56 @@
+id: "agent_route_failure_diagnostics_0140_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0140"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: last 20 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as narrative plus evidence"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze route failures by evaluating TradingView data and diagnosing tool gaps. Cross-reference evidence from approved tables for pattern analysis."
+sql_templates:
+  -
+    template_id: "recent_route_failures"
+    template: "SELECT run_id, run_ts, market_sentiment, notes FROM report.enhanced_runs WHERE run_ts >= (CURRENT_DATE - INTERVAL '20 days')"
+  -
+    template_id: "filtered_stocks_diagnostics"
+    template: "SELECT symbol, score, recommendation, rsi FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM recent_route_failures) AND rsi < 30"
+  -
+    template_id: "stage_snapshots_analysis"
+    template: "SELECT symbol, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date IN (SELECT run_ts FROM recent_route_failures)"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure route failures are extracted only for the last 20 sessions"
+  - "Check that all evidence tables are accurately queried without unnecessary columns"
+  - "Verify that Python tools do not exceed read-only access"
+synthesis_guidance: "Construct a narrative based on SQL results, weaving data insights with diagnostics for Agent Adda. Focus on actionable insights and tool gap identifications."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_filtered_stocks.recent_route_failures is not approved"
+  - "scores.stage_snapshots.recent_route_failures is not approved"
+  - "scores.stage_snapshots.run_ts is not approved"

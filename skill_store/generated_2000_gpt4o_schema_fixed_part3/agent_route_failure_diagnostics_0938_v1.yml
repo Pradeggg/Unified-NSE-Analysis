@@ -1,0 +1,66 @@
+id: "agent_route_failure_diagnostics_0938_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0938"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as comparison matrix"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Review evidence for agent routing failures, validate tool completeness, and identify symbol resolution issues using comparison matrix format."
+sql_templates:
+  -
+    name: "recent_sessions_analysis"
+    template: "SELECT er.run_id, er.universe_size, er.stocks_analyzed, er.stocks_filtered, ef.symbol, ef.tech_score, ss.stage FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id JOIN scores.stage_snapshots ss ON ef.symbol = ss.symbol WHERE er.run_ts >= CURRENT_DATE - INTERVAL '20 days' AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+  -
+    id: "route_diagnostics_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "comparison_data"
+    outputs:
+      - "diagnostic_report"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    code: "def run(comparison_data):\n    # Analyze provided data for diagnostic insights\n    return diagnostic_report"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Check that all necessary tools are present."
+  - "Verify that symbol resolution does not loop."
+  - "Ensure system handles all known contingencies."
+synthesis_guidance: "['Compare recent sessions to identify common failure patterns.', 'Use comparison matrix to correlate performance metrics with failures.', 'Assess tool gaps and recommend improvements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "route_diagnostics_tool: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "route_diagnostics_tool: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

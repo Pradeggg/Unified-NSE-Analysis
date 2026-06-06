@@ -1,0 +1,69 @@
+created_at: "2026-06-06T12:51:26"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: pre market; response style: QA checklist."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0771_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for pre market: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+
+status: "validated"
+synthesis_guidance: "{'explain_decisions': 'Highlight sector exposure, potential add/trim candidates, and any risk flags based on trend signals and technical scores.'}"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "pre_market"
+  - "QA_checklist"
+title: "Portfolio Incremental Add Trim Review Variant 0771"
+tool_plan_template:
+  python_tools:
+    -
+      approved_tables:
+        - "portfolio.holdings"
+        - "scores.stage_snapshots"
+      code: "def run(context):\n    # Calculate exposure, add, trim candidates, and risk flags based on holdings and stage scores\n    # Placeholder for detailed algorithm\n    sector_exposure = {}\n    add_candidates = []\n    trim_candidates = []\n    risk_flags = []\n    # Logic to populate above lists\n    return {\n        'sector_exposure': sector_exposure,\n        'add_candidates': add_candidates,\n        'trim_candidates': trim_candidates,\n        'risk_flags': risk_flags\n    }"
+      id: "calc_exposure_and_candidates"
+      inputs:
+        - "holdings"
+        - "stage_scores"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "sector_exposure"
+        - "add_candidates"
+        - "trim_candidates"
+        - "risk_flags"
+  sql_templates:
+    -
+      name: "Holdings with Stage Scores"
+      template: "SELECT h.symbol, h.qty, h.avg_cost, s.stage, s.technical_score, s.trend_signal, s.trading_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+validation_rules:
+  - "ensure_data_availability"
+  - "check_timestamp_freshness"
+version: 1

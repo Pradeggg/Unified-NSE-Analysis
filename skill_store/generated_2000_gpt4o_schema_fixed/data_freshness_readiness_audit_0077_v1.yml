@@ -1,0 +1,63 @@
+id: "data_freshness_readiness_audit_0077_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0077"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: pre market; response style: concise table."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for pre market: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as concise table"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  python_tools:
+
+  sql_templates:
+    -
+      template_name: "sector_freshness_check"
+      template_sql: "SELECT sector, MAX(trade_date) AS latest_trade_date FROM market.equity_eod GROUP BY sector;"
+      description: "Check data freshness by sector using the latest trade date from market.equity_eod."
+  evidence_gaps:
+    - "No direct table for loader freshness timing; requires scheduled run metadata or equivalent."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all selected tables' latest dates are within the last week."
+  - "Identify any sector with a latest date older than two days."
+  - "Verify no critical differences in sector data availability."
+synthesis_guidance: "Create a readiness summary table comparing sectors, highlighting data gaps, and providing actionable insights for improving loader performance."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:30"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

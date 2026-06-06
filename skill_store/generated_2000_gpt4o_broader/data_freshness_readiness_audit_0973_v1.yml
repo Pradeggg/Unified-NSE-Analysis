@@ -1,0 +1,71 @@
+id: "data_freshness_readiness_audit_0973_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0973"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: pre market; response style: comparison matrix."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for pre market: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as comparison matrix"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "daily_refresh_check_plan_v1"
+sql_templates:
+  select_recent_index_eod: "SELECT trade_date FROM market.index_eod WHERE index_symbol = 'NIFTY 50' ORDER BY trade_date DESC LIMIT 1"
+  select_recent_equity_eod: "SELECT trade_date FROM market.equity_eod ORDER BY trade_date DESC LIMIT 1"
+  select_recent_snapshot: "SELECT snapshot_date FROM scores.stage_snapshots ORDER BY snapshot_date DESC LIMIT 1"
+python_tools:
+  -
+    id: "freshtester_v1"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "evidence_data"
+    outputs:
+      - "freshness_matrix"
+      - "missing_sources"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Fetch the latest dates from the evidence data\n    index_latest = context['market.index_eod'].get('trade_date')\n    equity_latest = context['market.equity_eod'].get('trade_date')\n    snapshot_latest = context['scores.stage_snapshots'].get('snapshot_date')\n    \n    # Create a freshness matrix to compare dates\n    freshness_matrix = {\n        'Index EOD Latest Date': index_latest,\n        'Equity EOD Latest Date': equity_latest,\n        'Stage Snapshot Latest Date': snapshot_latest\n    }\n    \n    # Determine missing sources if any date is None\n    missing_sources = [source for source, date in freshness_matrix.items() if date is None]\n    \n    return freshness_matrix, missing_sources"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Compile all sources' freshness data into a comparison matrix. Identify any gaps or freshness issues for further action."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:50"
+generation_model: "gpt-4o"
+validation_errors:
+  - "freshtester_v1: execution failed: KeyError: 'market.index_eod'"
+review:
+  status: "needs_heal"
+  findings:
+    - "freshtester_v1: execution failed: KeyError: 'market.index_eod'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

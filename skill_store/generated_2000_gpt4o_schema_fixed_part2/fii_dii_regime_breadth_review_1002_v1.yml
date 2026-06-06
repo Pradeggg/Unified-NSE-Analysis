@@ -1,0 +1,52 @@
+id: "fii_dii_regime_breadth_review_1002_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1002"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: today; response style: concise table."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for today: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as concise table"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Combine evidence from specified tables using available join rules to evaluate market context features."
+sql_templates:
+  -
+    template: "WITH latest_data AS (SELECT MAX(trade_date) as trade_date FROM market.index_eod) SELECT rf.trade_date, rf.regime, rf.confidence, fdf.flow_signal, bm.ad_signal, ie.index_symbol, ie.close, ie.trend_signal FROM signals.regime_history rf JOIN signals.fii_dii_flows fdf ON rf.trade_date = fdf.trade_date JOIN breadth.market_daily bm ON rf.trade_date = bm.trade_date JOIN market.index_eod ie ON rf.trade_date = ie.trade_date AND ie.index_symbol = 'Nifty 50' WHERE rf.trade_date = (SELECT trade_date FROM latest_data) LIMIT 1;"
+    description: "Fetch latest market data."
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all join conditions adhere to _join_rules."
+  - "Verify date filtering aligns with _global_rules."
+synthesis_guidance: "['Interpret regime and flow signal for market direction.', 'Translate breadth into sentiment strength.', 'Confirm index trend alignment with FII/DII flows.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

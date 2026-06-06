@@ -1,0 +1,53 @@
+id: "fii_dii_regime_breadth_review_1506_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1506"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: today; response style: research-only summary."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for today: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as research-only summary"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "today"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  - "Using data from signals.fii_dii_flows, signals.regime_history, breadth.market_daily, and market.index_eod, analyze the FII/DII flows, market breadth, and index performance to determine the current market regime and assess risk-on or risk-off status."
+sql_templates:
+  -
+    template: "WITH latest_data AS (SELECT MAX(trade_date) AS trade_date FROM signals.fii_dii_flows) SELECT f.trade_date, f.flow_signal, r.regime, r.confidence, b.ad_signal, b.market_sentiment, i.trend_signal FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date JOIN breadth.market_daily b ON f.trade_date = b.trade_date JOIN market.index_eod i ON f.trade_date = i.trade_date WHERE f.trade_date = (SELECT trade_date FROM latest_data) AND i.index_symbol = 'Nifty 50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all SELECT statements are read-only."
+  - "Use approved join conditions from _join_rules."
+  - "Check that only approved columns are used in SELECT statements."
+synthesis_guidance: "['Provide a summary of the current market context based on the collected evidence.', 'Highlight any discrepancies or signals indicating a shift in market conditions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

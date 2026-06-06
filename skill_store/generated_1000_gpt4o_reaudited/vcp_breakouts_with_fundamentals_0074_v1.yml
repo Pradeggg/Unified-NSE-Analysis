@@ -1,0 +1,62 @@
+created_at: "2026-06-06T12:41:36"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: pre market; response style: concise table."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0074_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Retrieve stocks reaching or nearing 52-week highs with high fundamental scores."
+    template: "SELECT DISTINCT m.symbol, m.close, m.week52_high, s.enhanced_fund_score FROM market.equity_eod AS m JOIN scores.stage_snapshots AS s ON m.symbol = s.symbol WHERE m.trade_date = CURRENT_DATE AND m.close >= 0.95 * m.week52_high AND s.enhanced_fund_score >= 80;"
+  -
+    description: "Fetch VCP pick details with strong performance indicators."
+    template: "SELECT DISTINCT v.symbol, v.price, v.vcp_score, v.enhanced_fund_score FROM scores.stage2_vcp_picks AS v WHERE v.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND v.vcp_score >= 80 AND v.enhanced_fund_score >= 80;"
+status: "validated"
+synthesis_guidance: "Focus on clarity and relevance, ensuring the information is actionable for pre-market analysis."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "pre_market"
+  - "concise_table"
+title: "VCP Breakouts With Fundamentals Variant 0074"
+tool_plan_template:
+  approach: "Combine evidence from market EOD data with VCP picks and stage snapshots to filter stocks at potential new highs or breakouts with strong fundamentals."
+  steps:
+    - "Identify stocks with price at or near their 52-week high."
+    - "Filter for stocks classified as VCP or breakouts with strong fundamental scores using stage snapshots."
+    - "Generate a concise table for pre-market watchlist."
+  syntax: "Python for complex joining and sorting logic; SQL only for data retrieval."
+validation_rules:
+  - "Ensure all symbols are valid NSE listings."
+  - "Validate fundamental scores are above the threshold."
+  - "Cross-check symbol inclusion in all required datasets."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,71 @@
+id: "insider_bulk_deal_signal_review_1130_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1130"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: last 5 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for last 5 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as narrative plus evidence"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Generate insights based on insider alerts and bulk deals, incorporating technical analysis for narrative synthesis."
+sql_templates:
+  -
+    name: "bulk_deal_insights"
+    template: "WITH latest_stage AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT bd.symbol, bd.deal_date, bd.entity, bd.qty, bd.price, ss.trading_signal, ss.stage FROM signals.bulk_block_deals bd JOIN latest_stage ss ON bd.symbol = ss.symbol WHERE bd.deal_date > CURRENT_DATE - INTERVAL '5 days' AND ss.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+  -
+    name: "insider_alert_insights"
+    template: "SELECT ia.symbol, ia.alert_date, ia.entity, ia.qty, ia.value_cr, ss.trading_signal, ss.stage FROM signals.insider_alerts ia JOIN (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) ss ON ia.symbol = ss.symbol WHERE ia.alert_date > CURRENT_DATE - INTERVAL '5 days' AND ss.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "company_data"
+    outputs:
+      - "analysis_results"
+    approved_tables:
+      - "signals.insider_alerts"
+      - "signals.bulk_block_deals"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    result = {}\n    for data in context['company_data']:\n        # Analyze each symbol\n        result[data['symbol']] = f\"Analysis of {data['symbol']} results in signal: {data['trading_signal']}\"\n    return result"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "output_structure"
+  - "temporal_coverage"
+  - "narrative_coverage"
+synthesis_guidance: "Compile deals and insider activity into a cohesive narrative emphasizing accumulation or distribution signs based on technical indicators."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:55:39"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run: execution failed: KeyError: 'company_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "run: execution failed: KeyError: 'company_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

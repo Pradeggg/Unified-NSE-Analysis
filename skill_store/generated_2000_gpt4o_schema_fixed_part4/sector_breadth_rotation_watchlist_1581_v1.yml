@@ -1,0 +1,56 @@
+id: "sector_breadth_rotation_watchlist_1581_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1581"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: intraday context; response style: research-only summary."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for intraday context: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as research-only summary"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "intraday_context"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    tool: "SQLRunner"
+    params:
+      template_name: "intraday_sector_ranks"
+sql_templates:
+  intraday_sector_ranks:
+    template: "SELECT sd.sector, sd.pct_above_50dma, sd.change_5d, sd.breadth_signal, sd.divergence_alert, ma.stage2_pct\nFROM breadth.sector_daily sd\nJOIN breadth.ma_pct_above ma ON sd.snapshot_date = ma.snapshot_date\nWHERE sd.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) \nORDER BY ma.stage2_pct DESC, sd.pct_above_50dma DESC\nLIMIT 10;"
+    description: "Rank sectors by Stage 2 participation and short-term moving average breadth."
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "{'sector_ranks': 'Ensure sector ranks are ordered by stage2_pct and pct_above_50dma.', 'improving_sectors': 'Identify sectors showing positive breadth signals.', 'candidate_symbols': 'Select symbols from sectors with strong Stage 2 participation.', 'tradingview_symbols': 'Ensure symbols are formatted correctly for TradingView compatibility.'}"
+synthesis_guidance: "['Provide a brief summary of sectors showing potential improvement.', 'Highlight top-performing sectors based on Stage 2 participation and breadth.', 'List symbols to add to TradingView for each identified sector.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:59"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

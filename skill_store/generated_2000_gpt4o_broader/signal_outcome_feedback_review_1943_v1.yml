@@ -1,0 +1,56 @@
+id: "signal_outcome_feedback_review_1943_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1943"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for last 3 months: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as comparison matrix"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze signal performance over the last 3 months, focusing on hit_targets and hit_stops. Generate a comparison matrix to identify patterns."
+sql_templates:
+  target_performance: "SELECT symbol, COUNT(CASE WHEN hit_target = TRUE THEN 1 END) AS hit_target_count, COUNT(CASE WHEN hit_stop = TRUE THEN 1 END) AS hit_stop_count FROM signals.signal_log WHERE date_issued BETWEEN DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND CURDATE() GROUP BY symbol;"
+  stage_analysis: "SELECT symbol, AVG(stage_score) as avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND CURDATE() GROUP BY symbol;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all tables are utilized appropriately for analysis."
+  - "Verify timeframe filtering matches 'last 3 months' requirement."
+  - "Ensure only allowed SQL queries, with read-only structure, are used."
+synthesis_guidance: "Focus analysis on the signal outcomes (hit_target vs. hit_stop) over the considered timeframe. Synthesize findings in a comparison matrix to facilitate strategic improvements."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.avg_stage_score is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"
+  - "signals.signal_log.curdate is not approved"
+  - "signals.signal_log.date_sub is not approved"
+  - "signals.signal_log.hit_stop_count is not approved"
+  - "signals.signal_log.hit_target_count is not approved"
+  - "signals.signal_log.month is not approved"

@@ -1,0 +1,73 @@
+id: "fii_dii_regime_breadth_review_0540_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0540"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: last 20 sessions; response style: research-only summary."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as research-only summary"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  python_tools:
+    -
+      id: "summarize_market_data"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "fii_dii_flows"
+        - "regime_history"
+        - "market_daily"
+        - "index_eod"
+      outputs:
+        - "regime_summary"
+        - "flow_context"
+        - "breadth_context"
+        - "index_confirmation"
+        - "risk_flags"
+      approved_tables:
+        - "signals.fii_dii_flows"
+        - "signals.regime_history"
+        - "breadth.market_daily"
+        - "market.index_eod"
+      code: "def run(context):\n    # Process and summarize the evidence into the structured outputs\n    regime_summary = f\"Current market regime is {context['regime']} with {context['confidence']}% confidence.\"\n    flow_context = f\"FII/DII flows indicate a {context['flow_signal']} bias.\"\n    breadth_context = f\"Market breadth shows {context['ad_signal']} advances over declines.\"\n    index_confirmation = f\"Index movement corroborates the signals with a {context['trend_signal']}.\"\n    risk_flags = \"Risk-on if regime is bullish and flows are positive.\"\n    return regime_summary, flow_context, breadth_context, index_confirmation, risk_flags"
+sql_templates:
+  -
+    template: "SELECT f.trade_date, f.flow_signal, r.regime, r.confidence, b.ad_signal, i.trend_signal FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date JOIN breadth.market_daily b ON f.trade_date = b.trade_date JOIN market.index_eod i ON f.trade_date = i.trade_date WHERE i.index_symbol = 'Nifty 50' AND f.trade_date > CURRENT_DATE - INTERVAL '20 days' ORDER BY f.trade_date DESC;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "rule_set"
+  - "ensure_tables"
+synthesis_guidance: "Use the synthesized outputs to generate a coherent market analysis summary focusing on current risk-on or risk-off conditions, validated by institutional flows, market regime, and breadth data."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:48"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,83 @@
+id: "report_link_data_validation_1572_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1572"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for pre market: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    title: "Identify Broken Report Links and Missing Data"
+    description: "Use underlying metadata from enhanced runs and filtered stocks to validate report structure and completeness."
+    steps:
+      - "Check if report links are correctly generated."
+      - "Verify all stocks have corresponding data."
+      - "Evaluate missing or incomplete data in the selected timeframe."
+    tags:
+      - "validation"
+      - "broken_links"
+      - "missing_data"
+sql_templates:
+  -
+    title: "Enhanced Report Metadata Retrieval"
+    description: "Extract metadata for a given run to verify report generation timestamps and stocks analyzed."
+    sql: "SELECT run_id, run_ts, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months'"
+  -
+    title: "Filtered Stocks Data Verification"
+    description: "Retrieve stocks filtered details for validation with corresponding run_id."
+    sql: "SELECT f.run_id, f.symbol, f.current_price, f.volume FROM report.enhanced_filtered_stocks f JOIN report.enhanced_runs r ON r.run_id = f.run_id WHERE r.run_ts >= CURRENT_DATE - INTERVAL '3 months'"
+python_tools:
+  -
+    id: "validate_reports"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      context:
+        report_links: "List of report links"
+        filtered_stock_data: "Data regarding filtered stocks from enhanced reports"
+    outputs:
+      validation_summary: "Summary providing status on link validation and missing data identification"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context): ... # Sample code to iterate over report links and validate data presence."
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure timestamps and symbol data are complete and consistent across tables."
+  - "Validate trading value and volume data integrity for all listed stocks."
+synthesis_guidance: "['Summarize findings by categorizing issues into broken links, missing data, or data anomalies.', 'Provide recommendations for remediation based on institutional requirements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:51"
+generation_model: "gpt-4o"
+validation_errors:
+  - "validate_reports: inputs must be a list"
+  - "validate_reports: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "validate_reports: inputs must be a list"
+    - "validate_reports: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

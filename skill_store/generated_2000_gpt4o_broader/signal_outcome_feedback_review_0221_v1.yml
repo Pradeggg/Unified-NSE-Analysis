@@ -1,0 +1,49 @@
+id: "signal_outcome_feedback_review_0221_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review"
+description: "Analyze trading signal outcomes and learn from past sessions to enhance future trading strategies."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "last_5_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review past trading signals and outcomes over the last 5 sessions, rank strategies, and identify patterns for skill enhancement."
+sql_templates:
+  -
+    description: "Fetch successful and failed signals over the last 5 sessions."
+    sql: "SELECT id, symbol, date_issued, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE DATE(date_issued) >= DATE_SUB(CURDATE(), INTERVAL 5 DAY)"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all signals within the 5-day timeframe are reviewed."
+  - "Only include signals with conclusive outcomes (hit_target or hit_stop)."
+synthesis_guidance: "Collate insights into improving future signal strategies. Present findings in a clear and ranked format."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:49"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.curdate is not approved"
+  - "signals.signal_log.date is not approved"
+  - "signals.signal_log.date_sub is not approved"
+  - "signals.signal_log.day is not approved"

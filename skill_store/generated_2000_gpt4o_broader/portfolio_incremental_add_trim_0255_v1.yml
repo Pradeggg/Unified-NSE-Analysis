@@ -1,0 +1,55 @@
+id: "portfolio_incremental_add_trim_0255_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0255"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: quarter to date; response style: ranked candidates."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "quarter_to_date"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "{Generate portfolio add/trim recommendations with an emphasis on risk-first review using the approved schema.}"
+sql_templates:
+  -
+    name: "sector_exposure_check"
+    description: "Calculate sector exposure based on current portfolio holdings."
+    template: "WITH exposure AS (SELECT h.symbol, h.qty, s.sector, s.market_cap_cat FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol) SELECT sector, SUM(qty) AS total_qty FROM exposure GROUP BY sector;"
+  -
+    name: "risk_signal_analysis"
+    description: "Identify stocks for adding or trimming based on risk and stage scores."
+    template: "SELECT s.symbol, s.stage, s.stage_score, s.trend_signal, s.trading_signal FROM scores.stage_snapshots s JOIN portfolio.holdings h ON s.symbol = h.symbol WHERE s.stage_score < 3.0 ORDER BY s.stage_score ASC;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all portfolio holdings are analyzed using approved schemas."
+  - "Recommendations must be based upon quarter-to-date risk assessment."
+synthesis_guidance: "Focus on high-level risk analysis and prioritize ranked candidates for portfolio adjustments."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

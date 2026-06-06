@@ -1,0 +1,56 @@
+id: "insider_bulk_deal_signal_review_1830_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1830"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for last 5 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as action watchlist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "fetch_insider_bulk_deals"
+    template: "WITH latest_stage AS (SELECT symbol, MAX(snapshot_date) AS max_date FROM scores.stage_snapshots WHERE stage = 'STAGE_2' GROUP BY symbol)\nSELECT ia.symbol, ia.alert_date, bb.deal_date, ss.technical_score\nFROM signals.insider_alerts ia\nJOIN signals.bulk_block_deals bb ON ia.symbol = bb.symbol\nJOIN latest_stage ls ON ia.symbol = ls.symbol\nJOIN scores.stage_snapshots ss ON ia.symbol = ss.symbol AND ss.snapshot_date = ls.max_date\nWHERE ia.alert_date > CURRENT_DATE - INTERVAL '5 days' AND bb.deal_date > CURRENT_DATE - INTERVAL '5 days'\nAND ss.trading_signal IN ('BUY', 'STRONG_BUY')\nLIMIT 100;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure output includes a deal_summary with top symbols."
+  - "Verify insider_context aligns with provided alerts."
+  - "Ensure technical_confirmation is derived from stage snapshot scores."
+  - "Rank symbols based on technical scores in ranked_symbols."
+  - "Provide actionable risk_notes based on market cap or volatility."
+synthesis_guidance: "['Focus synthesis on actionable insights from bulk deals and technical confirmation.', 'Emphasize buy signals and accumulation indicators.', 'Use TradingView format for export readiness.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

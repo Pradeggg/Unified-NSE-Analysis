@@ -1,0 +1,65 @@
+id: "sector_breadth_rotation_watchlist_1651_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1651"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for quarter to date: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as debug trace"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  sector_ranks: "Generate sector rankings based on breadth and participation."
+  improving_sectors: "Identify sectors with improving conditions and increased Stage 2 participation."
+  candidate_symbols: "List candidate symbols exhibiting strong technicals in improving sectors."
+  tradingview_symbols: "Translate candidate symbols into TradingView format for watchlist export."
+  evidence: "Provide evidence tracing and reports for debugging and verification."
+sql_templates:
+  -
+    name: "latest_sector_breadth"
+    query: "SELECT sector, pct_above_50dma, change_5d, breadth_signal FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily);"
+  -
+    name: "stage2_participation"
+    query: "SELECT sector, COUNT(symbol) AS stage2_count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector;"
+  -
+    name: "technical_candidates"
+    query: "SELECT symbol, company_name, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all evidence tables are queried with the latest date filters."
+  - "Verify sector rankings are based on breadth and participation metrics."
+  - "Limit candidate symbol list to top 50 by technical score."
+synthesis_guidance: "['Use breadth and stage metrics to identify sector strengths and momentum.', 'Maintain a balance between comprehensive data analysis and succinct presentation.', 'Debug trace should offer transparency into the evidence collection process.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:40"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

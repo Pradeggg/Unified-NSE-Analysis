@@ -1,0 +1,64 @@
+id: "portfolio_lab_paper_trading_review_1510_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1510"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: TradingView export; timeframe: today; response style: research-only summary."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "TradingView export for today: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as research-only summary"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "TradingView_export"
+  - "today"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    name: "PortfolioLabStrategyReview"
+    context:
+      tables:
+        - "portfolio.holdings"
+        - "signals.signal_log"
+        - "scores.stage_snapshots"
+        - "market.equity_eod"
+      latest_snapshot:
+        snapshot_date: "(SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+      latest_trade:
+        trade_date: "(SELECT MAX(trade_date) FROM market.equity_eod)"
+sql_templates:
+  -
+    description: "Query paper trading signals and their outcomes."
+    template: "SELECT symbol, date_issued, signal, entry_low, entry_high, stop_loss, target_1, target_2, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_issued = CURRENT_DATE AND signal = 'BUY';"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "{'constraints': ['Ensure that output includes details of open trades and their current status.', 'Map strategies to symbol-specific performance, including any hit targets or stops.', 'Provide context using the latest market and stage snapshot data.'], 'formats': ['Ensure proper numerical data handling for prices and quantities.', 'Use PostgreSQL date formatting.']}"
+synthesis_guidance: "[\"Summarize the performance of paper trading strategies in the context of today's market data.\", 'Highlight key entry and exit points, as well as any strategies that have met target objectives.', 'Discuss overall exposure and strategy alignment with market conditions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:46"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

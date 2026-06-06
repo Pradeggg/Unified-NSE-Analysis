@@ -1,0 +1,75 @@
+id: "fii_dii_regime_breadth_review_1282_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1282"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for intraday context: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as ranked candidates"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    statement: "SELECT trade_date, fii_net_5d, dii_net_5d, flow_signal FROM signals.fii_dii_flows WHERE trade_date = CURRENT_DATE;"
+    purpose: "Fetch FII/DII flow trends for the current day."
+  -
+    statement: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date = CURRENT_DATE;"
+    purpose: "Retrieve current market regime and confidence."
+  -
+    statement: "SELECT trade_date, adv_oscillator, ad_signal, market_sentiment FROM breadth.market_daily WHERE trade_date = CURRENT_DATE;"
+    purpose: "Get daily market breadth indicators."
+  -
+    statement: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date = CURRENT_DATE;"
+    purpose: "Obtain end-of-day index data and trend signals."
+python_tools:
+  -
+    id: "aggregate_market_insights"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "fii_dii_flows"
+      - "regime_history"
+      - "market_daily"
+      - "index_eod"
+    outputs:
+      - "regime"
+      - "flow_context"
+      - "breadth_context"
+      - "index_confirmation"
+      - "risk_flags"
+    approved_tables: true
+    code: "def run(context):\n    regime = context['regime_history'][0]['regime']\n    flow_context = context['signals.fii_dii_flows'][0]['flow_signal']\n    breadth_context = context['breadth.market_daily'][0]['ad_signal']\n    index_confirmation = context['market.index_eod'][0]['trend_signal']\n    risk_flags = 'risk-on' if regime == 'bullish' and flow_context == 'positive' and breadth_context == 'expansion' else 'risk-off'\n    return {\n        'regime': regime,\n        'flow_context': flow_context,\n        'breadth_context': breadth_context,\n        'index_confirmation': index_confirmation,\n        'risk_flags': risk_flags\n    }"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.adv_oscillator is not approved"

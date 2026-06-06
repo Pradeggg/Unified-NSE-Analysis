@@ -1,0 +1,54 @@
+id: "corporate_events_results_watchlist_1255_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1255"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: risk-first review; timeframe: quarter to date; response style: ranked candidates."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "risk-first review for quarter to date: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as ranked candidates"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "risk-first_review"
+  - "quarter_to_date"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "corporate_events_watchlist"
+    query: "\nSELECT \n    ce.symbol, \n    ce.event_type, \n    ce.event_date, \n    ce.purpose_raw, \n    ra.verdict, \n    ss.stage, \n    ss.trading_signal\nFROM \n    signals.corporate_events ce\nJOIN \n    scores.stage_snapshots ss \nON \n    ce.symbol = ss.symbol\nJOIN \n    scores.results_analysis ra \nON \n    ce.symbol = ra.symbol\nWHERE \n    ce.event_date >= CURRENT_DATE - INTERVAL '3 months'\nAND \n    ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nAND \n    ra.period_end = (SELECT MAX(period_end) FROM scores.results_analysis)\nLIMIT 50\n"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event_date filter uses CURRENT_DATE - INTERVAL '3 months'."
+  - "Ensure snapshot_date is the latest from scores.stage_snapshots."
+  - "Ensure period_end is the latest from scores.results_analysis."
+  - "Limit results to 50 for candidate lists."
+synthesis_guidance: "['Analyze how corporate events impact stock performance using stage and signal analysis.', 'Focus on a risk-first approach, ranking stocks based on event-driven potential.', 'Ensure evidence trails are clear for all recommendations.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

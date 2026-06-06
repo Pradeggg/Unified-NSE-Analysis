@@ -1,0 +1,57 @@
+created_at: "2026-06-06T12:48:11"
+created_by: "llm_generated"
+description: "Skill card for validating enhanced report run metadata, filtered stock rows, populated data, and source trails. Focuses on watchlist creation and post-result analysis with portfolio-aware output."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_0464_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for post results: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "fetch_valid_runs"
+    query: "SELECT run_id, run_ts FROM report.enhanced_runs WHERE universe_size > stocks_filtered;"
+  -
+    name: "check_stock_data"
+    query: "WITH valid_stocks AS (SELECT run_id, symbol FROM report.enhanced_filtered_stocks WHERE recommendation IS NOT NULL) SELECT rs.run_id, rs.symbol FROM report.enhanced_runs rr JOIN valid_stocks rs ON rr.run_id = rs.run_id;"
+status: "validated"
+synthesis_guidance: "Synthesize findings to highlight discrepancies in report link validation and stock data, focusing on potential portfolio impacts."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "post_results"
+  - "portfolio-aware_output"
+title: "Enhanced Report Data Validation Variant 0464"
+tool_plan_template:
+  steps:
+    - "Perform initial validation for missing data in report links."
+    - "Analyze filtered stock rows to identify discrepancies."
+    - "Cross-check watchlist creation consistency post-result."
+validation_rules:
+  - "Ensure all referenced run_ids have associated stock data."
+  - "Check that each listed recommendation correlates with a valid analysis date."
+version: 1

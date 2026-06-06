@@ -1,0 +1,75 @@
+id: "fii_dii_regime_breadth_review_0792_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0792"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    name: "Weekly Institution Context Tool"
+    context_frame: "Analyze FII/DII flow trends and market regime state over the last week."
+    tasks:
+      -
+        task_type: "read_only_sql"
+        raw_sql:
+          template: "SELECT trade_date, fii_net_5d, dii_net_5d, flow_signal, fii_trend, dii_trend FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL '7 days'"
+      -
+        task_type: "read_only_sql"
+        raw_sql:
+          template: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date >= CURRENT_DATE - INTERVAL '7 days'"
+      -
+        task_type: "read_only_sql"
+        raw_sql:
+          template: "SELECT trade_date, adv_volume, dec_volume, ad_signal FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '7 days'"
+      -
+        task_type: "read_only_sql"
+        raw_sql:
+          template: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trend_signal IS NOT NULL AND trade_date >= CURRENT_DATE - INTERVAL '7 days'"
+sql_templates:
+  -
+    name: "Flow and Regime Analysis"
+    template: "SELECT f.trade_date, f.flow_signal, r.regime FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date WHERE f.trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows)"
+  -
+    name: "Breadth and Index Confirmation"
+    template: "SELECT b.trade_date, b.ad_signal, i.trend_signal FROM breadth.market_daily b JOIN market.index_eod i ON b.trade_date = i.trade_date WHERE b.trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily) AND i.index_symbol = :index_symbol"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure latest data is used based on max trade_date in each table."
+  - "Joins must adhere to approved join conditions."
+synthesis_guidance: "Focus on combining flow, regime, breadth, and index evidence to produce a coherent analysis of current market conditions. Structure response as a QA checklist."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,47 @@
+id: "report_link_data_validation_1656_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation"
+description: "Skill to validate enhanced report run metadata, filtered stock rows, and broken links with a focus on freshness audit for the quarter to date."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for quarter to date: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Validate data"
+sql_templates:
+  - "WITH latest_run AS (SELECT MAX(run_ts) AS max_run_ts FROM report.enhanced_runs) SELECT er.run_id, er.run_ts, COUNT(efs.symbol) AS missing_data_count FROM report.enhanced_runs er LEFT JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id WHERE er.run_ts >= (SELECT max_run_ts FROM latest_run WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months') GROUP BY er.run_id, er.run_ts"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "rules"
+synthesis_guidance: "Use available metadata to ascertain data completeness and freshness regarding recent market analysis reports."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:37"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

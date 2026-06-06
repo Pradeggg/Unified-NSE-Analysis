@@ -1,0 +1,50 @@
+id: "portfolio_incremental_add_trim_1697_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1697"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: weekly review; response style: debug trace."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Review portfolio holdings, compare sector exposures, and determine add/trim actions."
+sql_templates:
+  -
+    template: "WITH latest_stages AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), portfolio_context AS (SELECT h.symbol, h.qty, h.avg_cost, s.sector, s.trading_signal FROM portfolio.holdings h JOIN latest_stages s ON h.symbol = s.symbol) SELECT sector, SUM(qty) AS total_qty, COUNT(*) AS holdings_count FROM portfolio_context WHERE trading_signal IN ('BUY', 'STRONG_BUY') GROUP BY sector ORDER BY holdings_count DESC;"
+    purpose: "Identify sectors with high buy signals for potential incremental additions."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "SQL templates must use SELECT or WITH for data retrieval."
+  - "Evidence tables must match the approved schema tables."
+synthesis_guidance: "Focus on sector-relative comparisons and provide recommendations on whether to add or reduce holdings. Frame outputs as a debug trace for review meetings."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

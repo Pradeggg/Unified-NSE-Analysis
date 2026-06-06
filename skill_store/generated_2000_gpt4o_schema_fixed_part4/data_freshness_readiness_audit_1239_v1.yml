@@ -1,0 +1,81 @@
+id: "data_freshness_readiness_audit_1239_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1239"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for last 20 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as ranked candidates"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    tool_name: "Agent Adda Data Freshness Validator"
+    version: "2023.10.01"
+    task_type: "readiness_audit"
+sql_templates:
+  -
+    name: "fetch_latest_equity_records"
+    description: "Fetch the latest equity EOD records for freshness validation."
+    sql: "SELECT symbol, trade_date, close FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) ORDER BY trade_date DESC LIMIT 20"
+  -
+    name: "fetch_latest_index_records"
+    description: "Fetch the latest index EOD records for freshness validation."
+    sql: "SELECT index_symbol, trade_date, close FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) ORDER BY trade_date DESC LIMIT 20"
+python_tools:
+  -
+    id: "run_latest_data_check"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "trade_date"
+      - "close"
+    outputs:
+      - "freshness_metric"
+      - "data_lag"
+    approved_tables:
+      - "market.equity_eod"
+      - "market.index_eod"
+    code: "def run(context):\n    return [\n        {\n            'symbol': record['symbol'],\n            'freshness_metric': (context.today - record['trade_date']).days,\n            'data_lag': record['close'] - context.base_close\n        }\n        for record in context.get_records()\n    ]"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all required evidence tables are queried for latest data."
+  - "Confirm that EOD and stage_snapshot dates are consistent across records."
+  - "Ranked candidates should clearly illustrate data freshness issues."
+synthesis_guidance: "['Consolidate findings into a comprehensive freshness matrix.', 'Highlight any significant lags in data updates.', 'Recommend loader actions to address missing or stale data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:06"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_latest_data_check: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_latest_data_check: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

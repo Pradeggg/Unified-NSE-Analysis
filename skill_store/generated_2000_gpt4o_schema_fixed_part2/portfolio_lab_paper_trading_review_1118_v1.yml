@@ -1,0 +1,57 @@
+id: "portfolio_lab_paper_trading_review_1118_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Skill Card"
+description: "Analyzes paper trading strategies separate from real holdings, focusing on position-sizing context and latest EOD"
+input_patterns:
+  - "Analyze paper trading strategies distinct from my portfolio."
+  - "Focus on position-sizing from my latest paper trading report."
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review the paper trading strategies using EOD data while keeping real holdings separate. Analyze entries, exits, position-sizing, and targets."
+sql_templates:
+  -
+    name: "Get_Latest_Paper_Trading_Signals"
+    template: "SELECT symbol, date_issued, signal, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log);"
+python_tools:
+  -
+    id: "run_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signals"
+      - "market_data"
+    outputs:
+      - "strategy_insights"
+    approved_tables:
+      - "signals.signal_log"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Performing analysis on the provided signals and market data\n    return 'Strategy insights generated based on latest EOD data.'"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+validation_rules:
+  - "constraints"
+synthesis_guidance: "['Focus on position-sizing and narrative explanations.', 'Utilize latest EOD data for comprehensive review.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:21"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_analysis: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_analysis: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

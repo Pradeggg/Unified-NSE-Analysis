@@ -1,0 +1,50 @@
+id: "quarterly_results_quality_review_1853_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1853"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: action watchlist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "daily refresh follow-up for quarter to date: latest quarterly results analysis"
+  - "which companies had strong quarterly results as action watchlist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Review quarterly results with focus on growth metrics and narrative quality for recent filings."
+sql_templates:
+  -
+    template: "WITH latest_results AS (\n    SELECT DISTINCT ON (symbol) symbol, period_end, revenue, pat, opm_pct\n    FROM scores.quarterly_results\n    WHERE period_type = 'quarter'\n    ORDER BY symbol, period_end DESC NULLS LAST\n), latest_analysis AS (\n    SELECT DISTINCT ON (symbol) symbol, growth_yoy_revenue_pct, growth_yoy_pat_pct, opm_delta_pp\n    FROM scores.results_analysis\n    WHERE verdict IN ('beat', 'miss')\n    ORDER BY symbol, period_end DESC NULLS LAST\n)\nSELECT lr.symbol, lr.revenue, lr.pat, lr.opm_pct, la.growth_yoy_revenue_pct, la.growth_yoy_pat_pct, la.opm_delta_pp\nFROM latest_results lr\nJOIN latest_analysis la ON lr.symbol = la.symbol\nORDER BY la.growth_yoy_revenue_pct DESC\nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Verify all companies have up-to-date analysis in the current quarter."
+  - "Ensure rankings reflect performance in the latest quarter."
+synthesis_guidance: "Prioritize companies with high growth rates and positive margin trends for the action watchlist."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

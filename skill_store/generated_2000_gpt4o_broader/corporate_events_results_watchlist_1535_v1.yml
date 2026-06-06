@@ -1,0 +1,93 @@
+id: "corporate_events_results_watchlist_1535_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1535"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: risk-first review; timeframe: last 20 sessions; response style: research-only summary."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "risk-first review for last 20 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as research-only summary"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "risk-first_review"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    -
+      name: "signals.corporate_events"
+      columns:
+        - "id"
+        - "symbol"
+        - "event_type"
+        - "event_date"
+        - "purpose_raw"
+        - "detail"
+        - "source"
+    -
+      name: "scores.results_analysis"
+      columns:
+        - "symbol"
+        - "period_end"
+        - "company_name"
+        - "industry"
+        - "filing_date"
+        - "growth_yoy_revenue_pct"
+        - "growth_qoq_revenue_pct"
+        - "growth_yoy_pat_pct"
+        - "growth_qoq_pat_pct"
+        - "opm_delta_pp"
+        - "eps_yoy_pct"
+        - "verdict"
+        - "source_trail"
+    -
+      name: "scores.stage_snapshots"
+      columns:
+        - "snapshot_date"
+        - "symbol"
+        - "company_name"
+        - "sector"
+        - "price"
+        - "change_1d_pct"
+        - "change_1w_pct"
+        - "change_1m_pct"
+        - "stage"
+        - "stage_score"
+        - "technical_score"
+        - "relative_strength"
+        - "trading_signal"
+tool_plan_template:
+  type: "research-only"
+  focus: "risk-first review"
+sql_templates:
+  -
+    description: "Select upcoming corporate events"
+    template: "SELECT symbol, event_type, event_date FROM signals.corporate_events WHERE event_date > CURRENT_DATE - INTERVAL '20 days'"
+  -
+    description: "Select recent results analysis"
+    template: "SELECT symbol, company_name, growth_yoy_revenue_pct, growth_qoq_revenue_pct FROM scores.results_analysis WHERE period_end > CURRENT_DATE - INTERVAL '20 days' AND verdict = 'Positive'"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all selected events are within the last 20 sessions."
+  - "Verify results analysis includes only positive verdicts."
+synthesis_guidance: "Summarize findings into a watchlist and highlight risk factors based on event type and results performance."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:09:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table {'name': 'scores.results_analysis', 'columns': ['symbol', 'period_end', 'company_name', 'industry', 'filing_date', 'growth_yoy_revenue_pct', 'growth_qoq_revenue_pct', 'growth_yoy_pat_pct', 'growth_qoq_pat_pct', 'opm_delta_pp', 'eps_yoy_pct', 'verdict', 'source_trail']}"
+  - "unknown table {'name': 'scores.stage_snapshots', 'columns': ['snapshot_date', 'symbol', 'company_name', 'sector', 'price', 'change_1d_pct', 'change_1w_pct', 'change_1m_pct', 'stage', 'stage_score', 'technical_score', 'relative_strength', 'trading_signal']}"
+  - "unknown table {'name': 'signals.corporate_events', 'columns': ['id', 'symbol', 'event_type', 'event_date', 'purpose_raw', 'detail', 'source']}"

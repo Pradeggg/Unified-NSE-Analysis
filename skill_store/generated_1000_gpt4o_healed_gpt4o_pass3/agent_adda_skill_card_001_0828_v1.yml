@@ -1,0 +1,49 @@
+created_at: "2026-06-06T12:52:01"
+created_by: "llm_generated"
+description: "Skill card to validate report link functionality and data completeness for last 5 sessions in Indian markets."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_card_001_0828_v1"
+input_patterns:
+  - "validate report links"
+  - "check stock data availability"
+  - "verify position-sizing for last 5 sessions"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  validate_report_links:
+    description: "Fetch the number of broken links (missing data) for the recent report runs."
+    query: "WITH recent_runs AS (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '5 days') SELECT run_id, COUNT(*) AS broken_links FROM report.enhanced_filtered_stocks WHERE symbol IS NULL AND run_id IN (SELECT run_id FROM recent_runs) GROUP BY run_id;"
+status: "validated"
+synthesis_guidance: "Synthesize findings to provide clear actions, specifically targeting the rectification of data gaps or link issues."
+tags:
+  - "report_qa"
+  - "validation"
+  - "links"
+  - "data_availability"
+  - "market_analysis"
+title: "Enhanced Report Link Validation"
+tool_plan_template:
+  - "Gather report run metadata and filtered stock information for the last 5 sessions."
+  - "Identify any broken report links or missing data."
+  - "Compile findings into an action-oriented watchlist noting identified issues."
+validation_rules:
+  - "Ensure all report links are functional for the last 5 sessions."
+  - "Confirm data completeness in stock HTML files."
+version: 1

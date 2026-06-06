@@ -1,0 +1,68 @@
+id: "data_freshness_readiness_audit_1617_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1617"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: debug trace."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for latest EOD: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as debug trace"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  - "Collect data freshness from each table"
+  - "Identify missing sources affecting narrative"
+  - "Generate sector-relative comparisons"
+sql_templates:
+  -
+    description: "Retrieve latest EOD data for equities"
+    template: "SELECT e.symbol, e.close, e.trade_date FROM market.equity_eod e WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND series = 'EQ'"
+  -
+    description: "Retrieve latest index EOD data"
+    template: "SELECT i.index_symbol, i.close, i.trade_date FROM market.index_eod i WHERE i.trade_date = (SELECT MAX(trade_date) FROM market.index_eod)"
+  -
+    description: "Get latest stage snapshots"
+    template: "SELECT s.symbol, s.stage, s.snapshot_date FROM scores.stage_snapshots s WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+  -
+    description: "Retrieve market breadth data"
+    template: "SELECT b.trade_date, b.advances, b.declines FROM breadth.market_daily b WHERE b.trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily)"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure dates are the latest available for intended use"
+  - "Cross-reference against other data freshness audits"
+  - "Verify missing data aligns with known data gaps"
+synthesis_guidance: "['Focus on generating insights around freshness and readiness', 'Consider sector-relative performance using latest data', 'Explain missing data impacts using debug trace narratives']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

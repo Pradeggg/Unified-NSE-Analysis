@@ -1,0 +1,56 @@
+id: "report_link_data_validation_1026_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1026"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: last 5 sessions; response style: concise table."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as concise table"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Investigate report data for validation purpose using recent run metadata."
+sql_templates:
+  -
+    name: "select_recent_runs"
+    description: "Select recent report runs for freshness audit."
+    template: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 5;"
+  -
+    name: "select_broken_links"
+    description: "Identify sessions with report links not working."
+    template: "SELECT run_id FROM report.enhanced_runs WHERE notes LIKE '%link not working%';"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all recent reports have valid timestamps."
+  - "Check for any records indicating broken links."
+  - "Verify data completeness for filtered stocks."
+synthesis_guidance: "['Summarize findings in a concise table format.', 'Highlight broken links and missing data issues.', 'Offer remediation strategies for identified problems.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:31"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

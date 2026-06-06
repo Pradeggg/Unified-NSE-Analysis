@@ -1,0 +1,64 @@
+id: "market_3m_rotation_swing_1989_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1989"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    python_tools:
+
+    sql_templates:
+      -
+        name: "sector_leadership_and_stage"
+        description: "Identify leading sectors and stage 2 leadership"
+        sql: "WITH latest_stage_snapshots AS (\n    SELECT symbol, sector, stage, stage_score\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n      AND stage = 'STAGE_2'\n), \nrecent_market_activity AS (\n    SELECT index_symbol, AVG(change_pct) AS avg_return\n    FROM market.index_eod\n    WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'\n    GROUP BY index_symbol\n)\nSELECT lss.sector, COUNT(lss.symbol) AS stage_2_count, rma.avg_return\nFROM latest_stage_snapshots lss\nJOIN recent_market_activity rma\nON lss.symbol = rma.index_symbol\nGROUP BY lss.sector, rma.avg_return\nORDER BY stage_2_count DESC, rma.avg_return DESC;\n"
+      -
+        name: "swing_candidate_identification"
+        description: "Identify swing trading candidates from stage 2 VCP picks"
+        sql: "SELECT svp.symbol, svp.company_name, svp.price, svp.vcp_score\nFROM scores.stage2_vcp_picks svp\nWHERE svp.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)\nORDER BY svp.vcp_score DESC, svp.rank ASC\nLIMIT 10;\n"
+    evidence_gaps:
+
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "{'evidence_check': ['output must include as_of_date', 'output must include index_returns', 'output must include stage_distribution_change', 'output must include leading_sectors', 'output must include primary_candidates', 'output must include risks']}"
+synthesis_guidance: "{'notes': ['Stage 2 leadership analysis requires alignment with recent market trends.', 'Focus on liquid swing trading candidates using VCP metrics.', 'Use comparison matrix format to highlight changes in stage and sector performance.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:30"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

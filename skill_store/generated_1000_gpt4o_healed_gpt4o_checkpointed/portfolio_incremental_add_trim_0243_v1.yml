@@ -1,0 +1,49 @@
+created_at: "2026-06-06T12:43:41"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: ranked candidates."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0243_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for last 3 months: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  holdings_analysis: "SELECT h.symbol, h.qty, h.avg_cost, s.price, s.trend_signal, s.stage_score FROM portfolio.holdings h JOIN (SELECT symbol, MAX(snapshot_date) AS latest_snapshot FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY symbol) ls ON h.symbol = ls.symbol JOIN scores.stage_snapshots s ON ls.symbol = s.symbol AND ls.latest_snapshot = s.snapshot_date WHERE s.trend_signal = 'Buy' OR s.trend_signal = 'Sell';"
+status: "validated"
+synthesis_guidance: "Consolidate analysis from scores and holdings, identify add and trim candidates based on trends and scores."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "ranked_candidates"
+title: "Portfolio Incremental Add Trim Review Variant 0243"
+tool_plan_template: "Gather data on portfolio holdings and stage snapshots to determine incremental add or trim actions. Focus on last 3 months and frame response as ranked candidates. Analyze sector exposure and risk flags."
+validation_rules:
+  - "Ensure all symbols in add_candidates have a 'Buy' trend_signal."
+  - "Ensure all symbols in trim_candidates have a 'Sell' trend_signal."
+  - "Validate sector exposure reflects potential reallocations correctly."
+version: 1

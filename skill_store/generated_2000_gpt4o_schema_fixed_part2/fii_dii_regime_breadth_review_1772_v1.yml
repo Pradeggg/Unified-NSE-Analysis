@@ -1,0 +1,53 @@
+id: "fii_dii_regime_breadth_review_1772_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1772"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: pre market; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for pre market: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  - "Combine FII/DII flow trends, market regimes, breadth, and index data to analyze the overall market context."
+sql_templates:
+  -
+    description: "Get the latest FII/DII flow, regime, and market breadth context."
+    template: "WITH latest_fii_dii AS (SELECT trade_date, fii_net_today, dii_net_today, flow_signal FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows)), latest_regime AS (SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history)), latest_breadth AS (SELECT trade_date, advances, declines, net_ad, trin FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily)) SELECT f.trade_date, f.fii_net_today, f.dii_net_today, f.flow_signal, r.regime, r.confidence, b.advances, b.declines, b.net_ad, b.trin FROM latest_fii_dii f JOIN latest_regime r ON f.trade_date = r.trade_date JOIN latest_breadth b ON f.trade_date = b.trade_date;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all inputs match the required tables and fields as per the approved schema."
+  - "All joins must comply with approved _join_rules."
+synthesis_guidance: "['Focus on the historical and current institutional flow trends and market breadth.', 'Assess the confidence levels of the current market regime.', 'Identify key risk factors based on breadth indicators and flow signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:54"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

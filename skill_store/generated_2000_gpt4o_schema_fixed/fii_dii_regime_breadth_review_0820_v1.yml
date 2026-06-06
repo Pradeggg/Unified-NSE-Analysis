@@ -1,0 +1,71 @@
+id: "fii_dii_regime_breadth_review_0820_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0820"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for latest EOD: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as action watchlist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "This skill card analyzes FII/DII daily flows, regime data, market breadth, and index performance to produce contextual insights on market conditions."
+sql_templates:
+  -
+    description: "Fetch the latest FII/DII flows, regime, breadth, and index performance data."
+    template: "SELECT\n  fi.trade_date,\n  fi.fii_net_today,\n  fi.dii_net_today,\n  fi.flow_signal,\n  fi.fii_trend,\n  fi.dii_trend,\n  rh.regime,\n  rh.confidence,\n  md.advances,\n  md.declines,\n  md.ad_signal,\n  ie.index_symbol,\n  ie.close\nFROM\n  signals.fii_dii_flows fi\nJOIN\n  signals.regime_history rh ON fi.trade_date = rh.trade_date\nJOIN\n  breadth.market_daily md ON fi.trade_date = md.trade_date\nJOIN\n  market.index_eod ie ON fi.trade_date = ie.trade_date\nWHERE\n  fi.trade_date = (SELECT MAX(trade_date) FROM market.index_eod)\n  AND ie.index_symbol = 'Nifty 50'\nLIMIT 1;"
+python_tools:
+  -
+    id: "fii_dii_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "flow_data"
+      - "regime_data"
+      - "breadth_data"
+      - "index_data"
+    outputs:
+      - "actionable_insights"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context):\n    # Read-only analysis combining flows, regime, breadth, and index data.\n    # Synthesize into actionable insights without modifying inputs.\n    insights = {}\n    # Perform calculations and derivation of insights...\n    return insights"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure correct mapping of flows, regime, breadth, and index data."
+  - "Check the latest EOD is used."
+  - "Limit to relevant index symbol."
+synthesis_guidance: "{'strategy': 'Narrate market conditions using the latest EOD evidence for operational and strategic decision making.', 'action_style': 'Provide clear action steps for market positioning, emphasizing risk-on or risk-off indications.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:16"
+generation_model: "gpt-4o"
+validation_errors:
+  - "fii_dii_analysis_tool: missing output actionable_insights"
+review:
+  status: "needs_heal"
+  findings:
+    - "fii_dii_analysis_tool: missing output actionable_insights"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

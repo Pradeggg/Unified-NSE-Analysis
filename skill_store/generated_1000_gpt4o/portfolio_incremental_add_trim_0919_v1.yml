@@ -1,0 +1,53 @@
+id: "portfolio_incremental_add_trim_0919_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0919"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for latest EOD: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Analyze holdings and scores to identify add/trim candidates based on stage, price movements, and signals."
+sql_templates:
+  holdings_review: "SELECT p.symbol, p.qty, s.sector, s.stage, s.stage_score, s.live_price, s.change_1d_pct FROM portfolio.holdings p JOIN scores.stage_snapshots s ON p.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.change_1d_pct IS NOT NULL;"
+  sector_exposure: "SELECT sector, SUM(qty) AS total_qty FROM portfolio.holdings p JOIN scores.stage_snapshots s ON p.symbol = s.symbol GROUP BY sector;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure latest EOD data is used"
+  - "Validate that holdings match score data for corresponding symbols"
+synthesis_guidance: "Present data in a comparison matrix highlighting potential add/trim candidates, considering sector exposure with a focus on changes and signals."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:52:53"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table p.qty"
+  - "unknown table p.symbol"
+  - "unknown table s.change_1d_pct"
+  - "unknown table s.live_price"
+  - "unknown table s.sector"
+  - "unknown table s.snapshot_date"
+  - "unknown table s.stage"
+  - "unknown table s.stage_score"
+  - "unknown table s.symbol"

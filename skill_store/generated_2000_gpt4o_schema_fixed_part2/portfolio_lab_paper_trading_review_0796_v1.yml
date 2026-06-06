@@ -1,0 +1,57 @@
+id: "portfolio_lab_paper_trading_review_0796_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review"
+description: "Review paper trading strategies separately from real holdings, focusing on entries, exits, stops, targets, and exposure auditing."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for weekly review: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as QA checklist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  refresh_context: "Ensure analysis is based on the freshest data available for a reliable audit."
+  output_focus: "QA checklist format"
+  response_style: "Detailed audit report"
+sql_templates:
+  -
+    name: "latest_stage_data"
+    description: "Retrieve the latest stage data for current holdings."
+    query: "SELECT p.symbol, s.stage, s.stage_score FROM portfolio.holdings p JOIN scores.stage_snapshots s ON p.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all SQL templates are read-only SELECT queries."
+  - "Verify use of latest-date filters where appropriate."
+synthesis_guidance: "['Focus on distinguishing real and paper trades accurately.', 'Highlight any inconsistencies or deviations from expected entry/exit points.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:03"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

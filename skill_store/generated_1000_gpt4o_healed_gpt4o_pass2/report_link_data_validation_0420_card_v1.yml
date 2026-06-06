@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:46:18"
+created_by: "llm_generated"
+description: "Skill card for validating enhanced report run metadata."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0420_card_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for latest EOD: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "validate_links"
+    template: "SELECT run_id, analysis_date FROM report.enhanced_runs WHERE stocks_analyzed = 0 OR market_sentiment IS NULL;"
+  -
+    name: "check_stock_data"
+    template: "SELECT symbol, current_price FROM report.enhanced_filtered_stocks WHERE current_price IS NULL OR volume = 0;"
+status: "validated"
+synthesis_guidance: "Combine findings from SQL results to identify broken links and missing data issues, suggest plausible remediations."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "portfolio-aware_output"
+title: "Data Validation Skill Card"
+tool_plan_template:
+
+validation_rules:
+  - "Ensure that report.enhanced_runs contains valid metadata and non-zero stocks analyzed."
+  - "Verify that report.enhanced_filtered_stocks stocks have current prices and non-zero volume."
+version: 1

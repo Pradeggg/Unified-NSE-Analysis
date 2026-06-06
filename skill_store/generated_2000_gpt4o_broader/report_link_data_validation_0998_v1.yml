@@ -1,0 +1,67 @@
+id: "report_link_data_validation_0998_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation"
+description: "Agent skill to validate enhanced report run metadata and identify broken links and missing data in the Indian market context."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for weekly review: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Analyze report metadata and associated stock data to determine discrepancies or missing information."
+sql_templates:
+  validate_run_metadata:
+    query: "SELECT run_id, run_ts, analysis_date, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_id = ?"
+    description: "Retrieve metadata for specific report run."
+  retrieve_filtered_stocks:
+    query: "SELECT symbol, recommendation, current_price, weekly_signal, day_change_pct FROM report.enhanced_filtered_stocks WHERE run_id = ?"
+    description: "Fetch filtered stock information for given run."
+python_tools:
+  -
+    id: "compare_report_links"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "valid_links"
+      - "checked_links"
+    outputs:
+      - "broken_links"
+      - "remediation"
+    approved_tables:
+
+    code: "def run(context):\n    valid_links = set(context.inputs['valid_links'])\n    checked_links = set(context.inputs['checked_links'])\n    broken_links = valid_links.difference(checked_links)\n    remediation = f\"Found {len(broken_links)} broken links.\"\n    return {'broken_links': list(broken_links), 'remediation': remediation}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure metadata matches report expectations."
+  - "Identify stock data discrepancies or omissions."
+synthesis_guidance: "{'main_objective': 'Determine the integrity of report data and links in the context of the Indian stock market.', 'research_focus': 'Comparison matrix highlighting gaps.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "compare_report_links: execution failed: AttributeError: 'dict' object has no attribute 'inputs'"
+review:
+  status: "needs_heal"
+  findings:
+    - "compare_report_links: execution failed: AttributeError: 'dict' object has no attribute 'inputs'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

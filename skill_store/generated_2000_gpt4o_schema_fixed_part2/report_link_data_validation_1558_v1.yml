@@ -1,0 +1,51 @@
+id: "report_link_data_validation_1558_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1558"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: quarter to date; response style: research-only summary."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for quarter to date: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Run SQL query to identify missing data in enhanced reports."
+sql_templates:
+  -
+    template: "SELECT r.run_id, r.run_ts, r.analysis_date, f.symbol\nFROM report.enhanced_runs r\nLEFT JOIN report.enhanced_filtered_stocks f ON r.run_id = f.run_id\nWHERE f.symbol IS NULL;"
+    description: "Identify missing symbols in enhanced reports."
+  -
+    template: "SELECT DISTINCT r.run_id\nFROM report.enhanced_runs r\nWHERE r.run_ts >= CURRENT_DATE - INTERVAL '3 months'"
+    description: "Validate that reports exist for the last three months."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  -
+    rule: "Ensure all report.enhanced_runs entries have corresponding entries in report.enhanced_filtered_stocks."
+  -
+    rule: "Ensure all reports have run_ts within the last quarter."
+synthesis_guidance: "Provide a research-only summary based on validated SQL queries."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:20"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.r is not approved"

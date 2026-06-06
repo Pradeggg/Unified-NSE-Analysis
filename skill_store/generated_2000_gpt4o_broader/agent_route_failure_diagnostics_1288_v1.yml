@@ -1,0 +1,56 @@
+id: "agent_route_failure_diagnostics_1288_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1288"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for intraday context: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as ranked candidates"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  context: "Diagnose route steps failures during intraday trading"
+  areas:
+    - "Check missing tools within the route"
+    - "Analyze symbol resolution correctness"
+    - "Evaluate position-sizing strategy under context sensitivity"
+sql_templates:
+  - "SELECT run_id, run_ts, universe_size, stocks_filtered FROM report.enhanced_runs WHERE run_ts BETWEEN :start_date AND :end_date;"
+  - "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = :run_id ORDER BY score DESC LIMIT :limit;"
+  - "SELECT symbol, market_cap_cat, price, technical_score FROM scores.stage_snapshots WHERE snapshot_date = :date AND sector = :sector;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all SQL uses approved tables and columns."
+  - "Output should rank candidates based on likelihood of failure mode."
+synthesis_guidance: "['Identify potential gaps in the evidence for a robust diagnosis.', 'Provide ranked insight on most probable failure modes.', 'Discuss possible tool enhancements to prevent future issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

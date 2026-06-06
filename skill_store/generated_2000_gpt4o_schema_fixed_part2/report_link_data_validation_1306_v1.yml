@@ -1,0 +1,50 @@
+id: "report_link_data_validation_1306_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Agent Adda Skill Card: Report Data Validation and Freshness Audit"
+description: "This skill card assists in the validation of enhanced report run metadata, filtered stock rows, populated data, and source trails, focusing on freshness audit for today's date. It highlights exceptions and gaps first, ensuring data quality and completeness."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for today: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "today"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "This agent will inspect the most recent report data to check for completeness and freshness issues. It will identify broken links and missing data based on today's context."
+sql_templates:
+  -
+    template: "SELECT * FROM report.enhanced_runs WHERE run_ts::date = CURRENT_DATE AND run_id NOT IN (SELECT DISTINCT run_id FROM report.enhanced_filtered_stocks);"
+    description: "Identify runs with no corresponding stocks today, highlighting potential data gaps."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure reports cover today's date."
+  - "Highlight any missing stock data for today's runs."
+synthesis_guidance: "Focus on identifying exceptions and gaps first, with an emphasis on today's data. Use descriptive feedback to ensure clarity in findings."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

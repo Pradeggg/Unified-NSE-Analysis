@@ -1,0 +1,60 @@
+id: "company_360_research_report_0986_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0986"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: freshness audit; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "freshness audit for intraday context: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as comparison matrix"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "freshness_audit"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template: "Research focus on Indian market context using a comparison matrix. Audit for data freshness with intraday relevancy to provide institutional-grade insights."
+sql_templates:
+  -
+    query: "SELECT symbol, revenue, expenses, pat, eps FROM scores.quarterly_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1;"
+    description: "Fetch latest quarterly results for Reliance."
+  -
+    query: "SELECT symbol, stage, stage_score, fundamental_score FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' ORDER BY snapshot_date DESC LIMIT 1;"
+    description: "Fetch latest stage snapshot for Reliance."
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "status"
+  - "approved_tables"
+synthesis_guidance: "Blend fundamental analysis with technical indicators. Validate findings with narrative insights and ensure data relevancy."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

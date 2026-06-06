@@ -1,0 +1,58 @@
+id: "quarterly_results_quality_review_0761_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0761"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: post results; response style: QA checklist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for post results: latest quarterly results analysis"
+  - "which companies had strong quarterly results as QA checklist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "post_results"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "1. Extract latest quarterly results and context for each company from scores.quarterly_results."
+  - "2. Analyze latest filing and PAT growth using scores.results_analysis."
+  - "3. Examine stage and technical signals using scores.stage_snapshots."
+  - "4. Synthesize evidence to answer core questions for post results QA checklist."
+sql_templates:
+  fetch_quarterly_results:
+    template: "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.period_label, qr.revenue, qr.pat, qr.opm_pct, ra.verdict FROM scores.quarterly_results qr JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end WHERE qr.period_type = 'quarter' ORDER BY qr.symbol, qr.period_end DESC NULLS LAST, qr.fetched_at DESC;"
+    notes: "Gets the latest quarterly results with a verdict from results_analysis."
+  fetch_technical_context:
+    template: "SELECT ss.symbol, ss.stage, ss.trading_signal FROM scores.stage_snapshots ss WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    notes: "Fetches the latest technical stage and trading signal for context."
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure period_end is the latest available for each symbol."
+  - "Verify all resulting verdicts are consistent with approved values: beat, inline, miss, mixed, or unknown."
+synthesis_guidance: "Use extracted data to evaluate the quality of quarterly results, focusing on revenue and PAT growth, margin movement, and analyst verdicts to synthesize into a QA checklist for actionable insights."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

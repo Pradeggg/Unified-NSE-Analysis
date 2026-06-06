@@ -1,0 +1,46 @@
+id: "report_link_data_validation_0824_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0824"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Review and verify report data and links for last 5 sessions."
+sql_templates:
+  - "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered, indices_analyzed FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '5 days';"
+  - "SELECT rank, symbol, score, recommendation, current_price FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '5 days');"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure run_ts is within the last 5 days."
+  - "Check if report links are broken."
+  - "Identify missing data issues in stock rows."
+synthesis_guidance: "Compile verification outcomes and generate a watchlist creation action plan based on the last 5 sessions data."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:51:55"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.now is not approved"

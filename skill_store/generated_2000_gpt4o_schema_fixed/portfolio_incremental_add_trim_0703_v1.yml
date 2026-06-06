@@ -1,0 +1,87 @@
+id: "portfolio_incremental_add_trim_0703_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0703"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: today; response style: QA checklist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for today: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  run: "analyze_portfolio_incremental_add_trim"
+  inputs:
+    -
+      input_name: "snapshot_data"
+      table_name: "scores.stage_snapshots"
+    -
+      input_name: "current_holdings_data"
+      table_name: "portfolio.holdings"
+  outputs:
+    - "add_candidates"
+    - "trim_candidates"
+    - "sector_exposure"
+    - "portfolio_state"
+    - "risk_flags"
+sql_templates:
+  -
+    name: "latest_stage_snapshots"
+    template: "SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    name: "current_holdings"
+    template: "SELECT symbol, qty, avg_cost FROM portfolio.holdings;"
+  -
+    name: "buy_candidates"
+    template: "SELECT symbol FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+  -
+    name: "trim_candidates"
+    template: "SELECT symbol FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal = 'SELL' LIMIT 10;"
+python_tools:
+  -
+    id: "run_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "snapshot_data"
+      - "current_holdings_data"
+    outputs:
+      - "add_candidates"
+      - "trim_candidates"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    # Analyze portfolio for add/trim opportunities based on latest trading signals\n    add_candidates = context['snapshot_data'].query(\"trading_signal in ['BUY', 'STRONG_BUY']\").symbol.tolist()\n    trim_candidates = context['snapshot_data'].query(\"trading_signal == 'SELL'\").symbol.tolist()\n    return {'add_candidates': add_candidates, 'trim_candidates': trim_candidates}"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "evidence"
+synthesis_guidance: "Use the latest snapshot to determine potential add or trim actions based on stage and trading signals. Focus on QA checklist for decisions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_analysis: execution failed: KeyError: 'snapshot_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_analysis: execution failed: KeyError: 'snapshot_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

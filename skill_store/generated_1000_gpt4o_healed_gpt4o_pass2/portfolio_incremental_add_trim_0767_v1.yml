@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:51:26"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: post results; response style: QA checklist."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0767_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for post results: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  holdings_overview: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+  stage_snapshots: "SELECT symbol, sector, market_cap_cat, live_price, change_1w_pct, change_1m_pct, stage, stage_score, trend_signal, can_slim_score FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+status: "validated"
+synthesis_guidance: "{'sector_comparison': 'Use stage scores and market trends to determine relative sector strengths.', 'add_trim_decision': 'Base decisions on performance metrics and sector trends.'}"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "QA_checklist"
+title: "Portfolio Incremental Add Trim Review Variant 0767"
+tool_plan_template: "Analyze current holdings against stage scores and technical indicators for potential add/trim decisions."
+validation_rules:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+version: 1

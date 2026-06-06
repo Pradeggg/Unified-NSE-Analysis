@@ -1,0 +1,52 @@
+id: "quarterly_results_quality_review_1279_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1279"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: source-trail validation; timeframe: pre market; response style: ranked candidates."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "source-trail validation for pre market: latest quarterly results analysis"
+  - "which companies had strong quarterly results as ranked candidates"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "source-trail_validation"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Evaluate results using pre-defined SQL templates and Python tools if necessary for complex calculations."
+sql_templates:
+  -
+    name: "latest_quarterly_results_analysis"
+    query: "SELECT DISTINCT ON (qr1.symbol) qr1.symbol, qr1.revenue, qr1.pat, ra1.verdict, ra1.filing_date, sr1.stage, sr1.trading_signal FROM scores.quarterly_results qr1 JOIN scores.results_analysis ra1 ON qr1.symbol = ra1.symbol AND qr1.period_end = ra1.period_end JOIN scores.stage_snapshots sr1 ON qr1.symbol = sr1.symbol WHERE qr1.period_type = 'quarter' ORDER BY qr1.symbol, qr1.period_end DESC NULLS LAST, qr1.fetched_at DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure all referenced symbols have valid ticker symbols."
+  - "Check for consistency in verdict labels such as 'beat', 'miss', etc."
+  - "Verify that the data falls within the expected reporting window."
+synthesis_guidance: "Provide a ranked list of companies based on analysis of quarterly results, focusing on revenue, PAT growth, and margin drivers."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,63 @@
+id: "insider_bulk_deal_signal_review_0514_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0514"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: latest EOD; response style: research-only summary."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for latest EOD: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as research-only summary"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  context: "Analyze the latest end-of-day (EOD) data to create a watchlist based on insider buying alerts, bulk or block deals, and technical confirmations. Focus on identifying accumulation or distribution clues."
+  steps:
+    - "Identify insider buying alerts and bulk deals from relevant tables."
+    - "Combine deal information with technical signals to confirm positive setups."
+    - "Filter potential watchlist symbols based on recent EOD performance metrics."
+sql_templates:
+  -
+    template_name: "fetch_bulk_deals"
+    template: "SELECT symbol, deal_date, entity, qty, side FROM signals.bulk_block_deals WHERE deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals) AND side = 'buy'"
+  -
+    template_name: "fetch_insider_alerts"
+    template: "SELECT symbol, alert_date, entity, qty, insider_score FROM signals.insider_alerts WHERE alert_type = 'buy' AND alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts)"
+  -
+    template_name: "get_technical_confirmation"
+    template: "SELECT symbol, technical_score, rsi, trend_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Verify non-null results in combination of bulk deals and insider alerts."
+  - "Ensure technical confirmation data aligns with stock symbols identified."
+synthesis_guidance: "{'approach': 'Compile data to produce a coherent research summary highlighting potential accumulation or distribution stocks based on indicators and technical scores. Prioritize stocks with consistent signals across evidence sources.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:48:03"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

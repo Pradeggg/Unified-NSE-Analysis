@@ -1,0 +1,60 @@
+id: "agent_route_failure_diagnostics_0196_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0196"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: weekly review; response style: narrative plus evidence."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for weekly review: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as narrative plus evidence"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "weekly_review"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Use available evidence tables to analyze the latest reports and identify potential issues."
+sql_templates:
+  -
+    description: "Fetch the latest enhanced run reports within the past week."
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '1 week' ORDER BY run_ts DESC;"
+  -
+    description: "Check for symbol resolution issues by comparing enhanced filtered stocks with stage snapshots."
+    template: "WITH latest_snapshots AS (SELECT symbol FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT e.symbol, e.rank, e.recommendation FROM report.enhanced_filtered_stocks e WHERE e.run_id = (SELECT MAX(run_id) FROM report.enhanced_runs) AND e.symbol NOT IN (SELECT symbol FROM latest_snapshots);"
+python_tools:
+  - "required_function"
+  - "language"
+  - "mode"
+  - "blocked_capabilities"
+  - "required_fields"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all data retrievals adhere to the weekly review timeframe."
+  - "Validate symbol existence across snapshots and filtered stocks."
+synthesis_guidance: "['Narrate events leading to failures and propose corrective actions based on the data analysis.', 'Use a combination of SQL-derived evidence and inferred conclusions to craft a coherent diagnostic narrative.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:16"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

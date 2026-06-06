@@ -1,0 +1,60 @@
+id: "report_link_data_validation_1782_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Agent Adda Enhanced Report Link Validator"
+description: "Validates the links and data in enhanced report runs for the Indian market, ensuring that all stock information is complete and accurate."
+input_patterns:
+  - "review report links not working"
+  - "validate generated report links and missing data"
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "links"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  inputs:
+    reportId: "text"
+  outputs:
+    -
+      name: "findings"
+      type: "json"
+    -
+      name: "broken_links"
+      type: "list"
+    -
+      name: "missing_data"
+      type: "list"
+    -
+      name: "remediation"
+      type: "text"
+sql_templates:
+  -
+    description: "Retrieve broken links and missing data entries."
+    query: "SELECT efs.symbol, efs.rank, efs.score, er.run_id FROM report.enhanced_filtered_stocks efs JOIN report.enhanced_runs er ON efs.run_id = er.run_id WHERE er.run_id = $1 AND (efs.score IS NULL OR efs.symbol IS NULL);"
+    parameters:
+      - "$1"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+validation_rules:
+  - "Ensure all found symbols and scores have valid entries."
+  - "Check if all data fields are populated as per the schema."
+synthesis_guidance: "['Highlight gaps in reports, e.g., missing symbols or scores.', 'Provide actionable steps for remediation.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:12"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

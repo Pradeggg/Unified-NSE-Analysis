@@ -1,0 +1,53 @@
+id: "signal_outcome_feedback_review_0263_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0263"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: post results; response style: ranked candidates."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for post results: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as ranked candidates"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Gather signal outcomes from `signals.signal_log`."
+    - "Evaluate target hits and stops from `return_pct` and `hit_target`, `hit_stop`."
+    - "Analyze the conditions associated with winning patterns and failure patterns."
+    - "Calculate relevant statistics and provide insights for `route_improvements`."
+    - "Provide recommendations for `next_checks`."
+sql_templates:
+  signal_outcomes: "SELECT id, symbol, company, date_issued, date_resolved, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_resolved IS NOT NULL;"
+  winning_patterns: "SELECT setup_class, AVG(return_pct) AS avg_return FROM signals.signal_log WHERE hit_target = TRUE GROUP BY setup_class ORDER BY avg_return DESC;"
+  failure_patterns: "SELECT setup_class, AVG(return_pct) AS avg_return FROM signals.signal_log WHERE hit_stop = TRUE GROUP BY setup_class ORDER BY avg_return ASC;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'advice': ['Focus on pattern recognition from historical signals.', 'Leverage patterns to suggest improvements in signal strategy.', 'Provide transparent reasoning for recommended adjustments.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:18"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.avg_return is not approved"

@@ -1,0 +1,60 @@
+id: "report_link_data_validation_1586_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Enhanced Report Data Validation - Freshness Audit"
+description: "Audit report data freshness under intraday context, focusing on report link validation and stock data population."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "intraday_context"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    python_tools:
+      -
+        id: "run_freshness_check"
+        language: "python"
+        mode: "read_only"
+        inputs:
+          - "run_ts"
+        outputs:
+          - "freshness_status"
+        approved_tables:
+          - "report.enhanced_runs"
+        code: "def run(context):\n    max_run_ts = context['report.enhanced_runs']['run_ts'].max()\n    current_day = pd.to_datetime('now')\n    freshness_status = 'Fresh' if (current_day - max_run_ts).days < 1 else 'Stale'\n    return {'freshness_status': freshness_status}"
+sql_templates:
+  -
+    description: "Validate broken links and missing data"
+    template: "WITH latest_run AS (\n    SELECT run_id, run_ts\n    FROM report.enhanced_runs\n    WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)\n)\nSELECT er.run_id, ef.symbol\nFROM report.enhanced_runs er\nJOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id\nWHERE er.run_id IN (SELECT run_id FROM latest_run)\nAND (ef.symbol IS NULL OR ef.current_price IS NULL);"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "{'schema_checks': True, 'data_completeness': True, 'timeliness': True}"
+synthesis_guidance: "Consider the data results within the context of the Indian market and use them to guide research-oriented report quality assessments. Focus on intraday data relevance and integrity."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:55"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

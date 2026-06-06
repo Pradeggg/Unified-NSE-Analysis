@@ -1,0 +1,1 @@
+def run(context): return verify_data(context['filtered_stock_data'], context['reference_data'])

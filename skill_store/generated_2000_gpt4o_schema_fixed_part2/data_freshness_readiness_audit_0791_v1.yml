@@ -1,0 +1,76 @@
+id: "data_freshness_readiness_audit_0791_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0791"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for weekly review: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  - "1. Check latest available date in each evidence table using freshness queries."
+  - "2. Validate that the data meets freshness thresholds required for the workflow."
+  - "3. Identify any missing or outdated sources as blocking gaps."
+  - "4. Provide loader actions to refresh stale or missing data."
+  - "5. Compile verification queries to audit adherence to standard practices."
+sql_templates:
+  -
+    name: "Latest Index EOD Date"
+    query: "SELECT MAX(trade_date) AS latest_date FROM market.index_eod;"
+  -
+    name: "Latest Equity EOD Date"
+    query: "SELECT MAX(trade_date) AS latest_date FROM market.equity_eod;"
+  -
+    name: "Latest Stage Snapshot Date"
+    query: "SELECT MAX(snapshot_date) AS latest_date FROM scores.stage_snapshots;"
+  -
+    name: "Latest Market Daily Date"
+    query: "SELECT MAX(trade_date) AS latest_date FROM breadth.market_daily;"
+  -
+    name: "Latest MA Pct Above Date"
+    query: "SELECT MAX(snapshot_date) AS latest_date FROM breadth.ma_pct_above;"
+  -
+    name: "Latest Report Run Date"
+    query: "SELECT MAX(run_ts) AS latest_date FROM report.enhanced_runs;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all queries are read-only and align with approved schema constraints."
+  - "Verify appropriate use of latest-date filters from _global_rules."
+synthesis_guidance: "['Compile the freshness matrix by mapping each evidence table to its latest date.', 'Identify any gaps where data is missing or not recent enough.', 'Recommend specific actions for the data loaders to fill in these gaps.', 'Include SQL queries as evidence for verification of freshness status.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:46"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.latest_date is not approved"
+  - "breadth.market_daily.latest_date is not approved"
+  - "market.equity_eod.latest_date is not approved"
+  - "market.index_eod.latest_date is not approved"
+  - "report.enhanced_runs.latest_date is not approved"
+  - "scores.stage_snapshots.latest_date is not approved"

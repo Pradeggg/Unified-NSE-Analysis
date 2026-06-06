@@ -1,0 +1,82 @@
+id: "fii_dii_regime_breadth_review_0204_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0204"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: today; response style: ranked candidates."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for today: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as ranked candidates"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "today"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  sql_templates:
+    -
+      name: "fetch_fii_dii_flows"
+      sql: "SELECT trade_date, fii_net_today, dii_net_today, fii_trend, dii_trend FROM signals.fii_dii_flows WHERE trade_date = CURRENT_DATE;"
+    -
+      name: "fetch_regime_history"
+      sql: "SELECT trade_date, regime, confidence FROM signals.regime_history ORDER BY trade_date DESC LIMIT 1;"
+    -
+      name: "fetch_market_breadth"
+      sql: "SELECT trade_date, adv_volume, dec_volume, ad_signal FROM breadth.market_daily WHERE trade_date = CURRENT_DATE;"
+    -
+      name: "fetch_index_eod"
+      sql: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date = CURRENT_DATE AND index_symbol = 'NIFTY 50';"
+sql_templates:
+
+python_tools:
+  -
+    id: "market_trend_analyzer"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "fii_dii_flows"
+      - "regime_history"
+      - "market_breadth"
+      - "index_eod"
+    outputs:
+      - "ranked_candidates"
+      - "risk_analysis"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context):\n    # Analyze FII/DII trends\n    flows = context['fii_dii_flows']\n    regime = context['regime_history']\n    breadth = context['market_breadth']\n    index = context['index_eod']\n    \n    # Basic scoring based on trends\n    risk_on = flows['fii_trend'] == 'buy' and breadth['ad_signal'] == 'buy' and index['trend_signal'] == 'bullish'\n    risk_off = flows['fii_trend'] == 'sell' or breadth['ad_signal'] == 'sell' or index['trend_signal'] == 'bearish'\n    \n    candidates = []\n\n    if risk_on:\n        candidates.append({'candidate': 'Buy', 'reason': 'Positive FII trends and breadth'})\n    if risk_off:\n        candidates.append({'candidate': 'Sell', 'reason': 'Negative market signals'})\n    \n    return {'ranked_candidates': sorted(candidates, key=lambda x: x['candidate']), 'risk_analysis': 'Risk-on' if risk_on else 'Risk-off' if risk_off else 'Neutral'}"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data freshness with trade_date = CURRENT_DATE for real-time analysis."
+  - "Use ranking logic based on flows, breadth signals, and index trends to prioritize candidates."
+synthesis_guidance: "Combine flow, regime, breadth, and index data to determine the overall market sentiment and potential watchlist candidates prioritizing those with stronger buy signals or favorable conditions."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market_trend_analyzer: execution failed: KeyError: 'fii_dii_flows'"
+review:
+  status: "needs_heal"
+  findings:
+    - "market_trend_analyzer: execution failed: KeyError: 'fii_dii_flows'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

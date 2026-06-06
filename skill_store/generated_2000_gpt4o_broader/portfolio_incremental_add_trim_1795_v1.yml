@@ -1,0 +1,75 @@
+id: "portfolio_incremental_add_trim_1795_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1795"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  sql_templates:
+    -
+      name: "fetch_portfolio_holdings"
+      sql: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+    -
+      name: "fetch_stage_snapshots"
+      sql: "SELECT symbol, stage, stage_score, sector, market_cap_cat FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  python_tools:
+    evaluate_risk_flags:
+      id: "risk_evaluation_001"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        -
+          symbol: "str"
+          stage: "str"
+          stage_score: "float"
+          market_cap_cat: "str"
+      outputs:
+        -
+          symbol: "str"
+          risk_flag: "str"
+      approved_tables:
+        - "scores.stage_snapshots"
+        - "portfolio.holdings"
+      code: "def run(context):\n    risk_flags = []\n    for entry in context:\n        if entry['stage'] in ['4A', '4B'] and entry['stage_score'] < 50:\n            risk_flags.append({'symbol': entry['symbol'], 'risk_flag': 'High Risk'})\n        else:\n            risk_flags.append({'symbol': entry['symbol'], 'risk_flag': 'Normal'})\n    return risk_flags"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all approved tables are utilized"
+  - "SQL queries must be read-only"
+  - "Python tools must adhere to policy guidelines"
+synthesis_guidance: "['Use retrieved data to analyze current holdings.', 'Identify sectors with highest exposure.', 'Determine potential add or trim candidates based on analysis.', 'Assess risk levels of current holdings.', 'Provide a QA checklist for review decisions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

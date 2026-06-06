@@ -1,0 +1,52 @@
+id: "quarterly_results_quality_review_0299_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0299"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: source-trail validation; timeframe: weekly review; response style: ranked candidates."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "source-trail validation for weekly review: latest quarterly results analysis"
+  - "which companies had strong quarterly results as ranked candidates"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze the given quarterly results data for insights into revenue and PAT growth, margin trends, and overall performance to deliver a ranked list of companies. Verify filing freshness and detail narrative quality, focusing on source-trail validation."
+sql_templates:
+  -
+    query: "WITH latest_results AS (SELECT DISTINCT ON (symbol) symbol, revenue, pat, opm_pct FROM scores.quarterly_results WHERE period_type = 'quarter' ORDER BY symbol, period_end DESC, fetched_at DESC) SELECT r.symbol, r.company_name, r.growth_yoy_revenue_pct, r.opm_delta_pp, r.verdict FROM scores.results_analysis r JOIN latest_results l ON r.symbol = l.symbol WHERE r.verdict IN ('beat', 'miss') AND r.period_end = l.period_end ORDER BY r.growth_yoy_revenue_pct DESC LIMIT 10;"
+    description: "Fetch top 10 companies with significant YoY revenue growth and margin improvements."
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure symbols match between source tables."
+  - "Verify period_end alignment for data consistency."
+  - "Check for recent data by using latest periods."
+synthesis_guidance: "['Synthesize data into actionable insights focusing on high-growth and high-margin companies.', \"Provide context for each company's performance using narrative analysis.\"]"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

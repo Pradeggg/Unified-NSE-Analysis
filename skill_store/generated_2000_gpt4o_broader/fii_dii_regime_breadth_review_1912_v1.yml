@@ -1,0 +1,66 @@
+id: "fii_dii_regime_breadth_review_1912_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1912"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for latest EOD: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as comparison matrix"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  plan:
+    - "Query latest data from fii_dii_flows to understand cash-flow trends."
+    - "Review current market regime from regime_history."
+    - "Analyze market breadth using market_daily for advance/decline statistics."
+    - "Confirm market signals with index_eod data."
+sql_templates:
+  -
+    description: "Fetch latest FII/DII flow trends."
+    query: "SELECT trade_date, fii_net_today, dii_net_today, fii_trend, dii_trend FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+  -
+    description: "Fetch latest market regime and confidence."
+    query: "SELECT regime, confidence FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history);"
+  -
+    description: "Fetch latest market breadth indicators."
+    query: "SELECT net_ad, ad_signal, market_sentiment FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+  -
+    description: "Fetch latest index EOD data for confirmation."
+    query: "SELECT index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all evidence tables have the latest data."
+  - "Validate consistency among regime, flow, and breadth data."
+synthesis_guidance: "['Integrate evidence into a cohesive matrix format highlighting FII/DII flows, market regime, and breadth.', 'Emphasize market risk-on or risk-off context based on analyzed data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:16"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

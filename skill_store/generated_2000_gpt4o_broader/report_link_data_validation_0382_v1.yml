@@ -1,0 +1,71 @@
+id: "report_link_data_validation_0382_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0382"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: intraday context; response style: exceptions and gaps first."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for intraday context: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  purpose: "To validate metadata and filtered stock data for the enhanced reports."
+  step1: "Verify each 'run_id' from 'report.enhanced_runs'."
+  step2: "Ensure every run has corresponding entries in 'report.enhanced_filtered_stocks'."
+  step3: "Check for 'stocks_analyzed' consistency in 'report.enhanced_runs'."
+  step4: "Identify any discrepancies or missing data."
+sql_templates:
+  -
+    template: "SELECT run_id, analysis_date, stocks_analyzed FROM report.enhanced_runs WHERE run_ts BETWEEN :start_time AND :end_time;"
+  -
+    template: "SELECT run_id, symbol FROM report.enhanced_filtered_stocks WHERE run_id = :run_id;"
+python_tools:
+  -
+    id: "data_verification_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+      - "start_time"
+      - "end_time"
+    outputs:
+      - "verification_report"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Assuming context provides a way to access data safely. Verification logic here.\n    pass"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all 'run_id's in 'report.enhanced_runs' have corresponding stock data."
+  - "Verify 'stocks_analyzed' matches number of entries in 'report.enhanced_filtered_stocks' for each run."
+synthesis_guidance: "Focus on discrepancies and missing links first to guide remediation steps."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:37"
+generation_model: "gpt-4o"
+validation_errors:
+  - "data_verification_tool: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "data_verification_tool: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

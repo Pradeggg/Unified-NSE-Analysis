@@ -1,0 +1,77 @@
+id: "data_freshness_readiness_audit_1491_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1491"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for weekly review: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as portfolio-aware output"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    description: "Use evidence from approved tables to construct queries that determine the freshness and readiness of the data for various Agent Adda workflows."
+sql_templates:
+  -
+    description: "Select the latest EOD data for indices to check freshness."
+    query: "SELECT * FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+  -
+    description: "Select the latest EOD data for equities to verify data availability."
+    query: "SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+  -
+    description: "Select the latest snapshot to ensure stage data is current."
+    query: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+  -
+    id: "data_freshness_check_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "evidence_sources"
+    outputs:
+      - "freshness_analysis"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Logic to verify data freshness based on context inputs\n    return {'freshness_analysis': []}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all queries are read-only and compliant with approved schemas."
+  - "Verify that output reflects the latest data according to the global rules."
+synthesis_guidance: "Interpret SQL results to provide an understanding of data freshness and any actions required for Agent Adda's readiness. Highlight portfolio implications and any recommendations for missing or stale data."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:39"
+generation_model: "gpt-4o"
+validation_errors:
+  - "data_freshness_check_tool: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "data_freshness_check_tool: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

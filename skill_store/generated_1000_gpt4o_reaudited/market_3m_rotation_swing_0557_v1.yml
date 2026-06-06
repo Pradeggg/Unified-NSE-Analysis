@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:49:12"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: research-only summary."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0557_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as research-only summary"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    name: "Index_Performance"
+    query: "SELECT index_symbol, AVG(change_pct) AS avg_return FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol"
+  -
+    name: "Sector_Leaders"
+    query: "SELECT sector, COUNT(*) AS leader_count FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' AND stage = 2 GROUP BY sector ORDER BY leader_count DESC"
+status: "test_failed"
+synthesis_guidance: "Highlight shifts in market regime and sector dynamics with evidence. Interpret Stage 2 picks as leading indicators of market sentiment."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "research-only_summary"
+title: "3M Market Rotation Swing Assessment Variant 0557"
+tool_plan_template: "Create a detailed research summary using index and equity performance from the past 3 months. Identify sector leaders and potential swing candidates using Stage 2 VCP picks and stage snapshots."
+validation_rules:
+  - "Ensure index and sector data are updated within the last 3 months."
+  - "Stage 2 consideration should be latest and align with VCP picks."
+version: 1
+validation_errors:
+  - "market.index_eod.avg_return is not approved"
+  - "scores.stage2_vcp_picks.leader_count is not approved"
+  - "scores.stage2_vcp_picks.stage is not approved"

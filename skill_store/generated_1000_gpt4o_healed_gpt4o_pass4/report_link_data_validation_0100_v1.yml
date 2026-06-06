@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:41:51"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: weekly review; response style: concise table."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0100_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for weekly review: review report links not working"
+  - "validate generated report links and missing data as concise table"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Select run metadata for analysis."
+    template: "SELECT run_id, run_ts, analysis_date, stocks_analyzed FROM report.enhanced_runs WHERE universe_size > 0;"
+  -
+    description: "Select filtered stock data with missing signals."
+    template: "SELECT run_id, symbol, current_price, weekly_signal FROM report.enhanced_filtered_stocks WHERE weekly_signal IS NULL OR daily_signal IS NULL;"
+status: "validated"
+synthesis_guidance: "Focus on identifying missing data and broken links, provide results as a concise table for weekly review."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "weekly_review"
+  - "concise_table"
+title: "Enhanced Report Data Validation Variant 0100"
+tool_plan_template: "Validate report links and data using metadata and filtered stock details."
+validation_rules:
+  - "status"
+version: 1

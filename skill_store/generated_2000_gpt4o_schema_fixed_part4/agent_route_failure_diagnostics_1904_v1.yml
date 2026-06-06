@@ -1,0 +1,66 @@
+id: "agent_route_failure_diagnostics_1904_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1904"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: today; response style: comparison matrix."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for today: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as comparison matrix"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "today"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    steps:
+      - "Extract latest run details from report.enhanced_runs."
+      - "Join with report.enhanced_filtered_stocks to identify discrepancies or missing entries."
+      - "Analyze symbol resolution using scores.stage_snapshots with a focus on today's data."
+sql_templates:
+  -
+    name: "ExtractLatestRuns"
+    description: "Get the latest enhanced report runs for diagnostic insights."
+    sql: "SELECT * FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+  -
+    name: "JoinRunsWithStocks"
+    description: "Join run metadata with filtered stocks for detailed comparisons."
+    sql: "SELECT er.run_id, er.analysis_date, efs.symbol, efs.current_price FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id WHERE er.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+  -
+    name: "StageSnapshotsAnalysis"
+    description: "Analyze today's stage snapshots for symbol resolution and diagnostics."
+    sql: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure that the SQL templates follow read-only access."
+  - "Ensure all joins comply with the approved join rules."
+  - "All date constraints should utilize the global latest-date filters."
+synthesis_guidance: "['Focus on diagnosing route failures with clear data comparisons.', 'Utilize comparison matrices to highlight discrepancies and tool gaps.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:40"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

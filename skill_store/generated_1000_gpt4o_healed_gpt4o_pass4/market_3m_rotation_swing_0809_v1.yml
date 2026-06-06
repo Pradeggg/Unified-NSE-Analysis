@@ -1,0 +1,69 @@
+created_at: "2026-06-06T12:51:43"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: today; response style: action watchlist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0809_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "Index Return Calculation"
+    template: "SELECT trade_date, index_symbol, change_pct FROM `market.index_eod` WHERE trade_date >= (CURRENT_DATE - INTERVAL 3 MONTH)"
+  -
+    name: "Stage Distribution Change"
+    template: "SELECT snapshot_date, stage, COUNT(symbol) AS stage_count FROM `scores.stage_snapshots` WHERE snapshot_date >= (CURRENT_DATE - INTERVAL 3 MONTH) GROUP BY snapshot_date, stage"
+  -
+    name: "Leading Sectors Identification"
+    template: "SELECT sector, AVG(change_1m_pct) AS avg_monthly_change FROM `scores.stage_snapshots` WHERE snapshot_date >= (CURRENT_DATE - INTERVAL 3 MONTH) GROUP BY sector ORDER BY avg_monthly_change DESC LIMIT 5"
+status: "validated"
+synthesis_guidance: "Generate actionable insights on sector rotation and swing candidates from the recent market trends over the last 3 months, ensuring incorporation of validated source trails."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "today"
+  - "action_watchlist"
+title: "3M Market Rotation Swing Assessment Variant 0809"
+tool_plan_template: "Assess market regimes, stage analysis, and identify sector leadership by utilizing predefined SQL templates and analyzing the data points, ensuring consistency with Indian market evidence."
+validation_errors:
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage_snapshots.avg_monthly_change is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"
+  - "scores.stage_snapshots.stage_count is not approved"
+validation_rules:
+  - "Ensure the analysis is limited to the Indian market scope."
+  - "Cross-check if sector leadership aligns with index dynamics."
+  - "Verify swing candidate selection based on robust trend signals."
+version: 1

@@ -1,0 +1,1 @@
+def run(context): return {'financial_summary': summarize_financials(context['latest_equity_eod_data'], context['latest_stage_snapshot'])}

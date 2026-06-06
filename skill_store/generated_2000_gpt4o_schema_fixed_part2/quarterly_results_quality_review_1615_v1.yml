@@ -1,0 +1,52 @@
+id: "quarterly_results_quality_review_1615_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1615"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: risk-first review; timeframe: latest EOD; response style: debug trace."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "risk-first review for latest EOD: latest quarterly results analysis"
+  - "which companies had strong quarterly results as debug trace"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "risk-first_review"
+  - "latest_EOD"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "{{#latest_quarter_analysis}}{{/latest_quarter_analysis}}"
+sql_templates:
+  -
+    template: "WITH latest_results AS (SELECT DISTINCT ON (symbol) symbol, company_name, growth_yoy_revenue_pct, growth_yoy_pat_pct, opm_delta_pp, filing_date, filing_url, verdict, score FROM scores.results_analysis WHERE period_end = (SELECT MAX(period_end) FROM scores.results_analysis) AND verdict IN ('beat', 'miss', 'mixed') ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC) SELECT lr.symbol, lr.company_name, lr.growth_yoy_revenue_pct, lr.growth_yoy_pat_pct, lr.opm_delta_pp, lr.filing_date, lr.filing_url, lr.verdict, lr.score, ss.stage, ss.trading_signal FROM latest_results lr JOIN scores.stage_snapshots ss ON lr.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY lr.score DESC LIMIT 5;"
+    description: "Query to assess which companies had strong quarterly results with a risk-first approach."
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "Validate the presence of symbol and company_name in results."
+  - "Check that at least one company is returned in the output list."
+synthesis_guidance: "['Focus on contextualizing risks and opportunities in the latest quarterly results.', 'Highlight margin drivers and any significant deviations from expectations.', 'Prioritize companies that are both fundamentally strong and technically attractive.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

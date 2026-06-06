@@ -1,0 +1,49 @@
+id: "sector_breadth_rotation_watchlist_1399_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1399"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for weekly review: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as exceptions and gaps first"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Use approved evidence and schema for a weekly review to identify sector improvements and gaps first."
+sql_templates:
+  -
+    query: "SELECT sector, AVG(pct_above_50dma) as avg_pct_above_50dma FROM breadth.sector_daily WHERE snapshot_date = current_date - interval '7 days' GROUP BY sector ORDER BY avg_pct_above_50dma DESC;"
+    type: "sector_breadth_ranking"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all sectors in the evidence tables are evaluated for the past week."
+  - "Ensure rankings reflect changes in breadth and stage 2 participation."
+synthesis_guidance: "Prioritize sectors showing relative strength improvement with stage 2 migrations; identify potential trading candidates, highlighting exceptions and gaps first."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:51"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.sector_daily.avg_pct_above_50dma is not approved"

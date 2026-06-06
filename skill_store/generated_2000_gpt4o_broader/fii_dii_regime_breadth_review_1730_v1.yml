@@ -1,0 +1,66 @@
+id: "fii_dii_regime_breadth_review_1730_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1730"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for last 5 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  status: "generated"
+  steps:
+    - "Combine evidence from FII/DII flows and market breadth to establish current market condition."
+    - "Use regime history for market context validation over the last 5 sessions."
+    - "Review market index confirmations and generate risk signals based on cross-evidence."
+sql_templates:
+  -
+    description: "Fetch FII/DII flows and trends for the last 5 sessions."
+    template: "SELECT trade_date, fii_net_today, dii_net_today, flow_signal FROM signals.fii_dii_flows ORDER BY trade_date DESC LIMIT 5;"
+  -
+    description: "Fetch regime history and confidence for the last 5 sessions."
+    template: "SELECT trade_date, regime, confidence FROM signals.regime_history ORDER BY trade_date DESC LIMIT 5;"
+  -
+    description: "Fetch market breadth indicators for the last 5 sessions."
+    template: "SELECT trade_date, advances, declines, trin, market_sentiment FROM breadth.market_daily ORDER BY trade_date DESC LIMIT 5;"
+  -
+    description: "Fetch EOD index data for the last 5 sessions."
+    template: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod ORDER BY trade_date DESC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data flows correctly through SQL templates and matches expected results."
+  - "Validate completeness of market condition synthesis from evidence."
+synthesis_guidance: "['Align FII/DII flows with regime history to assess market risk levels.', \"Use breadth metrics to validate or question market indices' signals.\", 'Compile a QA checklist based on synthesized evidence to guide market outlook communication.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

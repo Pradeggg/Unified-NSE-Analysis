@@ -1,0 +1,67 @@
+created_at: "2026-06-06T12:52:44"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: latest EOD; response style: comparison matrix."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0912_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for latest EOD: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Add code to validate report_data\n    pass"
+    id: "data_validation_tool"
+    inputs:
+      - "report_data"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "findings"
+sql_templates:
+  -
+    sql: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered, market_composite_score, market_sentiment FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+    template_id: "select_enhanced_run_metadata"
+  -
+    sql: "SELECT symbol, recommendation, current_price, volume FROM report.enhanced_filtered_stocks WHERE run_id = (SELECT MAX(run_id) FROM report.enhanced_runs);"
+    template_id: "select_filtered_stocks"
+status: "test_failed"
+synthesis_guidance: "Highlight key discrepancies and provide a detailed comparison matrix for institutional review."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "latest_EOD"
+  - "comparison_matrix"
+title: "Enhanced Report Data Validation Variant 0912"
+tool_plan_template: "<To be defined>"
+validation_rules:
+  - "Ensure all links in the report are accessible."
+  - "Check for missing data in stock html files."
+  - "Verify correctness of data in the comparison matrix format."
+version: 1
+validation_errors:
+  - "data_validation_tool: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "data_validation_tool: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,67 @@
+id: "market_3m_rotation_swing_1261_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1261"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: post results; response style: ranked candidates."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Perform a quick 3-month market analysis to find swing candidates through sector rotation and stage 2 leadership observation."
+sql_templates:
+  -
+    description: "Retrieve the latest index performance for the last 3 months."
+    template: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    description: "Analyze equity performance over the last 3 months and filter for stage 2 leadership."
+    template: "SELECT eod.symbol, eod.trading_signal, snap.stage FROM market.equity_eod eod LEFT JOIN scores.stage_snapshots snap ON eod.symbol = snap.symbol WHERE eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND snap.stage = 'STAGE_2';"
+  -
+    description: "Fetch top VCP candidates for quick ranking."
+    template: "SELECT symbol, rank, trading_signal FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC, rank ASC LIMIT 10;"
+python_tools:
+  -
+    id: "calculate_index_trend"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "index_data"
+    outputs:
+      - "trend_analysis"
+    approved_tables:
+      - "market.index_eod"
+      - "scores.stage_snapshots"
+    code: "def run(index_data):\n    # Analyzing index trends\n    trends = []\n    for index in index_data:\n        if index['change_pct'] > 0:\n            trends.append((index['index_symbol'], 'UPTREND'))\n        else:\n            trends.append((index['index_symbol'], 'DOWNTREND'))\n    return {'trend_analysis': trends};"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure SQL queries adhere to read-only access."
+  - "Confirm adherence to approved_schema and _global_rules."
+  - "Validate column usage against column_details specifications."
+synthesis_guidance: "['Rank candidates based on technical scores and trading signals.', 'Provide context for sector rotations over past 3 months.', 'Describe potential risks in swing trading under current market conditions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:33"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.trading_signal is not approved"

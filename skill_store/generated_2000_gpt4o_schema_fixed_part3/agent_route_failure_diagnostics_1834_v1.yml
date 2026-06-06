@@ -1,0 +1,57 @@
+id: "agent_route_failure_diagnostics_1834_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1834"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as action watchlist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  type: "action_watchlist"
+  focus: "route diagnostics, tool validation, symbol resolution"
+  timeframe: "last_20_sessions"
+sql_templates:
+  -
+    description: "Fetch recent route diagnostics and failures."
+    template: "SELECT run_id, analysis_date, market_sentiment FROM report.enhanced_runs WHERE run_ts >= (CURRENT_DATE - INTERVAL '20 days');"
+  -
+    description: "Identify unresolved symbols and tool gaps."
+    template: "SELECT symbol, notes FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= (CURRENT_DATE - INTERVAL '20 days')) AND recommendation = 'UNRESOLVED';"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure SQL templates do not modify data."
+  - "Confirm table references match approved_schema."
+synthesis_guidance: "['Provide action-oriented watchlist based on diagnostics.', 'Address common failure patterns and tool gaps.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

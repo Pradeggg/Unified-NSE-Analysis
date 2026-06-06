@@ -1,0 +1,56 @@
+id: "market_3m_rotation_swing_0673_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0673"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: pre market; response style: debug trace."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Use SQL templates to extract market regime, leading sectors, and swing candidates based on stage analysis."
+sql_templates:
+  -
+    template: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+    comment: "Extract broad market regime through index percentage changes over 3 months."
+  -
+    template: "SELECT sector, COUNT(*) AS leader_count FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY leader_count DESC;"
+    comment: "Identify leading sectors based on stage 2 counts."
+  -
+    template: "SELECT symbol, company_name FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE - INTERVAL '1 day';"
+    comment: "Find primary swing candidates from latest VCP picks."
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure data reflects the past 3 months analysis."
+  - "Calculate change percentages for index returns accurately."
+  - "Correct identification of sector leaders and their counts."
+synthesis_guidance: "['Verify connections between market regime shifts and leading sectors.', 'Assess candidate reliability for stage 2 swing trading.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:25"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.leader_count is not approved"

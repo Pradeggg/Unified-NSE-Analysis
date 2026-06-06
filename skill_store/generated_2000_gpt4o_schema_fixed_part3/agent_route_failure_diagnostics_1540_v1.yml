@@ -1,0 +1,58 @@
+id: "agent_route_failure_diagnostics_1540_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1540"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: last 20 sessions; response style: research-only summary."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as research-only summary"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  overview: "Analyze the latest enhanced report runs to diagnose route issues."
+  steps:
+    - "Query the latest report runs to determine which symbols failed during analysis."
+    - "Identify if there are any repeating patterns of tool failures or missing tools."
+    - "Check symbol resolutions and cross-reference with latest stage snapshots."
+    - "Summarize findings into a comprehensive report highlighting any persistent issues."
+sql_templates:
+  -
+    name: "latest_enhanced_runs"
+    description: "Fetch the latest enhanced runs for review."
+    template: "SELECT * FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure no direct modifications of tables or systems."
+  - "All data extracts to be confined within pre-approved read-only queries."
+synthesis_guidance: "['Frame diagnostics as research and analysis outputs for internal review.', 'Focus on constructive identification of pattern failures and recommended next steps.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

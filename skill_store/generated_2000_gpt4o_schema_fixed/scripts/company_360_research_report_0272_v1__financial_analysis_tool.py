@@ -1,0 +1,1 @@
+def run(context): return { 'financial_trends': 'analyzed trends' }

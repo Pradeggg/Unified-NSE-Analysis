@@ -1,0 +1,56 @@
+id: "data_freshness_readiness_audit_0833_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0833"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for last 20 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as action watchlist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Assess data freshness across specified evidence tables for the last 20 sessions to identify stale data points. Focus on ensuring completeness and timeliness for all required workflows."
+sql_templates:
+  market_index_freshness: "SELECT MAX(trade_date) AS last_index_date, CURRENT_DATE - MAX(trade_date) AS days_stale FROM market.index_eod"
+  equity_eod_freshness: "SELECT MAX(trade_date) AS last_equity_date, CURRENT_DATE - MAX(trade_date) AS days_stale FROM market.equity_eod"
+  daily_breadth_freshness: "SELECT MAX(trade_date) AS last_breadth_date, CURRENT_DATE - MAX(trade_date) AS days_stale FROM breadth.market_daily"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Data should be refreshed within defined thresholds for live and EOD reports."
+  - "All evidence tables should contain data for the most recent trading session."
+synthesis_guidance: "Compile insights into any detected freshness issues and suggest proactive loader operations to address them. Highlight priority areas for verification."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:30"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.days_stale is not approved"
+  - "breadth.market_daily.last_breadth_date is not approved"
+  - "market.equity_eod.days_stale is not approved"
+  - "market.equity_eod.last_equity_date is not approved"
+  - "market.index_eod.days_stale is not approved"
+  - "market.index_eod.last_index_date is not approved"

@@ -1,0 +1,1 @@
+def run(context):\n    # Evaluate risk based on provided scores. Placeholder implementation.\n    risk_flags = []\n    for row in context:\n        if row['technical_score'] < 50:\n            risk_flags.append('High Risk')\n        else:\n            risk_flags.append('Low Risk')\n    return risk_flags

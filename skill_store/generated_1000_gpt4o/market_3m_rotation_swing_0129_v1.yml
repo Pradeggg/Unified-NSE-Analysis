@@ -1,0 +1,58 @@
+id: "market_3m_rotation_swing_0129_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0129"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: last 5 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for last 5 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as narrative plus evidence"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Using recent EOD data and stage snapshots, identify leading sectors and swing candidates over the last 3 months."
+sql_templates:
+  -
+    description: "Get index performance over the last 3 months."
+    sql: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) ORDER BY trade_date DESC;"
+  -
+    description: "Identify Stage 2 leaders in the last 3 months."
+    sql: "SELECT snapshot_date, symbol, company_name, sector, stage FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) ORDER BY snapshot_date DESC;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure data is sourced from approved tables."
+  - "SQL queries must be read-only and use sanitization practices."
+  - "Narrative explanation must cite data findings and trends."
+synthesis_guidance: "Create a narrative summarizing index performance, highlighted sectors, and swing trade opportunities over the past 3 months, supported by data."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:42:09"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"

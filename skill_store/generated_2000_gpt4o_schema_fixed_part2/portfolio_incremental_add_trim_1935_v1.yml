@@ -1,0 +1,66 @@
+id: "portfolio_incremental_add_trim_1935_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1935"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for last 20 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  sql_templates:
+    -
+      name: "latest_stages_and_scores"
+      description: "Fetch latest stages and scores for portfolio symbols."
+      template: "SELECT h.symbol, s.sector, s.stage, s.stage_score, s.trading_signal, s.technical_score, s.relative_strength, s.rsi FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  python_tools:
+    -
+      id: "risk_analysis_tool"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "latest_stages_and_scores"
+      outputs:
+        - "risk_flags"
+      approved_tables:
+        - "scores.stage_snapshots"
+        - "portfolio.holdings"
+      code: "def run(context):\n    # Example: Identify high-risk stocks based on RSI and stage.\n    high_risk = [row for row in context['latest_stages_and_scores'] if row['rsi'] > 70 and row['stage'] in ['STAGE_3', 'STAGE_4']]\n    return {'risk_flags': high_risk}"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure stages and signals match expected range and values."
+  - "Check that the portfolio_state and sector_exposure have valid mappings to existing data."
+synthesis_guidance: "Assemble a comparison matrix showcasing proposed portfolio changes, highlighting sectors with increased exposure, potential add/trim candidates, and flagged risk areas based on the latest data."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

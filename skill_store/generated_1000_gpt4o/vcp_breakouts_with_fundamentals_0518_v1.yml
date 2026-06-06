@@ -1,0 +1,57 @@
+id: "vcp_breakouts_with_fundamentals_0518_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0518"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: latest EOD; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "select_vcp_breakouts"
+    query: "\n                WITH VCP_Candidates AS (\n                    SELECT \n                        v.symbol, \n                        v.company_name, \n                        v.price, \n                        v.vcp_score, \n                        v.enhanced_fund_score,\n                        e.market_cap_cr, \n                        e.volume\n                    FROM \n                        scores.stage2_vcp_picks v\n                    JOIN \n                        market.equity_eod e ON v.symbol = e.symbol\n                    WHERE \n                        v.vcp_score > 70 AND \n                        v.enhanced_fund_score > 60 AND \n                        e.market_cap_cr > 500\n                )\n                SELECT * FROM VCP_Candidates\n            "
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:48:42"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table e.market_cap_cr"
+  - "unknown table e.symbol"
+  - "unknown table e.volume"
+  - "unknown table v.company_name"
+  - "unknown table v.enhanced_fund_score"
+  - "unknown table v.price"
+  - "unknown table v.symbol"
+  - "unknown table v.vcp_score"

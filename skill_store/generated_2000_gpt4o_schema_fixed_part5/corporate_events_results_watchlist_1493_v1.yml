@@ -1,0 +1,53 @@
+id: "corporate_events_results_watchlist_1493_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1493"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Research and analyze upcoming corporate events such as results, dividends, and AGMs to create a watchlist focused on market-impacting actions."
+sql_templates:
+  -
+    template_name: "event_watchlist"
+    template_description: "Retrieve upcoming corporate events and recent results for symbols."
+    sql: "WITH latest_stage AS (SELECT symbol, stage, stage_score, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY')) SELECT ce.symbol, ce.event_type, ce.event_date, ce.detail, ra.verdict, ra.filing_date FROM signals.corporate_events ce INNER JOIN latest_stage ls ON ce.symbol = ls.symbol LEFT JOIN scores.results_analysis ra ON ce.symbol = ra.symbol WHERE ce.event_date >= CURRENT_DATE ORDER BY ce.event_date LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "{'rules': ['Ensure event_dates are in the future from the current date.', 'Verify that symbols have valid stage scores and trading signals.']}"
+synthesis_guidance: "Combine event-driven data with results analysis to provide a comprehensive watchlist. Utilize source trails for verification and ensure outputs align with portfolio management strategies."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

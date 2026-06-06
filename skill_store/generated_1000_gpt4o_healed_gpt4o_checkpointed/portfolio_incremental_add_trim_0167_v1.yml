@@ -1,0 +1,161 @@
+created_at: "2026-06-06T12:42:37"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: post results; response style: narrative plus evidence."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0167_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for post results: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    sector_performance = context['sector_exposure']\n    sector_ranking = sorted(sector_performance, key=lambda x: x['exposure'], reverse=True)\n    return sector_ranking"
+    id: "sector_performance_tool"
+    inputs:
+      - "sector_exposure"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "sector_ranking"
+review:
+  attempts: 3
+  findings:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  add_candidates:
+    description: "Identify stocks as potential add candidates based on weekly performance, stage, and RSI."
+    query: "SELECT symbol, company_name, sector FROM scores.stage_snapshots WHERE change_1w_pct > 5 AND stage IN ('Stage 2') AND rsi < 70;"
+  sector_exposure:
+    description: "Calculate sector exposure based on current holdings and live prices."
+    query: "SELECT sector, SUM(qty * live_price) AS exposure FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE GROUP BY sector;"
+  trim_candidates:
+    description: "Identify stocks as potential trim candidates based on weekly performance, stage, and RSI."
+    query: "SELECT symbol, company_name, sector FROM scores.stage_snapshots WHERE change_1w_pct < -5 AND stage IN ('Stage 4') AND rsi > 70;"
+status: "test_failed"
+synthesis_guidance: "Convey findings in a narrative format supported by SQL-derived evidence to aid decision-making on adding or trimming portfolio positions."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "narrative_plus_evidence"
+title: "Portfolio Incremental Add Trim Review Variant 0167"
+tool_plan_template:
+  framing: "Agent Adda Indian market evidence and research-only framing"
+  output: "narrative plus evidence"
+validation_errors:
+  - "description is required"
+  - "domain is required"
+  - "evidence_required is required"
+  - "id is required"
+  - "input_patterns is required"
+  - "output_contract is required"
+  - "tags is required"
+  - "title is required"
+  - "validation_rules is required"
+  - "version is required"
+  - "version must be a positive integer"
+validation_rules:
+  - "status"
+  - "sql_read_only"
+version: 1
+card:
+  created_at: "2026-06-06T12:42:37"
+  created_by: "llm_generated"
+  description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: post results; response style: narrative plus evidence."
+  domain: "portfolio_review"
+  evidence_required:
+    tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+  generation_model: "gpt-4o"
+  id: "portfolio_incremental_add_trim_0167_v1"
+  input_patterns:
+    - "should we add incrementally or reduce exposure"
+    - "portfolio position sizing by sector and stock"
+    - "review holdings for add trim decisions"
+    - "sector-relative comparison for post results: should we add incrementally or reduce exposure"
+    - "review holdings for add trim decisions as narrative plus evidence"
+  output_contract:
+    - "portfolio_state"
+    - "sector_exposure"
+    - "add_candidates"
+    - "trim_candidates"
+    - "risk_flags"
+  python_tools:
+    -
+      approved_tables:
+        - "scores.stage_snapshots"
+      code: "def run(context):\n    sector_performance = context.get('sector_exposure', [])\n    sector_ranking = sorted(sector_performance, key=lambda x: x.get('exposure', 0), reverse=True)\n    return sector_ranking"
+      id: "sector_performance_tool"
+      inputs:
+        - "sector_exposure"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "sector_ranking"
+  review:
+    attempts: 1
+    findings:
+      - "sector_performance_tool: execution failed: KeyError: 'sector_exposure'"
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "needs_heal"
+  sql_templates:
+    add_candidates:
+      description: "Identify stocks as potential add candidates based on weekly performance, stage, and RSI."
+      query: "SELECT symbol, company_name, sector FROM scores.stage_snapshots WHERE change_1w_pct > 5 AND stage IN ('Stage 2') AND rsi < 70;"
+    sector_exposure:
+      description: "Calculate sector exposure based on current holdings and live prices."
+      query: "SELECT sector, SUM(qty * live_price) AS exposure FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE GROUP BY sector;"
+    trim_candidates:
+      description: "Identify stocks as potential trim candidates based on weekly performance, stage, and RSI."
+      query: "SELECT symbol, company_name, sector FROM scores.stage_snapshots WHERE change_1w_pct < -5 AND stage IN ('Stage 4') AND rsi > 70;"
+  status: "generated"
+  synthesis_guidance: "Convey findings in a narrative format supported by SQL-derived evidence to aid decision-making on adding or trimming portfolio positions."
+  tags:
+    - "portfolio"
+    - "position_sizing"
+    - "sector_exposure"
+    - "add_trim"
+    - "sector-relative_comparison"
+    - "post_results"
+    - "narrative_plus_evidence"
+  title: "Portfolio Incremental Add Trim Review Variant 0167"
+  tool_plan_template:
+    framing: "Agent Adda Indian market evidence and research-only framing"
+    output: "narrative plus evidence"
+  validation_errors:
+
+  validation_rules:
+    - "status"
+    - "sql_read_only"
+  version: 1

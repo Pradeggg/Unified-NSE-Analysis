@@ -1,0 +1,54 @@
+id: "insider_bulk_deal_signal_review_0052_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0052"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: quarter to date; response style: concise table."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for quarter to date: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as concise table"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    template_name: "insider_deal_review"
+    template_sql: "WITH latest_stage AS (SELECT symbol, stage, technical_score, snapshot_date FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), insider_deals AS (SELECT symbol, entity, qty, value_cr, alert_date FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '3 months'), bulk_deals AS (SELECT symbol, entity, qty, price, deal_date FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '3 months') SELECT id.symbol, id.entity AS insider_entity, id.qty AS insider_qty, id.value_cr, bd.entity AS bulk_entity, bd.qty AS bulk_qty, bd.price, ls.stage, ls.technical_score FROM insider_deals id JOIN bulk_deals bd ON id.symbol = bd.symbol JOIN latest_stage ls ON id.symbol = ls.symbol WHERE ls.stage = 'STAGE_2' ORDER BY ls.technical_score DESC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

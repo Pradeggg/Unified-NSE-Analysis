@@ -1,0 +1,67 @@
+id: "company_360_research_report_1448_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1448"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: position-sizing context; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "position-sizing context for last 3 months: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as portfolio-aware output"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "position-sizing_context"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Gather financials from the last 3 months using quarterly results."
+    - "Analyze technical setup using stage_snapshots and equity_eod data."
+    - "Compile a narrative overview from results_analysis."
+sql_templates:
+  -
+    query: "SELECT symbol, period_label, revenue, pat, eps FROM scores.quarterly_results WHERE symbol = 'RELIANCE' AND period_type = 'Quarter' ORDER BY period_end DESC LIMIT 1"
+    purpose: "Fetch latest quarterly financials for Reliance."
+  -
+    query: "SELECT symbol, close, rsi, stage, trend_signal FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' ORDER BY snapshot_date DESC LIMIT 1"
+    purpose: "Get recent technical indicators for Reliance."
+  -
+    query: "SELECT trade_date, close, volume FROM market.equity_eod WHERE symbol = 'RELIANCE' ORDER BY trade_date DESC LIMIT 1"
+    purpose: "Acquire latest market close and volume data for Reliance."
+  -
+    query: "SELECT company_name, growth_yoy_revenue_pct, key_strengths, key_risks FROM scores.results_analysis WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1"
+    purpose: "Extract narrative elements for recent performance."
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all financial data reflects the latest quarter."
+  - "Technical indicators and narratives are up-to-date."
+  - "Check if any large gaps exist in revenue or profit growth."
+synthesis_guidance: "['Integrate financial trends with the narrative for a compelling report.', 'Highlight recent changes in technical indicators.', 'Present an overview with potential risks and opportunities for investors.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:16"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.close is not approved"

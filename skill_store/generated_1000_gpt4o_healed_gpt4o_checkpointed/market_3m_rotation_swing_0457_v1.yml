@@ -1,0 +1,74 @@
+created_at: "2026-06-06T12:48:13"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: portfolio-aware output."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0457_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Query to calculate index returns over the last quarter."
+    query: "SELECT index_symbol, (SUM(change_pct) / COUNT(*)) AS avg_change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol"
+  -
+    description: "Identify stage distribution changes for stocks."
+    query: "SELECT sector, AVG(change_1m_pct) AS avg_change FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector"
+  -
+    description: "Query to detect leading sectors based on relative strength."
+    query: "SELECT sector, AVG(relative_strength) AS avg_strength FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY AVG(relative_strength) DESC LIMIT 3"
+  -
+    description: "Identify primary VCP swing candidates."
+    query: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' AND vcp_score > 80"
+status: "test_failed"
+synthesis_guidance:
+  - "Create portfolio-aware insights based on identified trends."
+  - "Provide context on how sector leadership influences strategy."
+  - "Highlight risks associated with identified market regimes."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+title: "3M Market Rotation Swing Assessment Variant 0457"
+tool_plan_template:
+
+validation_errors:
+  - "market.index_eod.avg_change_pct is not approved"
+  - "scores.stage_snapshots.avg_change is not approved"
+  - "scores.stage_snapshots.avg_strength is not approved"
+validation_rules:
+  - "Ensure index returns are calculated for each available index."
+  - "Verify sector average change is computed accurately."
+  - "Leading sectors should be those with the highest relative strength."
+  - "VCP candidates need to have a high score threshold."
+version: 1
+review:
+  attempts: 3
+  findings:
+    - "market.index_eod.avg_change_pct is not approved"
+    - "scores.stage_snapshots.avg_change is not approved"
+    - "scores.stage_snapshots.avg_strength is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"

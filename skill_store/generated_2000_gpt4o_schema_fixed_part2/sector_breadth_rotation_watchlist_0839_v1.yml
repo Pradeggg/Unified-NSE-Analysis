@@ -1,0 +1,54 @@
+id: "sector_breadth_rotation_watchlist_0839_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0839"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for last 20 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as action watchlist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Construct an SQL template to analyze sector breadth, stage involvement, and momentum."
+sql_templates:
+  -
+    template_id: "sector_rotation_analysis"
+    description: "Generate a ranking of sectors based on breadth and stage 2 participation for the latest data."
+    sql: "WITH latest_breadth AS (SELECT * FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)), latest_stage AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2'), sector_analysis AS (SELECT lb.sector, lb.breadth_signal, lb.change_5d, ms.stage_score FROM latest_breadth lb LEFT JOIN latest_stage ms ON lb.sector = ms.sector) SELECT sector, AVG(stage_score) AS avg_stage_score, AVG(change_5d) AS avg_change_5d FROM sector_analysis GROUP BY sector ORDER BY avg_stage_score DESC, avg_change_5d DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure SQL templates use only SELECT statements."
+  - "Cross-validate sector rankings with breadth and stage participation scores."
+synthesis_guidance: "Focus on sectors with improving breadth, high stage scores, and recent positive momentum."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

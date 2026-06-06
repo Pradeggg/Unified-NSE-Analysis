@@ -1,0 +1,57 @@
+id: "vcp_breakouts_with_fundamentals_0912_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0912"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  mode: "read_only"
+  approved_tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+sql_templates:
+  -
+    template: "WITH recent_prices AS ( SELECT symbol, close, volume, market_cap_cr FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)), stage_scores AS ( SELECT symbol, company_name, sector, enhanced_fund_score, minervini_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), vcp_candidates AS ( SELECT symbol, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND vcp_score > 0 ), final_selection AS ( SELECT rp.symbol, rp.close, rp.volume, rp.market_cap_cr, ss.company_name, ss.sector, ss.enhanced_fund_score, ss.minervini_score FROM recent_prices rp JOIN stage_scores ss ON rp.symbol = ss.symbol JOIN vcp_candidates vc ON rp.symbol = vc.symbol ) SELECT * FROM final_selection WHERE enhanced_fund_score > 70 AND close > 100"
+    name: "select_vcp_breakouts"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "The SQL should only use SELECT or WITH clauses."
+  - "The selected stocks must have an enhanced_fund_score greater than 70 and a closing price greater than 100."
+synthesis_guidance: "['Provide a comparison matrix for selected stocks.', 'Focus on strong fundamentals and liquidity.', 'Ensure that the response is framed for the Indian market context.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:16"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

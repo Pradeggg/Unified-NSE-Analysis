@@ -1,0 +1,52 @@
+id: "signal_outcome_feedback_review_0053_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0053"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: concise table."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for quarter to date: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as concise table"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Assess past signal outcomes using concise tables. Extract and reflect on winning and failing patterns."
+sql_templates:
+  signal_summary:
+    template: "SELECT date_issued, symbol, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= 'start_of_quarter' AND date_resolved <= 'end_of_today';"
+    description: "Summarizes signal outcomes for the current quarter."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "rule_1"
+  - "rule_2"
+synthesis_guidance: "Distill outcomes into clear patterns of success and failure, providing actionable insights for strategy enhancement."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

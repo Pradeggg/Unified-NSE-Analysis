@@ -1,0 +1,49 @@
+id: "fii_dii_regime_breadth_review_0358_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0358"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for quarter to date: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as exceptions and gaps first"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Use schema-safe SQL templates to fetch latest FII/DII flows, market regime, and breadth data."
+sql_templates:
+  -
+    name: "fetch_evidence"
+    template: "SELECT fii.trade_date, fii.flow_signal, reg.regime, reg.confidence, breadth.ad_oscillator, breadth.market_sentiment, index.close FROM signals.fii_dii_flows fii JOIN signals.regime_history reg ON fii.trade_date = reg.trade_date JOIN breadth.market_daily breadth ON fii.trade_date = breadth.trade_date JOIN market.index_eod index ON fii.trade_date = index.trade_date WHERE index.index_symbol = 'Nifty 50' AND fii.trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  -
+    rule: "Ensure latest trade_date is used for all evidence."
+    description: "SQL template uses CURRENT_DATE constraint for latest data."
+synthesis_guidance: "Prefer using the latest market data to determine the market's risk stance, focusing on divergences between FII/DII flows, regime states, and breadth signals."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:16"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.market_daily is not approved"

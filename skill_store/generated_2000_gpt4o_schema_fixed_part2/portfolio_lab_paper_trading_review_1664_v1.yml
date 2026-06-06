@@ -1,0 +1,82 @@
+id: "portfolio_lab_paper_trading_review_1664_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1664"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: post results; response style: debug trace."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for post results: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as debug trace"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "post_results"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Extract relevant strategy information from paper trading portfolios."
+    - "Analyze entry, exit, stop loss, and target data from signals."
+    - "Review strategies in isolation from the main portfolio."
+    - "Create a watchlist for post-result evaluation."
+    - "Provide detailed debug trace for decision analysis."
+sql_templates:
+  -
+    name: "latest_stage_snapshots"
+    sql: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2';"
+  -
+    name: "portfolio_holdings_with_latest_stage"
+    sql: "SELECT portfolio.holdings.symbol AS symbol, portfolio.holdings.qty, portfolio.holdings.avg_cost, scores.stage_snapshots.stage, scores.stage_snapshots.stage_score FROM portfolio.holdings JOIN scores.stage_snapshots ON portfolio.holdings.symbol = scores.stage_snapshots.symbol WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    name: "signal_log_with_outcomes"
+    sql: "SELECT id, symbol, date_issued, signal, price_at_issue, target_1, target_2, stop_loss, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+  -
+    id: "strategic_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signal_log_with_outcomes"
+      - "portfolio_holdings_with_latest_stage"
+    outputs:
+      - "strategy_state"
+      - "entry_exit_rules"
+    approved_tables:
+      - "signals.signal_log"
+      - "portfolio.holdings"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze signals and holdings to determine strategy states and entry/exit rules\n    # This is a read-only function following Python tool policy\n    signal_data = context['signal_log_with_outcomes']\n    holdings_data = context['portfolio_holdings_with_latest_stage']\n    # Business logic goes here\n    strategy_state = {}\n    entry_exit_rules = {}\n    return {\n        'strategy_state': strategy_state,\n        'entry_exit_rules': entry_exit_rules\n    }"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all strategy states are properly categorized."
+  - "Validate entry and exit rules against signal data."
+  - "Check for any missing data points or anomalies."
+synthesis_guidance: "['Provide insights into strategy performance over the post-result period.', 'Highlight any notable patterns or deviations from expected outcomes.', 'Summarize key metrics such as average return and hit rate.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:40"
+generation_model: "gpt-4o"
+validation_errors:
+  - "strategic_analysis: execution failed: KeyError: 'signal_log_with_outcomes'"
+review:
+  status: "needs_heal"
+  findings:
+    - "strategic_analysis: execution failed: KeyError: 'signal_log_with_outcomes'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,54 @@
+id: "portfolio_lab_paper_trading_review_1958_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1958"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: position-sizing context; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "position-sizing context for quarter to date: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as comparison matrix"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Analyze paper trading strategies separately by examining the following:\n1. Entries and exits using data from signals.signal_log.\n2. Current portfolio positions and performance in portfolio.holdings.\n3. Technical and stage context from scores.stage_snapshots.\n4. Latest market data from market.equity_eod.\n\nOutputs will include a comparison matrix with strategy state, open trades, entry/exit rules, and exposures."
+sql_templates:
+  strategy_summary:
+    query: "SELECT sl.symbol, sl.signal, sl.setup_class, sl.date_issued, sl.entry_low, sl.entry_high, sl.stop_loss, sl.target_1, sl.target_2, ss.stage, ss.technical_score, me.close\nFROM signals.signal_log sl\nJOIN scores.stage_snapshots ss ON sl.symbol = ss.symbol\nJOIN market.equity_eod me ON sl.symbol = me.symbol\nWHERE me.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)\nAND sl.date_issued >= CURRENT_DATE - INTERVAL '3 months';"
+    notes: "This query retrieves recent signal information, including entries and exits, with stage and technical context."
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "{'inputs': 'Must match predefined input patterns.', 'outputs': 'Must include categories in output contract.'}"
+synthesis_guidance: "Focus synthesis on a comprehensive analysis of paper trading strategies, using position-sizing for quarter-to-date assessments. Compare results in a matrix format and highlight differences between paper trading and actual portfolio results."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

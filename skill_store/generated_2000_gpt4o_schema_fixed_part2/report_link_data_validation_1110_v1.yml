@@ -1,0 +1,56 @@
+id: "report_link_data_validation_1110_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1110"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: today; response style: narrative plus evidence."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for today: review report links not working"
+  - "validate generated report links and missing data as narrative plus evidence"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "today"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  tool: "validate_report_links"
+  expected_outcomes:
+    - "findings"
+    - "broken_links"
+    - "missing_data"
+    - "remediation"
+    - "verification"
+sql_templates:
+  -
+    description: "Check for broken report links and missing data."
+    template: "SELECT er.run_id, er.run_ts, er.stocks_analyzed, ef.symbol, ef.score FROM report.enhanced_runs er LEFT JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id WHERE er.run_ts = CURRENT_DATE AND ef.symbol IS NULL;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "task"
+synthesis_guidance: "{'task': 'Generate a narrative with evidence detailing any findings of broken links or missing data, including remediation strategies and verification steps.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:13"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

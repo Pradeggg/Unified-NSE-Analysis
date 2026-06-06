@@ -1,0 +1,58 @@
+id: "fii_dii_regime_breadth_review_0974_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0974"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: pre market; response style: comparison matrix."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for pre market: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as comparison matrix"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "pre_market"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  tasks:
+    - "Assess current market regime from signals.regime_history."
+    - "Analyze FII/DII flows from signals.fii_dii_flows."
+    - "Examine market breadth context from breadth.market_daily."
+    - "Validate index confirmation from market.index_eod."
+  ordering: "sequential"
+sql_templates:
+  -
+    template: "WITH latest_data AS (SELECT MAX(trade_date) as latest_trade_date FROM market.index_eod) SELECT rh.trade_date, rh.regime, rh.confidence, fdf.fii_net_today, fdf.dii_net_today, fdf.flow_signal, md.bullish_pct, md.bearish_pct, me.close, me.change_pct FROM signals.regime_history rh JOIN signals.fii_dii_flows fdf ON rh.trade_date = fdf.trade_date AND rh.trade_date = (SELECT latest_trade_date FROM latest_data) JOIN breadth.market_daily md ON fdf.trade_date = md.trade_date JOIN market.index_eod me ON md.trade_date = me.trade_date WHERE me.index_symbol = 'Nifty 50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all required evidence is collected."
+  - "Validate join conditions and resulting data consistency."
+  - "Check latest date filter is correctly applied."
+synthesis_guidance: "['Synthesize evidence into a coherent market analysis report.', 'Use comparison matrix style for results presentation.', 'Provide clear risk-on or risk-off indicators.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:49"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

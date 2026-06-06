@@ -1,0 +1,52 @@
+id: "quarterly_results_quality_review_0383_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0383"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: exceptions and gaps first."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "daily refresh follow-up for intraday context: latest quarterly results analysis"
+  - "which companies had strong quarterly results as exceptions and gaps first"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Use the following SQL to retrieve evidence required for task analysis."
+sql_templates:
+  -
+    template_name: "latest_quarter_analysis"
+    template: "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.period_end, qr.revenue, qr.pat, ra.verdict, ra.pl_commentary, ss.stage, ss.trend_signal\nFROM scores.quarterly_results qr\nJOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end\nJOIN scores.stage_snapshots ss ON qr.symbol = ss.symbol\nWHERE qr.period_type = 'quarter'\nAND qr.period_end = (SELECT MAX(period_end) FROM scores.quarterly_results)\nORDER BY qr.symbol, qr.period_end DESC NULLS LAST, qr.fetched_at DESC\nLIMIT 100"
+    notes: "Fetches the latest quarterly analysis for each symbol."
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure all symbols have latest period_end data."
+  - "Validate that all SQL queries use approved schema and join rules."
+synthesis_guidance: "Prioritize presenting exceptions and gaps in the data first, with concise summaries on hits and misses in quarterly results."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:46"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

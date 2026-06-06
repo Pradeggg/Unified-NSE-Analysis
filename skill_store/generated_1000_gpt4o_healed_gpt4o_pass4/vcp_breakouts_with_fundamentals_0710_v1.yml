@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:50:55"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: today; response style: QA checklist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0710_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Select potential breakout stocks with VCP pattern and strong fundamentals."
+    template: "SELECT v.symbol, v.company_name, v.price, v.vcp_score, s.fundamental_score FROM scores.stage2_vcp_picks v JOIN scores.stage_snapshots s ON v.symbol = s.symbol WHERE v.vcp_score > 80 AND s.fundamental_score > 75"
+status: "validated"
+synthesis_guidance: "Ensure stocks selected have a VCP score and fundamental score above 75 and can be exported to TradingView."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "today"
+  - "QA_checklist"
+title: "VCP Breakouts With Fundamentals Variant 0710"
+tool_plan_template: "Using the evidence from the approved tables, screen for stocks fitting the VCP breakout criteria with strong fundamentals."
+validation_rules:
+  - "Ensure output includes stocks with VCP and breakout patterns."
+  - "Fundamental scores must be above a threshold."
+version: 1

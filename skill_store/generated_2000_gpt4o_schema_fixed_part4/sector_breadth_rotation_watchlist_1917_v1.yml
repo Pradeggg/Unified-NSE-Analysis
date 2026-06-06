@@ -1,0 +1,60 @@
+id: "sector_breadth_rotation_watchlist_1917_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1917"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for latest EOD: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as comparison matrix"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    steps:
+      - "Query the latest sector breadth data from breadth.sector_daily and breadth.ma_pct_above."
+      - "Join with scores.stage_snapshots to incorporate stage and RS data."
+      - "Identify improving sectors using breadth signals and Stage 2 participation."
+      - "Rank sectors by breadth and Stage 2 participation metrics."
+sql_templates:
+  -
+    template: "SELECT sd.sector, sd.change_5d, ma.stage2_pct, ss.relative_strength FROM breadth.sector_daily sd JOIN breadth.ma_pct_above ma ON sd.snapshot_date = ma.snapshot_date JOIN scores.stage_snapshots ss ON sd.sector = ss.sector WHERE sd.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) AND ss.stage = 'STAGE_2' AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    description: "Retrieve sector breadth, Stage 2 participation, and relative strength for the latest snapshot date."
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sector data is current and uses the latest snapshot date."
+  - "Validate Stage 2 participation ranks for accuracy."
+  - "Confirm relative strength values are properly joined."
+synthesis_guidance: "['Use the retrieved data to create a ranked list of sectors.', 'Highlight sectors with the most significant improvements and potential trades.', 'Ensure all recommendations align with the latest sector trends and movements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:36"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

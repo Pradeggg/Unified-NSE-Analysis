@@ -1,0 +1,56 @@
+id: "insider_bulk_deal_signal_review_0290_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0290"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for intraday context: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as ranked candidates"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review insider alerts and bulk deals with technical confirmation using results from SQL and Python tools. Synthesize findings into a ranked candidate list."
+sql_templates:
+  -
+    template_name: "Fetch Insider Alerts with Latest Stage"
+    template: "SELECT ia.symbol, ia.alert_date, ia.qty, ia.value_cr, ia.insider_score, s.stage, s.technical_score FROM signals.insider_alerts ia JOIN scores.stage_snapshots s ON ia.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ia.alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts WHERE symbol = ia.symbol) LIMIT 50;"
+  -
+    template_name: "Fetch Bulk/Block Deals with Latest Stage"
+    template: "SELECT bd.symbol, bd.deal_date, bd.qty, bd.price, bd.deal_type, s.stage_score, s.trading_signal FROM signals.bulk_block_deals bd JOIN scores.stage_snapshots s ON bd.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND bd.deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals WHERE symbol = bd.symbol) LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Combine insider alerts and bulk deals with technical scores to generate a ranked list of symbols indicating potential accumulation patterns. Consider stage and trading signals for technical confirmation."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:04"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,52 @@
+id: "vcp_breakouts_with_fundamentals_1696_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1696"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: weekly review; response style: debug trace."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Select top VCP breakout stocks with good fundamentals."
+    query: "SELECT se.symbol, se.company_name, se.price, se.enhanced_fund_score, se.technical_score, sp.vcp_score FROM scores.stage_snapshots se JOIN scores.stage2_vcp_picks sp ON se.symbol = sp.symbol WHERE se.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND sp.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND se.enhanced_fund_score > 75 AND sp.vcp_score > 80 ORDER BY sp.vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "{'rules': [{'description': 'Ensure fundamentals score is above threshold.', 'condition': 'enhanced_fund_score > 75'}, {'description': 'Ensure VCP score is above threshold.', 'condition': 'vcp_score > 80'}]}"
+synthesis_guidance: "{'notes': ['Focus on stocks with strong technical and fundamental indicators.', 'Emphasize recent VCP patterns and breakout potential.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:17"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,93 @@
+id: "fii_dii_regime_breadth_review_0456_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0456"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for quarter to date: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as portfolio-aware output"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  input_keys:
+    - "domain"
+    - "description"
+    - "tags"
+  output_keys:
+    - "tool_name"
+    - "contract"
+    - "validation"
+  logic: "Combine evidence from the specified tables to synthesize a comprehensive overview of the current market state with respect to FII/DII flows, market regimes, and breadth indicators."
+sql_templates:
+  -
+    name: "fetch_latest_fii_dii_flows"
+    template: "SELECT * FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY trade_date DESC;"
+    read-only: true
+  -
+    name: "fetch_latest_regime_history"
+    template: "SELECT * FROM signals.regime_history WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY trade_date DESC;"
+    read-only: true
+  -
+    name: "fetch_latest_market_breadth"
+    template: "SELECT * FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY trade_date DESC;"
+    read-only: true
+  -
+    name: "fetch_latest_index_eod"
+    template: "SELECT * FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' AND index_symbol = 'Nifty 50' ORDER BY trade_date DESC;"
+    read-only: true
+python_tools:
+  -
+    id: "analyze_freshness_trends"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "fii_dii_flows"
+      - "regime_history"
+      - "market_breadth"
+      - "index_eod"
+    outputs:
+      - "trend_analysis_report"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context):\n    # Analyze the freshness of data trends\n    report = {}\n    # Simple read analysis using data\n    return report"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure date ranges are correct for quarter-to-date filtering."
+  - "Validate all joins adhere to _join_rules specifications."
+  - "Ensure SQL is read-only and follows PostgreSQL syntax."
+synthesis_guidance: "{'style': 'portfolio-aware', 'focus': 'freshness audit and explanatory clarity', 'priority': 'Risk-on/risk-off context combined with institutional flow analysis.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:53"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analyze_freshness_trends: missing output trend_analysis_report"
+review:
+  status: "needs_heal"
+  findings:
+    - "analyze_freshness_trends: missing output trend_analysis_report"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

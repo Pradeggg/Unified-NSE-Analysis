@@ -1,0 +1,60 @@
+id: "market_3m_rotation_swing_1877_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1877"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Construct and validate the evidence table using the available schema and global rules. Prioritize efficiency and correctness."
+sql_templates:
+  index_returns:
+    query: "SELECT index_symbol, SUM(change_pct) AS total_return FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol"
+    description: "Calculate total returns for indices over the last 3 months."
+  stage_distribution_change:
+    query: "SELECT sector, stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector, stage"
+    description: "Determine sector stage distribution changes focusing on STAGE_2."
+  leading_sectors:
+    query: "SELECT sector, AVG(relative_strength) AS avg_relative_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY avg_relative_strength DESC LIMIT 5"
+    description: "Identify leading sectors based on average relative strength."
+  primary_candidates:
+    query: "SELECT symbol, company_name, price FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC, rank ASC LIMIT 10"
+    description: "Select top VCP candidates ranked by VCP score."
+  risks:
+    query: "SELECT index_symbol, close, rsi FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND rsi < 30"
+    description: "Highlight indices with RSI signaling potential oversold conditions."
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "indexes"
+synthesis_guidance: "Synthesize insights from the SQL results to form a concise market analysis focusing on immediate actionable insights for market rotation and swing trading opportunities."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:09"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.total_return is not approved"

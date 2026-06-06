@@ -1,0 +1,54 @@
+id: "sector_breadth_rotation_watchlist_1273_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1273"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: pre market; response style: ranked candidates."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for pre market: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as ranked candidates"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Assess sector breadth and stage migration using approved datasets to create a ranked watchlist."
+sql_templates:
+  -
+    name: "sector_breadth_ranking"
+    description: "Rank sectors by breadth signal and stage 2 participation."
+    template: "WITH ranked_sectors AS (SELECT sector, AVG(breadth_signal) AS avg_breadth_signal, AVG(stage2_pct) AS avg_stage2_pct FROM breadth.sector_daily INNER JOIN breadth.ma_pct_above ON breadth.sector_daily.snapshot_date = breadth.ma_pct_above.snapshot_date GROUP BY sector ORDER BY avg_breadth_signal DESC, avg_stage2_pct DESC) SELECT * FROM ranked_sectors;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure only read-only SQL is used."
+  - "Use approved tables and columns within the schema."
+synthesis_guidance: "['Provide a clear ranking of sectors by improvement metrics.', 'Identify stocks to include in the TradingView watchlist based on sector analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

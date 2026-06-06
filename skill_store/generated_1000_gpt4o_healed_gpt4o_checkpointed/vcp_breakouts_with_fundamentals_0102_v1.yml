@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:41:52"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: today; response style: narrative plus evidence."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0102_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    name: "get_vcp_breakouts_with_fundamentals"
+    query: "SELECT s.symbol, s.company_name, s.sector, s.price, s.trading_signal, s.investment_score, s.enhanced_fund_score, s.narrative FROM scores.stage_snapshots s WHERE s.trading_signal = 'BUY' AND s.enhanced_fund_score > 75 ORDER BY s.rsi DESC;"
+status: "test_failed"
+synthesis_guidance:
+  - "Combine technical scores with narrative evidence for holistic insights."
+  - "Focus on liquid stocks with strong institutional backing."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "today"
+  - "narrative_plus_evidence"
+title: "VCP Breakouts With Fundamentals Variant 0102"
+tool_plan_template: "Extract stocks that meet VCP, new-high, or breakout criteria and have strong fundamentals using approved evidence tables."
+validation_errors:
+  - "scores.stage_snapshots.s is not approved"
+validation_rules:
+  - "Ensure the stocks meet VCP breakout and fundamental strength conditions."
+  - "Validate using only the approved schema."
+  - "Report evidence gaps if any key metric is missing."
+version: 1
+review:
+  attempts: 3
+  findings:
+    - "scores.stage_snapshots.s is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"

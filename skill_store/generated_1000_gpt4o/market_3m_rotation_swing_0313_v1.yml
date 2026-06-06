@@ -1,0 +1,76 @@
+id: "market_3m_rotation_swing_0313_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0313"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: latest EOD; response style: exceptions and gaps first."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as exceptions and gaps first"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  data_sources:
+    market.index_eod:
+      description: "Indian index EOD data including OHLCV, trend indicators, and technical scores."
+    market.equity_eod:
+      description: "NSE equity EOD data with price and volume context."
+    scores.stage_snapshots:
+      description: "Point-in-time data on market stages and technical scores."
+    scores.stage2_vcp_picks:
+      description: "Materialized picks based on Stage 2 VCP."
+  analysis_focus: "Identify market regime shifts, leading sectors, and potential swing trade candidates."
+sql_templates:
+  stage_distribution_change:
+    template: "WITH StageChanges AS (SELECT snapshot_date, stage, COUNT(symbol) AS count FROM scores.stage_snapshots WHERE snapshot_date >= DATE_ADD(CURDATE(), INTERVAL -3 MONTH) GROUP BY snapshot_date, stage), TotalChanges AS (SELECT snapshot_date, SUM(count) AS total_count FROM StageChanges GROUP BY snapshot_date), StageDistributionChange AS (SELECT s.snapshot_date, s.stage, s.count / t.total_count AS percentage_change FROM StageChanges s JOIN TotalChanges t ON s.snapshot_date = t.snapshot_date) SELECT * FROM StageDistributionChange WHERE snapshot_date = CURDATE();"
+    description: "Calculate the percentage change of each market stage over the past 3 months."
+  leading_sectors:
+    template: "SELECT sector, AVG(change_1m_pct) AS avg_1m_change FROM scores.stage_snapshots WHERE snapshot_date >= DATE_ADD(CURDATE(), INTERVAL -3 MONTH) GROUP BY sector ORDER BY avg_1m_change DESC LIMIT 5;"
+    description: "Identify leading sectors based on average one-month price change."
+  primary_candidates:
+    template: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE vcp_score > 80 AND snapshot_date = CURDATE() ORDER BY vcp_score DESC;"
+    description: "Find high VCP score candidates for potential swing trades."
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+synthesis_guidance: "{'emphasis': 'Focus on exceptions and gaps.', 'temporal_scope': 'Last 3 months with a daily refresh for the latest EOD data.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:44:21"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.curdate is not approved"
+  - "scores.stage_snapshots.avg_1m_change is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.date_add is not approved"
+  - "scores.stage_snapshots.month is not approved"
+  - "unknown table s.count"
+  - "unknown table s.snapshot_date"
+  - "unknown table s.stage"
+  - "unknown table t.snapshot_date"
+  - "unknown table t.total_count"

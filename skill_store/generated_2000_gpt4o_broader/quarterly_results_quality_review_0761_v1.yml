@@ -1,0 +1,56 @@
+id: "quarterly_results_quality_review_0761_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0761"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: post results; response style: QA checklist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for post results: latest quarterly results analysis"
+  - "which companies had strong quarterly results as QA checklist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "post_results"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  language: "english"
+  style: "QA checklist"
+  purpose: "Review quarterly results for insights on financial performance and strategic positioning."
+sql_templates:
+  -
+    template: "SELECT symbol, period_label, period_end, revenue, operating_profit, pat, eps FROM scores.quarterly_results WHERE period_type = 'quarter' AND period_label = (SELECT MAX(period_label) FROM scores.quarterly_results) ORDER BY period_end DESC;"
+  -
+    template: "SELECT symbol, company_name, growth_yoy_revenue_pct, growth_yoy_pat_pct, opm_delta_pp FROM scores.results_analysis WHERE period_end = (SELECT MAX(period_end) FROM scores.results_analysis) AND growth_yoy_revenue_pct IS NOT NULL ORDER BY growth_yoy_revenue_pct DESC;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure all data is sourced from approved tables."
+  - "Validate completeness of revenue and PAT details."
+  - "Check margin movement data for significant changes."
+synthesis_guidance: "{'priority': 'Highlight top and bottom performing companies based on revenue growth.', 'risks': 'Identify any key risks in the results narrative and emerging trends.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

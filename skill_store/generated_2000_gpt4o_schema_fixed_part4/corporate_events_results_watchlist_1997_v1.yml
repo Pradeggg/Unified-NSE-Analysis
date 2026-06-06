@@ -1,0 +1,68 @@
+id: "corporate_events_results_watchlist_1997_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1997"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: weekly review; response style: comparison matrix."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as comparison matrix"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    output_contract:
+      - "event_calendar"
+      - "symbol_watchlist"
+      - "result_context"
+      - "action_bucket"
+      - "source_trail"
+    sql_templates:
+      -
+        name: "latest_events_and_results"
+        query: "WITH latest_stage_snapshots AS (\n    SELECT DISTINCT ON (s.symbol) s.symbol, s.stage, s.trading_signal, s.snapshot_date\n    FROM scores.stage_snapshots s\n    WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n),\nlatest_results_analysis AS (\n    SELECT DISTINCT ON (r.symbol) r.symbol, r.verdict, r.period_end\n    FROM scores.results_analysis r\n    ORDER BY r.symbol, r.period_end DESC, r.updated_at DESC\n)\nSELECT e.symbol, e.event_type, e.event_date, e.purpose_raw, e.source,\n       r.verdict, s.stage, s.trading_signal\nFROM signals.corporate_events e\nLEFT JOIN latest_results_analysis r ON e.symbol = r.symbol\nLEFT JOIN latest_stage_snapshots s ON e.symbol = s.symbol\nWHERE e.event_date >= CURRENT_DATE - INTERVAL '1 week'\nORDER BY e.event_date DESC\nLIMIT 50;"
+    validation_rules:
+      - "Ensure DISTINCT ON is used to obtain the latest records per symbol for both results analysis and stage snapshots."
+      - "Filter corporate events to only include those happening in the past week."
+      - "Limit results to 50 rows to maintain a manageable dataset for analysis."
+    synthesis_guidance:
+      - "Focus on comparing symbols based on their event types, verdict, and current trading signals."
+      - "Provide insights into sector-relative performance using stage and trading signals."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

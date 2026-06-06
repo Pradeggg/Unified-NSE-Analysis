@@ -1,0 +1,62 @@
+id: "corporate_events_results_watchlist_0261_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0261"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: post results; response style: ranked candidates."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for post results: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as ranked candidates"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Gather events and results data from approved tables, focusing on metrics and trends influencing post-results stocks. Provide ranked candidates based on analysis scores."
+sql_templates:
+  -
+    query_name: "recent_corporate_events"
+    sql: "SELECT symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date >= current_date - INTERVAL '30' DAY ORDER BY event_date DESC"
+  -
+    query_name: "results_analysis"
+    sql: "SELECT symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct, verdict, score FROM scores.results_analysis WHERE created_at >= current_date - INTERVAL '30' DAY ORDER BY score DESC"
+python_tools:
+  -
+    id: "results_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "growth_yoy_revenue_pct"
+      - "growth_qoq_revenue_pct"
+    outputs:
+      - "ranked_symbols"
+    approved_tables:
+      - "scores.results_analysis"
+    code: "\n\ndef run(context):\n    # Example of computing a ranking based on growth metrics\n    data = context['scores.results_analysis']\n    ranked = sorted(data, key=lambda x: (x['growth_yoy_revenue_pct'], x['growth_qoq_revenue_pct']), reverse=True)\n    return {'ranked_symbols': [item['symbol'] for item in ranked]}\n"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event dates and related scores are recent and relevant."
+  - "Verify symbols align with given patterns for events and results."
+synthesis_guidance: "Combine results from SQL queries to curate a ranked list of symbols. Utilize growth metrics and event types to prioritize actionable watchlist candidates."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:16"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.day is not approved"
+  - "signals.corporate_events.day is not approved"

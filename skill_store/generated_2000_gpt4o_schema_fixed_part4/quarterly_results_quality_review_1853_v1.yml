@@ -1,0 +1,57 @@
+id: "quarterly_results_quality_review_1853_v1"
+version: 1
+status: "review_pending"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1853"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: action watchlist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "daily refresh follow-up for quarter to date: latest quarterly results analysis"
+  - "which companies had strong quarterly results as action watchlist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    python_tools:
+
+    evidence_gaps:
+      - "No SQL constructions for pivot_price, average change required."
+sql_templates:
+  -
+    template_name: "latest_quarterly_results"
+    sql: "SELECT DISTINCT ON (q.symbol) q.symbol, q.period_label, q.revenue, q.pat, ra.verdict, ra.opm_delta_pp FROM scores.quarterly_results q JOIN scores.results_analysis ra ON q.symbol = ra.symbol AND q.period_end = ra.period_end ORDER BY q.symbol, q.period_end DESC NULLS LAST, q.fetched_at DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure distinct records by symbol."
+  - "Compare quarterly revenue and PAT growth."
+  - "Assess verdict consistency with operating margin movement."
+synthesis_guidance: "['Focus on recent growth and margin dynamics.', 'Rank companies by PAT improvement and OPM_delta.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:49"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

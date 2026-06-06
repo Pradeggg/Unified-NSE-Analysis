@@ -1,0 +1,73 @@
+id: "portfolio_incremental_add_trim_0591_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0591"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as research-only summary"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Research the holding patterns and performance stages to identify potential add/trim actions."
+sql_templates:
+  -
+    template_name: "fetch_portfolio_state"
+    description: "Fetch the current state of the portfolio from holdings and scores."
+    sql: "SELECT h.symbol, h.qty, h.avg_cost, s.stage, s.trend_signal, s.market_cap_cat, s.relative_strength FROM portfolio.holdings AS h JOIN scores.stage_snapshots AS s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    template_name: "identify_add_candidates"
+    description: "Identify potential candidates for adding based on relative strength and trend."
+    sql: "SELECT symbol FROM scores.stage_snapshots WHERE trend_signal = 'buy' AND relative_strength > 70 AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    template_name: "identify_trim_candidates"
+    description: "Identify potential candidates for trimming based on technical scores and stage."
+    sql: "SELECT symbol FROM scores.stage_snapshots WHERE trend_signal = 'sell' OR stage = '4' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+  -
+    id: "trend_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "portfolio_data"
+    outputs:
+      - "potential_candidates"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # An example placeholder for trend analysis based on provided context\n    potential_candidates = [entry for entry in context if entry['trend_signal'] == 'buy']\n    return potential_candidates"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure snapshot_date is the latest available."
+  - "Only select stocks where valid trend signals and stages are identified."
+synthesis_guidance: "['Summarize findings clearly and concisely.', 'Highlight both potential risks and opportunities.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:49:57"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table h.avg_cost"
+  - "unknown table h.qty"
+  - "unknown table h.symbol"
+  - "unknown table s.market_cap_cat"
+  - "unknown table s.relative_strength"
+  - "unknown table s.snapshot_date"
+  - "unknown table s.stage"
+  - "unknown table s.symbol"
+  - "unknown table s.trend_signal"

@@ -1,0 +1,60 @@
+id: "market_3m_rotation_swing_1373_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1373"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: pre market; response style: exceptions and gaps first."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as exceptions and gaps first"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Assess market trends, sectors, and candidates using tables [market.index_eod], [market.equity_eod], latest stage data from [scores.stage_snapshots], and [scores.stage2_vcp_picks]. Extract key indicators and swing candidates."
+sql_templates:
+  -
+    description: "Fetch latest index performance and trend signals."
+    template: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+  -
+    description: "Identify top sectors leading in the last 3 months."
+    template: "WITH sector_performance AS (SELECT sector, AVG(change_pct) AS avg_change_3m FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector) SELECT sector FROM sector_performance ORDER BY avg_change_3m DESC LIMIT 5;"
+  -
+    description: "Get Stage 2 stocks with buy signals from the latest snapshots."
+    template: "SELECT symbol, company_name, price, trading_signal, sector FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure date filters use PostgreSQL syntax and refer to correct [latest_date_column]."
+  - "Ensure join conditions match _join_rules documented conditions."
+  - "Confirm results are within the specified limit for performance."
+synthesis_guidance: "Prioritize results with notable transitions or anomalies, highlighting gaps in data. Engage in sector performance evaluation, focusing on current market drivers and potential swing opportunities."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

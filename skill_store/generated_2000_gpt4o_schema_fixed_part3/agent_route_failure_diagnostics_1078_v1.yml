@@ -1,0 +1,60 @@
+id: "agent_route_failure_diagnostics_1078_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1078"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: pre market; response style: concise table."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for pre market: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as concise table"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "pre_market"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+  join_rules:
+    -
+      left_table: "report.enhanced_runs"
+      left_column: "run_id"
+      right_table: "report.enhanced_filtered_stocks"
+      right_column: "run_id"
+      condition: "report.enhanced_runs.run_id = report.enhanced_filtered_stocks.run_id"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Retrieve latest run analysis with stock and stage details."
+    sql: "WITH latest_runs AS (\n    SELECT * \n    FROM report.enhanced_runs \n    WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)\n), latest_stage_snapshots AS (\n    SELECT *\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n)\nSELECT er.run_id, er.analysis_date, er.market_sentiment,\n       efs.symbol, efs.score, efs.recommendation, ss.stage,\n       ss.trading_signal\nFROM latest_runs er\nJOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id\nJOIN latest_stage_snapshots ss ON efs.symbol = ss.symbol\nLIMIT 100;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all SQL queries are limited (e.g., LIMIT 100)."
+  - "Use PostgreSQL syntax only."
+  - "Only use approved schema tables and columns."
+synthesis_guidance: "['Check for missing tools or evidence gaps in diagnostics.', 'Identify incorrect symbol or route handling.', 'Present results in a concise table format for pre-market context.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:49"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

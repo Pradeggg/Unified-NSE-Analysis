@@ -1,0 +1,55 @@
+id: "sector_breadth_rotation_watchlist_0419_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0419"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: latest EOD; response style: portfolio-aware output."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for latest EOD: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as portfolio-aware output"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Identify improving sectors and rank them by breadth, stage 2 participation, and momentum."
+    sql: "WITH latest_sector_data AS (SELECT * FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)),\nlatest_stage_data AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)),\nimproving_sectors AS (SELECT sd.sector, sd.pct_above_50dma, sd.change_5d, ma.stage2_pct FROM latest_sector_data sd \nJOIN breadth.ma_pct_above ma ON sd.snapshot_date = ma.snapshot_date WHERE ma.stage2_pct > 0 ORDER BY sd.breadth_signal DESC LIMIT 10)\nSELECT sector, pct_above_50dma, change_5d, stage2_pct FROM improving_sectors;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Use latest date filters for sector and stage snapshots."
+  - "Limit candidate lists to top 10 sectors by specified criteria."
+  - "Ensure all columns used in the SQL are approved in the schema."
+synthesis_guidance: "['Focus on sectors showing improvement in breadth and stage 2 participation.', 'Provide clear ranking and justification for sector selection.', 'Ensure portfolio-aware framing in outputs, suitable for TradingView integration.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

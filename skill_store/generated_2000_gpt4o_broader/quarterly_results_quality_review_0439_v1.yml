@@ -1,0 +1,55 @@
+id: "quarterly_results_quality_review_0439_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0439"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "source-trail validation for last 20 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as portfolio-aware output"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analysis using SQL and protected Python read-only tools. Use pre-approved tables for evidence collection."
+sql_templates:
+  -
+    query: "SELECT symbol, period_end, revenue, pat, opm_pct FROM scores.quarterly_results WHERE period_end >= CURRENT_DATE - INTERVAL '20 days';"
+    description: "Fetch recent quarterly results for symbols analyzed in the last 20 sessions."
+  -
+    query: "SELECT symbol, growth_yoy_revenue_pct, growth_yoy_pat_pct, opm_delta_pp FROM scores.results_analysis WHERE period_end >= CURRENT_DATE - INTERVAL '20 days';"
+    description: "Retrieve growth and margin trend data for source-trail validation."
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "The status must be 'generated'."
+  - "Queries should be read-only SELECT/WITH."
+  - "No new tables, aliases, or columns should be added beyond the approved list."
+synthesis_guidance: "Combine extracted data into a portfolio-aware summary. Consider earnings quality and market reaction over last 20 sessions."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:22"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

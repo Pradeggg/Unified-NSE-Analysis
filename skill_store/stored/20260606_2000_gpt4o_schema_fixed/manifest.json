@@ -1,0 +1,29 @@
+{
+  "actual_count": 2000,
+  "created_at": "2026-06-06T16:16:39",
+  "first_missing": [],
+  "jsonl": "skill_store/generated_2000_gpt4o_schema_fixed_merged/skill_cards_2000_schema_fixed.jsonl",
+  "max_id": 2000,
+  "min_id": 1,
+  "missing_count": 0,
+  "model": "gpt-4o",
+  "notes": "Merged by numeric seed id to remove overlaps from interrupted continuation runs.",
+  "source_dirs": [
+    "skill_store/generated_2000_gpt4o_schema_fixed",
+    "skill_store/generated_2000_gpt4o_schema_fixed_part3",
+    "skill_store/generated_2000_gpt4o_schema_fixed_part5"
+  ],
+  "status_counts": {
+    "review_pending": 528,
+    "test_failed": 510,
+    "validated": 962
+  },
+  "status_counts_verified": {
+    "review_pending": 528,
+    "test_failed": 510,
+    "validated": 962
+  },
+  "stored_jsonl": "skill_store/stored/20260606_2000_gpt4o_schema_fixed/skill_cards.jsonl",
+  "target_count": 2000,
+  "unique_ids": 2000
+}

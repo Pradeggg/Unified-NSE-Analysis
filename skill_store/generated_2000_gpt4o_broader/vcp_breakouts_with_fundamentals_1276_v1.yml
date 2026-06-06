@@ -1,0 +1,52 @@
+id: "vcp_breakouts_with_fundamentals_1276_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1276"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: pre market; response style: ranked candidates."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Use evidence from approved tables to generate ranked candidates."
+sql_templates:
+  -
+    template: "WITH vcp_candidates AS (SELECT symbol, price, stage, stage_score, enhanced_fund_score FROM scores.stage_snapshots WHERE stage = 'breakout' AND enhanced_fund_score > 80), recent_highs AS (SELECT symbol, high AS recent_high FROM market.equity_eod WHERE trade_date > CURRENT_DATE - INTERVAL '1 month' AND high >= week52_high) SELECT vc.symbol, vc.price, vc.stage, vc.stage_score, vc.enhanced_fund_score FROM vcp_candidates vc JOIN recent_highs rh ON vc.symbol = rh.symbol ORDER BY vc.stage_score DESC;"
+    description: "Find breakout stocks with strong fundamentals and recent highs."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Must use approved schema tables only."
+  - "Must use read-only SQL."
+synthesis_guidance: "Gather and rank candidates based on stage score and fundamentals."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:36"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

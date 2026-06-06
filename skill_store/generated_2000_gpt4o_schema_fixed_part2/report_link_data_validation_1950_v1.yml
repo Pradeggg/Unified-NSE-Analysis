@@ -1,0 +1,59 @@
+id: "report_link_data_validation_1950_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1950"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for last 3 months: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  description: "Use given tables to check for broken links and missing data in reports."
+  steps:
+    - "1. Retrieve the latest report runs from the last 3 months."
+    - "2. Identify reports with missing stock data."
+    - "3. Verify report metadata and stock link integrity."
+  evidence_gaps:
+    - "If any real-time TradingView data is needed, fetch using alternative methods due to lack of direct API access."
+sql_templates:
+  -
+    description: "Select report runs from the last 3 months."
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    description: "Select stocks with valid link data."
+    template: "SELECT run_id, symbol, recommendation, current_price FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months');"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'operation_notes': 'Focus on completeness of data per report and integrity of links provided.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:51"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

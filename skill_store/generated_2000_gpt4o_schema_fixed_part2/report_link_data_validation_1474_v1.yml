@@ -1,0 +1,51 @@
+id: "report_link_data_validation_1474_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1474"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: pre market; response style: portfolio-aware output."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for pre market: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "pre_market"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Validate report links and missing data in a pre-market watchlist creation context, ensuring responses are portfolio-aware."
+sql_templates:
+  -
+    template: "SELECT e.run_id, e.run_ts, f.symbol, f.recommendation, f.current_price FROM report.enhanced_runs e JOIN report.enhanced_filtered_stocks f ON e.run_id = f.run_id WHERE e.run_ts >= CURRENT_DATE - INTERVAL '3 months'"
+    description: "Fetches recent report runs and filtered stock data for validation."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure run_id matches across joined tables"
+  - "Check timestamps within last 3 months"
+  - "Portfolio-aware output for missing data"
+synthesis_guidance: "Focus on identifying any discrepancies or missing data that affect pre-market watchlist creation, using the provided SQL template and validation rules."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:37"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

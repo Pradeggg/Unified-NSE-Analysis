@@ -1,0 +1,56 @@
+id: "insider_bulk_deal_signal_review_1844_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1844"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: last 3 months; response style: action watchlist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for last 3 months: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as action watchlist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+
+  sql_templates:
+    -
+      description: "Fetch insider and bulk deal signals with technical confirmations for the last 3 months."
+      query: "WITH latest_stage AS (SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), \ninsider_signals AS (SELECT symbol, alert_date, qty, value_cr, category FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '3 months'), \nbulk_deals AS (SELECT symbol, deal_date, qty, price FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '3 months') \nSELECT i.symbol, i.alert_date, b.deal_date, i.qty as insider_qty, b.qty as bulk_qty, i.value_cr, i.category, b.price, s.stage, s.trading_signal \nFROM insider_signals i JOIN bulk_deals b ON i.symbol = b.symbol \nJOIN latest_stage s ON i.symbol = s.symbol \nWHERE s.stage = 'STAGE_2' AND s.trading_signal IN ('BUY', 'STRONG_BUY') \nLIMIT 50;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure results are limited to 50 rows."
+  - "Verify that the symbols align across insider and bulk deal matches."
+synthesis_guidance: "Provide a concise action watchlist highlighting symbols with substantial insider and bulk deal activity and positive technical indicators in the past 3 months."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:35"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

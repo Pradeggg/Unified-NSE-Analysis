@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:48:30"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: weekly review; response style: portfolio-aware output."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0494_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Select stocks in Stage 2 with high fundamental scores and either at 52-week high or in a breakout."
+    template: "SELECT s.symbol, s.company_name, s.sector, e.close, s.fundamental_score FROM scores.stage_snapshots s JOIN market.equity_eod e ON s.symbol = e.symbol WHERE s.stage = 2 AND s.enhanced_fund_score > 70 AND (e.close = e.week52_high OR s.trend_signal = 'Breakout')"
+status: "validated"
+synthesis_guidance: "Use dataset insights to infer potential watchlist candidates, focusing on liquidity and strong fundamentals based on trend signals and scores."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "portfolio-aware_output"
+title: "VCP Breakouts With Fundamentals Variant 0494"
+tool_plan_template: "Read-only research using approved tables to identify stocks with VCP or breakout patterns and strong fundamentals."
+validation_rules:
+  - "status"
+  - "sql_compliance"
+version: 1

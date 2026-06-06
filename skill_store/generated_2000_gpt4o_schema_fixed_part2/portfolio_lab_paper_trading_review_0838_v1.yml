@@ -1,0 +1,70 @@
+id: "portfolio_lab_paper_trading_review_0838_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0838"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "position-sizing context for last 20 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as action watchlist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze each strategy in a paper trading portfolio over the last 20 sessions, focusing on position-sizing context. Generate an action watchlist based on strategy performance without mixing with real portfolio data."
+sql_templates:
+  -
+    description: "Fetch the latest stage and scores for the holdings in the portfolio."
+    template: "SELECT h.symbol, s.stage, s.stage_score, s.technical_score, s.rsi FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    description: "Get trading signals issued in the last 20 sessions for paper trading review."
+    template: "SELECT symbol, date_issued, signal, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued >= (SELECT MAX(date_issued) FROM signals.signal_log) - INTERVAL '20 days';"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "date_issued"
+      - "signal"
+    outputs:
+      - "strategy_state"
+      - "open_trades"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context):\n    # Placeholder for logic to process signals\n    return {'strategy_state': [], 'open_trades': []}"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure signals for the last 20 sessions are captured."
+  - "Verify stage and score contexts are latest."
+  - "Confirm separation of paper and real portfolios."
+synthesis_guidance: "['Avoid combining paper and real portfolio data.', 'Focus on action items from the strategies.', 'Consider position-sizing in recommendations.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:22"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,68 @@
+id: "insider_bulk_deal_signal_review_0696_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0696"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: weekly review; response style: debug trace."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for weekly review: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as debug trace"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  plan:
+    -
+      action: "Query"
+      description: "Fetch latest insider alerts and bulk deals."
+      sql_template: "WITH latest_insider_alerts AS ( SELECT id, alert_date, symbol, alert_type, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '7 days' ) SELECT * FROM latest_insider_alerts;"
+    -
+      action: "Query"
+      description: "Fetch latest stage snapshots for the same symbols."
+      sql_template: "SELECT symbol, stage, stage_score, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol IN (SELECT symbol FROM latest_insider_alerts);"
+    -
+      action: "Join"
+      description: "Combine insights from insider alerts and stage snapshots."
+      sql_template: "SELECT i.symbol, i.alert_date, i.alert_type, s.stage, s.stage_score FROM latest_insider_alerts i JOIN scores.stage_snapshots s ON i.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+sql_templates:
+  -
+    name: "InsiderAlertsFetch"
+    template: "SELECT id, alert_date, symbol, alert_type, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '7 days';"
+  -
+    name: "StageSnapshotFetch"
+    template: "SELECT symbol, stage, stage_score, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol IN (SELECT symbol FROM latest_insider_alerts);"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "ensure_latest_data"
+  - "time_filter"
+synthesis_guidance: "{'focus': 'Combine analysis to provide a ranked list of symbols indicating insider accumulation.', 'tips': ['Look for INSIDER_BUY signals and positive technical scores.', 'Highlight symbols in STAGE_2 for accumulation insights.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:35:46"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

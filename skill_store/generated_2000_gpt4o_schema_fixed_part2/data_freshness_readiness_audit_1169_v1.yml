@@ -1,0 +1,78 @@
+id: "data_freshness_readiness_audit_1169_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1169"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: post results; response style: narrative plus evidence."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for post results: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as narrative plus evidence"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "post_results"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  evidence_sources:
+    -
+      name: "market.index_eod"
+      purpose: "Latest index EOD data confirmation"
+      freshness_check: true
+    -
+      name: "market.equity_eod"
+      purpose: "Latest equity EOD data confirmation"
+      freshness_check: true
+    -
+      name: "scores.stage_snapshots"
+      purpose: "Point-in-time stage snapshot validation"
+      freshness_check: true
+    -
+      name: "breadth.market_daily"
+      purpose: "Daily market breadth validation"
+      freshness_check: true
+    -
+      name: "breadth.ma_pct_above"
+      purpose: "Daily MA percentage verification"
+      freshness_check: true
+    -
+      name: "report.enhanced_runs"
+      purpose: "Enhanced report run metadata verification"
+      freshness_check: true
+sql_templates:
+  freshness_matrix: "SELECT 'market.index_eod' AS table_name, MAX(trade_date) AS latest_date FROM market.index_eod UNION ALL SELECT 'market.equity_eod' AS table_name, MAX(trade_date) AS latest_date FROM market.equity_eod UNION ALL SELECT 'scores.stage_snapshots' AS table_name, MAX(snapshot_date) AS latest_date FROM scores.stage_snapshots UNION ALL SELECT 'breadth.market_daily' AS table_name, MAX(trade_date) AS latest_date FROM breadth.market_daily UNION ALL SELECT 'breadth.ma_pct_above' AS table_name, MAX(snapshot_date) AS latest_date FROM breadth.ma_pct_above UNION ALL SELECT 'report.enhanced_runs' AS table_name, MAX(run_ts) AS latest_date FROM report.enhanced_runs;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure MAX(date_column) corresponds to the latest possible date."
+  - "Ensure no missing sources that are mandatory for market validation."
+synthesis_guidance: "Summarize the data freshness readiness status and highlight any gaps or outdated sources. Provide narrative and supporting evidence where necessary."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:57"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

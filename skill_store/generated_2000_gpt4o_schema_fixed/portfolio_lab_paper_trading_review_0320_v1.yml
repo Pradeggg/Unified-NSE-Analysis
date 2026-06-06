@@ -1,0 +1,54 @@
+id: "portfolio_lab_paper_trading_review_0320_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0320"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: TradingView export; timeframe: latest EOD; response style: exceptions and gaps first."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "TradingView export for latest EOD: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "{evidence_tools}"
+sql_templates:
+  strategy_state: "SELECT symbol, signal, setup_class, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log) AND symbol IN (SELECT symbol FROM portfolio.holdings) AND signal IN ('BUY', 'SELL');"
+  open_trades: "SELECT ph.symbol, ph.qty, ph.avg_cost, ms.price, (ms.price - ph.avg_cost) * ph.qty AS pnl FROM portfolio.holdings ph JOIN market.equity_eod ms ON ph.symbol = ms.symbol WHERE ms.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+  entry_exit_rules: "SELECT sl.symbol, sl.entry_low, sl.entry_high, sl.exit_low, sl.exit_high FROM signals.signal_log sl WHERE sl.symbol IN (SELECT symbol FROM portfolio.holdings) AND sl.signal IN ('BUY', 'SELL') AND sl.date_issued = (SELECT MAX(date_issued) FROM signals.signal_log);"
+  exposure: "SELECT stage.symbol, COUNT(DISTINCT stage.snapshot_date) as exposure_days, AVG(stage.price) as average_price FROM scores.stage_snapshots stage JOIN portfolio.holdings ph ON stage.symbol = ph.symbol WHERE stage.snapshot_date >= CURRENT_DATE - INTERVAL '1 month' GROUP BY stage.symbol;"
+  exceptions: "SELECT sl.symbol, sl.signal, sl.date_issued, sl.date_resolved FROM signals.signal_log sl LEFT JOIN market.equity_eod me ON sl.symbol = me.symbol WHERE sl.date_resolved IS NULL OR NOT EXISTS (SELECT 1 FROM market.equity_eod WHERE symbol = sl.symbol AND trade_date BETWEEN sl.date_issued AND COALESCE(sl.date_resolved, CURRENT_DATE));"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure no invented columns or tables are used."
+  - "Limit rows using LIMIT where applicable."
+  - "Utilize approved schema and join rules only."
+synthesis_guidance: "{'strategy_assessment': \"Focus on paper trading strategies' entries, exits, and current status against real data.\", 'pattern_review': 'Identify patterns in signals and their adherence to predefined rules.', 'exception_handling': 'First report on missing data or strategy exceptions.', 'exposure_analysis': \"Evaluate strategy's market exposure over the last month.\", 'report_format': 'Summarize findings in the context of the latest EOD data with clear exception notes.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.price is not approved"
+  - "signals.signal_log.exit_high is not approved"
+  - "signals.signal_log.exit_low is not approved"

@@ -1,0 +1,53 @@
+id: "corporate_events_results_watchlist_1759_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1759"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: quarter to date; response style: QA checklist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for quarter to date: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as QA checklist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "fetch_latest_events_with_scores"
+    template: "SELECT ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, ce.source, ra.growth_yoy_revenue_pct, ra.growth_qoq_revenue_pct, ra.eps_yoy_pct, ss.stage, ss.trading_signal FROM signals.corporate_events AS ce JOIN scores.results_analysis AS ra ON ce.symbol = ra.symbol JOIN scores.stage_snapshots AS ss ON ce.symbol = ss.symbol WHERE ce.event_date >= (CURRENT_DATE - INTERVAL '3 months') ORDER BY ce.event_date DESC LIMIT 100"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Verify event_date range is within the last quarter."
+  - "Ensure symbols in event_calendar are valid NSE listings."
+  - "Check source_trail provides appropriate provenance for events and analyses."
+synthesis_guidance: "['Use evidence trails to validate accuracy.', 'Cross-reference corporate events with results analysis for a comprehensive overview.', 'Prioritize events based on impact potential using growth metrics and technical scores.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:46"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

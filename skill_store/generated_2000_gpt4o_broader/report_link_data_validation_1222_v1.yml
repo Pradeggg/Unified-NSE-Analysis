@@ -1,0 +1,61 @@
+id: "report_link_data_validation_1222_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1222"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: ranked candidates."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  steps:
+    - "Retrieve report metadata from the last 5 sessions."
+    - "Analyze filtered stock rows for missing or inconsistent data."
+    - "Identify broken links in report documents."
+    - "Provide ranked candidates for missing data and links."
+  evidence_collection:
+    - "Retrieving metadata and filtered stocks"
+sql_templates:
+  -
+    description: "Select recent enhanced report runs within the last 5 sessions."
+    template: "SELECT run_id, run_ts, analysis_date, stocks_analyzed FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 5;"
+  -
+    description: "Select filtered stocks data for recent runs."
+    template: "WITH recent_runs AS (SELECT run_id FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 5) SELECT * FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM recent_runs);"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all report links are functional."
+  - "Verify all stock data entries are complete and accurate."
+  - "Rank findings based on severity and impact."
+synthesis_guidance: "Summarize the validation findings with clear, actionable remediation steps and verification methods."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:35"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

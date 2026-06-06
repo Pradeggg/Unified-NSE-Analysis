@@ -1,0 +1,77 @@
+id: "market_3m_rotation_swing_1653_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1653"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  - "Use SQL to retrieve the latest 3-month index returns from 'market.index_eod'."
+  - "Identify sector leadership and distribution changes from 'scores.stage_snapshots'."
+  - "Find top swing trade candidates from 'scores.stage2_vcp_picks'."
+sql_templates:
+  index_returns: "SELECT index_symbol, AVG(change_pct) as avg_return FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol"
+  stage_distribution: "SELECT sector, COUNT(*) AS count, SUM(case when stage = 'STAGE_2' then 1 else 0 end) as stage_2_count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector"
+  leading_sectors: "SELECT sector, AVG(relative_strength) as avg_relative_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY avg_relative_strength DESC LIMIT 5"
+  primary_candidates: "SELECT symbol, company_name, price, relative_strength, trading_signal FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY vcp_score DESC LIMIT 10"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "index_returns"
+      - "stage_distribution_change"
+      - "leading_sectors"
+      - "primary_candidates"
+    outputs:
+      - "as_of_date"
+      - "risks"
+    approved_tables:
+      - "market.index_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    # Compute as_of_date\n    as_of_date = context['index_returns'].at[0, 'trade_date']\n    # Risk assessment logic (example, details needed)\n    risks = {'market_trend_risk': 'Moderate'}\n    return {'as_of_date': as_of_date, 'risks': risks}"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "Validate the accuracy and format of the extracted data."
+synthesis_guidance: "['Combine evidence to assess overall market regime and sector rotation.', 'Identify and rank potential swing trading candidates.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:49"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_return is not approved"
+  - "run: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "market.index_eod.avg_return is not approved"
+    - "run: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

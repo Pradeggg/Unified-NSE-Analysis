@@ -1,0 +1,56 @@
+id: "insider_bulk_deal_signal_review_0150_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0150"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for last 3 months: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as narrative plus evidence"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Collect insider alerts and bulk/block deals in the last 3 months."
+  - "Identify technical confirmation for observed deals."
+  - "Compile a narrative based on collected evidence."
+sql_templates:
+  insider_alerts_query: "SELECT alert_date, symbol, alert_type, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '3 months';"
+  bulk_block_deals_query: "SELECT deal_date, symbol, entity, side, qty, price, deal_type FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '3 months';"
+  stage_snapshots_query: "SELECT snapshot_date, symbol, stage, stage_score, trend_signal FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months';"
+  equity_eod_query: "SELECT trade_date, symbol, close, volume FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all evidence is from the last 3 months."
+  - "Verify narrative includes both qualitative and quantitative insights."
+synthesis_guidance: "['Aggregate evidence to highlight patterns of accumulation or distribution.', 'Use technical indicators as secondary confirmation.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

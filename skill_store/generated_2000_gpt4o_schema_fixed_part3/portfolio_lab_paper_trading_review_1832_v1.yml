@@ -1,0 +1,66 @@
+id: "portfolio_lab_paper_trading_review_1832_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1832"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for last 20 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as action watchlist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze paper trading signals over the last 20 sessions, separating them from live holdings. Focus on entry and exit points, stop losses, and overall exposure without mixing with live portfolio data. Provide an action watchlist based on deep institutional insights."
+sql_templates:
+  -
+    name: "latest_signals_review"
+    template: "SELECT s.symbol, s.date_issued, s.signal, s.setup_class, s.investment_score, s.technical_score, s.rsi, s.supertrend_state, s.price_at_issue, s.entry_low, s.entry_high, s.stop_loss, s.target_1, s.target_2, s.return_pct FROM signals.signal_log AS s WHERE s.date_issued >= (CURRENT_DATE - INTERVAL '20 days') AND s.signal IN ('BUY', 'STRONG_BUY') ORDER BY s.date_issued DESC;"
+  -
+    name: "holding_stage_analysis"
+    template: "SELECT h.symbol, h.qty, h.avg_cost, st.stage, st.stage_score, st.technical_score, st.rsi FROM portfolio.holdings AS h INNER JOIN scores.stage_snapshots AS st ON h.symbol = st.symbol WHERE st.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+
+    outputs:
+
+    approved_tables:
+      - "portfolio.holdings"
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "# Read-only Python tool can be implemented here if needed"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure separate analysis of paper trading entries from live portfolio holdings."
+  - "Confirm signals reviewed are for the last 20 trading sessions."
+  - "Validate inclusion of entry, exit points, stop loss, and target details."
+synthesis_guidance: "Focus on paper trading entries and exits in isolation. Highlight stop-loss and target benchmarks. Create watchlist of potential strategic actions based on deep institutional review insights. Maintain clarity between paper trade and live investment discourse."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.s is not approved"

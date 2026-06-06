@@ -1,0 +1,55 @@
+id: "insider_bulk_deal_signal_review_1606_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1606"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: today; response style: debug trace."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for today: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as debug trace"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "today"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Analyze insider and bulk deal activity with technical scores for the freshest data."
+sql_templates:
+  -
+    template_id: "insider_bulk_deal_freshness_check"
+    description: "Fetch latest insider alerts and bulk deals with technical confirmation for accumulation or distribution clues."
+    sql: "WITH latest_date AS (SELECT MAX(alert_date) AS max_alert_date FROM signals.insider_alerts),\n     latest_stage AS (SELECT MAX(snapshot_date) AS max_snapshot_date FROM scores.stage_snapshots)\nSELECT i.symbol, i.alert_date, i.alert_type, i.qty, i.value_cr, i.insider_score,\n       b.deal_date, b.deal_type, b.qty AS deal_qty, b.price,\n       s.stage, s.stage_score, s.technical_score, s.trading_signal\nFROM signals.insider_alerts i\nJOIN signals.bulk_block_deals b ON i.symbol = b.symbol\nJOIN scores.stage_snapshots s ON i.symbol = s.symbol\nWHERE i.alert_date = (SELECT max_alert_date FROM latest_date)\n  AND s.snapshot_date = (SELECT max_snapshot_date FROM latest_stage)\n  AND s.trading_signal IN ('BUY', 'STRONG_BUY');"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure only the latest rows from each evidence table are considered."
+  - "Confirm trading_signal is in ['BUY', 'STRONG_BUY']."
+synthesis_guidance: "Integrate insider and bulk deal data with technical scores to produce a ranked list of symbols for today's analysis."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:17"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

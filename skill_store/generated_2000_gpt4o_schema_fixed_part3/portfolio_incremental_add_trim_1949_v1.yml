@@ -1,0 +1,48 @@
+id: "portfolio_incremental_add_trim_1949_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1949"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for last 3 months: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Assess current portfolio holdings within the last 3 months using the approved schema tables. Provide a detailed comparison matrix highlighting potential add/trim actions."
+sql_templates:
+  get_portfolio_stage_data: "WITH latest_stage AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT h.symbol, h.qty, h.avg_cost, s.stage, s.trading_signal FROM portfolio.holdings h JOIN latest_stage s ON h.symbol = s.symbol;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all portfolio holdings have corresponding stage scores."
+  - "Validate that trading signals are current as of the latest snapshot date."
+synthesis_guidance: "Provide a synthesized view of current portfolio standings with recommended actions based on trading signals and stages."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

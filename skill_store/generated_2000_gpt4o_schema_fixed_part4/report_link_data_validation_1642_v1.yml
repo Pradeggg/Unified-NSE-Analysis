@@ -1,0 +1,50 @@
+id: "report_link_data_validation_1642_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Enhanced Report Link & Data Validation"
+description: "Validate report link integrity, data completeness, and technical accuracy for the last three months. This card executes a debug trace for verification and institutional review."
+input_patterns:
+  - "review report links not working"
+  - "validate report link integrity and missing data"
+  - "conduct deep institutional review for the last 3 months"
+tags:
+  - "report_qa"
+  - "validation"
+  - "links"
+  - "missing_data"
+  - "debug_trace"
+  - "deep_review"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+  sql_templates:
+    -
+      description: "Fetch records from the last three months for report link validation."
+      query: "SELECT runs.run_id, runs.run_ts, runs.universe_size, COUNT(stocks.symbol) as stocks_analyzed FROM report.enhanced_runs as runs JOIN report.enhanced_filtered_stocks as stocks ON runs.run_id = stocks.run_id WHERE runs.run_ts >= CURRENT_DATE - INTERVAL '3 months' GROUP BY runs.run_id;"
+tool_plan_template:
+
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "recommendations"
+  - "verification_steps"
+validation_rules:
+  - "Ensure all report links generated over the last three months are accessible."
+  - "Confirm data completeness by cross-verifying stock analysis numbers."
+synthesis_guidance: "{'strategy': 'Use findings from SQL queries to highlight potential issues with report links and data integrity. Generate recommendations for resolution, and provide verification steps to confirm correction.', 'considerations': ['Focus on most recent data for timely action.', 'Account for discrepancies in expected stock analysis numbers.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:35"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

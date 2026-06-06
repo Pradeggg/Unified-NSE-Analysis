@@ -1,0 +1,53 @@
+id: "vcp_breakouts_with_fundamentals_1262_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1262"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: post results; response style: ranked candidates."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    description: "Identify stocks meeting VCP breakout criteria with strong fundamentals using predefined SQL queries and apply ranking to surface top candidates."
+sql_templates:
+  -
+    template: "WITH latest_stage AS (SELECT symbol, enhanced_fund_score, sector FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY')), latest_vcp AS (SELECT symbol, vcp_score, rank FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC, rank ASC LIMIT 10) SELECT e.symbol, e.close, s.enhanced_fund_score, v.vcp_score FROM market.equity_eod e JOIN latest_stage s ON e.symbol = s.symbol JOIN latest_vcp v ON e.symbol = v.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND e.series = 'EQ' ORDER BY v.vcp_score DESC, s.enhanced_fund_score DESC;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure candidate list is ranked by VCP score and enhanced fundamental score."
+  - "Check filters are applied according to defined SQL templates."
+synthesis_guidance: "['Highlight top-ranked VCP breakout candidates with strong fundamental scores.', 'Frame insights for an Indian market audience with a focus on post-results evaluation.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:29"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

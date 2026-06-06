@@ -1,0 +1,63 @@
+id: "agent_route_failure_diagnostics_0756_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0756"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: quarter to date; response style: QA checklist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for quarter to date: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as QA checklist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "1. Check if enhanced reports were generated for the quarter to date period."
+  - "2. Validate the completeness and timeliness of data in enhanced_filtered_stocks."
+  - "3. Analyze symbol resolution logs for potential DNS or API issues."
+  - "4. Verify if all required tools were loaded successfully without errors."
+  - "5. Cross-check the QA checklist against historical performance benchmarks."
+sql_templates:
+  -
+    description: "Fetch recent enhanced report runs for the quarter to date."
+    query: "SELECT run_id, run_ts, universe_size FROM report.enhanced_runs WHERE analysis_date >= DATE_TRUNC('quarter', CURRENT_DATE);"
+python_tools:
+  -
+    id: "run_context_diagnostics"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "diagnostics_report"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context): return {'diagnostics_report': 'Analysis completed successfully.'}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Verify that the evidence tables contain data for the current quarter."
+  - "Ensure no unauthorized SQL operations are present."
+synthesis_guidance: "Synthesize diagnostics into a structured QA checklist noting any gaps."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:26"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.date_trunc is not approved"

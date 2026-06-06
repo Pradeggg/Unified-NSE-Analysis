@@ -1,0 +1,59 @@
+created_at: "2026-06-06T12:49:57"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: intraday context; response style: research-only summary."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0589_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as research-only summary"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 3
+  findings:
+    - "market.index_eod.total_change is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    description: "Aggregate index performance over the last 3 months."
+    sql: "SELECT index_symbol, SUM(change_pct) as total_change FROM market.index_eod WHERE trade_date BETWEEN '2023-07-01' AND '2023-09-30' GROUP BY index_symbol;"
+    template_id: "indices_performance"
+status: "test_failed"
+synthesis_guidance: "Focus on providing a research-only summary highlighting major trends and swing opportunities over the past 3 months."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "research-only_summary"
+title: "3M Market Rotation Swing Assessment Variant 0589"
+tool_plan_template:
+  plan: "Acquire 3-month EOD data from indices and equities, analyze sector rotation and swing candidates, validate source trails."
+  task: "Analyze market rotation swing"
+validation_errors:
+  - "market.index_eod.total_change is not approved"
+validation_rules:
+  - "Ensure the sources are from the last 3 months."
+  - "Verify sector leadership changes."
+  - "Identify valid swing candidates."
+version: 1

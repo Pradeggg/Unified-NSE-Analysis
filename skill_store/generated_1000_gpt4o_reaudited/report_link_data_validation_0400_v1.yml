@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:46:12"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: weekly review; response style: exceptions and gaps first."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0400_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for weekly review: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE analysis_date > (CURRENT_DATE - INTERVAL '7 days');"
+  -
+    template: "SELECT run_id, symbol, recommendation, current_price, volume FROM report.enhanced_filtered_stocks WHERE run_id = ?;"
+status: "validated"
+synthesis_guidance: "['Frame analysis findings focusing on gaps and exceptions first.', 'Prioritize issues in report links and data availability.', 'Suggest feasible remediation actions and verify with sourcing links.']"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+title: "Enhanced Report Data Validation Variant 0400"
+tool_plan_template:
+  - "Analyze whether each report link is functional and identify any missing data points by extracting metadata and stock rows."
+  - "Highlight exceptions by detecting discrepancies in data for TradingView export."
+  - "Provide remediation suggestions based on the findings."
+validation_rules:
+  - "Ensure the time series of stock analysis matches expected weekly intervals."
+  - "Confirm all expected data fields are populated."
+  - "Identify missing, unreachable, or broken report links."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

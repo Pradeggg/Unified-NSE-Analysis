@@ -1,0 +1,54 @@
+id: "signal_outcome_feedback_review_1243_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1243"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: ranked candidates."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for last 3 months: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as ranked candidates"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "python_tool_policy"
+sql_templates:
+  -
+    name: "signal_outcome_review"
+    query: "SELECT s.symbol, s.date_issued, s.signal, s.price_at_issue, s.price_at_resolution, s.hit_target, s.hit_stop, s.return_pct, ss.stage, ss.stage_score FROM signals.signal_log AS s JOIN scores.stage_snapshots AS ss ON s.symbol = ss.symbol WHERE s.date_issued >= (CURRENT_DATE - INTERVAL '3 months') AND (s.hit_target = TRUE OR s.hit_stop = TRUE) ORDER BY s.return_pct DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure return_pct is calculated accurately."
+  - "Data review must be within the last 3 months."
+  - "Signal outcomes must be correctly classified as target hit or stop hit."
+  - "Ensure joined data remains in sync with latest stage snapshots."
+synthesis_guidance: "['Draw lessons for improving future signal accuracy.', 'Rank signals based on their outcomes.', 'Provide context for signal performance relative to current market stages.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:56"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

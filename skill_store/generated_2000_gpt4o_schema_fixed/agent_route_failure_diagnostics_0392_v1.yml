@@ -1,0 +1,70 @@
+id: "agent_route_failure_diagnostics_0392_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0392"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for weekly review: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as exceptions and gaps first"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  structure:
+    - "Validate inputs"
+    - "Gather evidences"
+    - "Resolve anomalies"
+    - "Generate diagnostics report"
+  shapes:
+    - "sequence"
+    - "branch"
+    - "cycle"
+sql_templates:
+  -
+    description: "Identify latest enhanced runs with missing or faulty stocks."
+    template: "SELECT er.run_id, er.run_ts, COUNT(efs.symbol) AS missing_symbols FROM report.enhanced_runs er LEFT JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id WHERE er.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) GROUP BY er.run_id, er.run_ts HAVING COUNT(efs.symbol) = 0;"
+  -
+    description: "Check stage snapshots for symbol resolution inconsistencies."
+    template: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT ls.symbol, ls.stage, COUNT(*) AS resolution_issues FROM latest_snapshots ls LEFT JOIN report.enhanced_filtered_stocks efs ON ls.symbol = efs.symbol WHERE efs.symbol IS NULL GROUP BY ls.symbol, ls.stage;"
+python_tools:
+  - "required_function"
+  - "language"
+  - "mode"
+  - "inputs"
+  - "outputs"
+  - "approved_tables"
+  - "code"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "constraints"
+synthesis_guidance: "{'steps': ['Compile findings', 'Map evidence to failure modes', 'Identify tool gaps', 'Propose concrete fixes and regression tests']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:56"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

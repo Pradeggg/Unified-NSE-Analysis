@@ -1,0 +1,70 @@
+id: "market_3m_rotation_swing_1597_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1597"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for weekly review: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as research-only summary"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  python_tools:
+
+  evidence_required:
+
+sql_templates:
+  -
+    description: "Get index returns for the last 3 months."
+    template: "SELECT index_symbol, (MAX(close) - MIN(close)) / MIN(close) * 100 AS index_return FROM market.index_eod WHERE trade_date >= DATEADD(month, -3, CURRENT_DATE) GROUP BY index_symbol;"
+  -
+    description: "Assess stage distribution change over 3 months."
+    template: "SELECT sector, stage, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date >= DATEADD(month, -3, CURRENT_DATE) GROUP BY sector, stage;"
+  -
+    description: "Identify leading sectors based on stage and scores."
+    template: "SELECT sector, COUNT(*) as lead_count FROM scores.stage_snapshots WHERE stage = 'Stage 2' AND snapshot_date >= DATEADD(month, -3, CURRENT_DATE) GROUP BY sector ORDER BY lead_count DESC LIMIT 5;"
+  -
+    description: "Select primary swing candidates from VCP picks."
+    template: "SELECT symbol, company_name, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATEADD(month, -3, CURRENT_DATE) ORDER BY vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "ensure_date_format"
+  - "ensure_non_negative"
+  - "limit_count"
+synthesis_guidance: "{'focus': 'Highlight trends and offer a comparative view of sector movements over the past three months, with a research-focused lens.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:16"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.dateadd is not approved"
+  - "market.index_eod.index_return is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage2_vcp_picks.dateadd is not approved"
+  - "scores.stage2_vcp_picks.month is not approved"
+  - "scores.stage_snapshots.dateadd is not approved"
+  - "scores.stage_snapshots.lead_count is not approved"
+  - "scores.stage_snapshots.month is not approved"

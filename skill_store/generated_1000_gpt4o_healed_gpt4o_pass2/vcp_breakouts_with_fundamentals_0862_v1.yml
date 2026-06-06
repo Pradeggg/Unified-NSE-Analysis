@@ -1,0 +1,65 @@
+created_at: "2026-06-06T12:52:19"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: post results; response style: action watchlist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0862_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    template: "SELECT v.symbol, v.company_name, v.price, v.relative_strength, e.market_cap_cr FROM scores.stage2_vcp_picks v JOIN market.equity_eod e ON v.symbol = e.symbol WHERE v.vcp_score > 80 AND v.enhanced_fund_score > 70 AND v.trading_signal = 'BUY'"
+    template_name: "select_vcp_breakouts"
+status: "validated"
+synthesis_guidance: "{'framework': 'Follow the institutional review for identifying stocks with strong fundamentals that are also showing price momentum.'}"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "post_results"
+  - "action_watchlist"
+title: "VCP Breakouts With Fundamentals Variant 0862"
+tool_plan_template:
+  python_tools:
+    -
+      approved_tables:
+        - "scores.stage2_vcp_picks"
+      code: "def run(context):\n    # Calculation logic goes here\n    investment_potential = context['vcp_score'] * context['enhanced_fund_score'] * context['rsi']\n    return investment_potential"
+      id: "calculate_investment_potential"
+      inputs:
+        - "vcp_score"
+        - "enhanced_fund_score"
+        - "rsi"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "investment_potential"
+validation_rules:
+  - "status"
+version: 1

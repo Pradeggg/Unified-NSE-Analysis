@@ -1,0 +1,55 @@
+id: "corporate_events_results_watchlist_0989_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0989"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for intraday context: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as comparison matrix"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+
+tool_plan_template:
+  inputs: "Find relevant corporate events and analyze performance post-event."
+  outputs: "Comparison matrix of stocks with event types and analysis."
+sql_templates:
+  select_upcoming_events:
+    description: "Selects upcoming corporate events from the signals table."
+    sql: "SELECT id, symbol, event_type, event_date, purpose_raw, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY event_date ASC;"
+  select_recent_results_analysis:
+    description: "Fetches recent results and growth metrics for analysis."
+    sql: "SELECT symbol, period_end, company_name, growth_yoy_revenue_pct, growth_qoq_revenue_pct, verdict, source_trail FROM scores.results_analysis ORDER BY period_end DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "Data sources must match approved schema."
+  - "Output must maintain the comparison matrix format."
+synthesis_guidance: "Organize results into a matrix, emphasizing source-trail accuracy and intraday relevance."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

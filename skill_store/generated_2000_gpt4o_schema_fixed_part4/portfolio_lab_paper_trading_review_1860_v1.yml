@@ -1,0 +1,71 @@
+id: "portfolio_lab_paper_trading_review_1860_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1860"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: TradingView export; timeframe: quarter to date; response style: action watchlist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "TradingView export for quarter to date: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as action watchlist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    steps:
+      - "1. Parse TradingView export to identify paper trading entries and exits."
+      - "2. Use signals.signal_log to verify the signal history and outcomes."
+      - "3. Join portfolio.holdings and scores.stage_snapshots to analyze current holdings against latest strategy indicators."
+sql_templates:
+  -
+    description: "Fetch latest strategy snapshot with contexts for current paper trading symbols."
+    template:
+      postgresql: "SELECT s.symbol, s.stage, s.trading_signal, p.avg_cost, h.qty FROM scores.stage_snapshots s JOIN portfolio.holdings h ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+  -
+    id: "parse_tradingview_export"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "tradingview_export_path"
+    outputs:
+      - "parsed_entries"
+      - "parsed_exits"
+    approved_tables:
+      - "portfolio.holdings"
+    code: "def run(context): pass  # Implementation"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure strategies are checked against the latest available market data."
+  - "Validate entries and exits against TradingView statistics."
+synthesis_guidance: "{'instructions': 'Provide a clear comparison of current strategy state to historical performance. Highlight instances where strategies deviate strongly from expectations and address risk exposure.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:00"
+generation_model: "gpt-4o"
+validation_errors:
+  - "parse_tradingview_export: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "parse_tradingview_export: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

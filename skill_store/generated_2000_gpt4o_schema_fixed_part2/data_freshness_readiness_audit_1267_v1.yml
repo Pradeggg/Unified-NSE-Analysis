@@ -1,0 +1,71 @@
+id: "data_freshness_readiness_audit_1267_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit - Generated Variant 1267"
+description: "Evaluates the freshness of data sources for Agent Adda with a focus on post-result sector-relative comparison. This skill card generates ranked candidates and checks data readiness against defined thresholds."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for post results: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as ranked candidates"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "latest_data_freshness"
+    description: "Retrieve the latest date for all relevant tables to assess freshness."
+    template: "SELECT MAX(trade_date) AS latest_index_date FROM market.index_eod; SELECT MAX(trade_date) AS latest_equity_date FROM market.equity_eod; SELECT MAX(snapshot_date) AS latest_stage_date FROM scores.stage_snapshots;"
+  -
+    name: "sector_relative_comparison"
+    description: "Compare data freshness across sectors post-results using ranked performance."
+    template: "SELECT sector, MAX(snapshot_date) AS latest_snapshot FROM scores.stage_snapshots GROUP BY sector ORDER BY latest_snapshot DESC LIMIT 10;"
+python_tools:
+  -
+    id: "check_data_readiness"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "indices_date"
+      - "equities_date"
+      - "stages_date"
+    outputs:
+      - "is_fresh"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "def run(inputs):\n    indices_date = inputs['indices_date']\n    equities_date = inputs['equities_date']\n    stages_date = inputs['stages_date']\n    # Implement check logic\n    is_fresh = ... # Logic to determine freshness\n    return {'is_fresh': is_fresh}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Verify that MAX dates are within acceptable freshness thresholds."
+  - "Ensure sector data is sorted and limited to top candidates based on freshest datasets."
+synthesis_guidance: "Focus on identifying sectors with potential data freshness issues. Highlight areas needing immediate loader actions if blocking gaps are found."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.latest_snapshot is not approved"

@@ -1,0 +1,60 @@
+id: "report_link_data_validation_1838_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Link Validation"
+description: "Agent Adda skill card to validate report links and missing data for the position-sizing context over the last 20 sessions."
+input_patterns:
+  - "check for report links not working"
+  - "verify missing data in stock reports"
+  - "validate reports with focus on position-sizing for the past 20 sessions"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    description: "Fetch recent enhanced report runs with filtered stocks."
+    approach: "SQL based validation using latest date filter"
+    code: "SELECT run_id, analysis_date FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '20 days' ORDER BY run_ts DESC;"
+  -
+    description: "List all filtered stocks with recommendations and signals."
+    approach: "SQL query joining enhanced_runs and enhanced_filtered_stocks"
+    code: "SELECT ef.run_id, ef.symbol, ef.recommendation FROM report.enhanced_filtered_stocks ef JOIN report.enhanced_runs er ON ef.run_id = er.run_id WHERE er.run_ts > CURRENT_DATE - INTERVAL '20 days';"
+sql_templates:
+  -
+    description: "Retrieve report metadata for validation."
+    template: "SELECT * FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '20 days';"
+  -
+    description: "Fetch stocks data with scores and signals."
+    template: "SELECT ef.symbol, ef.score, ef.weekly_signal, ef.daily_signal FROM report.enhanced_filtered_stocks ef JOIN report.enhanced_runs er ON ef.run_id = er.run_id WHERE er.run_ts > CURRENT_DATE - INTERVAL '20 days';"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Check if run_id exists in both tables."
+  - "Validate timestamps fall within last 20 days."
+  - "Ensure all relevant stock data is populated."
+synthesis_guidance: "['Create a summarized validation report highlighting any inconsistencies.', 'Focus on report links and missing data in stocks report.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:36"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

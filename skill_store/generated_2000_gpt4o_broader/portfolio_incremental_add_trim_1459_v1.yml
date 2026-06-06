@@ -1,0 +1,49 @@
+id: "portfolio_incremental_add_trim_1459_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1459"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Perform stage and signal analysis and expose add/trim candidates with source validation for incremental decision-making."
+sql_templates:
+  stage_and_signal_analysis:
+    template: "WITH latest_snapshots AS (SELECT symbol, max(snapshot_date) as latest_date FROM scores.stage_snapshots GROUP BY symbol) SELECT ss.symbol, ss.company_name, ss.sector, ss.stage, ss.stage_score, ss.trading_signal FROM scores.stage_snapshots ss JOIN latest_snapshots ls ON ss.symbol = ls.symbol AND ss.snapshot_date = ls.latest_date"
+    description: "Fetch latest stage and trading signal for all symbols."
+  current_holdings:
+    template: "SELECT h.symbol, h.qty, h.avg_cost FROM portfolio.holdings h"
+    description: "Fetch current portfolio holdings."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all symbols in holdings are covered in stage analysis."
+  - "Check trading signals consistency with stages for all holdings."
+synthesis_guidance: "['Correlate stage score with trading signal to form add/trim lists.', 'Identify sectors with overweight exposure requiring trimming.', 'Validate portfolio state change with consistent source data trail.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:27"
+generation_model: "gpt-4o"
+validation_errors:
+  - "portfolio.holdings.h is not approved"

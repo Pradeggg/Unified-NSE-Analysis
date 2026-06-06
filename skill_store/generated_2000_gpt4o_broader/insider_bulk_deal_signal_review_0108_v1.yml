@@ -1,0 +1,58 @@
+id: "insider_bulk_deal_signal_review_0108_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0108"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: today; response style: narrative plus evidence."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for today: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as narrative plus evidence"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "today"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Evaluate insider alerts and bulk deals with technical confirmations using available data. Provide a comprehensive position-sizing context for today."
+sql_templates:
+  -
+    name: "fetch_latest_insider_alerts"
+    query: "SELECT symbol, SUM(qty) as total_qty, SUM(value_cr) as total_value FROM signals.insider_alerts WHERE alert_date = current_date GROUP BY symbol"
+  -
+    name: "fetch_latest_bulk_deals"
+    query: "SELECT symbol, side, SUM(qty) as total_qty, AVG(price) as avg_price FROM signals.bulk_block_deals WHERE deal_date = current_date GROUP BY symbol, side"
+  -
+    name: "fetch_technical_scores"
+    query: "SELECT symbol, technical_score, rsi, trend_signal FROM scores.stage_snapshots WHERE snapshot_date = current_date"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all relevant alerts and deals are from today."
+  - "Technical confirmations must be included when possible."
+  - "Provide a narrative along with evidence tables."
+synthesis_guidance: "['Summarize relevant insights regarding insider and bulk deals.', 'Position-sizing context should be clearly outlined.', 'Provide actionable narratives based on evidence.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:22"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.bulk_block_deals.avg_price is not approved"
+  - "signals.bulk_block_deals.total_qty is not approved"
+  - "signals.insider_alerts.total_qty is not approved"
+  - "signals.insider_alerts.total_value is not approved"

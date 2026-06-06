@@ -1,0 +1,50 @@
+id: "sector_breadth_rotation_watchlist_1987_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1987"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for intraday context: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as comparison matrix"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze sector breadth and stage migration to identify sector trends and stocks for TradingView watchlist."
+sql_templates:
+  -
+    name: "sector_breadth_analysis"
+    template: "SELECT sector, AVG(pct_above_50dma) as avg_pct_above_50dma, AVG(change_5d) as avg_change_5d FROM breadth.sector_daily WHERE snapshot_date = CURRENT_DATE GROUP BY sector ORDER BY avg_pct_above_50dma DESC;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sectors with highest average pct_above_50dma are ranked top."
+  - "Identify sectors with positive avg_change_5d as improving."
+synthesis_guidance: "['Focus on sector-relative strengths for stocks.', 'Prioritize sectors with Stage 2 participation and positive momentum.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:58"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.sector_daily.avg_change_5d is not approved"
+  - "breadth.sector_daily.avg_pct_above_50dma is not approved"

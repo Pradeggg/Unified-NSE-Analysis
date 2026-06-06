@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:48:42"
+created_by: "llm_generated"
+description: "This skill card focuses on validating report metadata and filtered stock data to ensure accuracy. It aims to support watchlist creation for the last five sessions by analyzing report links, identifying missing data, and summarizing findings."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_001_0524_v1"
+input_patterns:
+  - "validate enhanced report run metadata"
+  - "check filtered stock data availability"
+  - "create a watchlist from the last 5 sessions"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+python_tools:
+
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Retrieve report metadata from the last 5 sessions."
+    query: "SELECT run_id, run_ts, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE analysis_date >= CURRENT_DATE - INTERVAL '5 days';"
+  -
+    description: "Fetch filtered stocks for the latest session."
+    query: "SELECT symbol, score, recommendation, current_price FROM report.enhanced_filtered_stocks WHERE run_id = (SELECT MAX(run_id) FROM report.enhanced_runs);"
+status: "validated"
+synthesis_guidance:
+  - "Frame the validation as a research snapshot."
+  - "Highlight trends in available data, noting any inconsistencies."
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "watchlist_creation"
+  - "research-only"
+title: "Enhanced Report Data Validation"
+tool_plan_template: "Research-focused data validation and watchlist support."
+validation_errors:
+
+validation_rules:
+  - "Analyze comprehensive metadata and stock details."
+  - "Confirm data availability and accuracy over the last five sessions."
+  - "Ensure findings meet the research-only summary style."
+version: 1

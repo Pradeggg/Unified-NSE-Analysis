@@ -1,0 +1,51 @@
+id: "portfolio_incremental_add_trim_0297_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0297"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: weekly review; response style: ranked candidates."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Review holdings to determine add/trim actions using a sector-relative approach."
+sql_templates:
+  -
+    name: "weekly_sector_performance"
+    description: "Retrieve weekly performance data for each sector."
+    sql: "SELECT sector, AVG(change_1w_pct) AS avg_change_1w_pct FROM scores.stage_snapshots GROUP BY sector;"
+  -
+    name: "portfolio_current_holdings"
+    description: "Get current holdings details."
+    sql: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure SQL execution only returns read-only data."
+  - "Verify that all SELECT statements use only approved tables and columns."
+synthesis_guidance: "Aggregate data to suggest ranked candidates for add/trim actions based on sector performance."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:33"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.avg_change_1w_pct is not approved"

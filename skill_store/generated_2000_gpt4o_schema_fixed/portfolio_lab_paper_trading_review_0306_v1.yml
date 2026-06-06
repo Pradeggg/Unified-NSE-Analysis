@@ -1,0 +1,73 @@
+id: "portfolio_lab_paper_trading_review_0306_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0306"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: today; response style: exceptions and gaps first."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for today: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "today"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze the paper trading portfolio using today's date and separate strategies including entries, exits, stops, and targets. Prioritize identifying exceptions and gaps."
+sql_templates:
+  -
+    description: "Fetch latest stage snapshot for analysis"
+    query: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    description: "Filter signals issued today for freshness"
+    query: "SELECT * FROM signals.signal_log WHERE date_issued = CURRENT_DATE;"
+python_tools:
+  -
+    id: "run_strategies_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      context: "Use today's paper trading data to evaluate entry, exit, stop loss, and target strategies."
+    outputs:
+      strategy_outcomes: "List of strategy exceptions, open issues, and resolved strategies for review."
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Analyze strategy for today's paper trades\n    strategy_outcomes = []\n    # Implement analysis logic here\n    return strategy_outcomes"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure signal data freshness by confirming date_issued is today."
+  - "Validate that the portfolio holdings align with the latest EOD data for symbol and trade_date."
+synthesis_guidance: "Focus on identifying inconsistencies or missing data points in the paper trading strategies and highlight any critical gaps or exceptions found during review."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:46"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_strategies_analysis: inputs must be a list"
+  - "run_strategies_analysis: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_strategies_analysis: inputs must be a list"
+    - "run_strategies_analysis: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

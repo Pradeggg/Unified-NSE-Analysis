@@ -1,0 +1,55 @@
+id: "market_3m_rotation_swing_0687_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0687"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: intraday context; response style: debug trace."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze sector performance over the last quarter; identify leading sectors and Stage 2 swing candidates."
+sql_templates:
+  market_performance:
+    sql: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= NOW() - INTERVAL '3 months' AND index_symbol IN ('NIFTY50', 'NIFTYBANK') ORDER BY trade_date DESC;"
+    description: "Fetch index performance data for sector-relative comparison."
+  sector_leaders:
+    sql: "SELECT snapshot_date, company_name, sector, stage, stage_score FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY stage_score DESC LIMIT 5;"
+    description: "Identify leading sectors based on latest stage scores."
+  swing_candidates:
+    sql: "SELECT symbol, company_name, sector, vcp_score FROM scores.stage2_vcp_picks WHERE vcp_breakout_pct > 5 AND change_1d_pct > 0 ORDER BY vcp_score DESC;"
+    description: "Select potential swing trade candidates from Stage 2 VCP picks."
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure sector diversification among selected candidates."
+  - "Verify minimum RSI threshold for candidate selection."
+synthesis_guidance: "Interpret SQL data for sector rotation insights over the last quarter. Identify sectors showing resilience or leadership changes. Highlight candidates demonstrating strong price action and technical patterns."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.now is not approved"

@@ -1,0 +1,57 @@
+id: "company_360_research_report_0286_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0286"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: freshness audit; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "freshness audit for intraday context: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as ranked candidates"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "freshness_audit"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template: "Create an intraday focused report using stage, technical, fundamental data and provide a ranked list analysis with freshness."
+sql_templates:
+  - "SELECT snapshot_date, symbol, company_name, price, change_1d_pct, change_1w_pct FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' ORDER BY snapshot_date DESC LIMIT 1;"
+  - "WITH quarterly AS (SELECT symbol, period_end, revenue, operating_profit FROM scores.quarterly_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 4) SELECT AVG(revenue) as avg_revenue, AVG(operating_profit) as avg_operating_profit FROM quarterly;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL queries are read-only and access only approved tables as listed."
+  - "Restrict analysis timeframe to intraday context where relevant."
+  - "Rank candidates for report inclusion based on freshness and relevance."
+synthesis_guidance: "Combine data points to build a narrative supported by technical indicators and company financial results. Emphasize quick-turnaround analysis and freshness."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:33"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

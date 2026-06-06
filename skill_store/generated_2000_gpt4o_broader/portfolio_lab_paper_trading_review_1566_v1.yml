@@ -1,0 +1,57 @@
+id: "portfolio_lab_paper_trading_review_1566_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1566"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for post results: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as research-only summary"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Analyze paper trading strategy entries, exits, and stop losses using available data."
+  - "Evaluate exposed symbols for potential discrepancies in paper trading setups."
+  - "Assess freshness of signals using timestamps and associated outcomes."
+  - "Summarize independent analysis in a research-only summary without mixing real holdings data."
+sql_templates:
+  -
+    description: "Retrieve active paper trading signals and their outcomes for review."
+    template: "SELECT s.symbol, s.signal, s.entry_low, s.entry_high, s.stop_loss, s.target_1, s.target_2, s.date_issued, s.date_resolved, s.price_at_resolution, s.return_pct, s.hit_target, s.hit_stop FROM signals.signal_log AS s WHERE s.action_bucket = 'paper_trading' AND s.date_resolved IS NOT NULL ORDER BY s.date_issued DESC;"
+  -
+    description: "Analyze EOD data for symbols involved in paper trading strategies."
+    template: "SELECT e.symbol, e.trade_date, e.close, e.volume FROM market.equity_eod AS e WHERE e.symbol IN (SELECT DISTINCT s.symbol FROM signals.signal_log AS s WHERE s.action_bucket = 'paper_trading') ORDER BY e.trade_date DESC;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure no mixing of paper trading and real holdings in analysis."
+  - "Paper trading results should be fresh and relevant to the current market conditions."
+  - "Data discrepancies or gaps should be clearly noted in the summary."
+synthesis_guidance: "['Focus on providing a clear, concise research summary regarding paper trading outcomes.', 'Ensure paper trading strategy results are independently assessed from actual holdings.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.s is not approved"

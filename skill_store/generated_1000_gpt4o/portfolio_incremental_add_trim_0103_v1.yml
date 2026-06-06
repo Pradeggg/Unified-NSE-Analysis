@@ -1,0 +1,83 @@
+id: "portfolio_incremental_add_trim_0103_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0103"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: today; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for today: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "First, use the appropriate SQL templates to extract the necessary data. Then, synthesize the data into a decision-making framework, considering current market conditions and historical performance."
+sql_templates:
+  -
+    description: "Query to get current holdings and their performance."
+    template: "SELECT h.symbol, h.qty, h.avg_cost, s.stage, s.stage_score, s.trend_signal, s.narrative FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE;"
+  -
+    description: "Query to get daily performance updates for candidates."
+    template: "SELECT symbol, change_1d_pct, change_1w_pct, change_1m_pct FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+python_tools:
+  -
+    id: "holdings_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs: "context = { 'holdings_data': <extracted_data>, 'stage_data': <stage_data> }"
+    outputs: "add_candidates, trim_candidates, risk_flags"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code:
+      - "def run(context):"
+      - "    holdings = context['holdings_data']"
+      - "    stage_data = context['stage_data']"
+      - "    add_candidates = []"
+      - "    trim_candidates = []"
+      - "    risk_flags = []"
+      - "    # Analyze based on some criteria"
+      - "    for holding in holdings:"
+      - "        relevant_stage_data = [s for s in stage_data if s['symbol'] == holding['symbol']]"
+      - "        if relevant_stage_data:"
+      - "            stage_info = relevant_stage_data[0]"
+      - "            if stage_info['stage_score'] > 80:"
+      - "                add_candidates.append(holding['symbol'])"
+      - "            elif stage_info['stage_score'] < 50:"
+      - "                trim_candidates.append(holding['symbol'])"
+      - "    return add_candidates, trim_candidates, risk_flags"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all extracted data is for the current date."
+  - "Cross-verify holdings against the stage scores for consistency."
+  - "Identify mismatched or missing symbols in holdings and snapshots."
+synthesis_guidance: "Focus on key performance changes and how they align with long-term strategy. Highlight any significant sector rotations or unusual performance patterns."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:41:56"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table h.avg_cost"
+  - "unknown table h.qty"
+  - "unknown table h.symbol"
+  - "unknown table s.narrative"
+  - "unknown table s.snapshot_date"
+  - "unknown table s.stage"
+  - "unknown table s.stage_score"
+  - "unknown table s.symbol"
+  - "unknown table s.trend_signal"

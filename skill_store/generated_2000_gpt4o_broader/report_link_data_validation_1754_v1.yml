@@ -1,0 +1,54 @@
+id: "report_link_data_validation_1754_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation - Indian Market Focus"
+description: "Skill to validate enhanced report metadata, check for missing data, and verify report links. Focus is on watchlist creation for the Indian market, covering the current quarter to date."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for quarter to date: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Ensure to validate the report links and data correctness using the approved tables."
+sql_templates:
+  -
+    description: "Retrieve report runs with missing data."
+    template: "SELECT run_id, run_ts, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE stocks_filtered = 0;"
+  -
+    description: "Check for broken links or unpopulated stocks in filtered stocks."
+    template: "SELECT symbol, recommendation FROM report.enhanced_filtered_stocks WHERE recommendation IS NULL OR current_price IS NULL;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all report links are functioning."
+  - "Check for any missing or unpopulated data fields."
+  - "Verify completeness of the watchlist for the quarter."
+synthesis_guidance: "Combine SQL results with manual verification steps to form a comprehensive QA checklist."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:35"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

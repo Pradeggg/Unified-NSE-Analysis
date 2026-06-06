@@ -1,0 +1,62 @@
+id: "market_3m_rotation_swing_1401_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1401"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Gather market analysis using approved tables to assess market regime, sector leadership, and swing candidates."
+sql_templates:
+  -
+    description: "Fetch index performance over the last 3 months."
+    template: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)"
+  -
+    description: "Retrieve leading sectors based on relative strength."
+    template: "SELECT sector, AVG(relative_strength) AS avg_strength FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY sector ORDER BY avg_strength DESC"
+  -
+    description: "Identify Stage 2 candidates with a high Minervini score."
+    template: "SELECT symbol, company_name, minervini_score FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) ORDER BY minervini_score DESC"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure date ranges align with the last 3 months."
+  - "Relative strength averages must be calculated correctly."
+  - "Candidates must be correctly identified and ranked."
+synthesis_guidance: "Compile outputs to provide a holistic view of current market opportunities and risks within the context of the past 3 months."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:51"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage_snapshots.avg_strength is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"

@@ -1,0 +1,58 @@
+id: "agent_route_failure_diagnostics_1792_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1792"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for weekly review: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as QA checklist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "For diagnosing route failures, examine enhanced report runs, filtered stocks, and stage snapshots for discrepancies. Focus on missing tools, incorrect symbol resolution, and any fallback loops."
+sql_templates:
+  -
+    description: "Check latest enhanced runs with discrepancies in stocks analyzed and filtered."
+    sql: "SELECT run_id, run_ts, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) AND stocks_analyzed <> stocks_filtered LIMIT 10;"
+  -
+    description: "Identify stocks with missing recommendations in latest snapshots."
+    sql: "SELECT es.symbol, es.recommendation FROM report.enhanced_filtered_stocks es JOIN report.enhanced_runs er ON es.run_id = er.run_id WHERE er.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) AND es.recommendation IS NULL LIMIT 10;"
+  -
+    description: "List symbols in Stage 2 with no BUY signals."
+    sql: "SELECT ss.symbol, ss.stage, ss.trading_signal FROM scores.stage_snapshots ss WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.stage = 'STAGE_2' AND ss.trading_signal NOT IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure discrepancies are identified between analyzed and filtered stocks."
+  - "Verify the presence of recommendations for filtered stocks."
+  - "Confirm trading signals for Stage 2 are appropriate according to the strategy."
+synthesis_guidance: "['Summarize key findings and discrepancies observed.', 'Identify potential gaps in tools or symbol resolution.', 'Suggest actionable fixes for identified route failures.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:04"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

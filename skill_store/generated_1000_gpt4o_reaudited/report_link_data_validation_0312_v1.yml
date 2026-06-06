@@ -1,0 +1,73 @@
+created_at: "2026-06-06T12:44:21"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: latest EOD; response style: exceptions and gaps first."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0312_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for latest EOD: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Ensure 'latest_run_metadata' and 'filtered_stock_data' are not empty\n    if not context['latest_run_metadata'] or not context['filtered_stock_data']:\n        return {'verified_findings': 'Data missing in the latest run.'}\n    return {'verified_findings': 'All data present and accounted for in the latest run.'}"
+    id: "run_data_verification"
+    inputs:
+      - "latest_run_metadata"
+      - "filtered_stock_data"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "verified_findings"
+sql_templates:
+  -
+    purpose: "Get the latest enhanced report run metadata"
+    query: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+  -
+    purpose: "Retrieve filtered stock data for the latest report run"
+    query: "SELECT EFS.run_id, EFS.symbol, EFS.current_price FROM report.enhanced_filtered_stocks EFS INNER JOIN report.enhanced_runs ER ON EFS.run_id = ER.run_id WHERE ER.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+status: "test_failed"
+synthesis_guidance: "Prioritize identifying data gaps and broken links, followed by cross-verification against approved schemas and source trails."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+title: "Enhanced Report Data Validation Variant 0312"
+tool_plan_template:
+  steps:
+    - "Collect report run metadata and stock data"
+    - "Identify any broken report links and missing data"
+    - "Document findings and propose remediation"
+  type: "review"
+validation_rules:
+  - "Check for missing data in the stock HTML files"
+  - "Identify broken report links from report metadata and stock data"
+  - "Cross-verify data against latest market reports"
+version: 1
+validation_errors:
+  - "run_data_verification: execution failed: KeyError: 'latest_run_metadata'"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_data_verification: execution failed: KeyError: 'latest_run_metadata'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

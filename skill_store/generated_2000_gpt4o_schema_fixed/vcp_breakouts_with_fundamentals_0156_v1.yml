@@ -1,0 +1,53 @@
+id: "vcp_breakouts_with_fundamentals_0156_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0156"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: quarter to date; response style: narrative plus evidence."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Generate a detailed screening report for the specified timeframe and focus on stocks making new highs or forming VCP patterns with strong fundamentals."
+sql_templates:
+  -
+    name: "fetch_latest_vcp_breakouts"
+    description: "Select latest VCP breakouts with strong fundamentals."
+    query: "WITH latest_snapshots AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)), latest_eod AS (SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)) SELECT v.symbol, v.price, v.rsi, v.trading_signal, v.investment_score, e.market_cap_cr FROM latest_snapshots v JOIN latest_eod e ON v.symbol = e.symbol WHERE v.trading_signal IN ('BUY', 'STRONG_BUY') AND e.series = 'EQ' ORDER BY v.investment_score DESC, v.price ASC LIMIT 20;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Validate that the candidate stocks have a BUY or STRONG_BUY signal."
+  - "Ensure all symbols align with the latest snapshot and EOD data."
+synthesis_guidance: "['Focus on providing a narrative explanation of why selected stocks qualify as VCP breakouts.', 'Correlate fundamental scores with market metrics to provide context.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

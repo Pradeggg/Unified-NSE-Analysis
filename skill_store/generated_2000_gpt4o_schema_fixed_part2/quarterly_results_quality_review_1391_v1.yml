@@ -1,0 +1,75 @@
+id: "quarterly_results_quality_review_1391_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1391"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for weekly review: latest quarterly results analysis"
+  - "which companies had strong quarterly results as exceptions and gaps first"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    tool: "sql"
+    reasoning: "Fetch the latest quarterly results and their analysis."
+    notes: "Align symbols and period_end to ensure the analysis matches the actual results."
+    output:
+      - "symbol"
+      - "period_end"
+      - "revenue"
+      - "pat"
+      - "verdict"
+      - "opm_delta_pp"
+sql_templates:
+  -
+    sql: "WITH latest_results AS ( SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.period_end, qr.revenue, ra.pat, ra.verdict, ra.opm_delta_pp FROM scores.quarterly_results qr JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end WHERE qr.period_type = 'quarter' ORDER BY qr.symbol, qr.period_end DESC NULLS LAST, ra.updated_at DESC ) SELECT * FROM latest_results LIMIT 10;"
+    title: "Fetch Latest Quarterly Results"
+    description: "Retrieve the latest quarterly results for symbols."
+python_tools:
+  -
+    id: "review_quarterly_results_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "period_end"
+    outputs:
+      - "exceptions"
+      - "notable_changes"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze the latest quarterly results for notable changes\n    exceptions, notable_changes = [], []\n    for entry in context['data']:\n        if entry['verdict'] in ['miss', 'mixed']:\n            exceptions.append(entry)\n        if float(entry['opm_delta_pp']) > 5.0:\n            notable_changes.append(entry)\n    return {'exceptions': exceptions, 'notable_changes': notable_changes}"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  -
+    rule: "ensure non-null revenue and pat values for top results."
+    scope: "output"
+    required: true
+synthesis_guidance: "['Highlight gaps or exceptions first, focusing on revenue, PAT growth, and margin displacement.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.pat is not approved"

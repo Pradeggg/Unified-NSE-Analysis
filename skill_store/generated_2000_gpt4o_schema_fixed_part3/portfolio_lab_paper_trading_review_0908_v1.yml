@@ -1,0 +1,77 @@
+id: "portfolio_lab_paper_trading_review_0908_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0908"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: position-sizing context; timeframe: today; response style: comparison matrix."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "position-sizing context for today: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as comparison matrix"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "position-sizing_context"
+  - "today"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Select distinct symbols from portfolio.holdings for current paper trading scenarios."
+    - "Join signals.signal_log on symbols to retrieve trading signals, ensuring the date_issued is within the latest month."
+    - "Align signals with stage_snapshots for current technical scores and fundamentals, using approved join rules."
+    - "Retrieve latest prices from market.equity_eod for selected symbols."
+sql_templates:
+  select_signals:
+    template: "SELECT symbol, signal, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '1 month' AND symbol IN (SELECT symbol FROM portfolio.holdings)"
+    output_column_list:
+      - "symbol"
+      - "signal"
+      - "entry_low"
+      - "entry_high"
+      - "stop_loss"
+      - "target_1"
+      - "target_2"
+  select_stage_snapshot:
+    template: "SELECT symbol, technical_score, investment_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol IN (SELECT symbol FROM portfolio.holdings)"
+    output_column_list:
+      - "symbol"
+      - "technical_score"
+      - "investment_score"
+  select_latest_prices:
+    template: "SELECT symbol, close AS latest_price FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND symbol IN (SELECT symbol FROM portfolio.holdings)"
+    output_column_list:
+      - "symbol"
+      - "latest_price"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Verify symbols in strategy_state match the unique list from paper trading contexts."
+  - "Ensure latest technical and investment scores align with the current stage snapshot."
+  - "Check that price data is the most recent available."
+synthesis_guidance: "['Build a comparison matrix for each symbol with open trades showing entry and exit points.', 'Highlight position-sizing strategies based on the current paper trading setup.', \"Frame analysis in the context of today's market scenarios with a focus on strategy outcomes.\"]"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:37"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

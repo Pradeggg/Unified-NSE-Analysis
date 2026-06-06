@@ -1,0 +1,77 @@
+id: "company_360_research_report_0384_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0384"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: watchlist creation; timeframe: intraday context; response style: exceptions and gaps first."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "watchlist creation for intraday context: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as exceptions and gaps first"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "watchlist_creation"
+  - "intraday_context"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  validation_rules:
+    - "Ensure all required tables are queried."
+    - "Adhere to PostgreSQL syntax"
+    - "Include latest date filters"
+  synthesis_guidance: "Highlight exceptions and gaps first, focusing on watchlist creation."
+sql_templates:
+  stage: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol = :symbol"
+  financials: "WITH latest_quarter AS (SELECT DISTINCT ON (symbol) * FROM scores.quarterly_results WHERE symbol = :symbol ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC) SELECT * FROM latest_quarter"
+  technical: "SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND symbol = :symbol"
+python_tools:
+  -
+    id: "calculate_ratios"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "annual_results"
+      - "balance_sheet"
+    outputs:
+      - "valuation_gaps"
+    approved_tables:
+      - "scores.annual_results"
+      - "scores.balance_sheet"
+    code: "def run(context):\n    annual_df = context['annual_results']\n    balance_df = context['balance_sheet']\n    # Logic for calculating valuation gaps\n    valuation_gaps = ... \n    return {'valuation_gaps': valuation_gaps}"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_ratios: execution failed: KeyError: 'annual_results'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_ratios: execution failed: KeyError: 'annual_results'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

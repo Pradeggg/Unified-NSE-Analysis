@@ -1,0 +1,54 @@
+id: "sector_breadth_rotation_watchlist_1511_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1511"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: latest EOD; response style: research-only summary."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for latest EOD: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as research-only summary"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "latest_EOD"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Rank and identify sectors showing improving breadth and Stage 2 participation. Filter and rank individual stocks with a strong Stage 2 signal and add them to a watchlist for trading."
+sql_templates:
+  -
+    name: "sector_improvement_and_stage_2_participation"
+    description: "Identify sectors with increasing breadth signals and active Stage 2 stocks."
+    sql: "WITH latest_stage AS (SELECT sector, COUNT(*) AS stage2_count FROM scores.stage_snapshots WHERE stage = 'STAGE_2' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector), latest_breadth AS (SELECT sector, pct_above_50dma, change_5d FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)) SELECT b.sector, b.pct_above_50dma, b.change_5d, s.stage2_count FROM latest_breadth b JOIN latest_stage s ON b.sector = s.sector ORDER BY s.stage2_count DESC, b.pct_above_50dma DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all sectors returned have non-zero Stage 2 counts."
+  - "Verify breadth and Stage 2 metrics are from the latest EOD data."
+synthesis_guidance: "['Summarize sectors showing improvement in breadth and Stage 2 participation.', 'Highlight any notable stocks within improving sectors.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:51"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

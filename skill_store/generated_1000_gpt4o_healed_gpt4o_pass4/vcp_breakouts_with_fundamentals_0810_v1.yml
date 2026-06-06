@@ -1,0 +1,76 @@
+created_at: "2026-06-06T12:51:43"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: today; response style: action watchlist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0810_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Assume context provides necessary data frames\n    # Placeholder function to be completed\n    # Compute the performance metrics based on input symbols and prices\n    # Logic missing in the initial generation\n    performance_metrics = context.get('performance_metrics', [])  # Example placeholder\n    return {'performance_metrics': performance_metrics}"
+    id: "run_performance_analysis"
+    inputs:
+      - "symbol"
+      - "price"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "performance_metrics"
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    query: "SELECT symbol, company_name, price, trading_signal FROM scores.stage2_vcp_picks WHERE vcp_score > 70 AND enhanced_fund_score > 75 ORDER BY vcp_score DESC"
+    template_name: "fetch_vcp_breakouts"
+  -
+    query: "SELECT symbol, high, trade_date FROM market.equity_eod WHERE high = week52_high AND trade_date = CURRENT_DATE"
+    template_name: "fetch_new_highs"
+  -
+    query: "SELECT symbol, can_slim_score, fundamental_score FROM scores.stage_snapshots WHERE can_slim_score > 70 AND fundamental_score > 75"
+    template_name: "fetch_strong_fundamentals"
+status: "validated"
+synthesis_guidance: "Provide a synthesis of VCP breakouts and new-high stocks with strong fundamentals for TradingView export. Ensure the timeframe is today's data for actionable insights."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "today"
+  - "action_watchlist"
+title: "VCP Breakouts With Fundamentals Variant 0810"
+tool_plan_template:
+  filters:
+    - "new_highs"
+    - "vcp_breakouts"
+    - "strong_fundamentals"
+validation_errors:
+  - "run_performance_analysis: run(context) must return a dict"
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "Do not exceed approved table columns."
+version: 1

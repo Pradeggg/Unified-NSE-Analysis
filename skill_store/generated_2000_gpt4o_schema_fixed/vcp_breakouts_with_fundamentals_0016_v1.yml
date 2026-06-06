@@ -1,0 +1,66 @@
+id: "vcp_breakouts_with_fundamentals_0016_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0016"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: latest EOD; response style: concise table."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "latest_EOD"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  read_only_plan: "Create a plan that involves read-only operations from the provided tables based on the context and rules."
+sql_templates:
+  overview: "Use SELECT statements to gather information on stocks meeting the criteria of new highs, VCP, or breakouts with strong fundamentals."
+  select_template: "SELECT s.symbol, s.company_name, e.close, p.vcp_score, p.enhanced_fund_score \nFROM market.equity_eod e \nJOIN scores.stage_snapshots s ON e.symbol = s.symbol \nJOIN scores.stage2_vcp_picks p ON s.symbol = p.symbol \nWHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) \nAND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) \nAND p.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) \nAND e.series = 'EQ' \nAND s.stage = 'STAGE_2' \nAND s.trading_signal IN ('BUY', 'STRONG_BUY') \nORDER BY p.vcp_score DESC \nLIMIT 10;"
+python_tools:
+  -
+    id: "evidence_processor"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "raw_evidence"
+    outputs:
+      - "processed_evidence"
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    code: "\ndef run(context):\n    return {'processed_evidence': context['raw_evidence']}\n"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "response_length"
+  - "data_integrity"
+synthesis_guidance: "{'formatting': 'Return the top candidates in a table format with the required fields.', 'interpretation': 'Highlight key factors like VCP score, enhanced fundamental score, and latest EOD metrics.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:17:54"
+generation_model: "gpt-4o"
+validation_errors:
+  - "evidence_processor: execution failed: KeyError: 'raw_evidence'"
+review:
+  status: "needs_heal"
+  findings:
+    - "evidence_processor: execution failed: KeyError: 'raw_evidence'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

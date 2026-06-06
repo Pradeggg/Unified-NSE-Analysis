@@ -1,0 +1,64 @@
+created_at: "2026-06-06T12:41:07"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: concise table."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0017_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+
+status: "validated"
+synthesis_guidance: "['Combine quantitative data with qualitative context.', 'Highlight any significant shifts in sector leadership.']"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "concise_table"
+title: "3M Market Rotation Swing Assessment Variant 0017"
+tool_plan_template:
+  sql_templates:
+    -
+      description: "Select index returns over the last 3 months."
+      template: "SELECT index_symbol, AVG(change_pct) AS avg_return FROM market.index_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY index_symbol;"
+    -
+      description: "Determine sector stage distribution change."
+      template: "SELECT sector, COUNT(*) AS total, SUM(CASE WHEN stage = 2 THEN 1 ELSE 0 END) AS stage_2_count FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY sector;"
+    -
+      description: "Identify leading sectors."
+      template: "SELECT sector, SUM(relative_strength) AS total_strength FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY sector ORDER BY total_strength DESC LIMIT 5;"
+    -
+      description: "List primary swing candidates based on stage 2 picks."
+      template: "SELECT symbol, company_name, sector, price FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND vcp_score > 80 ORDER BY vcp_score DESC LIMIT 10;"
+validation_rules:
+  - "Ensure data covers the full 3-month period."
+  - "Check for anomalies in index returns."
+version: 1

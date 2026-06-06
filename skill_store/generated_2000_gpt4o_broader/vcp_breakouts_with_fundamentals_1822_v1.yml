@@ -1,0 +1,64 @@
+id: "vcp_breakouts_with_fundamentals_1822_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1822"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  required_function: "run(context)"
+  language: "python"
+  mode: "read_only"
+  inputs:
+    - "context"
+  outputs:
+    - "action_watchlist"
+  approved_tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+  code: "def run(context):\n    pass  # Implementation will be added here"
+sql_templates:
+  -
+    template: "WITH latest_data AS (\n    SELECT e.symbol, e.trade_date, e.close, s.stage_score, s.fundamental_score\n    FROM market.equity_eod e\n    JOIN scores.stage_snapshots s ON e.symbol = s.symbol\n    WHERE e.trade_date >= CURRENT_DATE - INTERVAL '5 days'\n)\nSELECT symbol, MAX(close) AS new_high\nFROM latest_data\nWHERE stage_score > 7 AND fundamental_score > 6\nGROUP BY symbol"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all returns are read-only"
+  - "Do not exceed last 5 sessions in analysis"
+  - "Demonstrate usage of approved tables only"
+synthesis_guidance: "{'strategy': 'Leverage VCP and stage snapshot metrics for insights into potential breakout stocks within last 5 sessions focusing on fundamentals and liquidity.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

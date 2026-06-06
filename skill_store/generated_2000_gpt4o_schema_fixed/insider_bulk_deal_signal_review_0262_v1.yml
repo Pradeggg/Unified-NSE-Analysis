@@ -1,0 +1,70 @@
+id: "insider_bulk_deal_signal_review_0262_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0262"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: post results; response style: ranked candidates."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for post results: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as ranked candidates"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  execution_plan:
+    -
+      task: "Validate inputs and load data"
+    -
+      task: "Filter latest insider alerts and bulk deals"
+    -
+      task: "Join data with latest technical context"
+    -
+      task: "Apply technical confirmation filters"
+    -
+      task: "Rank candidates based on scores"
+sql_templates:
+  -
+    name: "fetch_latest_signals"
+    template: "WITH latest_signals AS (SELECT * FROM signals.insider_alerts WHERE alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts)), latest_deals AS (SELECT * FROM signals.bulk_block_deals WHERE deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals)) SELECT * FROM latest_signals UNION ALL SELECT * FROM latest_deals;"
+  -
+    name: "join_with_technical_context"
+    template: "SELECT l.symbol, l.alert_date, l.entity, s.stage, s.technical_score FROM latest_signals l JOIN scores.stage_snapshots s ON l.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    name: "rank_candidates"
+    template: "SELECT * FROM join_with_technical_context WHERE stage = 'STAGE_2' AND technical_score > 70 ORDER BY technical_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure fetched dates are the latest."
+  - "Verify technical score threshold is met."
+  - "Confirm stage filtering is applied correctly."
+synthesis_guidance: "['Emphasize top-ranked symbols in output.', 'Provide clear risk notes based on technical confirmation.', 'Discuss implications of insider activity and related deals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:51"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

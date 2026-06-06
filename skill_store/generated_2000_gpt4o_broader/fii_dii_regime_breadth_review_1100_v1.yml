@@ -1,0 +1,79 @@
+id: "fii_dii_regime_breadth_review_1100_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1100"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: weekly review; response style: concise table."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as concise table"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "weekly_review"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Use SQL and Python tools to extract and analyze market data."
+sql_templates:
+  -
+    query: "SELECT trade_date, fii_net_5d, dii_net_5d, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL '7 days';"
+    description: "Retrieve FII/DII flows over the past week."
+  -
+    query: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date >= CURRENT_DATE - INTERVAL '7 days';"
+    description: "Fetch regime history for the past week."
+  -
+    query: "SELECT trade_date, advances, declines, ad_signal FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '7 days';"
+    description: "Get market breadth data for the last week."
+  -
+    query: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '7 days';"
+    description: "Acquire index data for the previous week."
+python_tools:
+  -
+    id: "trend_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "fii_dii_flows"
+      - "regime_history"
+      - "market_daily"
+      - "index_eod"
+    outputs:
+      - "aggregated_signals"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context):\n    # Analyze and aggregate trends\n    context['aggregated_signals'] = 'processed_results'\n    return context"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all trade dates are within the last week."
+  - "Validate flow signals against predefined thresholds."
+  - "Check that breadth signals align with historical norms."
+  - "Confirm index trend consistency with regime data."
+synthesis_guidance: "['Integrate flow trends with regime and breadth for holistic view.', 'Highlight anomalies in data that suggest risk-on/off switch.', 'Present findings in a clear tabular format suitable for TradingView.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:22"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

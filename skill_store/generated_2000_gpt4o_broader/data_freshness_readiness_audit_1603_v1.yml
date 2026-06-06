@@ -1,0 +1,72 @@
+id: "data_freshness_readiness_audit_1603_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1603"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: today; response style: debug trace."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for today: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as debug trace"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    id: "1"
+    title: "Check Latest Refresh Dates"
+    description: "Verify if the data in the approved tables is updated as of today."
+    sql_templates:
+      -
+        query: "SELECT MAX(trade_date) AS latest_date FROM {{table}}"
+        tables:
+          - "market.index_eod"
+          - "market.equity_eod"
+  -
+    id: "2"
+    title: "Assess Missing Data Gaps"
+    description: "Identify any missing sources or blocking gaps for the current date."
+    sql_templates:
+      -
+        query: "SELECT COUNT(*) AS missing_count FROM {{table}} WHERE trade_date != CURRENT_DATE"
+        tables:
+          - "breadth.market_daily"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "All approved tables must have data for today's date."
+  - "Any missing data should be identified as a blocking gap."
+synthesis_guidance: "Focus on evaluating data freshness with a debug trace approach. Highlight discrepancies and propose remediation if needed."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:15"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

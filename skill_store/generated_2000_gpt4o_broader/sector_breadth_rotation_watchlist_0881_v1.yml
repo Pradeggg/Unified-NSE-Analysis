@@ -1,0 +1,71 @@
+id: "sector_breadth_rotation_watchlist_0881_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0881"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for intraday context: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as action watchlist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Identify sectors showing breadth improvement and Stage 2 participation, then list symbols with upward momentum for a watchlist."
+sql_templates:
+  -
+    description: "Retrieve current sector breadth data."
+    query: "SELECT sector, pct_above_50dma, change_5d, breadth_signal FROM breadth.sector_daily WHERE snapshot_date = CURRENT_DATE() ORDER BY breadth_signal DESC;"
+  -
+    description: "Identify stocks in Stage 2 with price momentum."
+    query: "SELECT symbol, company_name, sector, price, change_1d_pct, stage FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE() AND stage = 2 ORDER BY change_1d_pct DESC;"
+python_tools:
+  -
+    id: "run_sector_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_breadth_data"
+      - "stage2_stock_data"
+    outputs:
+      - "sector_ranks"
+      - "candidate_symbols"
+    approved_tables:
+      - "breadth.sector_daily"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    sector_breadth_data = context['sector_breadth_data']\n    stage2_stock_data = context['stage2_stock_data']\n    \n    sector_ranks = sorted(sector_breadth_data, key=lambda x: x['breadth_signal'], reverse=True)\n    candidate_symbols = [stock for stock in stage2_stock_data if stock['change_1d_pct'] > 0]\n    \n    return {'sector_ranks': sector_ranks, 'candidate_symbols': candidate_symbols}"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sectors are ranked by breadth and Stage 2 participation."
+  - "Ensure symbols are listed if they meet criteria from SQL queries."
+synthesis_guidance: "Synthesize SQL output into actionable items for tradingview."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_sector_analysis: execution failed: KeyError: 'sector_breadth_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_sector_analysis: execution failed: KeyError: 'sector_breadth_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

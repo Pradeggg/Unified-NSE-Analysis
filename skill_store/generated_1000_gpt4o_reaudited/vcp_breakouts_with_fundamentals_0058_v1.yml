@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:41:28"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: quarter to date; response style: concise table."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0058_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  - "WITH latest_stage AS (SELECT symbol, MAX(snapshot_date) as last_snapshot FROM scores.stage_snapshots GROUP BY symbol), vcp_candidates AS (SELECT s.symbol, s.company_name, s.sector, s.price, s.vcp_score, s.enhanced_fund_score FROM scores.stage2_vcp_picks s JOIN latest_stage l ON s.symbol = l.symbol WHERE s.snapshot_date = l.last_snapshot AND s.vcp_score > 70) SELECT e.symbol, e.trade_date, e.close, e.volume, e.turnover_cr, v.company_name, v.sector, v.price, v.vcp_score, v.enhanced_fund_score FROM market.equity_eod e JOIN vcp_candidates v ON e.symbol = v.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND e.close > e.week52_high * 0.9 ORDER BY v.vcp_score DESC, v.enhanced_fund_score DESC LIMIT 50"
+status: "validated"
+synthesis_guidance: "Highlight top candidates by VCP score and fundamentals with latest price movements."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "concise_table"
+title: "VCP Breakouts With Fundamentals Variant 0058"
+tool_plan_template:
+  pattern: "Use Agent Adda Indian market evidence and research-only framing."
+validation_rules:
+  - "sql_syntax"
+  - "output_format"
+  - "data_sensitivity"
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:53:06"
+created_by: "llm_generated"
+description: "Skill focused on validating report links and ensuring data presence for the Indian market. This involves a freshness audit for the quarter-to-date period and presents a comparison matrix."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_001_0956_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for quarter to date: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select metadata from enhanced report runs for freshness audit."
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= DATE('now', 'start of month', '-3 months')"
+  -
+    description: "Select stock data from filtered enhanced report stocks."
+    template: "SELECT symbol, score, current_price, day_change_pct FROM report.enhanced_filtered_stocks WHERE run_id = ?"
+status: "test_failed"
+synthesis_guidance: "Create a synthesized summary focusing on discrepancies, freshness, and quality of the data in relation to the report links. Provide actionable recommendations for any identified gaps."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "comparison_matrix"
+title: "Enhanced Report Link and Data Validation"
+tool_plan_template: "Analyze report links and data presence using available evidence tables based on input patterns."
+validation_errors:
+  - "report.enhanced_runs.date is not approved"
+validation_rules:
+  - "Ensure all fields are populated where applicable."
+  - "Report any instances of missing or outdated data."
+version: 1
+review:
+  attempts: 3
+  findings:
+    - "report.enhanced_runs.date is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"

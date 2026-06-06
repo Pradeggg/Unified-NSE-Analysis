@@ -1,0 +1,55 @@
+id: "vcp_breakouts_with_fundamentals_1052_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1052"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: quarter to date; response style: concise table."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  python_tools: null
+  evidence_gaps: null
+sql_templates:
+  -
+    description: "Select VCP breakout stocks with strong fundamentals."
+    query: "SELECT v.symbol, v.company_name, v.price, v.vcp_score, v.enhanced_fund_score\nFROM scores.stage2_vcp_picks v\nJOIN scores.stage_snapshots s ON v.symbol = s.symbol\nWHERE v.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)\nAND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nAND v.trading_signal IN ('BUY', 'STRONG_BUY')\nORDER BY v.vcp_score DESC, v.enhanced_fund_score DESC\nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "{'text': 'Produce a table summarizing the top VCP breakout stocks, highlighting those with the strongest fundamentals and liquidity.', 'format': 'table'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:35"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

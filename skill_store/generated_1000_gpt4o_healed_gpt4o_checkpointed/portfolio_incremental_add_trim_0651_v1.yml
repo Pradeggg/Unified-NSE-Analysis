@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:50:29"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: quarter to date; response style: debug trace."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0651_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  add_candidates:
+    query: "SELECT symbol, company_name, stage, stage_score FROM scores.stage_snapshots WHERE stage IN ('1', '2') AND stage_score >= 75 AND snapshot_date = CURRENT_DATE"
+    type: "SELECT"
+  sector_exposure:
+    query: "SELECT sector, SUM(qty * live_price) as total_value FROM scores.stage_snapshots ss JOIN portfolio.holdings ph ON ss.symbol = ph.symbol WHERE snapshot_date = CURRENT_DATE GROUP BY sector"
+    type: "SELECT"
+  trim_candidates:
+    query: "SELECT symbol, company_name, stage, stage_score FROM scores.stage_snapshots WHERE stage IN ('3', '4') AND stage_score < 50 AND snapshot_date = CURRENT_DATE"
+    type: "SELECT"
+status: "validated"
+synthesis_guidance: "Focus on identifying sectors with high exposure and stocks that are strong add or trim candidates."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "debug_trace"
+title: "Portfolio Incremental Add Trim Review Variant 0651"
+tool_plan_template: "Examine current portfolio holdings and stage snapshots to decide incremental add or trim actions."
+validation_rules:
+  - "Ensure symbols match between holdings and stage snapshots."
+  - "Validate current snapshot date."
+version: 1

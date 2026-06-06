@@ -1,0 +1,65 @@
+id: "portfolio_incremental_add_trim_1963_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1963"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: post results; response style: comparison matrix."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for post results: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Analyze current portfolio holdings using the given tables with a focus on deciding whether to add or trim investments. Review sector exposure, risk factors, and performance signals."
+sql_templates:
+  -
+    description: "Select portfolio holdings and their recent performance metrics."
+    template: "SELECT h.symbol, h.qty, h.avg_cost, s.company_name, s.sector, s.market_cap_cat, s.live_price, s.change_1w_pct, s.stage_score FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+python_tools:
+  -
+    id: "calculate_risk"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "market_cap_cat"
+      - "sector"
+      - "stage_score"
+    outputs:
+      - "risk_flags"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    return [dict(risk_flag='High' if score < 2 else 'Low') for score in context['stage_score']]"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure sector exposure is aggregated correctly."
+  - "Check risk flags for any significant market cap or sector shifts."
+  - "Ensure the representation of add and trim candidates is accurate."
+synthesis_guidance: "Frame the output as a comparison matrix highlighting portfolio state, exposure, and recommend actions. Emphasize the Indian market context with research insights."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_risk: execution failed: KeyError: 'stage_score'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_risk: execution failed: KeyError: 'stage_score'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,86 @@
+id: "fii_dii_regime_breadth_review_1786_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1786"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: intraday context; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for intraday context: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "intraday_context"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  steps:
+    - "Gather intraday data for FII/DII flows and identify trends."
+    - "Assess current market regime and its stability."
+    - "Analyze market breadth using advance-decline data."
+    - "Confirm signals with index movements and volatility measures."
+    - "Compile findings into a QA checklist for decision-making."
+sql_templates:
+  -
+    description: "Retrieve recent FII/DII flow data and trends."
+    sql: "SELECT trade_date, fii_net_today, dii_net_today, flow_signal, fii_trend, dii_trend FROM signals.fii_dii_flows ORDER BY trade_date DESC LIMIT 5"
+  -
+    description: "Get current market regime data."
+    sql: "SELECT trade_date, regime, confidence, days_in_regime FROM signals.regime_history ORDER BY trade_date DESC LIMIT 1"
+  -
+    description: "Analyze market breadth for the latest day."
+    sql: "SELECT trade_date, advances, declines, net_ad, ad_signal, market_sentiment FROM breadth.market_daily ORDER BY trade_date DESC LIMIT 1"
+  -
+    description: "Fetch end-of-day index data for trend confirmation."
+    sql: "SELECT trade_date, close, change_pct, rsi, trend_signal FROM market.index_eod WHERE index_symbol = 'NIFTY 50' ORDER BY trade_date DESC LIMIT 1"
+python_tools:
+  -
+    id: "intraday_freshness_audit"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "fii_dii_flows_updated_at"
+      - "regime_history_updated_at"
+      - "market_daily_updated_at"
+      - "index_eod_trade_date"
+    outputs:
+      - "freshness_report"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context):\n    report = {}\n    current_date = datetime.date.today()\n    report['fii_dii_flow_freshness'] = (current_date - context['fii_dii_flows_updated_at'].date()).days\n    report['regime_history_freshness'] = (current_date - context['regime_history_updated_at'].date()).days\n    report['market_daily_freshness'] = (current_date - context['market_daily_updated_at'].date()).days\n    report['index_eod_freshness'] = (current_date - context['index_eod_trade_date'].date()).days\n    return report"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data timeliness for intraday relevance."
+  - "Verify consistency and coherence of flow trends with market regime signals."
+  - "Cross-check breadth indicators against major index confirmations."
+synthesis_guidance: "['Prioritize recent data for accurate intraday insights.', 'Use QA checklist style to clarify risk-on/risk-off dynamics.', 'Highlight any discrepancies between institutional flows and market breadth.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:06"
+generation_model: "gpt-4o"
+validation_errors:
+  - "intraday_freshness_audit: execution failed: NameError: name 'datetime' is not defined"
+review:
+  status: "needs_heal"
+  findings:
+    - "intraday_freshness_audit: execution failed: NameError: name 'datetime' is not defined"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

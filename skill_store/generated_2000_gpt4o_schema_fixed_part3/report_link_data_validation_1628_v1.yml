@@ -1,0 +1,52 @@
+id: "report_link_data_validation_1628_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Agent Adda Report Validation"
+description: "This skill validates enhanced report metadata and content for Indian market stock analysis, focusing on position-sizing context for the last 5 sessions."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Use SQL templates to query and validate report data. Employ debug trace for step-by-step verification."
+sql_templates:
+  -
+    type: "validation"
+    purpose: "Confirm existence and correctness of report links and data."
+    template: "SELECT er.run_id, er.run_ts, ef.symbol, ef.score, ef.recommendation FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id WHERE er.run_ts > CURRENT_DATE - INTERVAL '5 DAYS';"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all required columns are populated."
+  - "Check that report links are generated and accessible."
+  - "Verify integrity and completeness of stock data for the latest 5 sessions."
+synthesis_guidance: "Summarize key insights, potential issues, and offer remediation steps if needed."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

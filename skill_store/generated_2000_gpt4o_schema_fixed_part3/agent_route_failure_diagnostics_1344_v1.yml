@@ -1,0 +1,57 @@
+id: "agent_route_failure_diagnostics_1344_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1344"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: last 3 months; response style: exceptions and gaps first."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for last 3 months: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as exceptions and gaps first"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Plan diagnostics using evidence from approved tables to highlight route failures, missing tools, incorrect symbol resolution, and propose recommendations."
+sql_templates:
+  -
+    description: "Identify report runs with potential issues in the last 3 months."
+    template: "SELECT run_id, run_ts, market_sentiment FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    description: "Find stocks with abnormal score variations from recent reports."
+    template: "WITH recent_runs AS (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months') SELECT efs.run_id, efs.symbol, efs.score FROM report.enhanced_filtered_stocks efs JOIN recent_runs rr ON efs.run_id = rr.run_id WHERE efs.score < 50;"
+  -
+    description: "Extract recent stage snapshots for anomaly detection."
+    template: "SELECT snapshot_date, symbol, stage, rsi FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure data is collected from the last 3 months only."
+  - "Check for missing or incorrect symbol resolutions and address tool validation errors."
+synthesis_guidance: "Emphasize exceptions and gaps first before proposing solutions or diagnostics."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

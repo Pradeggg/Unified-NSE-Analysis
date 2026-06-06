@@ -1,0 +1,54 @@
+id: "report_link_data_validation_0830_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0830"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  sql_templates:
+    -
+      name: "validate_report_links"
+      purpose: "Retrieve the latest enhanced report runs and their corresponding filtered stock details."
+      sql: "WITH latest_runs AS ( SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '5 days' ) SELECT ers.run_id, ers.analysis_date, ers.universe_size, es.symbol, es.score, es.recommendation FROM report.enhanced_runs ers INNER JOIN report.enhanced_filtered_stocks es ON ers.run_id = es.run_id WHERE ers.run_id IN (SELECT run_id FROM latest_runs);"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "_join_rules"
+  - "_global_rules"
+  - "status"
+synthesis_guidance: "Utilize provided SQL templates and Python tools for efficient report validation while ensuring compliance with schema and safety rules."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:25"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,68 @@
+id: "enhanced_report_data_validation_0336_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0336"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: last 20 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Investigate issues related to report link failures and data gaps for the last 20 sessions."
+sql_templates:
+  -
+    name: "get_recent_runs"
+    sql: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 20"
+  -
+    name: "check_link_validity"
+    sql: "SELECT run_id, symbol, current_price FROM report.enhanced_filtered_stocks WHERE current_price IS NULL"
+python_tools:
+  -
+    id: "run_freshness_audit"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "recent_runs"
+      - "filtered_stocks"
+    outputs:
+      - "link_issues"
+      - "data_gaps"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Placeholder for data gap analysis logic\n    pass"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "All recent runs should have at least one linked stock entry."
+  - "Current prices should not be NULL in filtered stock records."
+synthesis_guidance: "Emphasize gaps and exceptions; focus on report links and data availability issues. Prioritize identifying and reporting missing data and invalid metadata."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:45:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_freshness_audit: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_freshness_audit: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

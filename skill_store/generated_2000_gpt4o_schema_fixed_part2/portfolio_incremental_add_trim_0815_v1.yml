@@ -1,0 +1,63 @@
+id: "portfolio_incremental_add_trim_0815_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review"
+description: "Review current holdings and identify add or trim actions based on risk-first criteria using latest EOD data."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for latest EOD: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as action watchlist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "SQL_QUERY"
+sql_templates:
+  -
+    name: "latest_stage_data"
+    template: "SELECT s.symbol, s.company_name, s.sector, s.stage, s.trading_signal, p.qty, p.avg_cost FROM portfolio.holdings p INNER JOIN scores.stage_snapshots s ON p.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY s.trading_signal DESC LIMIT 50;"
+python_tools:
+  -
+    id: "calculate_trim_candidates"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sql_output"
+    outputs:
+      - "trim_candidates"
+    approved_tables:
+
+    code: "def run(context):\n    trim_candidates = []\n    for record in context['sql_output']:\n        if record['qty'] > 100:\n            trim_candidates.append(record['symbol'])\n    return {'trim_candidates': trim_candidates}"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure that only symbols with a 'BUY' or 'STRONG_BUY' trading signal are considered for addition."
+  - "Limit the number of candidate symbols to 50 to maintain focus."
+  - "Ensure the snapshot date uses the latest available data."
+synthesis_guidance: "{'process': 'Analyze the SQL output to determine which holdings are candidates for incremental addition or reduction based on latest signals.', 'context': 'Indian market analysis focusing on risk-first review.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:13"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_trim_candidates: execution failed: KeyError: 'sql_output'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_trim_candidates: execution failed: KeyError: 'sql_output'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

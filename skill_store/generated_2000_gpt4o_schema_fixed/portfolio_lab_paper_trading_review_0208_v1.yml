@@ -1,0 +1,48 @@
+id: "portfolio_lab_paper_trading_review_0208_v1"
+version: 1
+status: "validated"
+domain: "strategy_evaluation"
+title: "Agent Adda: Evaluate Paper Trading Strategies"
+description: "Analyze and evaluate the strategies applied in a paper trading environment, focusing on position-sizing context and timeframe relevance for today."
+input_patterns:
+  - "paper trading evaluation"
+  - "strategy review for paper trading"
+  - "evaluate trading entries and exits"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_evaluation"
+  - "position-sizing_context"
+  - "analysis"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze strategies in a paper trading environment using the provided tables with a focus on today\u2019s timeframe and position-sizing."
+sql_templates:
+  -
+    template_id: "Evaluate_Strategy_Latest"
+    sql: "SELECT sl.symbol, sl.signal, sl.date_issued, ss.stage, me.open, me.close FROM signals.signal_log sl JOIN scores.stage_snapshots ss ON sl.symbol = ss.symbol JOIN market.equity_eod me ON sl.symbol = me.symbol WHERE me.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+validation_rules:
+  - "Ensure all SQL queries adhere to approved schema and global SQL rules."
+  - "Responses must not include any write operations on the datasets."
+  - "Verify output adheres to defined constraints."
+synthesis_guidance: "Focus on current market conditions and ensure strategies are aligned with today\u2019s data. Emphasize position-sizing and risk assessment."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:12"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

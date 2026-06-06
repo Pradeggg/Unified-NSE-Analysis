@@ -1,0 +1,71 @@
+id: "data_freshness_readiness_audit_1883_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1883"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for intraday context: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as action watchlist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  representation: "Create a structured plan based on daily freshness for listed tables."
+  tools:
+    - "Read-only strategic SQL queries"
+    - "Structured Python evidence tools (quarantined mode)"
+sql_templates:
+  -
+    name: "daily_freshness_verification"
+    query: "SELECT MAX(trade_date) as latest_trade_date FROM market.equity_eod"
+    description: "Verify the latest trade date from the equity EOD table."
+  -
+    name: "index_trend_signal_check"
+    query: "SELECT index_symbol, trend_signal FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod)"
+    description: "Check the trend signals for indices on the latest available date."
+python_tools:
+  -
+    id: "freshtool_101"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "trade_date"
+    outputs:
+      - "data_freshness_score"
+    approved_tables:
+      - "market.equity_eod"
+      - "market.index_eod"
+    code: "def run(context):\n    # Perform analysis\n    return {'data_freshness_score': 'context-calculated-value'}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure data freshness thresholds are within acceptable limits."
+  - "All strategic queries must conform to read-only policy."
+synthesis_guidance: "Merge the findings into a coherent report highlighting data readiness and action points."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:48"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_trade_date is not approved"

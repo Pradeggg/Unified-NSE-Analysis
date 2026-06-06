@@ -1,0 +1,53 @@
+id: "fii_dii_regime_breadth_review_1002_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1002"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: today; response style: concise table."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for today: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as concise table"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Combine FII/DII flows, market regime, and breadth indicators to evaluate if the market is in a risk-on or risk-off environment."
+sql_templates:
+  -
+    template_name: "flow_regime_breadth_combination"
+    sql: "WITH latest_data AS (\n    SELECT\n        f.trade_date,\n        f.fii_net_today, f.dii_net_today,\n        f.flow_signal, f.fii_trend, f.dii_trend,\n        r.regime, r.confidence,\n        b.advances, b.declines, b.total_stocks,\n        b.ad_signal,\n        m.index_symbol, m.close, m.trend_signal\n    FROM\n        signals.fii_dii_flows f\n    JOIN\n        signals.regime_history r ON \n        f.trade_date = r.trade_date\n    JOIN\n        breadth.market_daily b ON\n        f.trade_date = b.trade_date\n    JOIN\n        market.index_eod m ON\n        f.trade_date = m.trade_date\n    WHERE\n        m.index_symbol = 'Nifty 50' AND\n        f.trade_date = (SELECT MAX(trade_date) FROM market.index_eod)\n)\nSELECT\n    regime,\n    CASE\n        WHEN fii_net_today > 0 AND dii_net_today > 0 THEN 'Positive Flows'\n        ELSE 'Negative Flows'\n    END as flow_context,\n    CASE\n        WHEN advances > declines THEN 'Broad Advances'\n        ELSE 'Broad Declines'\n    END as breadth_context,\n    trend_signal as index_confirmation,\n    CASE\n        WHEN regime = 'BULL' AND flow_signal = 'BULLISH' THEN 'Risk-On'\n        ELSE 'Risk-Off'\n    END as risk_flags\nFROM\n    latest_data;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure the latest data is selected."
+  - "Validate the flow context reflects net positions accurately."
+  - "Verify the breadth context matches market daily data."
+synthesis_guidance: "Focus on presenting the interconnectedness of FII/DII flows, market regime, and breadth to provide a clear risk assessment."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:51:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

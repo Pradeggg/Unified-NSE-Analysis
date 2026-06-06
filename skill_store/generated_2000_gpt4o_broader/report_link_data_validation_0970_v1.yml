@@ -1,0 +1,64 @@
+id: "report_link_data_validation_0970_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0970"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: post results; response style: comparison matrix."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for post results: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "post_results"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Inspect the data through structured SQL queries and synthesize findings based on analysis."
+sql_templates:
+  -
+    description: "Fetch metadata and filter data for analysis."
+    template: "SELECT run_id, run_ts, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs;"
+  -
+    description: "Retrieve filtered stock details."
+    template: "SELECT run_id, symbol, score, recommendation FROM report.enhanced_filtered_stocks;"
+python_tools:
+  -
+    id: "tool_read_stock_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+      - "symbol"
+    outputs:
+      - "detailed_analysis"
+    approved_tables:
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Implement context-based filtering\n    return {'detailed_analysis': 'example_output'}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all linked data reports are accessible."
+  - "Check that filtered stock data aligns with expected results."
+synthesis_guidance: "Use SQL output to confirm data completeness and identify any missing elements crucial for report integrity."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:50"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

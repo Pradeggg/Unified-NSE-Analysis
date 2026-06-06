@@ -1,0 +1,67 @@
+id: "corporate_events_results_watchlist_1759_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1759"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: quarter to date; response style: QA checklist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for quarter to date: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as QA checklist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "QA Checklist for Corporate Events and Results"
+sql_templates:
+  -
+    description: "Retrieve upcoming corporate events for watchlist."
+    query: "SELECT symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY event_date;"
+  -
+    description: "Select key performance indicators for recent results analysis."
+    query: "SELECT symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct, eps_yoy_pct FROM scores.results_analysis WHERE period_end >= (CURRENT_DATE - INTERVAL '3 months') ORDER BY period_end DESC;"
+python_tools:
+  -
+    id: "source_validation_check"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "event_data"
+      - "results_data"
+    outputs:
+      - "validated_source_trail"
+    approved_tables:
+      - "signals.corporate_events"
+    code: "def run(event_data, results_data):\n    validation = {}  # Add logic for source-trail validation\n    # Example: Compare source links for consistency\n    return validation"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure that SQL queries retrieve data strictly as per the timeframe and relevant event types."
+  - "All outputs must align with the quarterly results and corporate events context."
+synthesis_guidance: "Provide a structured QA checklist based on retrieved data aligning with recent and upcoming corporate events and results."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:42"
+generation_model: "gpt-4o"
+validation_errors:
+  - "source_validation_check: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "source_validation_check: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

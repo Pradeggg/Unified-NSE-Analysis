@@ -1,0 +1,63 @@
+id: "market_3m_rotation_swing_1317_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1317"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: exceptions and gaps first."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as exceptions and gaps first"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    tool: "SQL"
+    template: "{global_sql_rules} SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months' ORDER BY trade_date DESC;"
+  -
+    tool: "SQL"
+    template: "{global_sql_rules} SELECT symbol, close, change_pct FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND series = 'EQ';"
+  -
+    tool: "SQL"
+    template: "{global_sql_rules} SELECT symbol, sector, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2';"
+  -
+    tool: "SQL"
+    template: "{global_sql_rules} SELECT symbol, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 10;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all returned dates are recent and consistent with the latest available entries."
+  - "Check that returned sectors show differentiated leadership."
+synthesis_guidance: "['Highlight any sector anomalies or gaps in data.', 'Present concise insights on potential swing candidates, especially with strong VCP scores.', 'Emphasize any risks or inconsistencies found during analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

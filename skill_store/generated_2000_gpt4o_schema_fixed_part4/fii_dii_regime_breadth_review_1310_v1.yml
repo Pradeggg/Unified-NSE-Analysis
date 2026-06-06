@@ -1,0 +1,66 @@
+id: "fii_dii_regime_breadth_review_1310_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1310"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: today; response style: exceptions and gaps first."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for today: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as exceptions and gaps first"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "today"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    plan: "Fetch and interpret data from approved evidence tables to synthesize insights into current market regime, breadth, and institutional flow. Identify any exceptions or data gaps."
+    steps:
+      - "Query same-day FII/DII flows and regimes."
+      - "Analyze market breadth based on advances, declines, and TRIN indicators."
+      - "Check index confirmation with current close and technical signals."
+      - "Provide output with noted exceptions and missing data (gaps)."
+sql_templates:
+  -
+    description: "Fetch latest institutional flows and regimes."
+    sql: "SELECT f.trade_date, f.fii_net_today, f.dii_net_today, f.flow_signal, r.regime FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date WHERE f.trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows)"
+  -
+    description: "Analyze market breadth."
+    sql: "SELECT b.trade_date, b.advances, b.declines, b.trin, b.ad_signal FROM breadth.market_daily b WHERE b.trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily)"
+  -
+    description: "Check index confirmation."
+    sql: "SELECT i.trade_date, i.close, i.trend_signal FROM market.index_eod i WHERE i.index_symbol = 'Nifty 50' AND i.trade_date = (SELECT MAX(trade_date) FROM market.index_eod)"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure latest data is used as per 'latest-date' filters."
+  - "Handle any missing or null data gracefully."
+  - "Verify each query yields results compatible with output contract."
+synthesis_guidance: "['Correlate FII/DII flows with current market regime.', 'Interpret breadth indicators (advances, declines, TRIN).', 'Validate index movement against technical indicators.', 'Highlight any exceptional patterns or missing pieces.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:07"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

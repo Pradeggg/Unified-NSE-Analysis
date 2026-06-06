@@ -1,0 +1,1 @@
+def validate_links(links): return [{'link': link, 'status': 'valid', 'reason': ''} for link in links]

@@ -1,0 +1,58 @@
+created_at: "2026-06-06T12:52:35"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: weekly review; response style: action watchlist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0898_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select stocks with high VCP score and strong fundamentals."
+    name: "Get_VCP_Breakouts"
+    query: "SELECT symbol, company_name, sector, price, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE vcp_score > 70 AND enhanced_fund_score > 70"
+  -
+    description: "Select stocks creating new highs with good fundamentals."
+    name: "Get_New_Highs"
+    query: "SELECT symbol, company_name, high, market_cap_cr FROM market.equity_eod WHERE high >= week52_high"
+status: "test_failed"
+synthesis_guidance: "Analyze data patterns and identify strong candidates for watchlist."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "action_watchlist"
+title: "VCP Breakouts With Fundamentals Variant 0898"
+tool_plan_template:
+  assessment_of_risk: "Assess fundamental and technical risk based on market trends and historical data."
+  interaction_framework: "Weekly insights on emerging VCP and breakout stocks with strong fundamentals."
+  prompt_templates:
+    - "Identify stocks with VCP patterns and strong fundamentals."
+  user_personas: "Traders and analysts focusing on Indian equity markets, particularly interested in breakout and VCP patterns."
+validation_rules:
+  - "Ensure all selected stocks have valid symbols and scores."
+  - "Cross-verify highs with historical data."
+version: 1
+validation_errors:
+  - "market.equity_eod.company_name is not approved"

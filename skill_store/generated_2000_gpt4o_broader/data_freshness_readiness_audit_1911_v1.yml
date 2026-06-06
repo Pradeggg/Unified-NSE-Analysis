@@ -1,0 +1,56 @@
+id: "data_freshness_readiness_audit_1911_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1911"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for latest EOD: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as comparison matrix"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "1. Assess the latest evidence update times from each table.\n2. Compare these times against predefined freshness thresholds.\n3. Construct a comparison matrix displaying current freshness status.\n4. Identify any missing or stale data sources impacting reports.\n5. Suggest possible loader actions to correct data staleness."
+sql_templates:
+  -
+    description: "Fetch latest data update times for all required tables."
+    sql: "SELECT MAX(trade_date) AS latest_trade_date FROM market.index_eod;\nSELECT MAX(trade_date) AS latest_trade_date FROM market.equity_eod;\nSELECT MAX(snapshot_date) AS latest_snapshot_date FROM scores.stage_snapshots;\nSELECT MAX(trade_date) AS latest_trade_date FROM breadth.market_daily;\nSELECT MAX(snapshot_date) AS latest_snapshot_date FROM breadth.ma_pct_above;\nSELECT MAX(run_ts) AS latest_run_ts FROM report.enhanced_runs;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all date comparisons are done within the latest EOD timeframes."
+  - "Check that all required tables have been queried for their most recent data points."
+  - "Validate correctness of the constructed comparison matrix for data freshness."
+synthesis_guidance: "['Focus on delivering a clear comparison matrix indicating current data freshness against expected thresholds.', 'Highlight any data sources that are missing or significantly outdated.', 'Provide actionable insights into loader operations needed to address identified freshness issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:16"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

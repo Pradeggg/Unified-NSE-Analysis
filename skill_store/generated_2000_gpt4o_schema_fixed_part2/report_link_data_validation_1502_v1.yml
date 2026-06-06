@@ -1,0 +1,48 @@
+id: "report_link_data_validation_1502_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Report Link Data Validation"
+description: "Validate report links and data quality for deep institutional review. This skill focuses on analyzing enhanced report runs and filtered stocks for today's reports."
+input_patterns:
+  - "review report links not working"
+  - "validate generated report links and missing data today"
+  - "deep institutional review for today's report issues"
+tags:
+  - "report_qa"
+  - "links"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "today"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  sql_templates:
+    -
+      template: "WITH latest_runs AS (SELECT * FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)), filtered_stocks AS (SELECT * FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM latest_runs)) SELECT r.run_id, r.analysis_date, r.stocks_analyzed, r.stocks_filtered, f.symbol, f.current_price FROM latest_runs r JOIN filtered_stocks f ON r.run_id = f.run_id WHERE f.current_price IS NULL OR f.current_price = 0;"
+      description: "Validate report data completeness and identify stocks with missing price information."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure run_id matches across tables for join."
+  - "Validate that all stock entries have non-zero current_price."
+synthesis_guidance: "Review and synthesize findings focusing on today's data inconsistencies, providing a research-only final summary."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

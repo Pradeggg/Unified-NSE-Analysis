@@ -1,0 +1,73 @@
+created_at: "2026-06-06T12:51:11"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: QA checklist."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0747_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for last 3 months: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context): return {'analysis_report': 'Analysis results for sectors.'}"
+    id: "run_sector_analysis"
+    inputs:
+      - "sector_data"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "analysis_report"
+review:
+  attempts: 3
+  findings:
+    - "scores.stage_snapshots.avg_1d_change is not approved"
+    - "scores.stage_snapshots.avg_1w_change is not approved"
+    - "scores.stage_snapshots.curdate is not approved"
+    - "scores.stage_snapshots.date_sub is not approved"
+    - "scores.stage_snapshots.day is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    description: "Evaluate sector performance relative to the portfolio over the last 3 months."
+    sql: "SELECT symbol, sector, AVG(change_1d_pct) AS avg_1d_change, AVG(change_1w_pct) AS avg_1w_change FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 90 DAY) GROUP BY symbol, sector"
+    template_id: "sector_relative_performance"
+status: "test_failed"
+synthesis_guidance:
+  - "Provide a comprehensive QA checklist evaluating each holding for potential add/trim actions."
+  - "Highlight sectors with outperforming or underperforming trends."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "QA_checklist"
+title: "Portfolio Incremental Add Trim Review Variant 0747"
+tool_plan_template: "Analyze the portfolio holdings and sector exposures based on the last 3 months\u2019 performance and provide add/trim recommendations."
+validation_errors:
+  - "scores.stage_snapshots.avg_1d_change is not approved"
+  - "scores.stage_snapshots.avg_1w_change is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.day is not approved"
+validation_rules:
+  - "Ensure all evidence used is derived from the approved tables."
+  - "Only read-only queries are used for analysis."
+version: 1

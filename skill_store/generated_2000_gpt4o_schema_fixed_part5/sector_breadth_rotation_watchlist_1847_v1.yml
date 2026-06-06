@@ -1,0 +1,60 @@
+id: "sector_breadth_rotation_watchlist_1847_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1847"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: action watchlist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for last 3 months: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as action watchlist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Identify sector leaders with improving breadth and Stage 2 participation for a trading watchlist."
+    steps:
+      - "Extract the latest sector breadth data from breadth.sector_daily for the last 3 months."
+      - "Identify sectors with highest pct_above_50dma and positive change_5d."
+      - "Join with scores.stage_snapshots to filter symbols in STAGE_2 with BUY signals."
+      - "Generate a list of symbols to monitor in TradingView."
+sql_templates:
+  -
+    template_name: "sector_relative_strength"
+    sql_string: "WITH latest_breadth AS (SELECT * FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)), latest_stage AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY')) SELECT latest_breadth.sector, latest_breadth.index_name, latest_breadth.pct_above_50dma, latest_breadth.change_5d, latest_stage.symbol, latest_stage.company_name, latest_stage.price FROM latest_breadth JOIN latest_stage ON latest_breadth.sector = latest_stage.sector WHERE latest_breadth.pct_above_50dma > 50 AND latest_breadth.change_5d > 0 ORDER BY latest_breadth.pct_above_50dma DESC, latest_breadth.change_5d DESC LIMIT 20;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure that returned sectors have improving breadth metrics."
+  - "Confirm candidate symbols are in Stage 2 with BUY signals."
+synthesis_guidance: "Rank sectors by relative strength improvements and filter symbols for constructive Stage 2 participation. Generate a top-20 action watchlist."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:36"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

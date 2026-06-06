@@ -1,0 +1,49 @@
+id: "corporate_events_results_watchlist_0583_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0583"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: research-only summary."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for intraday context: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as research-only summary"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Gather corporate events and results analysis data from specified tables, filter for near-term events and stocks influenced by recent results, and compile a research-centric summary."
+sql_templates:
+  upcoming_events: "SELECT symbol, event_type, event_date, purpose_raw, detail FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY event_date ASC;"
+  recent_results: "SELECT symbol, company_name, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct FROM scores.results_analysis WHERE filing_date >= DATE_SUB(CURRENT_DATE, INTERVAL 7 DAY) ORDER BY filing_date DESC;"
+  watchlist_performance: "SELECT symbol, price, change_1d_pct, change_1w_pct FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE ORDER BY change_1d_pct DESC;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event dates are in the future for 'upcoming_events'."
+  - "Verify 'recent_results' includes only data from the last 7 days."
+  - "Check 'watchlist_performance' reflects current date's data."
+synthesis_guidance: "Compile data into a coherent overview highlighting key corporate events and pertinent stock movements, providing a narrative-based, research-focused summary."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:58:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.date_sub is not approved"
+  - "scores.results_analysis.day is not approved"

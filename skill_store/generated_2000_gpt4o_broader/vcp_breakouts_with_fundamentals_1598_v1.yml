@@ -1,0 +1,74 @@
+id: "vcp_breakouts_with_fundamentals_1598_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1598"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  status: "generated"
+  sql_templates:
+    -
+      select: "symbol, company_name, sector, price, market_cap_cat, fundamental_score, enhanced_fund_score"
+      from: "scores.stage_snapshots"
+      where: "fundamental_score > 80 AND enhanced_fund_score > 80"
+  python_tools:
+    -
+      id: "evaluate_vcp_breakouts"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "symbol"
+        - "price"
+      outputs:
+        - "vcp_qualification"
+      approved_tables:
+        - "scores.stage2_vcp_picks"
+      code: "def run(context):\n  return [s for s in context if s['vcp_score'] > 50 and s['vcp_breakout_pct'] > 10]"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates, if any, must be read-only SELECT/WITH templates."
+  - "Python evidence tools are allowed only when SQL would become complex; keep them read-only and quarantined."
+  - "Use only approved tables and columns; do not invent tables, aliases, or columns."
+  - "If a required concept is missing from the approved schema, place it in evidence_gaps instead of inventing SQL."
+  - "Use evidence_required.tables exactly; do not use primary_tables or required_tables."
+  - "Use Agent Adda Indian market evidence and research-only framing."
+synthesis_guidance: "Summarize findings on VCP breakouts with a focus on strong fundamentals, providing insights for a weekly review in a research-only format."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:15"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

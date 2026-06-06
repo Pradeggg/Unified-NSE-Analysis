@@ -1,0 +1,87 @@
+id: "company_360_research_report_0846_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "RELIANCE 360 Research Report"
+description: "This skill card provides a comprehensive 360-degree research report on RELIANCE, focusing on the company's overview, financials, fundamentals, technical context, and narrative evidence for the last 3 months. The report is presented as an action watchlist."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "freshness audit for last 3 months: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as action watchlist"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "freshness_audit"
+  - "last_3_months"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template: "_undefined_"
+sql_templates:
+  -
+    name: "fetch_stage_snapshots"
+    description: "Fetch the latest stage snapshot for RELIANCE."
+    sql: "SELECT * FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' ORDER BY snapshot_date DESC LIMIT 1;"
+  -
+    name: "fetch_quarterly_results"
+    description: "Fetch quarterly results for RELIANCE for the last 3 months."
+    sql: "SELECT * FROM scores.quarterly_results WHERE symbol = 'RELIANCE' AND period_end > DATE_SUB(NOW(), INTERVAL 3 MONTH) ORDER BY period_end DESC;"
+  -
+    name: "fetch_annual_results"
+    description: "Fetch the latest annual results for RELIANCE."
+    sql: "SELECT * FROM scores.annual_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1;"
+  -
+    name: "fetch_market_data"
+    description: "Fetch EOD market data for RELIANCE for the last 3 months."
+    sql: "SELECT * FROM market.equity_eod WHERE symbol = 'RELIANCE' AND trade_date > DATE_SUB(NOW(), INTERVAL 3 MONTH) ORDER BY trade_date DESC;"
+python_tools:
+  -
+    id: "compute_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "financial_data"
+      - "market_data"
+      - "technical_indicators"
+    outputs:
+      - "insights_summary"
+      - "action_points"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "scores.quarterly_results"
+      - "scores.annual_results"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Analysis logic to derive insights based on the provided data\n    return {'insights_summary': 'Key insights...', 'action_points': 'Recommended actions...'}"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "All SQL queries must be read-only."
+  - "Ensure data freshness for the last 3 months."
+synthesis_guidance: "Integrate the SQL data into a cohesive analysis by focusing on key insights and trends in company's recent performance, technical indicators, and market context."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:37"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.date_sub is not approved"
+  - "market.equity_eod.month is not approved"
+  - "market.equity_eod.now is not approved"
+  - "scores.quarterly_results.date_sub is not approved"
+  - "scores.quarterly_results.month is not approved"
+  - "scores.quarterly_results.now is not approved"

@@ -1,0 +1,60 @@
+created_at: "2026-06-06T12:50:50"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: debug trace."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0693_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for weekly review: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    query: "WITH IndexPerformance AS (SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 MONTHS'), LatestPerformance AS (SELECT index_symbol, MAX(trade_date) as latest_date FROM IndexPerformance GROUP BY index_symbol) SELECT ip.index_symbol, ip.trade_date, ip.close, ip.change_pct FROM IndexPerformance ip JOIN LatestPerformance lp ON ip.index_symbol = lp.index_symbol AND ip.trade_date = lp.latest_date ORDER BY ip.change_pct DESC;"
+    query_name: "IndexChangesLast3Months"
+  -
+    query: "SELECT sector, AVG(stage_score) FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 MONTHS' GROUP BY sector ORDER BY AVG(stage_score) DESC LIMIT 5;"
+    query_name: "SectorLeadership"
+  -
+    query: "SELECT symbol, company_name, sector, price, change_1w_pct, trading_signal FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND stage = 2 AND investment_score > 75 ORDER BY change_1w_pct DESC LIMIT 10;"
+    query_name: "Stage2VCPPicks"
+status: "validated"
+synthesis_guidance: "Consolidate findings into trends and patterns over the last 3 months, detailing regime shifts, sector strength, and viable swing trading candidates."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "weekly_review"
+  - "debug_trace"
+title: "3M Market Rotation Swing Assessment Variant 0693"
+tool_plan_template: "Read data from approved tables to identify markets' active sectors, regime, and potential swing trading candidates. Focus on recent 3-month period trends and stage 2 leadership insights."
+validation_errors:
+
+validation_rules:
+  - "context_timeout_secs"
+version: 1

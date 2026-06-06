@@ -1,0 +1,54 @@
+id: "corporate_events_results_watchlist_0653_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0653"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for quarter to date: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as debug trace"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Identify corporate events and results of interest based on the quarter-to-date timeframe and signal importance for event-driven strategies."
+sql_templates:
+  -
+    template_name: "fetch_upcoming_corporate_events"
+    query: "SELECT id, symbol, event_type, event_date, purpose_raw, detail, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE AND created_at >= (CURRENT_DATE - INTERVAL '90 DAY') ORDER BY event_date ASC"
+  -
+    template_name: "fetch_recent_results_analysis"
+    query: "SELECT symbol, period_end, company_name, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct FROM scores.results_analysis WHERE period_end >= (CURRENT_DATE - INTERVAL '90 DAY') ORDER BY period_end DESC"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all events cover the quarter-to-date period."
+  - "Verify the relevance of stock symbols for the watchlist."
+synthesis_guidance: "Focus on event-driven actions that impact stock performance; cross-reference results analysis with corporate event occurrences."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

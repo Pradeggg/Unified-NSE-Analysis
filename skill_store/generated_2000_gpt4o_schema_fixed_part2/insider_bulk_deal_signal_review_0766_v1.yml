@@ -1,0 +1,81 @@
+id: "insider_bulk_deal_signal_review_0766_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0766"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: post results; response style: QA checklist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for post results: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as QA checklist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "post_results"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Gather insider alerts and bulk deals to form the primary list."
+  - "Filter this list using the latest technical scores and trading signals."
+  - "Perform freshness audit based on the alert date and deal date."
+sql_templates:
+  -
+    template_name: "GetInsiderAlerts"
+    description: "Fetch insider alerts within the last three months"
+    sql: "SELECT * FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY alert_date DESC;"
+  -
+    template_name: "GetBulkDeals"
+    description: "Fetch bulk deals within the last three months"
+    sql: "SELECT * FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY deal_date DESC;"
+  -
+    template_name: "GetLatestTechnicalScores"
+    description: "Fetch latest technical scores and trading signals"
+    sql: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY');"
+python_tools:
+  -
+    id: "run_technical_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "insider_alerts"
+      - "bulk_deals"
+      - "technical_scores"
+    outputs:
+      - "mapped_alerts"
+    approved_tables:
+      - "signals.insider_alerts"
+      - "signals.bulk_block_deals"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze the context and return results\n    pass"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure insider alerts and bulk deals are from the last three months."
+  - "Verify technical signals are 'BUY' or 'STRONG_BUY'."
+  - "Check deal freshness against the latest snapshot date."
+synthesis_guidance: "['Contextualize results in a QA checklist format.', 'Highlight significant accumulation or distribution patterns.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:27"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_technical_analysis: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_technical_analysis: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

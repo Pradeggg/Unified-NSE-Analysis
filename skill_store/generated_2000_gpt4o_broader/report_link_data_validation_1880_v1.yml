@@ -1,0 +1,62 @@
+id: "report_link_data_validation_1880_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1880"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for pre market: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Check all run metadata and stock data entries for missing or broken links."
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts, analysis_date, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= CURDATE() ORDER BY run_ts DESC;"
+    description: "Fetch recent report run metadata for analysis."
+  -
+    template: "SELECT run_id, symbol, recommendation, current_price FROM report.enhanced_filtered_stocks WHERE run_id = ?;"
+    description: "Fetch details of filtered stocks for a given run ID."
+python_tools:
+  -
+    id: "check_links_python_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    outputs:
+      - "broken_links"
+      - "missing_data"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Evaluate report and stock links for breakages\n    findings = []\n    for run in context['report.enhanced_runs']:\n        if not run.get('links'): # Assuming 'links' is part of the data object\n            findings.append({'run_id': run['run_id'], 'issue': 'No links found'})\n    return {'broken_links': findings}\n"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all recent runs have stock data linked correctly."
+  - "Check each stock's data completeness and availability."
+synthesis_guidance: "Compile a list of any discrepancies found in report links or stock data and suggest actionable solutions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:04"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.curdate is not approved"

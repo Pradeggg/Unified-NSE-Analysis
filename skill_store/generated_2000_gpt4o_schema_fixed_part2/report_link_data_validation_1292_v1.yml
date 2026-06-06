@@ -1,0 +1,54 @@
+id: "report_link_data_validation_1292_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1292"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: weekly review; response style: ranked candidates."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for weekly review: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  - "Apply the latest run filter on enhanced_runs using approved global SQL rules."
+  - "Perform a join between enhanced_runs and enhanced_filtered_stocks using the approved schema join rules."
+  - "Rank the candidates based on relevant criteria like missing data and broken links."
+sql_templates:
+  -
+    template: "WITH latest_runs AS (SELECT * FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '7 days') SELECT er.run_id, er.run_ts, er.stocks_analyzed, er.stocks_filtered, ef.symbol, ef.rank, ef.recommendation FROM latest_runs er JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id ORDER BY ef.rank LIMIT 100"
+    type: "extraction"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all reports with recent timestamps are included."
+  - "Verify that stocks with missing data or broken links are uniquely identifiable."
+  - "Use a ranked system for identifying critical reports needing remediation."
+synthesis_guidance: "['Create a high-priority list of reports with missing or incomplete information.', 'Maintain clear evidence trails to back data validation findings.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:54"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

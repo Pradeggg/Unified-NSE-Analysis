@@ -1,0 +1,60 @@
+id: "vcp_breakouts_with_fundamentals_1808_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1808"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters: "SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND change_pct > 0 AND series = 'EQ';"
+  candidates: "SELECT s.symbol, s.company_name, s.trading_signal, s.enhanced_fund_score FROM scores.stage_snapshots s JOIN scores.stage2_vcp_picks v ON s.symbol = v.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND v.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY v.vcp_score DESC LIMIT 10;"
+  tradingview_symbols: "SELECT symbol FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) LIMIT 5;"
+  evidence: "Evidence of VCP breakout candidates with strong fundamentals sourced from latest market data and technical scores."
+  risks: "Candidates are subject to market volatility; validate against live data before trading."
+sql_templates:
+  latest_vcp_candidates:
+    template: "WITH latest_vcp AS (SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT $1) SELECT l.symbol, l.company_name, e.high, e.low, e.close FROM latest_vcp l JOIN market.equity_eod e ON l.symbol = e.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+    description: "Select latest VCP candidates with their most recent high, low, and close prices."
+    parameters:
+      - "LIMIT"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure snapshot_date is the latest for all evidence queries."
+  - "Use LIMIT to bound result sets when querying candidates."
+  - "Verify that trading_signal values conform to allowed types."
+synthesis_guidance: "Provide a concise action watchlist with strong fundamental and technical signals for potential VCP breakouts in the Indian market."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:55"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

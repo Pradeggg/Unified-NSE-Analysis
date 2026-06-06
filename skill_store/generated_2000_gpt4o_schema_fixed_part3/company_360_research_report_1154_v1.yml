@@ -1,0 +1,87 @@
+id: "company_360_research_report_1154_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Comprehensive Company Research Card"
+description: "Generate a detailed 360-degree company research report focusing on watchlist creation for the quarter to date."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "watchlist creation for quarter to date: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as narrative plus evidence"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template: "Generate comprehensive research report for {symbol} with elements: overview, financials, fundamentals, and technical context."
+sql_templates:
+  stage_snapshot_query: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol = '{symbol}';"
+  quarterly_results_query: "SELECT * FROM scores.quarterly_results WHERE symbol = '{symbol}' AND period_type = 'quarter' ORDER BY period_end DESC LIMIT 1;"
+  annual_results_query: "SELECT * FROM scores.annual_results WHERE symbol = '{symbol}' AND period_type = 'annual' ORDER BY period_end DESC LIMIT 1;"
+  balance_sheet_query: "SELECT * FROM scores.balance_sheet WHERE symbol = '{symbol}' ORDER BY period_end DESC LIMIT 1;"
+  cash_flow_query: "SELECT * FROM scores.cash_flow WHERE symbol = '{symbol}' ORDER BY period_end DESC LIMIT 1;"
+  results_analysis_query: "SELECT * FROM scores.results_analysis WHERE symbol = '{symbol}' ORDER BY period_end DESC LIMIT 1;"
+  equity_eod_query: "SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND symbol = '{symbol}';"
+python_tools:
+  -
+    id: "snapshot_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "stage_snapshot_data"
+      - "quarterly_results_data"
+      - "annual_results_data"
+      - "balance_sheet_data"
+      - "cash_flow_data"
+      - "results_analysis_data"
+      - "equity_eod_data"
+    outputs:
+      - "company_snapshot"
+      - "financial_summary"
+      - "technical_summary"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "scores.quarterly_results"
+      - "scores.annual_results"
+      - "scores.balance_sheet"
+      - "scores.cash_flow"
+      - "scores.results_analysis"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Extract relevant data and perform analysis\n    # Return synthesized insights"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure latest data by verifying the use of MAX date columns."
+  - "Align period_end for consistent analysis across financial statements."
+synthesis_guidance: "Use narrative style to explain trends and insights; integrate data evidence smoothly."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:55:54"
+generation_model: "gpt-4o"
+validation_errors:
+  - "snapshot_analysis: python syntax error: expected an indented block after function definition on line 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "snapshot_analysis: python syntax error: expected an indented block after function definition on line 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

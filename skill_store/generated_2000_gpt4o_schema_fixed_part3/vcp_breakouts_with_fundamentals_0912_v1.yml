@@ -1,0 +1,71 @@
+id: "vcp_breakouts_with_fundamentals_0912_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0912"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  python_tool_policy:
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    required_fields:
+      - "id"
+      - "language"
+      - "mode"
+      - "inputs"
+      - "outputs"
+      - "approved_tables"
+      - "code"
+sql_templates:
+  -
+    description: "Select VCP breakouts with strong fundamentals."
+    sql: "WITH latest_eod AS (SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND series = 'EQ'), latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_vcp AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)) SELECT eod.symbol, eod.close, ss.company_name, ss.sector, ss.enhanced_fund_score, vcp.vcp_score FROM latest_eod eod JOIN latest_snapshots ss ON eod.symbol = ss.symbol JOIN latest_vcp vcp ON eod.symbol = vcp.symbol WHERE ss.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY vcp.vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:37"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,62 @@
+id: "market_3m_rotation_swing_1779_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1779"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: pre market; response style: QA checklist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "pre_market"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze market trends and sector changes; validate swing candidates with comprehensive QA."
+sql_templates:
+  -
+    name: "IndexReturns"
+    description: "Calculate returns and changes for major indices over the last 3 months."
+    template: "SELECT index_symbol, AVG(change_pct) AS average_change_pct FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 months') GROUP BY index_symbol"
+  -
+    name: "LatestStageDistribution"
+    description: "Get the current stage distribution for major stocks."
+    template: "SELECT stage, COUNT(symbol) AS count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY stage"
+  -
+    name: "LeadingSectors"
+    description: "Identify leading sectors in the current market regime."
+    template: "SELECT sector, AVG(change_1m_pct) AS avg_monthly_change FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY avg_monthly_change DESC LIMIT 5"
+  -
+    name: "PrimaryCandidates"
+    description: "List primary trading candidates based on Stage 2 VCP."
+    template: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 10"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure latest data snapshots for all evidence tables."
+  - "Cross-verify sector leadership with historical index data."
+synthesis_guidance: "['Integrate evidence from SQL outputs into a coherent market analysis.', 'Highlight key sectors and swing candidates with strong technical indicators.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:56"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.average_change_pct is not approved"

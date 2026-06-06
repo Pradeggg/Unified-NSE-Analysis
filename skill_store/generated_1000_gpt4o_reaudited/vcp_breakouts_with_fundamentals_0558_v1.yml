@@ -1,0 +1,64 @@
+created_at: "2026-06-06T12:49:12"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: quarter to date; response style: research-only summary."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0558_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  templates:
+    -
+      description: "Get stocks reaching new 52-week highs."
+      sql: "SELECT symbol, high, week52_high FROM market.equity_eod WHERE high >= week52_high;"
+    -
+      description: "Identify VCP breakout candidates."
+      sql: "SELECT symbol, vcp_score, vcp_breakout_pct FROM scores.stage2_vcp_picks WHERE vcp_score > 70;"
+    -
+      description: "Select stocks with strong fundamental scores."
+      sql: "SELECT symbol, fundamental_score FROM scores.stage_snapshots WHERE fundamental_score > 80;"
+status: "validated"
+synthesis_guidance: "['Compile results to provide a comprehensive research summary.', 'Position the findings with a focus on Indian market dynamics.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "research-only_summary"
+title: "VCP Breakouts With Fundamentals Variant 0558"
+tool_plan_template:
+  description: "Plan to use SQL queries to extract stocks creating new highs or experiencing VCP breakouts with strong fundamentals."
+  steps:
+    - "Identify stocks reaching new 52-week highs"
+    - "Evaluate stocks with high VCP scores"
+    - "Filter stocks with strong fundamentals and liquidity"
+validation_rules:
+  - "Ensure data integrity by validating symbols across tables."
+  - "Verify no data duplication across report outputs."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,78 @@
+id: "signal_outcome_feedback_review_1019_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1019"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: latest EOD; response style: concise table."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for latest EOD: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as concise table"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "concise_table"
+evidence_required:
+  tables:
+    -
+      name: "signals.signal_log"
+      required_columns:
+        - "symbol"
+        - "date_issued"
+        - "hit_target"
+        - "hit_stop"
+        - "return_pct"
+        - "action_reason"
+      filters:
+
+tool_plan_template:
+  -
+    id: "review_signals"
+    name: "Review Signals"
+    steps:
+      - "Extract signals with their outcomes using \"signals.signal_log\"."
+      - "Ensure to consider only latest entries by using date filter based on \"date_issued\"."
+sql_templates:
+  -
+    description: "Retrieve the latest signals and their outcomes."
+    template: "SELECT symbol, date_issued, hit_target, hit_stop, return_pct, action_reason FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log) AND (hit_target OR hit_stop);"
+    comment: "Focus on signals that hit their target or stop loss."
+python_tools:
+  -
+    id: "calculate_summary"
+    name: "Calculate Summary"
+    function: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "hit_target"
+      - "hit_stop"
+      - "return_pct"
+    outputs:
+      - "outcome_summary"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context): return {'outcome_summary': context[:10]}"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Verify the presence of symbols, targets, and stops in the outcome summary."
+  - "Ensure the concise format of the table with summaries and patterns."
+synthesis_guidance: "{'description': 'Summarize findings into actionable insights with a focus on improving market strategies. Ensure coherence in outcome presentation for easy understanding.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table {'name': 'signals.signal_log', 'required_columns': ['symbol', 'date_issued', 'hit_target', 'hit_stop', 'return_pct', 'action_reason'], 'filters': []}"

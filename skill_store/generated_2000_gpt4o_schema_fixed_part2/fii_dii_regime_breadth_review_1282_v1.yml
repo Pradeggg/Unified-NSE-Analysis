@@ -1,0 +1,74 @@
+id: "fii_dii_regime_breadth_review_1282_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1282"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for intraday context: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as ranked candidates"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Use intraday data for FII/DII flows and market regime. Focus on breadth indicators and confirm with index EOD data."
+sql_templates:
+  main_query:
+    -
+      name: "combined_market_analysis"
+      template: "SELECT f.trade_date, \n         f.fii_net_today, \n         f.dii_net_today, \n         f.flow_signal, \n         r.regime, \n         r.confidence, \n         b.ad_signal, \n         b.trin_signal, \n         i.close, \n         i.change_pct\nFROM signals.fii_dii_flows AS f \nJOIN signals.regime_history AS r ON f.trade_date = r.trade_date \nJOIN breadth.market_daily AS b ON f.trade_date = b.trade_date \nJOIN market.index_eod AS i ON f.trade_date = i.trade_date \nWHERE i.index_symbol = 'Nifty 50' \nAND f.trade_date = (SELECT MAX(trade_date) FROM market.index_eod) \nORDER BY f.trade_date DESC \nLIMIT 10;"
+      description: "Combine signals for FII/DII flows, market regime, breadth, and index action."
+python_tools:
+  -
+    id: "calculate_risk_flags"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "fii_net_today"
+      - "dii_net_today"
+      - "regime"
+      - "ad_signal"
+      - "trin_signal"
+    outputs:
+      - "risk_flags"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "\ndef run(context):\n    fii_flow = context.inputs['fii_net_today']\n    dii_flow = context.inputs['dii_net_today']\n    regime = context.inputs['regime']\n    ad_signal = context.inputs['ad_signal']\n    trin_signal = context.inputs['trin_signal']\n\n    flags = []\n\n    if fii_flow > 0 and dii_flow > 0:\n        flags.append('Positive Institutional Inflows')\n\n    if regime == 'BULL' and ad_signal == 'BUY' and trin_signal == 'BULLISH':\n        flags.append('Risk-On')\n    elif regime == 'BEAR' or ad_signal == 'SELL' or trin_signal == 'BEARISH':\n        flags.append('Risk-Off')\n    else:\n        flags.append('Neutral')\n\n    context.outputs['risk_flags'] = flags\n\n    return context.outputs"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure recent data by checking trade_date filtering."
+  - "Data must align with approved schema columns and data types."
+  - "Use LIMIT to ensure result set remains bounded."
+synthesis_guidance: "Rank the signals indicating risk-on or risk-off posture by evaluating institutional flows, market regime, and breadth indicators."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:46"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_risk_flags: execution failed: AttributeError: 'dict' object has no attribute 'inputs'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_risk_flags: execution failed: AttributeError: 'dict' object has no attribute 'inputs'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

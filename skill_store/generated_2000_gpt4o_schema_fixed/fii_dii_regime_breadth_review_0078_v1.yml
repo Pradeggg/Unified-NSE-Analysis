@@ -1,0 +1,56 @@
+id: "fii_dii_regime_breadth_review_0078_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0078"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: pre market; response style: concise table."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for pre market: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as concise table"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "pre_market"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  python_tools:
+
+  sql_templates:
+    -
+      template_name: "fetch_latest_market_context"
+      description: "Fetch the latest market context for FII/DII flows, regime, breadth, and index data."
+      sql: "WITH latest_date AS (\n    SELECT MAX(trade_date) as trade_date\n    FROM signals.fii_dii_flows\n),\nlatest_data AS (\n    SELECT f.trade_date, f.flow_signal, r.regime, b.ad_signal, i.trend_signal\n    FROM signals.fii_dii_flows f\n    JOIN signals.regime_history r ON f.trade_date = r.trade_date\n    JOIN breadth.market_daily b ON f.trade_date = b.trade_date\n    JOIN market.index_eod i ON f.trade_date = i.trade_date\n    WHERE f.trade_date = (SELECT trade_date FROM latest_date)\n      AND i.index_symbol = 'Nifty 50'\n)\nSELECT * FROM latest_data;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "rules"
+synthesis_guidance: "Analyze the data to provide a risk-on or risk-off context based on FII/DII flows, market regime, breadth, and index trends. Present this in a concise table for clarity."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

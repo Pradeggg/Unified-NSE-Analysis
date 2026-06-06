@@ -1,0 +1,63 @@
+id: "insider_bulk_deal_signal_review_0738_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0738"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for last 20 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as QA checklist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  sql_task: "Retrieve and assess insider and bulk deal signals, integrating technical confirmations over the last 20 trading sessions."
+  evidence_analysis: "Compare insider alerts with bulk deals and verify technical confirmations to identify accumulation patterns."
+sql_templates:
+  -
+    template_name: "fetch_insider_alerts_last_20_sessions"
+    template_type: "SELECT"
+    template: "SELECT symbol, alert_date, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date >= current_date - interval '20 days';"
+  -
+    template_name: "fetch_bulk_deals_last_20_sessions"
+    template_type: "SELECT"
+    template: "SELECT symbol, deal_date, entity, side, qty, price FROM signals.bulk_block_deals WHERE deal_date >= current_date - interval '20 days';"
+  -
+    template_name: "fetch_technical_confirmation"
+    template_type: "SELECT"
+    template: "SELECT symbol, trend_signal, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = current_date AND trend_signal IS NOT NULL AND trading_signal IS NOT NULL;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all symbols in output are confirmed by both insider alerts and bulk deals within the specified timeframe."
+  - "Verify that technical confirmations support accumulation patterns."
+synthesis_guidance: "{'approach': 'Combine SQL query results to generate a clear and concise overview of potential accumulation due to insider actions and bulk deals, ensuring technical verification.', 'analysis': 'Focus on symbols with alignment across insider actions, bulk deals, and technical confirmations, offering a robust assessment.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:17"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

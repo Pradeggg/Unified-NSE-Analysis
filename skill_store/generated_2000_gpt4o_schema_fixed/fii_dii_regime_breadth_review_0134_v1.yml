@@ -1,0 +1,53 @@
+id: "fii_dii_regime_breadth_review_0134_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0134"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as narrative plus evidence"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Gather FII/DII flow, regime, breadth, and index data over the last 20 sessions."
+sql_templates:
+  -
+    template: "SELECT sff.trade_date, sff.fii_net_today, sff.dii_net_today, sff.flow_signal, srh.regime, srh.confidence, bmd.ad_signal FROM signals.fii_dii_flows sff JOIN signals.regime_history srh ON sff.trade_date = srh.trade_date JOIN breadth.market_daily bmd ON sff.trade_date = bmd.trade_date WHERE sff.trade_date BETWEEN CURRENT_DATE - INTERVAL '20 days' AND CURRENT_DATE LIMIT 20;"
+    description: "Fetch combined FII/DII flows, regime, and breadth for the last 20 sessions."
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all fields are defined and match expected types."
+  - "Verify joins conform to _join_rules."
+  - "Limit to 20 sessions using bounded date interval."
+synthesis_guidance: "Convey analysis in a narrative format based on SQL results, highlighting risk-on or risk-off context."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

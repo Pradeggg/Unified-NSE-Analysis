@@ -1,0 +1,62 @@
+id: "fii_dii_regime_breadth_review_1058_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1058"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: quarter to date; response style: concise table."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for quarter to date: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as concise table"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Fetch quarter to date FII/DII net flows and flow signal."
+    template: "SELECT SUM(fii_net_today) AS fii_net_qtd, SUM(dii_net_today) AS dii_net_qtd, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= DATEADD(DAY, -90, GETDATE()) GROUP BY flow_signal;"
+  -
+    description: "Retrieve current market regime and confidence."
+    template: "SELECT regime, confidence, days_in_regime FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history);"
+  -
+    description: "Assess market breadth and sentiment."
+    template: "SELECT adv_signal, market_sentiment FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+  -
+    description: "Get index trend confirmation based on Nifty 500."
+    template: "SELECT close, trend_signal FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND index_symbol = 'NIFTY500';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure SQL templates are read-only and follow schema."
+  - "Output must match output_contract structure."
+synthesis_guidance: "['Synthesize results into a concise table format.', 'Highlight any risk-on or risk-off indicators.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:57"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.fii_dii_flows.dateadd is not approved"
+  - "signals.fii_dii_flows.day is not approved"
+  - "signals.fii_dii_flows.dii_net_qtd is not approved"
+  - "signals.fii_dii_flows.fii_net_qtd is not approved"
+  - "signals.fii_dii_flows.getdate is not approved"

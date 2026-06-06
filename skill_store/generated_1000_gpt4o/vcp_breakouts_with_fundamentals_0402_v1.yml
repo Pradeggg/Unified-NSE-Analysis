@@ -1,0 +1,53 @@
+id: "vcp_breakouts_with_fundamentals_0402_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0402"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Extract VCP breakouts with fundamental strength from approved tables."
+sql_templates:
+  -
+    template_name: "Get_VCP_Breakouts"
+    sql: "SELECT s.symbol, s.company_name, s.price, s.vcp_score, s.enhanced_fund_score FROM scores.stage2_vcp_picks s WHERE s.vcp_score > 85 AND s.enhanced_fund_score > 75;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Data must correspond with approved_schema."
+  - "Only include symbols with VCP and enhanced fund scores above thresholds."
+synthesis_guidance: "['Emphasize strong fundamentals.', \"Ensure real-time applicability for today's market.\", 'Provide output in a portfolio-aware format.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:46:12"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.s is not approved"
+  - "unknown table s.company_name"
+  - "unknown table s.enhanced_fund_score"
+  - "unknown table s.price"
+  - "unknown table s.symbol"
+  - "unknown table s.vcp_score"

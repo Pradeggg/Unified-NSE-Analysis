@@ -1,0 +1,71 @@
+id: "quarterly_results_quality_review_0747_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0747"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: QA checklist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "sector-relative comparison for last 3 months: latest quarterly results analysis"
+  - "which companies had strong quarterly results as QA checklist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  filing_window: "${evidence_latest_period_end}"
+  beat_miss_summary: "${evidence_comments_verdict_summary}"
+  margin_drivers: "${evidence_margin_trends}"
+  ranked_companies: "${evidence_ranked_symbols}"
+  risks: "${evidence_quality_risks}"
+sql_templates:
+  -
+    name: "fetch_latest_results"
+    template: "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.period_label, qr.period_end, qr.revenue, qr.opm_pct, ra.verdict FROM scores.quarterly_results qr JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end WHERE ra.period_end > CURRENT_DATE - INTERVAL '3 months' AND qr.period_type = 'quarter' ORDER BY qr.symbol, qr.period_end DESC, ra.updated_at DESC LIMIT 50;"
+python_tools:
+  -
+    id: "calculate_sector_relative_strength"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "evidence_latest_results"
+    outputs:
+      - "ranked_companies"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Sample Python logic for sorting companies by sector strength\n    companies = context['evidence_latest_results']\n    companies.sort(key=lambda x: x['growth_yoy_revenue_pct'], reverse=True)\n    return companies"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  -
+    rule_name: "Verify Non-Empty Output"
+    condition: "All Outputs must be non-empty."
+synthesis_guidance: "['Compare revenue, PAT growth, and margin movement across sectors.', 'Highlight top performing companies based on key financial metrics.', 'Assess narrative quality for sector-relative insights.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:24"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_sector_relative_strength: execution failed: KeyError: 'evidence_latest_results'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_sector_relative_strength: execution failed: KeyError: 'evidence_latest_results'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

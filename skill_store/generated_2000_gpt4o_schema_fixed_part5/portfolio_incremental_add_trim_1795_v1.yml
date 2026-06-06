@@ -1,0 +1,59 @@
+id: "portfolio_incremental_add_trim_1795_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1795"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  -
+    language: "SQL"
+    steps:
+      -
+        description: "Retrieve the latest portfolio snapshot and scores for each holding"
+        template: "WITH latest_stages AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY snapshot_date DESC) rn FROM scores.stage_snapshots), \n"
+sql_templates:
+  -
+    description: "Evidence: Identify portfolio holdings with buy signals."
+    template: "SELECT h.symbol, h.qty, h.avg_cost, ss.trading_signal \n"
+  -
+    description: "Evidence: Identify portfolio holdings with risk flags."
+    template: "SELECT h.symbol, ss.stage, ss.trend_signal, ss.rsi \n"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all symbols in add_candidates and trim_candidates exist in portfolio_state."
+  - "Validate that risk_flags only highlight holdings with a 'BEARISH' trend_signal or RSI < 30."
+synthesis_guidance: "['Focus on holdings with strong upward momentum for add_candidates.', 'Prioritize reducing exposure from holdings with weakening fundamentals or technicals for trim_candidates.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:51"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

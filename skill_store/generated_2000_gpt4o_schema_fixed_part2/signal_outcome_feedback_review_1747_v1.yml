@@ -1,0 +1,75 @@
+id: "signal_outcome_feedback_review_1747_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1747"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: QA checklist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for last 3 months: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as QA checklist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "sector_relative_performance"
+    description: "Retrieve signals and outcomes for sector-comparison over the last 3 months."
+    template: "SELECT s.symbol, s.sector, s.signal, s.target_1, s.stop_loss, s.return_pct, s.hit_target, s.hit_stop, ss.stage\nFROM signals.signal_log s\nJOIN scores.stage_snapshots ss ON s.symbol = ss.symbol\nWHERE s.date_issued >= CURRENT_DATE - INTERVAL '3 months'\nAND s.date_resolved IS NOT NULL\nAND s.sector = 'Technology';"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    required_fields:
+      - "id"
+      - "language"
+      - "mode"
+      - "inputs"
+      - "outputs"
+      - "approved_tables"
+      - "code"
+    code: "# This Python tool is used to analyze complex patterns when SQL queries become cumbersome.\n\ndef run(context):\n    # Analyze data to extract relevant patterns\n    pass\n"
+    inputs:
+      - "signal_data"
+    outputs:
+      - "pattern_analysis"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure relevant sector-relative comparisons are conducted."
+  - "Verify that the SQL template uses appropriate filtering for last 3 months."
+synthesis_guidance: "['Focus on QA checklist formulation for future improvements based on signal outcomes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:37"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

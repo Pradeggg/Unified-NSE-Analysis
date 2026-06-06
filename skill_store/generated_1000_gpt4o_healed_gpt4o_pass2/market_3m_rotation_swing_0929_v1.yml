@@ -1,0 +1,59 @@
+created_at: "2026-06-06T12:52:50"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: last 5 sessions; response style: comparison matrix."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0929_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for last 5 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 3
+  findings:
+    - "scores.stage_snapshots.avg_change is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    description: "Retrieve index performance for the past 5 sessions."
+    template: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '5 days';"
+  -
+    description: "Identify leading sectors over the last 3 months."
+    template: "SELECT sector, AVG(change_1m_pct) as avg_change FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' AND symbol IS NOT NULL GROUP BY sector ORDER BY avg_change DESC LIMIT 5;"
+status: "test_failed"
+synthesis_guidance: "Integrate outputs from SQL into a summary that highlights market trends, sector leadership changes, and potential swing trading candidates."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "comparison_matrix"
+title: "3M Market Rotation Swing Assessment Variant 0929"
+tool_plan_template: "Analyze market, sector, and candidates using approved tables focusing on trends, strengths, and rotation."
+validation_errors:
+  - "scores.stage_snapshots.avg_change is not approved"
+validation_rules:
+  - "Ensure SQL templates use only approved tables."
+  - "Check data freshness against the current date."
+  - "Validate presence of leading sectors and swing candidates in the output."
+version: 1

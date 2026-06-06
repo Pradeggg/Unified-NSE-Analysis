@@ -1,0 +1,59 @@
+id: "corporate_events_results_watchlist_1829_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1829"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for last 5 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as action watchlist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze upcoming or recent corporate events and results, assess related stock actions and validate source trails."
+sql_templates:
+  -
+    template_name: "fetch_upcoming_events"
+    sql: "SELECT symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '5 days'"
+  -
+    template_name: "fetch_recent_results"
+    sql: "SELECT symbol, company_name, growth_yoy_revenue_pct, growth_qoq_revenue_pct, verdict FROM scores.results_analysis WHERE created_at >= CURRENT_DATE - INTERVAL '5 days'"
+  -
+    template_name: "fetch_stage_snapshots"
+    sql: "SELECT symbol, stage, stage_score, change_1d_pct FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '5 days'"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates must be read-only SELECT/WITH templates."
+  - "Python evidence tools are allowed only when SQL would become complex."
+  - "Only use approved tables and columns."
+synthesis_guidance: "Combine insights from recent events and results to build a validated watchlist with clear source trails."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:24"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

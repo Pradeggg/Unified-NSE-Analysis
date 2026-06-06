@@ -1,0 +1,74 @@
+id: "portfolio_lab_paper_trading_review_0572_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0572"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for pre market: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as research-only summary"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Generate a research-focused assessment using evidence from Indian market data focusing on pre-market strategies."
+sql_templates:
+  -
+    description: "Retrieve open paper trading signals."
+    query: "SELECT symbol, date_issued, signal, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_resolved IS NULL AND action_bucket = 'Open';"
+  -
+    description: "Get information on current holdings from portfolio."
+    query: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+  -
+    description: "Fetch latest market data for analysis."
+    query: "SELECT symbol, close, volume FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+python_tools:
+  -
+    id: "calculate_exposure"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "qty"
+      - "market_price"
+    outputs:
+      - "exposure_value"
+    approved_tables:
+      - "portfolio.holdings"
+      - "market.equity_eod"
+    code: "def run(context):\n    exposure_value = context['qty'] * context['market_price']\n    return {'exposure_value': exposure_value}"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure SQL queries are safe and read-only."
+  - "Check if all required evidence tables are utilized."
+synthesis_guidance: "Focus on deep institutional review insights for paper trading strategies, leveraging Indian market data and synthesizing a research-only summary."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:58:38"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_exposure: execution failed: KeyError: 'qty'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_exposure: execution failed: KeyError: 'qty'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

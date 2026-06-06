@@ -1,0 +1,58 @@
+id: "vcp_breakouts_with_fundamentals_1668_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1668"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: post results; response style: debug trace."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "post_results"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze stocks using VCP and breakout patterns. Ensure fundamentals are strong. Use the Agent Adda framework to identify opportunities."
+sql_templates:
+  - "WITH latest_eod AS (SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND series = 'EQ'),"
+  - "latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)),"
+  - "latest_vcp AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks))"
+  - "SELECT le.symbol, le.close, ss.stage, ss.fundamental_score, vcp.vcp_score FROM latest_eod le"
+  - "JOIN latest_snapshots ss ON le.symbol = ss.symbol"
+  - "JOIN latest_vcp vcp ON le.symbol = vcp.symbol"
+  - "WHERE ss.trading_signal IN ('BUY', 'STRONG_BUY')"
+  - "AND vcp.vcp_score IS NOT NULL"
+  - "ORDER BY vcp.vcp_score DESC, le.close DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure symbols have valid trading signals."
+  - "Validate that VCP scores are present and relevant."
+synthesis_guidance: "['Focus on stocks with highest VCP scores and BUY signals.', 'Consider fundamentals for additional scoring and selection.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:40"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

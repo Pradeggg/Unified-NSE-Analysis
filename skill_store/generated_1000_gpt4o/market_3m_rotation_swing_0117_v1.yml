@@ -1,0 +1,53 @@
+id: "market_3m_rotation_swing_0117_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0117"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: narrative plus evidence."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as narrative plus evidence"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze market data for rotation and swing trading opportunities within the last 3 months."
+sql_templates:
+  index_analysis: "SELECT index_symbol, trade_date, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  equity_analysis: "SELECT symbol, trade_date, change_pct FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  stage_analysis: "SELECT symbol, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure generated output matches schema"
+  - "Limit analysis to approved tables and columns"
+synthesis_guidance: "Narratively synthesize sector comparisons, with emphasis on emerging market regimes and stage analysis."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:42:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

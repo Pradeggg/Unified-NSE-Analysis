@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:51:10"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 3 months; response style: QA checklist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0750_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "select_vcp_breakouts"
+    template: "WITH recent_data AS (SELECT symbol, MAX(trade_date) as last_date FROM market.equity_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY symbol) SELECT e.symbol, e.close, e.market_cap_cr, v.vcp_score FROM market.equity_eod e JOIN recent_data r ON e.symbol = r.symbol AND e.trade_date = r.last_date JOIN scores.stage2_vcp_picks v ON e.symbol = v.symbol WHERE e.close > e.week52_high AND v.vcp_score > 0.7;"
+status: "validated"
+synthesis_guidance: "Focus on identifying strong breakouts with robust volume and technical indicators for Indian equities."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_3_months"
+  - "QA_checklist"
+title: "VCP Breakouts With Fundamentals Variant 0750"
+tool_plan_template: "Identify stocks achieving new highs, VCP, or breakouts within the last 3 months using approved evidence tables."
+validation_rules:
+  - "Ensure all symbols are listed on the NSE."
+  - "Check that VCP score is greater than 0.7."
+version: 1

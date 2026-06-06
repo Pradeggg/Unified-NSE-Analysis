@@ -1,0 +1,76 @@
+id: "data_freshness_readiness_audit_0763_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0763"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: post results; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for post results: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  strategy: "Assess the freshness of data sources relevant to the Agent Adda Indian market. Use approved_schema for structure."
+  steps:
+    - "Query the latest dates across the selected evidence tables."
+    - "Compile a freshness matrix for assessment."
+    - "Identify any missing sources crucial for daily operations."
+    - "Propose actionable steps to address any identified freshness gaps."
+  response_style: "QA checklist"
+  analysis_timeframe: "Daily"
+  focus_area: "Daily refresh follow-up"
+sql_templates:
+  -
+    description: "Get latest trade_date for market.index_eod."
+    query: "SELECT MAX(trade_date) AS latest_trade_date FROM market.index_eod;"
+  -
+    description: "Check the latest stage snapshot date."
+    query: "SELECT MAX(snapshot_date) AS latest_snapshot_date FROM scores.stage_snapshots;"
+python_tools:
+  -
+    id: "check_freshness_anomalies"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "latest_trade_dates"
+      - "expected_refresh_intervals"
+    outputs:
+      - "anomaly_reports"
+    approved_tables:
+      - "market.index_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    anomalies = {}  # Dictionary to store freshness anomalies\n    # Compare latest trade dates against expected intervals\n    for table, latest_date in context['latest_trade_dates'].items():\n        if (context['current_date'] - latest_date).days > context['expected_refresh_intervals'][table]:\n            anomalies[table] = 'Data freshness threshold exceeded'\n    return {'anomaly_reports': anomalies}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure queries return non-null latest dates."
+  - "Compare returned dates against expected freshness standards."
+synthesis_guidance: "['Integrate findings to highlight any immediate action needed to maintain data integrity.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:33"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.latest_trade_date is not approved"
+  - "scores.stage_snapshots.latest_snapshot_date is not approved"

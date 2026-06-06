@@ -1,0 +1,65 @@
+id: "agent_route_failure_diagnostics_1442_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1442"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for last 3 months: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as portfolio-aware output"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  evidence_query: "SELECT er.run_id, er.run_ts, esf.symbol, esf.score, esf.recommendation FROM report.enhanced_runs AS er JOIN report.enhanced_filtered_stocks AS esf ON er.run_id = esf.run_id WHERE er.run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+  analysis_steps:
+    - "Check for missing tools in agent operations log."
+    - "Analyze symbol resolution failure cases."
+    - "Identify and document fallback loop scenarios."
+sql_templates:
+  route_issue_check: "WITH latest_runs AS (SELECT * FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months') SELECT er.run_id, esf.symbol, esf.recommendation FROM latest_runs er JOIN report.enhanced_filtered_stocks esf ON er.run_id = esf.run_id WHERE esf.recommendation IS NULL OR esf.score < 50;"
+  symbol_resolution_issues: "SELECT ss.snapshot_date, ss.symbol, ss.stage FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal IS NULL;"
+python_tools:
+  -
+    id: "symbol_resolution_checker"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol_resolution_issues"
+    outputs:
+      - "resolution_status"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    return {'resolution_status': 'Review completed'}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all outputs address the input patterns."
+  - "Validate route_fix suggestions using historical success rates."
+synthesis_guidance: "['Navigate through identified failures and provide a clear trail.', 'Provide actionable resolutions in a portfolio-aware manner.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:24"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

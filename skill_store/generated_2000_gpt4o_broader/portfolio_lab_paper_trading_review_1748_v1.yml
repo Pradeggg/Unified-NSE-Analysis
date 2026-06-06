@@ -1,0 +1,72 @@
+id: "portfolio_lab_paper_trading_review_1748_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1748"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: position-sizing context; timeframe: last 3 months; response style: QA checklist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "position-sizing context for last 3 months: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as QA checklist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "position-sizing_context"
+  - "last_3_months"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  type: "python"
+  details:
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    required_fields:
+      - "id"
+      - "language"
+      - "mode"
+      - "inputs"
+      - "outputs"
+      - "approved_tables"
+      - "code"
+sql_templates:
+  -
+    description: "Fetch recent trading signals"
+    query: "SELECT * FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months' AND action_bucket NOT IN ('resolved')"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "status"
+  - "must_return"
+synthesis_guidance: "{'emphasis': 'Explore paper trading strategies in isolation, analyze position sizing, and document as a QA checklist for clarity.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,62 @@
+id: "vcp_breakouts_with_fundamentals_1374_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1374"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: pre market; response style: exceptions and gaps first."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  task: "Extract stocks meeting the VCP breakout criteria with strong fundamentals and liquidity for pre-market watchlist."
+  steps:
+    - "Select stocks reaching new highs or identified as VCP in stage2_vcp_picks."
+    - "Filter stocks with strong fundamentals using scores from stage_snapshots."
+sql_templates:
+  -
+    id: "historical_highs"
+    template: "SELECT symbol FROM market.equity_eod WHERE high = week52_high AND trade_date = CURRENT_DATE - INTERVAL '1 day';"
+  -
+    id: "vcp_picks"
+    template: "SELECT symbol FROM scores.stage2_vcp_picks WHERE vcp_score > 80 AND snapshot_date = CURRENT_DATE - INTERVAL '1 day';"
+  -
+    id: "strong_fundamentals"
+    template: "SELECT symbol FROM scores.stage_snapshots WHERE enhanced_fund_score > 70 AND snapshot_date = CURRENT_DATE - INTERVAL '1 day';"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure SQL queries are read-only and aligned with the approved schema."
+  - "Verify extracted symbols have strong fundamentals before inclusion in candidates."
+synthesis_guidance: "Identify potential breakouts prioritizing gaps in data and weights on fundamentals."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:33"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

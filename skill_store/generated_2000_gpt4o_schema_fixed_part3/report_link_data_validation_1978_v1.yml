@@ -1,0 +1,77 @@
+id: "report_link_data_validation_1978_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1978"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: pre market; response style: comparison matrix."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for pre market: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "pre_market"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  stage_1: "Validate existing reports and stock data integrity pre-market."
+  stage_2: "Identify missing or malformed data using SQL queries."
+sql_templates:
+  - "WITH latest_runs AS (SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months'), missing_data AS (SELECT er.run_id, ef.symbol FROM report.enhanced_runs er LEFT JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id WHERE ef.run_id IS NULL) SELECT * FROM latest_runs lr JOIN missing_data md ON lr.run_id = md.run_id;"
+python_tools:
+  -
+    id: "validate_links"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "report_link"
+    outputs:
+      - "status"
+      - "reason"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def validate_links(links): return [{'link': link, 'status': 'valid', 'reason': ''} for link in links]"
+  -
+    id: "filter_missing_data"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+    outputs:
+      - "symbols"
+    approved_tables:
+      - "report.enhanced_filtered_stocks"
+    code: "def filter_missing_data(run_id):\n    # This is a placeholder function that requires actual SQL logic\n    return []"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Check for null or missing values in critical columns."
+  - "Ensure report links are functional for all entries."
+synthesis_guidance: "Compile results into a comparison matrix to contrast valid and invalid report entries."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "filter_missing_data: must define run(context)"
+  - "validate_links: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "filter_missing_data: must define run(context)"
+    - "validate_links: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

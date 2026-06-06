@@ -1,0 +1,49 @@
+id: "report_link_data_validation_0900_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0900"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for weekly review: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Analyze enhanced report metadata and filtering with focus on TradingView. Aim for comprehensive QA on link integrity and data completeness."
+sql_templates:
+  -
+    name: "Validate Report Links"
+    query: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '1 week';"
+  -
+    name: "Check Missing Data"
+    query: "SELECT s.run_id, s.symbol, s.recommendation, s.current_price FROM report.enhanced_filtered_stocks AS s JOIN report.enhanced_runs AS r ON s.run_id = r.run_id WHERE s.current_price IS NULL;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "date_checks"
+  - "data_integrity"
+synthesis_guidance: "Summarize findings on broken links and data integrity issues. Propose remediation steps and verification criteria."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:04"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.now is not approved"

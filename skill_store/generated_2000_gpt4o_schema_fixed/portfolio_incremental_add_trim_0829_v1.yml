@@ -1,0 +1,60 @@
+id: "portfolio_incremental_add_trim_0829_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0829"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for last 5 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as action watchlist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "The analysis will use latest scores and current holdings to suggest add/trim actions based on technical indicators and market conditions."
+sql_templates:
+  -
+    evidence_type: "portfolio_state"
+    template: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT holdings.symbol, holdings.qty, holdings.avg_cost, snapshots.stage, snapshots.trading_signal FROM portfolio.holdings AS holdings JOIN latest_snapshots AS snapshots ON holdings.symbol = snapshots.symbol;"
+    description: "Retrieve the latest portfolio state with stage and trading signal for each holding."
+  -
+    evidence_type: "add_candidates"
+    template: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT symbol, company_name, sector, trading_signal FROM latest_snapshots WHERE trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+    description: "Identify candidates for incremental addition based on strong buy signals."
+  -
+    evidence_type: "trim_candidates"
+    template: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT symbol, company_name, sector, trading_signal FROM latest_snapshots WHERE trading_signal = 'SELL' LIMIT 10;"
+    description: "Identify candidates for trimming based on sell signals."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all data is from the latest available date in scores.stage_snapshots."
+  - "All JOIN operations must use approved join rules."
+  - "Do not perform any read-modify operations, ensure SQL is read-only."
+synthesis_guidance: "Synthesize the data into an easily digestible format highlighting sector exposures, potential candidates for adding and trimming positions, and any associated risk flags. Ensure to provide actionable insights consistent with Agent Adda\u2019s portfolio objectives."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

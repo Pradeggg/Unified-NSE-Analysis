@@ -1,0 +1,59 @@
+id: "fii_dii_regime_breadth_review_0834_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0834"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as action watchlist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  regime: "Assess the current market regime by evaluating columns 'regime' and 'confidence' from 'signals.regime_history'."
+  flow_context: "Evaluate FII and DII net flows trends over the last 20 sessions using 'fii_net_today', 'dii_net_today', 'fii_trend', 'dii_trend' from 'signals.fii_dii_flows'."
+  breadth_context: "Analyze market breadth using columns 'advances', 'declines', 'net_ad', and 'ad_signal' from 'breadth.market_daily'."
+  index_confirmation: "Use 'market.index_eod' to confirm index performance trends based on 'close', 'change_pct', and 'trend_signal'."
+  risk_flags: "Derive risk flags by synthesizing information from 'flow_context', 'regime', and 'breadth_context'."
+sql_templates:
+  regime: "SELECT regime, confidence FROM signals.regime_history WHERE trade_date >= (CURRENT_DATE - INTERVAL '20 DAYS') ORDER BY trade_date DESC;"
+  flow_context: "SELECT trade_date, fii_net_today, dii_net_today, fii_trend, dii_trend FROM signals.fii_dii_flows WHERE trade_date >= (CURRENT_DATE - INTERVAL '20 DAYS') ORDER BY trade_date DESC;"
+  breadth_context: "SELECT trade_date, advances, declines, net_ad, ad_signal FROM breadth.market_daily WHERE trade_date >= (CURRENT_DATE - INTERVAL '20 DAYS') ORDER BY trade_date DESC;"
+  index_confirmation: "SELECT trade_date, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '20 DAYS') AND index_symbol = 'NIFTY 500' ORDER BY trade_date DESC;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure that all SQL queries have non-null results for at least the last 10 trade days."
+  - "Verify flow trends are consistent with market regime signals."
+  - "Check for correlational strength between breadth and index confirmation."
+synthesis_guidance: "{'priority': 'Start with the market regime analysis, proceed to FII/DII flow context, then synthesize breadth with index confirmation to deduce risk flags.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:31"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

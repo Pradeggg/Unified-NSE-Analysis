@@ -1,0 +1,54 @@
+id: "signal_outcome_feedback_review_1705_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1705"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: today; response style: QA checklist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for today: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as QA checklist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "today"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    template: "Review signals outcome using approved tables and list observations."
+sql_templates:
+  -
+    description: "Fetch resolved signals from the past three months."
+    query: "SELECT id, date_issued, symbol, signal, target_1, target_2, stop_loss, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months' AND date_resolved IS NOT NULL;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure outcome_summary includes at least one summary statement."
+  - "Ensure winner_patterns and failure_patterns are both populated, even if with default values."
+synthesis_guidance: "['Use evidence from signals, market trends, and stage scores to identify patterns.', 'Highlight risk management improvements prioritized by stop-loss effectiveness.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:16"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

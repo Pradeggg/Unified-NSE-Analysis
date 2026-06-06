@@ -1,0 +1,70 @@
+id: "portfolio_lab_paper_trading_review_1090_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1090"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: TradingView export; timeframe: intraday context; response style: concise table."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "TradingView export for intraday context: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as concise table"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "TradingView_export"
+  - "intraday_context"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  use_template: "Trading Strategy Review"
+  tool: "ConciseTableReport"
+  focus: "Paper Trading"
+sql_templates:
+  holdings_review: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+  signal_log_review: "SELECT symbol, signal, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE action_bucket = 'paper_trading';"
+python_tools:
+  -
+    id: "calculate_exposure"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "holdings_data"
+      - "market_data"
+    outputs:
+      - "exposure_summary"
+    approved_tables:
+      - "portfolio.holdings"
+      - "market.equity_eod"
+    code: "def run(context):\n    holdings = context['holdings_data']\n    market = context['market_data']\n    # Calculate paper trading exposure based on holdings and market data\n    exposure = sum([h['qty'] * m['last_price'] for h, m in zip(holdings, market) if h['symbol'] == m['symbol']])\n    return {'exposure_summary': exposure}"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure separation from real holdings."
+  - "Include entries, exits, stop loss, and targets."
+  - "Contextualize with intraday paper trading scenario."
+synthesis_guidance: "['Integrate TradingView export formats.', 'Present as a concise table.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:12"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_exposure: execution failed: KeyError: 'holdings_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_exposure: execution failed: KeyError: 'holdings_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

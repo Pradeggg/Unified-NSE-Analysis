@@ -1,0 +1,60 @@
+created_at: "2026-06-06T12:53:13"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: post results; response style: comparison matrix."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0965_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  index_returns: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  leading_sectors: "SELECT sector, AVG(change_1m_pct) AS avg_change FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_change DESC;"
+  primary_candidates: "SELECT symbol, company_name, price, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY vcp_score DESC;"
+  stage_distribution_change: "SELECT snapshot_date, sector, COUNT(symbol) AS count, stage FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector, stage;"
+status: "test_failed"
+synthesis_guidance: "Integrate extracted data to form a cohesive report on market swings, emphasizing risks and opportunities."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "post_results"
+  - "comparison_matrix"
+title: "3M Market Rotation Swing Assessment Variant 0965"
+tool_plan_template: "Use SQL to extract recent 3-month data on market performance, focusing on index returns, stage distribution changes, and leading sectors. Identify primary swing trading candidates and potential risks."
+validation_errors:
+  - "scores.stage_snapshots.avg_change is not approved"
+validation_rules:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+version: 1
+review:
+  attempts: 3
+  findings:
+    - "scores.stage_snapshots.avg_change is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"

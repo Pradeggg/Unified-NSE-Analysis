@@ -1,0 +1,61 @@
+id: "portfolio_lab_paper_trading_review_0292_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Agent Adda Strategy Review"
+description: "Evaluate paper trading strategies for performance metrics and potential improvements in the Indian market. Weekly review focuses on strategy entries, exits, stop losses, and targets."
+input_patterns:
+  - "Review paper trading strategies separately"
+  - "Weekly strategy assessment"
+  - "Independently evaluate trading entries and exits"
+tags:
+  - "portfolio"
+  - "strategy_review"
+  - "Indian_market"
+  - "weekly_assessment"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  1: "Analyze strategy entries and exits using signal logs."
+  2: "Review performance metrics such as hits on targets or stops."
+  3: "Incorporate technical scores from stage snapshots."
+  4: "Provide ranked recommendations for strategic improvements."
+sql_templates:
+  strategy_analysis: "SELECT symbol, signal, entry_low, entry_high, stop_loss, target_1, target_2, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_resolved IS NOT NULL ORDER BY symbol, date_issued;"
+python_tools:
+  -
+    id: "analyze_trading_performance"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signals.signal_log"
+    outputs:
+      - "performance_insights"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context):\n    # Analyze performance metrics of trading strategies\n    performance_insights = []\n    for signal in context['signals.signal_log']:\n        # Extract necessary data and analyze\n        performance_insights.append({\n            'symbol': signal['symbol'],\n            'performance': signal['return_pct'],\n            'target_hits': signal['hit_target'],\n            'stop_hits': signal['hit_stop']\n        })\n    return performance_insights"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "1"
+  - "2"
+synthesis_guidance: "Focus on identifying high-performing strategies and areas needing improvement. Emphasize results specific to the Indian market conditions."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analyze_trading_performance: execution failed: KeyError: 'signals.signal_log'"
+review:
+  status: "needs_heal"
+  findings:
+    - "analyze_trading_performance: execution failed: KeyError: 'signals.signal_log'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

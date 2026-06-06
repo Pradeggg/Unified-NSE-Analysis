@@ -1,0 +1,58 @@
+id: "data_freshness_readiness_audit_1953_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1953"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for quarter to date: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as comparison matrix"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    description: "{}"
+sql_templates:
+  -
+    name: "LatestDataDateCheck"
+    description: "Find the latest trade date available for all evidence sources."
+    sql: "SELECT 'market.index_eod' AS source, MAX(trade_date) AS latest_date FROM market.index_eod UNION ALL SELECT 'market.equity_eod', MAX(trade_date) FROM market.equity_eod UNION ALL SELECT 'scores.stage_snapshots', MAX(snapshot_date) FROM scores.stage_snapshots UNION ALL SELECT 'breadth.market_daily', MAX(trade_date) FROM breadth.market_daily UNION ALL SELECT 'breadth.ma_pct_above', MAX(snapshot_date) FROM breadth.ma_pct_above UNION ALL SELECT 'report.enhanced_runs', MAX(analysis_date) FROM report.enhanced_runs;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all required evidence tables have a latest date within the expected quarter to date timeframe."
+  - "Identify any missing or stale data sources impacting the analysis."
+synthesis_guidance: "['Compare data freshness across all evidence sources and determine readiness for daily reporting.', 'Highlight any gaps that must be addressed for data accuracy and completeness.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,86 @@
+id: "market_3m_rotation_swing_1947_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1947"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  type: "block"
+  sections:
+    -
+      title: "Market Regime Analysis"
+      steps:
+        -
+          instruction: "Fetch latest index data for the last 3 months."
+          details:
+            query: "{index_query}"
+    -
+      title: "Sector Leadership Assessment"
+      steps:
+        -
+          instruction: "Identify leading sectors in stage 2 over the last 3 months."
+          details:
+            query: "{stage_query}"
+sql_templates:
+  index_query:
+    template: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY trade_date DESC;"
+    description: "Fetch index returns for the last 3 months."
+  stage_query:
+    template: "SELECT sector, COUNT(*) AS count FROM scores.stage_snapshots WHERE stage = 'STAGE_2' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY count DESC LIMIT 5;"
+    description: "Identify leading sectors in stage 2."
+python_tools:
+  -
+    id: "3m_rotation_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "index_data"
+      - "stage_data"
+    outputs:
+      - "comparison_matrix"
+    approved_tables:
+      - "market.index_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    index_data = context['index_data']\n    stage_data = context['stage_data']\n    # Insert analytical logic here\n    return {'comparison_matrix': index_data.join(stage_data)}"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure SQL templates remain read-only."
+  - "Cross-verify as_of_date with SQL output."
+synthesis_guidance: "['Create a comprehensive comparison matrix from the results.', 'Emphasize sector-relative performance.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:30"
+generation_model: "gpt-4o"
+validation_errors:
+  - "3m_rotation_tool: execution failed: KeyError: 'index_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "3m_rotation_tool: execution failed: KeyError: 'index_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

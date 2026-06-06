@@ -1,0 +1,60 @@
+id: "data_freshness_readiness_audit_1365_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1365"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: risk-first review; timeframe: post results; response style: exceptions and gaps first."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "risk-first review for post results: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as exceptions and gaps first"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "risk-first_review"
+  - "post_results"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Plan to assess data freshness from selected tables for readiness in various workflows."
+sql_templates:
+  -
+    query: "SELECT MAX(trade_date) AS last_index_update FROM market.index_eod;"
+    description: "Retrieve the last update date for market index data."
+  -
+    query: "SELECT MAX(snapshot_date) AS last_breadth_update FROM breadth.market_daily;"
+    description: "Retrieve the last update date for market daily breadth data."
+  -
+    query: "SELECT MAX(run_ts) AS last_report_run FROM report.enhanced_runs;"
+    description: "Retrieve the last execution timestamp for enhanced report runs."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all tables have recent data (within freshness thresholds)."
+  - "Identify and report tables with missing data updates."
+synthesis_guidance: "Focus on identifying exceptions and gaps in data freshness impacting readiness."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:26"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.last_breadth_update is not approved"
+  - "breadth.market_daily.snapshot_date is not approved"
+  - "market.index_eod.last_index_update is not approved"
+  - "report.enhanced_runs.last_report_run is not approved"

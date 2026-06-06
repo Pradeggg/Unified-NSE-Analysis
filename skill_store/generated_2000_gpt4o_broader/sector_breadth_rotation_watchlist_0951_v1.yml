@@ -1,0 +1,61 @@
+id: "sector_breadth_rotation_watchlist_0951_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0951"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for quarter to date: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as comparison matrix"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Select sector breadth and changes quarter to date."
+    query: "WITH sector_changes AS (SELECT sector, AVG(change_5d) AS avg_change_5d FROM breadth.sector_daily WHERE snapshot_date BETWEEN CURDATE() - INTERVAL 3 MONTH AND CURDATE() GROUP BY sector) SELECT sd.sector, sd.pct_above_50dma, sd.breadth_signal, sd.divergence_alert, sc.avg_change_5d FROM breadth.sector_daily sd JOIN sector_changes sc ON sd.sector = sc.sector WHERE sd.snapshot_date = CURDATE();"
+  -
+    description: "Select stage 2 participation and technical scores."
+    query: "SELECT sector, AVG(stage2_pct) AS avg_stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date BETWEEN CURDATE() - INTERVAL 3 MONTH AND CURDATE() GROUP BY sector;"
+  -
+    description: "Fetch top symbols with improving relative strength."
+    query: "SELECT symbol, relative_strength FROM scores.stage_snapshots WHERE snapshot_date = CURDATE() AND stage = 2 ORDER BY relative_strength DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:40"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.avg_stage2_pct is not approved"
+  - "breadth.ma_pct_above.curdate is not approved"
+  - "breadth.ma_pct_above.month is not approved"
+  - "breadth.ma_pct_above.sector is not approved"
+  - "scores.stage_snapshots.curdate is not approved"

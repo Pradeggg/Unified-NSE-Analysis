@@ -1,0 +1,67 @@
+id: "data_freshness_readiness_audit_0539_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0539"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: research-only summary."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for last 20 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as research-only summary"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  - "1. Verify data freshness for last 20 sessions."
+  - "2. Check missing approved history and loader status."
+  - "3. Summarize gaps in data freshness and readiness."
+sql_templates:
+  -
+    template_name: "check_recent_data_availability"
+    sql: "SELECT MAX(trade_date) AS latest_trade_date FROM market.index_eod"
+  -
+    template_name: "source_trail_validation"
+    sql: "WITH recent_data AS (SELECT trade_date FROM market.index_eod ORDER BY trade_date DESC LIMIT 20) SELECT COUNT(DISTINCT trade_date) AS available_days FROM market.index_eod WHERE trade_date IN (SELECT trade_date FROM recent_data)"
+python_tools:
+  -
+    id: "data_freshness_summary_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "latest_trade_date"
+      - "available_days"
+    outputs:
+      - "freshness_report"
+    approved_tables:
+      - "market.index_eod"
+    code: "def run(context):\n    max_date = context['latest_trade_date']\n    available_days = context['available_days']\n    freshness_report = {\n        'latest_trade_date': max_date,\n        'sessions_covered': available_days\n    }\n    return freshness_report"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all SQL queries respect read-only access and use approved tables and columns."
+synthesis_guidance: "['Provide a research-focused summary pointing out any data gaps and suggesting non-invasive improvement methods.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:50"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.latest_trade_date is not approved"

@@ -1,0 +1,52 @@
+id: "insider_bulk_deal_signal_review_1004_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1004"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: today; response style: concise table."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for today: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as concise table"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Use the provided tables to generate a concise watchlist of stocks with recent insider buying or bulk deals confirmed by technical signals. The SQL query filters insider alerts and bulk deals from today, then confirms setups using the latest stage snapshots."
+sql_templates:
+  -
+    description: "Select insider alerts and bulk deals with technical confirmation."
+    query: "WITH latest_stage_snapshots AS (\n    SELECT symbol, stage, trading_signal, snapshot_date\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n      AND trading_signal IN ('BUY', 'STRONG_BUY')\n),\ninsider_alerts AS (\n    SELECT symbol, entity, qty, value_cr, insider_score, alert_date\n    FROM signals.insider_alerts\n    WHERE alert_date = CURRENT_DATE\n),\nbulk_deals AS (\n    SELECT symbol, qty, deal_type, deal_date\n    FROM signals.bulk_block_deals\n    WHERE deal_date = CURRENT_DATE\n)\nSELECT la.symbol, la.entity, la.qty AS insider_qty, la.value_cr, bd.qty AS bulk_qty, ls.stage, ls.trading_signal\nFROM latest_stage_snapshots ls\nJOIN insider_alerts la ON la.symbol = ls.symbol\nJOIN bulk_deals bd ON bd.symbol = ls.symbol\nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure the watchlist includes symbols with both recent insider alerts and bulk deals."
+  - "Confirm that each entry on the watchlist is technically confirmed by the latest signals."
+synthesis_guidance: "Focus on identifying actionable patterns by ensuring technical confirmation of accumulation signals from insider alerts and bulk deals."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:51:07"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

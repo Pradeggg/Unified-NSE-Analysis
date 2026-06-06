@@ -1,0 +1,60 @@
+created_at: "2026-06-06T12:50:34"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: post results; response style: debug trace."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0669_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Calculate index returns over the last 3 months."
+    template: "SELECT index_symbol, AVG(change_pct) AS average_return FROM market.index_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY index_symbol"
+  -
+    description: "Identify leading sectors based on stage changes."
+    template: "SELECT sector, COUNT(*) AS count_leading FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND stage = 2 GROUP BY sector ORDER BY count_leading DESC"
+status: "test_failed"
+synthesis_guidance: "Use a comprehensive debug trace approach to assess and validate sector rotations and market regime changes, ensuring that the interpretations are backed by robust source-trail evidence."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "post_results"
+  - "debug_trace"
+title: "3M Market Rotation Swing Assessment Variant 0669"
+tool_plan_template: "Generate a debug trace for post-result analysis of market rotation over the last 3 months using the provided data tables."
+validation_rules:
+  - "Ensure comprehensive incorporation of recent market conditions in the assessment."
+  - "Stage 2 leadership must be accurately identified from the snapshots."
+  - "Validate the swing candidates against sector rotation trends."
+version: 1
+validation_errors:
+  - "market.index_eod.average_return is not approved"
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage_snapshots.count_leading is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"

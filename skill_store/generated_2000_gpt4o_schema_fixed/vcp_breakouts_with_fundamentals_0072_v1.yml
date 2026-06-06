@@ -1,0 +1,54 @@
+id: "vcp_breakouts_with_fundamentals_0072_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0072"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: pre market; response style: concise table."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  latest_vcp_picks:
+    type: "SELECT"
+    query: "SELECT vcp.symbol, vcp.company_name, vcp.price, vcp.change_1d_pct, vcp.rsi, vcp.relative_strength, vcp.investment_score, vcp.enhanced_fund_score, ss.stage FROM scores.stage2_vcp_picks vcp JOIN scores.stage_snapshots ss ON vcp.symbol = ss.symbol WHERE vcp.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY vcp.vcp_score DESC, vcp.rank ASC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Valid SQL syntax"
+  - "Valid column references"
+  - "No mutations, inserts, or deletes"
+synthesis_guidance: "['Generate concise tabular outputs.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

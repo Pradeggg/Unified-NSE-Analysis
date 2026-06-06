@@ -1,0 +1,85 @@
+id: "portfolio_lab_paper_trading_review_1902_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1902"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: today; response style: comparison matrix."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for today: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as comparison matrix"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "today"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    layout: "table"
+    structure:
+      columns:
+        -
+          header: "Symbol"
+          value: "symbol"
+        -
+          header: "Entry / Exit Rules"
+          value: "entry_exit_rules"
+        -
+          header: "Current Exposure"
+          value: "exposure"
+sql_templates:
+  -
+    template: "SELECT sh.symbol, sg.entry_low, sg.entry_high, sg.stop_loss, sg.target_1, ss.stage\nFROM signals.signal_log sg\nJOIN scores.stage_snapshots ss ON sg.symbol = ss.symbol\nWHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nAND sg.signal IN ('BUY', 'SELL')"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    approved_tables:
+      - "portfolio.holdings"
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Placeholder for Python tool functions\n    return {'result': 'output'}"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all joins use approved _join_rules."
+  - "SQL must only be within SELECT-type operations."
+  - "Conform to data types and column constraints."
+synthesis_guidance: "['Create a clear comparison matrix focusing on strategy effectiveness.', 'Evaluate portfolio entries and exits without mixing real holdings.', 'Assess exposure levels based on latest trading signals and scores.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

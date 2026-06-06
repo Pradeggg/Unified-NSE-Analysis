@@ -1,0 +1,72 @@
+id: "sector_breadth_rotation_watchlist_1203_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1203"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: today; response style: ranked candidates."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for today: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as ranked candidates"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Fetch sector breadth data and identify sectors with strong Stage 2 participation and momentum."
+  - "Rank sectors by breadth and ongoing improvements."
+sql_templates:
+  -
+    description: "Select sectors with Stage 2 participation and positive momentum."
+    sql: "SELECT sector, pct_above_50dma, change_5d, divergence_alert FROM breadth.sector_daily WHERE snapshot_date = CURRENT_DATE AND breadth_signal = 'positive' ORDER BY change_5d DESC;"
+  -
+    description: "Identify stocks with strong relative strength and technical signals in Stage 2."
+    sql: "SELECT symbol, company_name, relative_strength, stage, price FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE AND stage = 2 AND relative_strength > 70 ORDER BY relative_strength DESC;"
+python_tools:
+  -
+    id: "stage2_participation_calculator"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_breadth_data"
+      - "stage_snapshots"
+    outputs:
+      - "ranked_sectors"
+    approved_tables:
+      - "breadth.sector_daily"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Example code to calculate sector rankings\n    pass"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sectors are ranked by breadth and momentum."
+  - "List candidate stocks with high relative strength."
+synthesis_guidance: "['Focus on sectors and stocks showing improvement and potential for Stage 2 participation.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:27"
+generation_model: "gpt-4o"
+validation_errors:
+  - "stage2_participation_calculator: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "stage2_participation_calculator: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

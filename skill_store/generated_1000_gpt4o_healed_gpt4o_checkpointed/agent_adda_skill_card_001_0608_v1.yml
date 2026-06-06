@@ -1,0 +1,58 @@
+created_at: "2026-06-06T12:50:05"
+created_by: "llm_generated"
+description: "Validate report run metadata and filtered stock data for discrepancies. Ensure robust data validation for Indian stock market."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_card_001_0608_v1"
+input_patterns:
+  - "validate enhanced report metadata"
+  - "check filtered stock data for position sizing"
+  - "confirm report data accuracy for today's market"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    description: "Retrieve today's report run metadata to verify current analysis."
+    query_name: "fetch_recent_runs"
+    sql: "SELECT run_id, run_ts, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE analysis_date = '<ANALYSIS_DATE>';"
+  -
+    description: "Fetch stock data for a given run to check scoring and recommendations."
+    query_name: "fetch_filtered_stocks"
+    sql: "SELECT run_id, symbol, recommendation, current_price, tech_score FROM report.enhanced_filtered_stocks WHERE run_id = ?;"
+status: "validated"
+synthesis_guidance: "Focus on validating the precision and accuracy of the filtered stocks and align them with current market data."
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "stock_analysis"
+  - "india_market"
+  - "debug_trace"
+title: "Enhanced Report Data Validation"
+tool_plan_template:
+  steps:
+    - "Gather recent report run metadata from report.enhanced_runs."
+    - "Validate filtered stock data from report.enhanced_filtered_stocks."
+    - "Cross-check report consistency with expected position-sizing context."
+validation_errors:
+  - "report.enhanced_runs.curdate is not approved"
+validation_rules:
+  - "Ensure run timestamps align with current date/time metrics."
+  - "Verify stock recommendations match with populated scores."
+  - "Cross-reference current prices with historical data trends."
+version: 1
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"

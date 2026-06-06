@@ -1,0 +1,57 @@
+id: "data_freshness_readiness_audit_1743_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1743"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for last 3 months: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  - "Gather latest dates for indexes, equities, and scores."
+  - "Review generated run timestamps for lag analysis."
+  - "Analyze missing dates and assess impact on workflows."
+sql_templates:
+  freshness_check_index_eod: "SELECT MAX(trade_date) AS latest_index_date FROM market.index_eod;"
+  freshness_check_equity_eod: "SELECT MAX(trade_date) AS latest_equity_date FROM market.equity_eod WHERE series = 'EQ';"
+  freshness_check_stage_snapshots: "SELECT MAX(snapshot_date) AS latest_stage_date FROM scores.stage_snapshots;"
+  recent_enhanced_runs: "SELECT run_ts FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure that latest data points align across index, equity, and snapshot sources."
+  - "Verify no more than 2 days of lag in the enhanced run history."
+synthesis_guidance: "['Use gathered data to create a checklist of freshness issues.', 'Link evidence to master records for weekly quality reviews.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:33"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_equity_date is not approved"
+  - "market.index_eod.latest_index_date is not approved"
+  - "scores.stage_snapshots.latest_stage_date is not approved"

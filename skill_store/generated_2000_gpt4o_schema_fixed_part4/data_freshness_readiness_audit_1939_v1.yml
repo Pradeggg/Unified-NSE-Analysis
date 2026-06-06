@@ -1,0 +1,73 @@
+id: "data_freshness_readiness_audit_1939_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1939"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for last 20 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as comparison matrix"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    description: "Validation Plan Template for Freshness Audit"
+sql_templates:
+  -
+    description: "Get most recent trade date for each table to ensure data freshness."
+    statement: "SELECT MAX(trade_date) AS last_trade_date FROM market.index_eod UNION SELECT MAX(trade_date) FROM market.equity_eod UNION SELECT MAX(snapshot_date) FROM scores.stage_snapshots UNION SELECT MAX(trade_date) FROM breadth.market_daily UNION SELECT MAX(snapshot_date) FROM breadth.ma_pct_above UNION SELECT MAX(run_ts) FROM report.enhanced_runs;"
+python_tools:
+  -
+    id: "freshness_audit_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "trade_date_data"
+    outputs:
+      - "freshness_matrix"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "breadth.market_daily"
+      - "breadth.ma_pct_above"
+      - "report.enhanced_runs"
+    code: "def run(context):\n    trade_dates = context['trade_date_data']\n    # Example logic to build freshness matrix\n    return {'freshness_matrix': trade_dates}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "{'reasoning_requirements': ['Demonstrate how each data source contributes to overall data freshness.', 'Explain any missing approved history and its potential impact on outputs.', 'Provide a rationale for comparison matrix style and session coverage.']}"
+synthesis_guidance: "{'style': 'comparison_matrix', 'focus': 'source-trail validation across last 20 sessions', 'response': 'Convey findings in a matrix to highlight freshness issues and missing data impacts.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:57"
+generation_model: "gpt-4o"
+validation_errors:
+  - "freshness_audit_tool: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "freshness_audit_tool: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

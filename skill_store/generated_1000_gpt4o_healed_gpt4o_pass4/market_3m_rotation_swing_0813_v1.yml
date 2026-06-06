@@ -1,0 +1,157 @@
+card:
+  created_at: "2026-06-06T12:51:57"
+  created_by: "llm_generated"
+  description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: latest EOD; response style: action watchlist."
+  domain: "market_analysis"
+  evidence_required:
+    tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "market_3m_rotation_swing_0813_v1"
+  input_patterns:
+    - "last 3 months market analysis"
+    - "find swing candidates from recent sector rotation"
+    - "market regime and stage 2 leadership over 3 months"
+    - "daily refresh follow-up for latest EOD: last 3 months market analysis"
+    - "market regime and stage 2 leadership over 3 months as action watchlist"
+  output_contract:
+    - "as_of_date"
+    - "index_returns"
+    - "stage_distribution_change"
+    - "leading_sectors"
+    - "primary_candidates"
+    - "risks"
+  python_tools:
+
+  review:
+    attempts: 3
+    findings:
+
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "needs_heal"
+  sql_templates:
+    index_returns: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 90 DAY) ORDER BY trade_date DESC;"
+    leading_sectors: "SELECT sector, AVG(change_1m_pct) AS avg_change FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 90 DAY) GROUP BY sector ORDER BY avg_change DESC LIMIT 5;"
+    primary_candidates: "SELECT symbol, company_name, price, sector FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE() ORDER BY vcp_score DESC LIMIT 10;"
+    stage_distribution_change: "SELECT snapshot_date, stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 90 DAY) GROUP BY snapshot_date, stage ORDER BY snapshot_date DESC;"
+  status: "generated"
+  synthesis_guidance: "Focus on identifying key trends, sector movement, and potential swing trading candidates based on the latest market data. Highlight top performers and sectors with robust momentum. Provide a concise action watchlist for investors."
+  tags:
+    - "market_regime"
+    - "sector_rotation"
+    - "stage_analysis"
+    - "swing_trading"
+    - "daily_refresh_follow-up"
+    - "latest_EOD"
+    - "action_watchlist"
+  title: "3M Market Rotation Swing Assessment Variant 0813"
+  tool_plan_template:
+    python_tool_policy:
+      blocked_capabilities:
+        - "network"
+        - "subprocess"
+        - "filesystem_write"
+        - "db_write"
+        - "broker_api"
+      language: "python"
+      mode: "read_only"
+      required_fields:
+        - "id"
+        - "language"
+        - "mode"
+        - "inputs"
+        - "outputs"
+        - "approved_tables"
+        - "code"
+      required_function: "run(context)"
+  validation_errors:
+
+  validation_rules:
+    - "date_format"
+    - "percent_format"
+  version: 1
+created_at: "2026-06-06T12:51:57"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: latest EOD; response style: action watchlist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0813_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  status: "needs_heal"
+  findings:
+    - "market.index_eod.date_add is not approved"
+    - "market.index_eod.day is not approved"
+    - "scores.stage_snapshots.avg_change is not approved"
+    - "scores.stage_snapshots.date_add is not approved"
+    - "scores.stage_snapshots.day is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  index_returns: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= DATE_ADD(CURRENT_DATE(), INTERVAL -90 DAY) ORDER BY trade_date DESC;"
+  leading_sectors: "SELECT sector, AVG(change_1m_pct) AS avg_change FROM scores.stage_snapshots WHERE snapshot_date >= DATE_ADD(CURRENT_DATE(), INTERVAL -90 DAY) GROUP BY sector ORDER BY avg_change DESC LIMIT 5;"
+  primary_candidates: "SELECT symbol, company_name, price, sector FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE() ORDER BY vcp_score DESC LIMIT 10;"
+  stage_distribution_change: "SELECT snapshot_date, stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date >= DATE_ADD(CURRENT_DATE(), INTERVAL -90 DAY) GROUP BY snapshot_date, stage ORDER BY snapshot_date DESC;"
+status: "test_failed"
+synthesis_guidance: "Focus on identifying key trends, sector movement, and potential swing trading candidates based on the latest market data. Highlight top performers and sectors with robust momentum. Provide a concise action watchlist for investors."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "latest_EOD"
+  - "action_watchlist"
+title: "3M Market Rotation Swing Assessment Variant 0813"
+tool_plan_template:
+  python_tool_policy:
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    language: "python"
+    mode: "read_only"
+    required_fields:
+      - "id"
+      - "language"
+      - "mode"
+      - "inputs"
+      - "outputs"
+      - "approved_tables"
+      - "code"
+    required_function: "run(context)"
+validation_errors:
+  - "market.index_eod.date_add is not approved"
+  - "market.index_eod.day is not approved"
+  - "scores.stage_snapshots.avg_change is not approved"
+  - "scores.stage_snapshots.date_add is not approved"
+  - "scores.stage_snapshots.day is not approved"
+validation_rules:
+  - "date_format"
+  - "percent_format"
+version: 1

@@ -1,0 +1,1 @@
+def calculate_vcp_strength(vcp_score, enhanced_fund_score): return 0.5 * vcp_score + 0.5 * enhanced_fund_score

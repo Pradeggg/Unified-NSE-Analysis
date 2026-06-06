@@ -1,0 +1,65 @@
+id: "corporate_events_results_watchlist_0471_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0471"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: pre market; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for pre market: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "pre_market"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  template_id: "event_watchlist_tool_plan"
+  description: "Create a tool plan to identify corporate events and results-driven stocks for a watchlist."
+sql_templates:
+  -
+    template_id: "corporate_event_watchlist"
+    description: "Identify upcoming corporate events and scores."
+    sql: "WITH latest_stage_data AS (SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_results AS (SELECT DISTINCT ON (symbol) symbol, period_end, verdict FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC) SELECT ce.symbol, ce.event_date, ce.event_type, ce.detail, ls.stage, ls.trading_signal, lr.verdict FROM signals.corporate_events ce LEFT JOIN latest_stage_data ls ON ce.symbol = ls.symbol LEFT JOIN latest_results lr ON ce.symbol = lr.symbol WHERE ce.event_date >= CURRENT_DATE AND ce.event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM') LIMIT 50;"
+python_tools:
+  -
+    id: "corporate_events_overlap_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "event_data"
+    outputs:
+      - "overlap_insights"
+    approved_tables:
+      - "signals.corporate_events"
+      - "scores.results_analysis"
+    code: "def run(context): return {'overlap_insights': []}"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Check if event_date is future-dated."
+  - "Ensure stage and trading_signal are not null."
+synthesis_guidance: "{'description': 'Synthesize and structure watchlist output for pre-market event-driven analysis.', 'notes': ['Focus on events with a clear portfolio impact.', 'Prioritize symbols with high stage scores or positive verdicts.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

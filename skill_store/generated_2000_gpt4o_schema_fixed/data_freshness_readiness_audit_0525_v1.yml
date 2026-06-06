@@ -1,0 +1,55 @@
+id: "data_freshness_readiness_audit_0525_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0525"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: risk-first review; timeframe: last 5 sessions; response style: research-only summary."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "risk-first review for last 5 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as research-only summary"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "risk-first_review"
+  - "last_5_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Conduct a research-only summary to determine the freshness of data in the last 5 sessions focusing on potential risks. Query evidence from the required tables. Identify missing data or loader issues."
+sql_templates:
+  -
+    description: "Get the latest market index EOD data for verification."
+    query: "SELECT * FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure queries remain read-only and access only columns and tables approved in the schema."
+  - "Check that the evidence_gaps section is populated if required concepts are missing from the schema."
+synthesis_guidance: "Summarize the findings with a focus on freshness and readiness of the data for risk-first review. Highlight blockage areas or gaps in data freshness. Provide a comprehensive research-only overview."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:37"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

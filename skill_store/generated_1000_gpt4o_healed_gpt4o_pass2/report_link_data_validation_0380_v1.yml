@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:46:06"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: pre market; response style: exceptions and gaps first."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0380_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for pre market: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "ValidateReports"
+    template: "SELECT run_id, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE universe_size > 0;"
+  -
+    name: "CheckStockData"
+    template: "SELECT symbol, current_price, volume FROM report.enhanced_filtered_stocks WHERE current_price IS NULL OR volume IS NULL;"
+status: "validated"
+synthesis_guidance: "Focus on gaps first, providing a clear hierarchy of exceptions before reporting complete data sets."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+title: "Enhanced Report Data Validation Variant 0380"
+tool_plan_template: "Utilize SQL templates for reporting from approved tables. Use Python tools when additional computational logic is required."
+validation_rules:
+  - "Ensure all report links are functional."
+  - "Identify stocks with missing price or volume data."
+version: 1

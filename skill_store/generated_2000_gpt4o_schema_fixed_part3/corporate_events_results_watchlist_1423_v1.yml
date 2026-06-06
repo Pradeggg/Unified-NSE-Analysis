@@ -1,0 +1,50 @@
+id: "corporate_events_results_watchlist_1423_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1423"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for last 5 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "last_5_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze corporate events and results over the last 5 sessions, focusing on event-driven stocks with a portfolio-aware output."
+sql_templates:
+  -
+    description: "Select upcoming or recent corporate events with stage and technical context."
+    template: "SELECT ce.symbol, ce.event_type, ce.event_date, ss.stage, ss.trading_signal FROM signals.corporate_events ce JOIN scores.stage_snapshots ss ON ce.symbol = ss.symbol WHERE ce.event_date >= CURRENT_DATE - INTERVAL '5 days' ORDER BY ce.event_date DESC LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure output includes only recent or upcoming events within the specified timeframe."
+synthesis_guidance: "['Focus on providing insights that align with a portfolio-aware strategy.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:37"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

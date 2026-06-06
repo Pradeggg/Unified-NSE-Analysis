@@ -1,0 +1,62 @@
+id: "market_3m_rotation_swing_1597_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1597"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for weekly review: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as research-only summary"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  steps:
+    - "Determine market regime and sector performance using index data."
+    - "Identify leading sectors and their relative strength."
+    - "Analyze stage 2 leadership from scores.stage_snapshots for potential candidates."
+    - "Filter swing candidates from scores.stage2_vcp_picks."
+sql_templates:
+  -
+    description: "Fetch latest 3 months index performance."
+    template: "SELECT index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' AND trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+  -
+    description: "Fetch stage 2 symbols with strong buy signals."
+    template: "SELECT symbol, sector, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY');"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all required evidence tables are accessible."
+  - "Validate output contracts match expected structure."
+  - "SQL executions must conform to defined PostgreSQL syntax."
+synthesis_guidance: "['Summarize the three-month market regime and sector rotation impact.', 'Highlight leading sectors and potential swing candidates.', 'Provide risk assessment in context of current market conditions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

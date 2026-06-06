@@ -1,0 +1,62 @@
+id: "signal_outcome_feedback_review_1635_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1635"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for last 20 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as debug trace"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Review outcome of trading signals using the signals.signal_log table for records within the last 20 sessions."
+  - "Assess the success and failure patterns by analyzing the 'hit_target' and 'hit_stop' columns."
+  - "Use scores.stage_snapshots to provide context by joining on symbol, examining technicals, such as 'technical_score' and 'rsi'."
+  - "Gather supplementary data from market.equity_eod for price movements correlating to signals, using issued/resolved timestamps."
+sql_templates:
+  -
+    template_name: "recent_signals_outcome"
+    template_description: "Fetch outcomes of signals from the last 20 sessions."
+    sql: "SELECT id, date_issued, symbol, setup_class, signal, target_1, stop_loss, price_at_issue, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_issued >= (SELECT MAX(date_issued) FROM signals.signal_log) - INTERVAL '20 sessions' ORDER BY date_issued DESC"
+  -
+    template_name: "join_stage_snapshot"
+    template_description: "Join recent signal outcomes with stage snapshots for additional context."
+    sql: "SELECT sl.symbol, sl.signal, ss.stage, sl.return_pct FROM signals.signal_log sl JOIN scores.stage_snapshots ss ON sl.symbol = ss.symbol WHERE sl.date_issued >= (SELECT MAX(sl.date_issued) FROM signals.signal_log) - INTERVAL '20 sessions'"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Verify that the data includes the last 20 sessions of trading signals."
+  - "Ensure outcomes are correctly flagged as 'hit_target' or 'hit_stop'."
+  - "Check for successful joins between signal and stage snapshot data."
+synthesis_guidance: "['Focus on extracting actionable insights from both successful and unsuccessful signals.', 'Highlight recurring patterns in winners and address the issues in failures.', 'Propose improvements to signal strategy and risk management based on outcomes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:25"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

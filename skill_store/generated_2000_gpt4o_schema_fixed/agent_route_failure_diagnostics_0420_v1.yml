@@ -1,0 +1,51 @@
+id: "agent_route_failure_diagnostics_0420_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0420"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: latest EOD; response style: portfolio-aware output."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for latest EOD: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as portfolio-aware output"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Assess the run id and filter symbols for diagnostics focusing on the symbol resolution and tool validation."
+sql_templates:
+  -
+    template_name: "latest_runs_analysis"
+    sql: "SELECT run_id, notes FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure latest runs are selected using the max run_ts."
+  - "SQL queries must be read-only."
+synthesis_guidance: "['Cross-check tool gaps with available python evidence tools.', 'Use the latest entries to minimize state errors.', 'Frame solutions with respect to TradingView export diagnosis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

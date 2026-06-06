@@ -1,0 +1,57 @@
+id: "portfolio_lab_paper_trading_review_1468_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1468"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: position-sizing context; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "position-sizing context for post results: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "position-sizing_context"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  evidence_gaps:
+
+sql_templates:
+  -
+    name: "latest_portfolio_stage"
+    description: "Fetch latest stage and score context for portfolio holdings."
+    query: "SELECT ph.symbol, ph.qty, ph.avg_cost, ss.stage, ss.stage_score, ss.technical_score FROM portfolio.holdings ph JOIN scores.stage_snapshots ss ON ph.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    name: "paper_trading_signals"
+    description: "Review signals with entry, exit, stop-loss, and target information."
+    query: "SELECT sl.symbol, sl.signal, sl.entry_low, sl.entry_high, sl.stop_loss, sl.target_1, sl.target_2, sl.date_resolved, sl.return_pct FROM signals.signal_log sl WHERE sl.date_issued >= CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:09"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.sl is not approved"

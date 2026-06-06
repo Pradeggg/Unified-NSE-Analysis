@@ -1,0 +1,84 @@
+id: "fii_dii_regime_breadth_review_1422_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1422"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for last 5 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as portfolio-aware output"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Combine SQL and Python read-only tools to extract and summarize data."
+sql_templates:
+  -
+    template_name: "fetch_fii_dii_flows"
+    select: "SELECT trade_date, fii_net_5d, dii_net_5d, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL '5 DAY';"
+  -
+    template_name: "fetch_market_regime"
+    select: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date >= CURRENT_DATE - INTERVAL '5 DAY';"
+  -
+    template_name: "fetch_breadth_data"
+    select: "SELECT trade_date, advances, declines, net_ad, ad_signal FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '5 DAY';"
+  -
+    template_name: "fetch_index_data"
+    select: "SELECT trade_date, index_symbol, close, change_pct, rsi FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '5 DAY';"
+python_tools:
+  -
+    id: "fetch_and_summarize_data"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "fii_dii_flows"
+      - "market_regime"
+      - "breadth_data"
+      - "index_data"
+    outputs:
+      - "regime"
+      - "flow_context"
+      - "breadth_context"
+      - "index_confirmation"
+      - "risk_flags"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context):\n    # Process and integrate data from inputs\n    fiis, diis = sum([x['fii_net_5d'] for x in context['fii_dii_flows']]), sum([x['dii_net_5d'] for x in context['fii_dii_flows']])\n    regime = max(context['market_regime'], key=lambda x: x['confidence'])\n    breadth = context['breadth_data'][-1]['ad_signal']\n    index_trend = context['index_data'][-1]['change_pct']\n    return {\n        'regime': regime['regime'],\n        'flow_context': {'fii': fiis, 'dii': diis},\n        'breadth_context': {'ad_signal': breadth},\n        'index_confirmation': {'trend': index_trend},\n        'risk_flags': detect_risks(fiis, diis, breadth, index_trend)\n    }\n\ndef detect_risks(fii, dii, breadth, trend):\n    risk_on = fii > 0 and breadth == 'positive' and trend > 0\n    risk_off = dii < 0 or breadth == 'negative' or trend < 0\n    return {'risk_on': risk_on, 'risk_off': risk_off}"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data coverage for the last 5 sessions."
+  - "Correlate FII/DII flows with regime and breadth signals."
+  - "Summarize index trend evidence."
+synthesis_guidance: "['Integrate extracted evidence to describe the current market conditions in terms of risk-on or risk-off status with a portfolio-aware view.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "fetch_and_summarize_data: execution failed: KeyError: 'fii_dii_flows'"
+review:
+  status: "needs_heal"
+  findings:
+    - "fetch_and_summarize_data: execution failed: KeyError: 'fii_dii_flows'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

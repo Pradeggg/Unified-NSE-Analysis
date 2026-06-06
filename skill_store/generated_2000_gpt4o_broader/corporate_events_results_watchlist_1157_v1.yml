@@ -1,0 +1,56 @@
+id: "corporate_events_results_watchlist_1157_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1157"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: narrative plus evidence."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for quarter to date: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as narrative plus evidence"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  description: "Identify and analyze recent or upcoming corporate events, results announcements, and watchlist actions."
+  intent: "This plan is for generating a narrative analysis of Indian market corporate events with a focus on sector-relative performance for the current quarter."
+sql_templates:
+  -
+    name: "select_corporate_events"
+    query: "SELECT symbol, event_date, event_type, purpose_raw, detail, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '90 days';"
+  -
+    name: "select_results_analysis"
+    query: "SELECT symbol, company_name, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct, eps_yoy_pct, verdict, score FROM scores.results_analysis WHERE period_end >= CURRENT_DATE - INTERVAL '90 days';"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event dates are within the last quarter."
+  - "Validate that symbols with significant changes are highlighted."
+synthesis_guidance: "Synthesize a narrative focusing on recent trends and comparisons across sectors for companies with notable corporate events."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:58"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

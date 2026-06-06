@@ -1,0 +1,67 @@
+id: "sector_breadth_rotation_watchlist_0643_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0643"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for last 3 months: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as debug trace"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze sector breadth and stage data to rank sectors and identify improvement."
+sql_templates:
+  -
+    name: "sector_breadth_analysis"
+    template: "SELECT sector, AVG(pct_above_50dma) as avg_pct_above_50dma FROM breadth.sector_daily WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_pct_above_50dma DESC;"
+  -
+    name: "stage2_participation"
+    template: "SELECT sector, AVG(stage2_pct) as avg_stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_stage2_pct DESC;"
+python_tools:
+  -
+    id: "analyze_sector_data"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_breadth_analysis"
+      - "stage2_participation"
+    outputs:
+      - "improving_sectors"
+      - "candidate_symbols"
+    approved_tables:
+      - "breadth.sector_daily"
+      - "breadth.ma_pct_above"
+    code: "def run(context):\n    sectors = context['sector_breadth_analysis']\n    stage2 = context['stage2_participation']\n    # Analyze and determine improving sectors\n    improving_sectors = [sector for sector in sectors if sector in stage2]\n    # Determine candidate symbols based on the improving sectors\n    candidate_symbols = [get_candidates(sector) for sector in improving_sectors]\n    return {'improving_sectors': improving_sectors, 'candidate_symbols': candidate_symbols}\n\n# Mock function for candidate retrieval\nget_candidates = lambda sector: ['TCS', 'INFY'] if sector == 'IT' else []"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sector ranking aligns with both breadth signal and stage 2 participation."
+  - "Verify the regular update of sectors based on the latest 3 months data."
+synthesis_guidance: "['Analyze the SQL output to identify sectors with increasing participation rates.', 'Consider both breadth and stage participation for recommending TradingView symbols.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.avg_stage2_pct is not approved"
+  - "breadth.ma_pct_above.sector is not approved"
+  - "breadth.sector_daily.avg_pct_above_50dma is not approved"

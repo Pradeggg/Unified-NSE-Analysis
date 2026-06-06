@@ -1,0 +1,57 @@
+id: "market_3m_rotation_swing_1205_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1205"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: today; response style: ranked candidates."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "today"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  as_of_date: "SELECT MAX(trade_date) AS as_of_date FROM market.index_eod;"
+  index_returns: "SELECT index_symbol, ROUND((close - LAG(close, 1) OVER (PARTITION BY index_symbol ORDER BY trade_date)) / LAG(close, 1) OVER (PARTITION BY index_symbol ORDER BY trade_date) * 100, 2) AS change_pct FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+  stage_distribution_change: "SELECT sector, COUNT(CASE WHEN stage = 'STAGE_2' THEN 1 END) AS stage_2_count_last, COUNT(CASE WHEN stage = 'STAGE_2' AND snapshot_date = (CURRENT_DATE - INTERVAL '3 months') THEN 1 END) AS stage_2_count_3m_ago FROM scores.stage_snapshots WHERE snapshot_date IN ((SELECT MAX(snapshot_date) FROM scores.stage_snapshots), (SELECT MAX(snapshot_date) FROM scores.stage_snapshots WHERE snapshot_date = (CURRENT_DATE - INTERVAL '3 months'))) GROUP BY sector;"
+  leading_sectors: "SELECT sector, COUNT(symbol) AS num_stocks FROM scores.stage_snapshots WHERE stage = 'STAGE_2' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY num_stocks DESC LIMIT 3;"
+  primary_candidates: "SELECT symbol, company_name, rank FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 5;"
+  risks: "SELECT index_symbol, COUNT(CASE WHEN trading_signal = 'SELL' THEN 1 END) AS sell_signals FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) GROUP BY index_symbol;"
+sql_templates:
+  - "WITH latest_snapshot AS (SELECT symbol, stage, sector FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT sector, COUNT(CASE WHEN stage = 'STAGE_2' THEN 1 END) AS stage_2_count FROM latest_snapshot GROUP BY sector ORDER BY stage_2_count DESC LIMIT 3;"
+  - "SELECT symbol, company_name, rank FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'rules': ['Summarize results with a focus on risk and liquidity.', 'Rank candidates by stage and VCP scores.', 'Highlight sector rotation and changes in structure.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:41:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

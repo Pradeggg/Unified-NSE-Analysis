@@ -1,0 +1,51 @@
+id: "corporate_events_results_watchlist_0793_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0793"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as QA checklist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Provide a detailed action plan based on upcoming results and event analysis research."
+sql_templates:
+  -
+    name: "upcoming_corporate_events"
+    template: "SELECT ce.symbol, ce.event_type, ce.event_date, ce.detail, ss.stage, ss.trading_signal FROM signals.corporate_events ce JOIN scores.stage_snapshots ss ON ce.symbol = ss.symbol WHERE ce.event_date >= CURRENT_DATE ORDER BY ce.event_date LIMIT 50"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure upcoming corporate events align with technical signals and stage."
+  - "Limit the output to events occurring soon to maintain relevance."
+synthesis_guidance: "Using the queries, construct a concise watchlist of symbols with upcoming events and reconcile them with current technical and stage analysis signals."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:45"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

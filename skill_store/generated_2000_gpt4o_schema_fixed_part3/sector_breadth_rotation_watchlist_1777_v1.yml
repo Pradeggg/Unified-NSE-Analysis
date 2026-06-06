@@ -1,0 +1,78 @@
+id: "sector_breadth_rotation_watchlist_1777_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1777"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: pre market; response style: QA checklist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for pre market: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as QA checklist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  context: "Generate insights for sector-relative watchlist focusing on sector breadth and stage analysis."
+  steps:
+    -
+      summary: "Identify top sectors by breadth and stage participation."
+      evidence: "Use SQL templates to extract sector data."
+    -
+      summary: "Select stocks within improving sectors."
+      evidence: "Filter stocks based on stage and trading signals."
+sql_templates:
+  -
+    id: "sector_ranking"
+    query: "WITH latest_sectors AS (SELECT *, RANK() OVER (ORDER BY pct_above_50dma DESC) AS rank FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)) SELECT sector, breadth_signal, rank FROM latest_sectors WHERE rank <= 5;"
+  -
+    id: "candidate_stocks"
+    query: "SELECT symbol, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY');"
+python_tools:
+  -
+    id: "sector_comparison"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_ranks"
+      - "candidate_symbols"
+    outputs:
+      - "improving_sectors"
+    approved_tables:
+      - "breadth.sector_daily"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    sector_data = context['sector_ranks']\n    stock_data = context['candidate_symbols']\n    improving_sectors = [sector['sector'] for sector in sector_data if sector['rank'] <= 5]\n    return improving_sectors"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sectors are ranked by breadth and stage participation."
+  - "Stocks should be filtered within ranked sectors."
+synthesis_guidance: "{'prompts': ['Using the SQL results, summarize which sectors are improving.', 'List candidate stocks to add to TradingView.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:09"
+generation_model: "gpt-4o"
+validation_errors:
+  - "sector_comparison: execution failed: KeyError: 'sector_ranks'"
+review:
+  status: "needs_heal"
+  findings:
+    - "sector_comparison: execution failed: KeyError: 'sector_ranks'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

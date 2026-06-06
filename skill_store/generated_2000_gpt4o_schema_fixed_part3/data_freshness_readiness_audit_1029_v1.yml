@@ -1,0 +1,71 @@
+id: "data_freshness_readiness_audit_1029_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1029"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: last 5 sessions; response style: concise table."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for last 5 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as concise table"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Evaluate data freshness and completeness for each approved evidence table and deliver a concise summary matrix."
+sql_templates:
+  -
+    name: "Fetch Latest EOD Index Data"
+    query: "SELECT * FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod)"
+  -
+    name: "Fetch Latest Equity EOD Data"
+    query: "SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+  -
+    name: "Fetch Latest Stage Snapshot"
+    query: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+  -
+    name: "Fetch Latest Market Daily Data"
+    query: "SELECT * FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily)"
+  -
+    name: "Fetch Latest MA Percentage Above"
+    query: "SELECT * FROM breadth.ma_pct_above WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.ma_pct_above)"
+  -
+    name: "Fetch Latest Enhanced Run Report"
+    query: "SELECT * FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all queries provide recent data context for each table."
+  - "Check for missing or outdated data."
+  - "Validate against known freshness thresholds."
+synthesis_guidance: "Produce a clear and concise summary table or matrix displaying data freshness, completeness, and gaps for decision-making validation."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:13"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,92 @@
+id: "market_3m_rotation_swing_1205_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1205"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: today; response style: ranked candidates."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "today"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    subtasks:
+      -
+        task: "Index Performance"
+        description: "Assess index changes for market regime analysis."
+        output_key: "index_returns"
+      -
+        task: "Stage Distribution"
+        description: "Identify changes in stage distribution."
+        output_key: "stage_distribution_change"
+      -
+        task: "Sector Leadership"
+        description: "Rank leading sectors based on recent performance."
+        output_key: "leading_sectors"
+      -
+        task: "Swing Candidates"
+        description: "Identify potential swing trading candidates."
+        output_key: "primary_candidates"
+      -
+        task: "Market Risks"
+        description: "Determine potential market risks."
+        output_key: "risks"
+sql_templates:
+  index_returns:
+    template: "SELECT trade_date, index_symbol, SUM(change_pct) as index_return FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY trade_date, index_symbol ORDER BY trade_date DESC;"
+    output_format: "table"
+  stage_distribution_change:
+    template: "SELECT snapshot_date, stage, COUNT(*) as stage_count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY snapshot_date, stage;"
+    output_format: "table"
+  leading_sectors:
+    template: "SELECT sector, AVG(change_1m_pct) as avg_change FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY avg_change DESC LIMIT 5;"
+    output_format: "table"
+  primary_candidates:
+    template: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 10;"
+    output_format: "table"
+  risks:
+    template: "SELECT symbol, stage, relative_strength FROM scores.stage_snapshots WHERE stage = 'STAGE_4' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY relative_strength DESC;"
+    output_format: "table"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "All SQL queries must conform to approved_schema."
+  - "Ensure the evidence_required.tables are accurately queried."
+  - "Do not modify template structure to make assumptions outside global_sql_rules."
+synthesis_guidance: "['Focus on creating concise, ranked output.', 'Pay particular attention to market risk factors and how they influence candidate rankings.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:46"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.index_return is not approved"
+  - "scores.stage_snapshots.stage_count is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "market.index_eod.index_return is not approved"
+    - "scores.stage_snapshots.stage_count is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

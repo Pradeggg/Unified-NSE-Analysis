@@ -1,0 +1,65 @@
+created_at: "2026-06-06T12:49:56"
+created_by: "llm_generated"
+description: "Research-only summary validation of enhanced report data with a focus on link availability, data completeness, and freshness audits for weekly reviews."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "data_validation_skill_001_0596_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for weekly review: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_runs"
+    code: "def run(context):\n    from datetime import datetime\n    run_ts = datetime.strptime(context['run_ts'], '%Y-%m-%d %H:%M:%S')\n    analysis_date = datetime.strptime(context['analysis_date'], '%Y-%m-%d')\n    delta = (run_ts - analysis_date).days\n    return {'freshness_days': delta}"
+    id: "calculate_freshness_001"
+    inputs:
+      - "run_id"
+      - "run_ts"
+      - "analysis_date"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "freshness_days"
+sql_templates:
+  -
+    description: "Check for missing data in enhanced filtered stocks for the latest run."
+    query: "SELECT run_id, symbol, score FROM report.enhanced_filtered_stocks WHERE run_id = (SELECT MAX(run_id) FROM report.enhanced_runs) AND (score IS NULL OR symbol IS NULL)"
+status: "test_failed"
+synthesis_guidance: "Summarize the evidence to highlight any data gaps or validation issues. Do not conduct further research beyond approved data access."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "weekly_review"
+  - "research-only_summary"
+title: "Data Validation for Enhanced Reports"
+tool_plan_template: "Use SQL for data retrieval and Python for complex calculations. Ensure evidence is read-only."
+validation_rules:
+  - "Status must be generated."
+  - "Data retrieval should be read-only."
+  - "No SQL write operations allowed."
+version: 1
+validation_errors:
+  - "calculate_freshness_001: execution failed: ImportError: __import__ not found"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_freshness_001: execution failed: ImportError: __import__ not found"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

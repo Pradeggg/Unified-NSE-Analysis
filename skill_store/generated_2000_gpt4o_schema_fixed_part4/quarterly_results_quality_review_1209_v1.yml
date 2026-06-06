@@ -1,0 +1,71 @@
+id: "quarterly_results_quality_review_1209_v1"
+version: 1
+status: "review_pending"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1209"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: source-trail validation; timeframe: today; response style: ranked candidates."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "source-trail validation for today: latest quarterly results analysis"
+  - "which companies had strong quarterly results as ranked candidates"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "source-trail_validation"
+  - "today"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    steps:
+      -
+        name: "Fetch Latest Quarterly Results"
+        description: "Retrieve the most recent quarterly financial data for all companies."
+        sql:
+          query: "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.period_end, qr.revenue, qr.pat, qr.opm_pct FROM scores.quarterly_results qr WHERE qr.period_type = 'quarter' ORDER BY qr.symbol, qr.period_end DESC NULLS LAST, qr.fetched_at DESC LIMIT 10;"
+          read_only: true
+      -
+        name: "Analyze Results Metrics"
+        description: "Evaluate revenue and PAT growth, margin trends, and derive conclusions."
+        sql:
+          query: "SELECT ra.symbol, ra.growth_yoy_revenue_pct, ra.growth_yoy_pat_pct, ra.opm_delta_pp, ra.verdict FROM scores.results_analysis ra JOIN scores.quarterly_results qr ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end WHERE ra.verdict IN ('beat', 'miss') ORDER BY ra.verdict DESC, ra.growth_yoy_revenue_pct DESC LIMIT 10;"
+          read_only: true
+      -
+        name: "Assess Stage and Technical Score"
+        description: "Gather the latest stage and fundamental scores for context."
+        sql:
+          query: "SELECT ss.symbol, ss.stage, ss.technical_score FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY ss.technical_score DESC LIMIT 10;"
+          read_only: true
+sql_templates:
+  latest_quarterly_results: "SELECT DISTINCT ON (symbol) * FROM scores.quarterly_results WHERE period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC LIMIT 10;"
+  results_analysis: "SELECT symbol, growth_yoy_revenue_pct, growth_yoy_pat_pct, opm_delta_pp, verdict FROM scores.results_analysis WHERE verdict='beat' ORDER BY verdict DESC LIMIT 10;"
+  stage_snapshot: "SELECT symbol, stage, fundamental_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY fundamental_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL queries utilize specified global rules such as using the latest period_end and snapshot_date."
+  - "Results must maintain focus on today\u2019s context with a ranked list output."
+synthesis_guidance: "['Synthesize insights by ranking companies on the strength of their quarterly results and technical analysis.', 'Ensure each company suggested in the ranked candidates list is backed by evidence and aligns with today\u2019s market context.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:40"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

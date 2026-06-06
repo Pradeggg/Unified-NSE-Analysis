@@ -1,0 +1,48 @@
+id: "signal_outcome_feedback_review_1831_v1"
+version: 1
+status: "validated"
+domain: "signal_performance_review"
+title: "Signal Performance Quick Analysis"
+description: "Analyze and review the performance of previous signals for pattern identification and improvement."
+input_patterns:
+  - "review previous signal outcomes"
+  - "identify successful signals"
+  - "evaluate signal failures"
+  - "analyze signal performance for last 20 sessions"
+tags:
+  - "performance_analysis"
+  - "signal_evaluation"
+  - "pattern_recognition"
+  - "improvement_suggestions"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Examine and elaborate on signals that reached desired targets or hit stop losses, and propose actionable insights."
+sql_templates:
+  success_fail_rate:
+    template: "SELECT COUNT(*) AS total_signals, SUM(CASE WHEN hit_target = 'Y' THEN 1 ELSE 0 END) AS successful_signals, SUM(CASE WHEN hit_stop = 'Y' THEN 1 ELSE 0 END) AS failed_signals FROM signals.signal_log WHERE date_issued >= (SELECT MAX(date_issued) FROM signals.signal_log) - INTERVAL '20 sessions';"
+    description: "Calculate the number of successful and failed signals over the last 20 sessions."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure 'outcome_summary' includes success and failure rates."
+  - "Identify at least one pattern for both winning and failing signals."
+  - "Suggest at least one improvement for future signal generation."
+synthesis_guidance: "Focus on extracting key insights from successful signals and identifying common traits among failures for actionable strategy refinement."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:37"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,52 @@
+id: "report_link_data_validation_1152_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Report Link and Data Validation"
+description: "This Agent Adda skill card focuses on validating report links, checking for missing stock data, and providing a deep institutional review for the quarter to date."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock HTML files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for quarter to date: review report links not working"
+  - "validate generated report links and missing data as narrative plus evidence"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  steps:
+    - "Check report links using the run_id."
+    - "Identify missing data using enhanced_filtered_stocks."
+sql_templates:
+  - "WITH latest_runs AS (SELECT * FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months') SELECT efs.* FROM report.enhanced_filtered_stocks efs JOIN latest_runs lr ON efs.run_id = lr.run_id WHERE efs.current_price IS NULL OR efs.volume IS NULL;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure that SQL uses the approved tables and columns."
+  - "SQL must be read-only; do not perform updates or deletes."
+  - "Verify that narrative findings align with evidence."
+synthesis_guidance: "['Combine narrative findings with SQL-based evidence to create a comprehensive analysis.', 'Focus on summarizing key insights and areas for remediation.', 'Ensure clarity and conciseness in reporting results.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:55:49"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

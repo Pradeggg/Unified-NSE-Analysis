@@ -1,0 +1,57 @@
+id: "corporate_events_results_watchlist_1227_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1227"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: ranked candidates."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for last 5 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as ranked candidates"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Get the latest corporate events and results analysis data. Use it to create a ranked watchlist focusing on sector-relative performance in the last 5 sessions."
+sql_templates:
+  -
+    template_name: "Get_Corporate_Events"
+    sql: "SELECT id, symbol, event_type, event_date, purpose_raw, detail, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '5 days' LIMIT 100;"
+  -
+    template_name: "Get_Results_Analysis"
+    sql: "SELECT DISTINCT ON (symbol) symbol, period_end, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct, eps_yoy_pct, score FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC;"
+  -
+    template_name: "Get_Stage_Snapshots"
+    sql: "SELECT symbol, sector, change_1d_pct, change_1w_pct, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY');"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure result contains unique symbols."
+  - "Include at least one sector-relative comparison metric."
+synthesis_guidance: "Prioritize symbols with strong buy signals in stage snapshots and positive growth percentages in results analysis. Compare within sectors for relative performance."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:41"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

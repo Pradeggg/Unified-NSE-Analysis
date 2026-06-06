@@ -1,0 +1,62 @@
+id: "vcp_breakouts_with_fundamentals_0884_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0884"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    type: "sql"
+    status: "generated"
+    description: "Select top VCP candidates with strong fundamentals and recent performance."
+    table: "scores.stage2_vcp_picks"
+    template: "SELECT symbol, company_name, sector, price, relative_strength, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND vcp_score IS NOT NULL ORDER BY vcp_score DESC LIMIT 50;"
+sql_templates:
+  -
+    type: "primary"
+    status: "generated"
+    template: "SELECT e.symbol, e.close, s.stage, s.fundamental_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.stage = 'STAGE_2' AND s.trading_signal IN ('BUY', 'STRONG_BUY') AND e.high > e.week52_high * 0.95 ORDER BY s.fundamental_score DESC LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+synthesis_guidance: "{'insight': 'Prioritize high VCP score stocks with strong fundamental strength in the list.', 'watchlist_focus': 'Intraday breakout and new high potential stocks with strong fundamentals.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:54"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

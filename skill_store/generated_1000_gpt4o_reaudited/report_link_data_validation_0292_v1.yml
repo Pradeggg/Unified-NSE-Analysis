@@ -1,0 +1,66 @@
+created_at: "2026-06-06T12:44:14"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: weekly review; response style: ranked candidates."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0292_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for weekly review: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    run_id = context['run_id']\n    # Check if all mandatory data is present\n    missing_data = []\n    # Fetch all relevant stock data\n    for stock in context['report.enhanced_filtered_stocks']:\n        if not all([stock['current_price'], stock['open_price'], stock['high_price']]):\n            missing_data.append(stock['symbol'])\n    return {\n        'missing_data': missing_data,\n        'verification': len(missing_data) == 0\n    }"
+    id: "validate_report_data_completion"
+    inputs:
+      - "run_id"
+      - "evidence_required.tables"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "missing_data"
+      - "verification"
+sql_templates:
+  -
+    sql: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_id NOT IN (SELECT DISTINCT run_id FROM report.enhanced_filtered_stocks)"
+    template_id: "validate_links"
+    type: "read-only"
+status: "test_failed"
+synthesis_guidance: "Focus on generating a ranked list of data issues. Prioritize critical findings and provide evidence trails using the SQL outcomes and additional manual review where required."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "ranked_candidates"
+title: "Enhanced Report Data Validation Variant 0292"
+tool_plan_template: "Review the integrity and completeness of report data using approved tables for a deep institutional review. Summarize findings in ranked order with detailed evidence from the provided tables."
+validation_rules:
+  - "Ensure no broken links in report data"
+  - "Validate all filtered stocks have complete data"
+  - "Rank the report issues by severity and impact"
+version: 1
+validation_errors:
+  - "validate_report_data_completion: execution failed: KeyError: 'run_id'"
+review:
+  status: "needs_heal"
+  findings:
+    - "validate_report_data_completion: execution failed: KeyError: 'run_id'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

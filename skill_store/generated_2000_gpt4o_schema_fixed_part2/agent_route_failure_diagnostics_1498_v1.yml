@@ -1,0 +1,52 @@
+id: "agent_route_failure_diagnostics_1498_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1498"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for weekly review: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as portfolio-aware output"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze Agent Adda route failure reports by evaluating input patterns and evidence tables. Use portfolio-aware framing for weekly reviews. Contrast symbol resolution and tool validation failures using provided data."
+sql_templates:
+  -
+    description: "Retrieve the latest report run data and diagnostic information for weekly review."
+    template: "WITH latest_runs AS (\n    SELECT *\n    FROM report.enhanced_runs\n    WHERE run_ts = (\n        SELECT MAX(run_ts)\n        FROM report.enhanced_runs\n    )\n)\nSELECT\n    er.run_id,\n    er.universe_size,\n    er.stocks_analyzed,\n    er.stocks_filtered,\n    er.market_sentiment,\n    fs.symbol,\n    fs.weekly_signal,\n    ss.stage\nFROM\n    latest_runs er\nJOIN\n    report.enhanced_filtered_stocks fs ON er.run_id = fs.run_id\nJOIN\n    scores.stage_snapshots ss ON fs.symbol = ss.symbol\nWHERE\n    ss.snapshot_date = (\n        SELECT MAX(snapshot_date)\n        FROM scores.stage_snapshots\n    )\nAND\n    ss.stage = 'STAGE_2'\nLIMIT 50;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure SQL returns results for the latest report runs."
+  - "Validate that the symbol stage is correctly labeled as 'STAGE_2'."
+  - "Confirm portfolio-awareness by limiting result sets to 50 records."
+synthesis_guidance: "['Use retrieved data to determine common failure patterns and tool gaps.', 'Formulate diagnostic outputs that suggest portfolio-aware resolutions.', 'Include regression tests to validate any proposed fixes for tool chains or symbols.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:45"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

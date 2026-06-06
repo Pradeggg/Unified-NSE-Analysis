@@ -1,0 +1,67 @@
+id: "quarterly_results_quality_review_1237_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1237"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "sector-relative comparison for last 20 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as ranked candidates"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Assess which companies have shown strong quarterly results within the last 20 sessions using revenue and PAT growth, margin movement, and sector-relative comparison."
+sql_templates:
+  -
+    name: "latest_quarterly_results"
+    query: "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.revenue, qr.pat, ra.industry FROM scores.quarterly_results qr JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end WHERE qr.period_type = 'quarter' ORDER BY qr.symbol, qr.period_end DESC, qr.fetched_at DESC LIMIT 50;"
+  -
+    name: "sector_relative_comparison"
+    query: "SELECT ra.symbol, ra.verdict, ra.growth_yoy_revenue_pct, ra.growth_qoq_revenue_pct FROM scores.results_analysis ra WHERE ra.period_end = (SELECT MAX(period_end) FROM scores.results_analysis) AND ra.verdict IN ('beat', 'mixed') ORDER BY ra.growth_yoy_revenue_pct DESC, ra.growth_qoq_revenue_pct DESC LIMIT 10;"
+python_tools:
+  -
+    id: "run_quarterly_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "analysis_result"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+    code: "def run(context):\n    results = context.sql_templates['latest_quarterly_results']\n    sector_comparison = context.sql_templates['sector_relative_comparison']\n    # Process results and sector comparison\n    return analysis_result"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure only the latest quarterly results are assessed."
+  - "Rank companies based on sector-relative growth and performance."
+synthesis_guidance: "['Combine narrative and quantitative insights to rank the companies effectively.', 'Focus on industry trends and sector-specific movements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:56"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_quarterly_analysis: execution failed: AttributeError: 'dict' object has no attribute 'sql_templates'"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_quarterly_analysis: execution failed: AttributeError: 'dict' object has no attribute 'sql_templates'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

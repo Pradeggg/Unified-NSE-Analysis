@@ -1,0 +1,52 @@
+id: "insider_bulk_deal_signal_review_1858_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1858"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: quarter to date; response style: action watchlist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for quarter to date: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as action watchlist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    template: "This tool plans to retrieve data on insider alerts and bulk deals, match it with the latest technical and stage snapshot of the stocks, and compile a watchlist of actionable signals."
+sql_templates:
+  -
+    template: "WITH latest_stage AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_eod AS (SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)), insider_context AS (SELECT ia.symbol, ia.qty, ia.value_cr, ia.insider_score, ss.trend_signal FROM signals.insider_alerts ia JOIN latest_stage ss ON ia.symbol = ss.symbol WHERE ia.alert_date > CURRENT_DATE - INTERVAL '3 months'), bulk_deal_summary AS (SELECT bd.symbol, bd.side, bd.qty FROM signals.bulk_block_deals bd JOIN latest_stage ss ON bd.symbol = ss.symbol WHERE bd.deal_date > CURRENT_DATE - INTERVAL '3 months') SELECT ic.symbol, ic.insider_score, bd.qty AS bulk_qty, ic.trend_signal FROM insider_context ic JOIN bulk_deal_summary bd ON ic.symbol = bd.symbol WHERE ic.insider_score >= 50 ORDER BY ic.insider_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "{'rules': ['Ensure insider_score is a positive numerical value.', 'Confirm trend_signal is one of the expected text labels.', 'Bound output list to top 10 entries.']}"
+synthesis_guidance: "{'guidelines': ['How to interpret trend_signal in the context of insider trading data.', 'The significance of bulk deal quantities and their market impact.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

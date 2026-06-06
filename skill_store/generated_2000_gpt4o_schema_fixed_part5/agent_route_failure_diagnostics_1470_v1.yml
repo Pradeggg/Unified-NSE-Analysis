@@ -1,0 +1,52 @@
+id: "agent_route_failure_diagnostics_1470_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1470"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for post results: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as portfolio-aware output"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Analyze the report timelines and stock discrepancies. Use appropriate evidence and schema guidelines."
+sql_templates:
+  -
+    description: "Identify recent enhanced runs and any failures in stock analysis."
+    template: "SELECT r.run_id, r.run_ts, r.universe_size, s.symbol, s.score FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks s ON r.run_id = s.run_id WHERE r.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "{'rules': ['Ensure route diagnostics leverage the latest enhanced report data.', 'Tool presence validations should be cross-referenced with known gaps.']}"
+synthesis_guidance: "Consider the agent's operational patterns and identify periods of misalignment or missing tool interactions. Suggest improvements or tool additions."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

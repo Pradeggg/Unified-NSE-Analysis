@@ -1,0 +1,84 @@
+id: "vcp_breakouts_with_fundamentals_0726_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0726"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    -
+      table: "market.equity_eod"
+      columns:
+        - "trade_date"
+        - "symbol"
+        - "high"
+        - "volume"
+        - "turnover_cr"
+        - "market_cap_cr"
+    -
+      table: "scores.stage_snapshots"
+      columns:
+        - "snapshot_date"
+        - "symbol"
+        - "company_name"
+        - "market_cap_cat"
+        - "stage"
+        - "technical_score"
+        - "fundamental_score"
+        - "minervini_score"
+        - "enhanced_fund_score"
+    -
+      table: "scores.stage2_vcp_picks"
+      columns:
+        - "snapshot_date"
+        - "symbol"
+        - "vcp_score"
+        - "vcp_breakout_pct"
+        - "vcp_contraction_pct"
+        - "trend_signal"
+        - "trading_signal"
+tool_plan_template:
+  sql_templates:
+    -
+      description: "Fetch stocks reaching new highs in the past 5 sessions."
+      template: "SELECT symbol, MAX(high) AS recent_high FROM market.equity_eod WHERE trade_date > CURRENT_DATE - INTERVAL '5 days' GROUP BY symbol HAVING MAX(high) > (SELECT week52_high FROM market.equity_eod WHERE trade_date = CURRENT_DATE AND symbol = market.equity_eod.symbol);"
+    -
+      description: "Identify quality VCP breakout stocks with strong fundamentals."
+      template: "SELECT vcp.symbol, s.company_name, vcp.vcp_score, s.fundamental_score FROM scores.stage2_vcp_picks AS vcp JOIN scores.stage_snapshots AS s ON vcp.symbol = s.symbol WHERE vcp.snapshot_date > CURRENT_DATE - INTERVAL '5 days' AND vcp.vcp_score > 70 AND s.fundamental_score > 80;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Output must contain a list of candidate stocks with the required performance metrics."
+  - "Ensure freshness by using data within the last 5 sessions."
+  - "Check adherence to the fundamental scores criteria."
+synthesis_guidance: "Combine technical indicators with fundamental analysis to shortlist stocks. Ensure the final candidate list aligns with the freshness criterion, focusing on breakout potentials and recent high achievers."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:51:05"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table {'table': 'market.equity_eod', 'columns': ['trade_date', 'symbol', 'high', 'volume', 'turnover_cr', 'market_cap_cr']}"
+  - "unknown table {'table': 'scores.stage2_vcp_picks', 'columns': ['snapshot_date', 'symbol', 'vcp_score', 'vcp_breakout_pct', 'vcp_contraction_pct', 'trend_signal', 'trading_signal']}"
+  - "unknown table {'table': 'scores.stage_snapshots', 'columns': ['snapshot_date', 'symbol', 'company_name', 'market_cap_cat', 'stage', 'technical_score', 'fundamental_score', 'minervini_score', 'enhanced_fund_score']}"

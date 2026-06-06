@@ -1,0 +1,59 @@
+id: "corporate_events_results_watchlist_1521_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1521"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: last 5 sessions; response style: research-only summary."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for last 5 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as research-only summary"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "last_5_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    steps:
+      -
+        action: "Retrieve relevant corporate events within the last 5 sessions."
+        sql_template: "SELECT symbol, event_type, event_date, purpose_raw, detail, source FROM signals.corporate_events WHERE event_date BETWEEN CURRENT_DATE - INTERVAL '5 days' AND CURRENT_DATE;"
+      -
+        action: "Join events data with latest stage snapshots for technical context."
+        sql_template: "WITH latest_stage_data AS (SELECT DISTINCT ON (symbol) symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY symbol, snapshot_date DESC) SELECT ce.symbol, ce.event_type, ce.event_date, ss.stage, ss.trading_signal FROM signals.corporate_events ce JOIN latest_stage_data ss ON ce.symbol = ss.symbol WHERE ce.event_date BETWEEN CURRENT_DATE - INTERVAL '5 days' AND CURRENT_DATE;"
+sql_templates:
+  - "SELECT symbol, event_type, event_date, purpose_raw, detail, source FROM signals.corporate_events WHERE event_date BETWEEN CURRENT_DATE - INTERVAL '5 days' AND CURRENT_DATE;"
+  - "WITH latest_stage_data AS (SELECT DISTINCT ON (symbol) symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY symbol, snapshot_date DESC) SELECT ce.symbol, ce.event_type, ce.event_date, ss.stage, ss.trading_signal FROM signals.corporate_events ce JOIN latest_stage_data ss ON ce.symbol = ss.symbol WHERE ce.event_date BETWEEN CURRENT_DATE - INTERVAL '5 days' AND CURRENT_DATE;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event_date range is correct for the last 5 sessions."
+  - "Validate that joining conditions and field selections follow approved schema."
+  - "Check that the syntax and latest date rules comply with _global_rules."
+synthesis_guidance: "Create a concise summary of stocks and symbols involved in recent or upcoming corporate events within the last 5 sessions. Emphasize technical stages and trading signals using only research-based observations and evidence."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:46"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

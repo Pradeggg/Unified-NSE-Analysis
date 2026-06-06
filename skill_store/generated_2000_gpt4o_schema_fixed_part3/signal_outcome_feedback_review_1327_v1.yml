@@ -1,0 +1,65 @@
+id: "signal_outcome_feedback_review_1327_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1327"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for last 5 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as exceptions and gaps first"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze historical signal outcomes in the context of sector performance over the last 5 sessions."
+sql_templates:
+  -
+    description: "Extract signal outcomes for the last 5 sessions with sector-relative comparison."
+    template: "WITH recent_signals AS (\n    SELECT symbol, date_issued, sector, signal, target_1, stop_loss, hit_target, hit_stop\n    FROM signals.signal_log\n    WHERE date_issued >= CURRENT_DATE - INTERVAL '5 sessions'\n),\nsector_performance AS (\n    SELECT sector, AVG(price) AS avg_price\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n    GROUP BY sector\n)\nSELECT rs.symbol, rs.date_issued, rs.sector, rs.signal, sp.avg_price, rs.hit_target, rs.hit_stop\nFROM recent_signals rs\nJOIN sector_performance sp ON rs.sector = sp.sector"
+python_tools:
+  -
+    id: "evaluate_signal_patterns"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signal_data"
+    outputs:
+      - "pattern_insights"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze and identify repetitive patterns using signal data\n    pattern_insights = []\n    # Example processing\n    for signal in context['signal_data']:\n        # Evaluate and append insights\n        pass\n    return pattern_insights"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all dates align with a 5-session window."
+  - "Check that sector comparison uses latest market data."
+synthesis_guidance: "['Focus on identifying exceptions and data gaps.', 'Highlight sectors with significant deviations or patterns.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:32"
+generation_model: "gpt-4o"
+validation_errors:
+  - "evaluate_signal_patterns: execution failed: KeyError: 'signal_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "evaluate_signal_patterns: execution failed: KeyError: 'signal_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

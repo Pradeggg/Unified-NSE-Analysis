@@ -1,0 +1,73 @@
+id: "insider_bulk_deal_signal_review_0766_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0766"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: post results; response style: QA checklist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for post results: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as QA checklist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "post_results"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze insider alerts and bulk deals for technical confirmation and freshness; prepare a QA checklist."
+sql_templates:
+  -
+    template: "SELECT symbol, alert_date, alert_type, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '30 days' ORDER BY alert_date DESC;"
+    description: "Fetch recent insider alerts within the last 30 days."
+  -
+    template: "SELECT symbol, deal_date, side, qty, price FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '30 days' ORDER BY deal_date DESC;"
+    description: "Retrieve recent bulk and block deals within the last 30 days."
+  -
+    template: "SELECT symbol, price, trend_signal, rsi FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE ORDER BY trend_signal DESC;"
+    description: "Get the latest trend signals and RSI values."
+python_tools:
+  -
+    id: "tool_1"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "deal_summaries"
+    approved_tables:
+      - "signals.insider_alerts"
+      - "signals.bulk_block_deals"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze context to summarize deals and context.\n    results = []\n    for item in context:\n        summary = { 'symbol': item['symbol'], 'deal_info': item['deal'] }\n        results.append(summary)\n    return results"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure only SELECT queries."
+  - "Verify symbols with associated alerts and deals."
+  - "Confirm technical setups with trend signals > 0."
+synthesis_guidance: "Combine insights from insider alerts and bulk deals with technical signals to create a QA checklist."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:34"
+generation_model: "gpt-4o"
+validation_errors:
+  - "tool_1: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "tool_1: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

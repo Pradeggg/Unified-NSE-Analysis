@@ -1,0 +1,57 @@
+id: "sector_breadth_rotation_watchlist_1343_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1343"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: exceptions and gaps first."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for last 3 months: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as exceptions and gaps first"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Analyze sector breadth using percentages above 50DMA and stage 2 participation."
+sql_templates:
+  -
+    name: "sector_breadth_analysis"
+    template: "WITH recent_breadth AS (\n    SELECT sector, pct_above_50dma, change_5d, breadth_signal, divergence_alert\n    FROM breadth.sector_daily\n    WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months'\n),\nlatest_stages AS (\n    SELECT symbol, sector\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY')\n)\nSELECT rb.sector, rb.pct_above_50dma, rb.change_5d, rb.breadth_signal, ls.symbol\nFROM recent_breadth rb\nJOIN latest_stages ls ON rb.sector = ls.sector\nLIMIT 100;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Output secotr_ranks must list sectors in descending order of breadth improvement."
+  - "Improving_sectors should highlight sectors with the most stage 2 participation."
+  - "Candidate_symbols should include stocks from the improving sectors with 'BUY' or 'STRONG_BUY' signals."
+  - "Ensure evidence covers the timeframe of the last 3 months."
+synthesis_guidance: "Focus on sectors with increasing breadth and stage 2 migration. Report exceptions and gaps prominently."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:58"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

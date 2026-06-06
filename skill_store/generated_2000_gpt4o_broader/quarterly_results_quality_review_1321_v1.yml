@@ -1,0 +1,61 @@
+id: "quarterly_results_quality_review_1321_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1321"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for last 5 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as exceptions and gaps first"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  -
+    query: "SELECT symbol, period_end, growth_yoy_revenue_pct, growth_yoy_pat_pct, opm_delta_pp, verdict FROM scores.results_analysis WHERE period_end >= DATE('now', '-5 days')"
+    type: "latest_results"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "summary"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Use context to summarize the latest quarterly results\n    return {'summary': 'Placeholder for results summary based on context.'}"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure quarterly data covers last 5 sessions."
+  - "Identify beat/miss based on growth percentages."
+  - "Highlight exceptions and gaps in results first."
+synthesis_guidance: "Prioritize identifying which companies had exceptional quarterly results or notable gaps. Contextualize findings within a quick scan framework."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:59"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.date is not approved"

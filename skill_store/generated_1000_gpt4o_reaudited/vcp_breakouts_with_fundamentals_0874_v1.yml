@@ -1,0 +1,57 @@
+created_at: "2026-06-06T12:52:27"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: pre market; response style: action watchlist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0874_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    template: "WITH vcp_candidates AS (SELECT symbol, company_name, sector, price FROM scores.stage2_vcp_picks WHERE vcp_score > 80 AND enhanced_fund_score > 70), fundamentals AS (SELECT symbol, company_name, market_cap_cr, turnover_cr, volume FROM market.equity_eod WHERE trade_date = CURRENT_DATE) SELECT vcp_candidates.symbol, vcp_candidates.company_name, vcp_candidates.sector, fundamentals.market_cap_cr, fundamentals.turnover_cr FROM vcp_candidates JOIN fundamentals ON vcp_candidates.symbol = fundamentals.symbol WHERE fundamentals.market_cap_cr > 5000 AND fundamentals.turnover_cr > 100 ORDER BY fundamentals.turnover_cr DESC, fundamentals.market_cap_cr DESC"
+status: "validated"
+synthesis_guidance: "Prioritize symbols with high liquidity and robust fundamentals. Focus on generating actionable insights for pre-market watchlist creation."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "pre_market"
+  - "action_watchlist"
+title: "VCP Breakouts With Fundamentals Variant 0874"
+tool_plan_template:
+  candidates: "Use historical data and VCP frameworks to find quality breakouts."
+  evidence: "Gather evidence from approved tables."
+  filters: "Identify stocks that are creating new highs, VCP or breakouts with robust fundamentals and liquidity."
+  risks: "Highlight potential risks using fundamental and technical discrepancies."
+  tradingview_symbols: "Provide TradingView symbols for easy tracking."
+validation_rules:
+  - "Ensure all symbols meet VCP breakout criteria."
+  - "Cross-reference with fundamentals for consistency."
+  - "Verify tradingview_symbols are correctly formatted."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

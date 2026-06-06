@@ -1,0 +1,55 @@
+id: "agent_route_failure_diagnostics_1890_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1890"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for intraday context: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as action watchlist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    sql_templates:
+      -
+        type: "SELECT"
+        template: "SELECT ers.run_id, ers.run_ts, ers.market_sentiment, efs.symbol, efs.recommendation, efs.daily_signal, sss.stage, sss.trading_signal FROM report.enhanced_runs AS ers INNER JOIN report.enhanced_filtered_stocks AS efs ON ers.run_id = efs.run_id INNER JOIN scores.stage_snapshots AS sss ON efs.symbol = sss.symbol WHERE sss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND sss.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+        description: "Select recent enhanced runs with Buy signals."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure output aligns with approved schema."
+  - "Validate SQL templates against use cases."
+synthesis_guidance: "['Consolidate output into actionable diagnostics.', 'Identify gaps in tool chains and propose fixes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

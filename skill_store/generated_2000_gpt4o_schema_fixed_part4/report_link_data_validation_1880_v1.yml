@@ -1,0 +1,55 @@
+id: "report_link_data_validation_1880_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1880"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for pre market: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    steps:
+      - "Identify the latest report metadata"
+      - "Check for missing or broken links in the report"
+      - "Ensure data for filtered stocks is populated"
+sql_templates:
+  validate_links:
+    template: "SELECT e.run_id, e.run_ts FROM report.enhanced_runs e WHERE NOT EXISTS (SELECT 1 FROM report.enhanced_filtered_stocks s WHERE e.run_id = s.run_id) ORDER BY e.run_ts DESC LIMIT 10;"
+    description: "Find report runs with missing stock data."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all reported links lead to existing data sources."
+  - "Verify that stock data is complete within reports."
+synthesis_guidance: "[\"Summarize the report's metadata validation findings.\", 'Provide actionable recommendations for any broken links or missing data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:15"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

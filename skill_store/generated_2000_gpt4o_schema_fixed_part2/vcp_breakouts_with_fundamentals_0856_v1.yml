@@ -1,0 +1,57 @@
+id: "vcp_breakouts_with_fundamentals_0856_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0856"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: quarter to date; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  status: "generated"
+  steps:
+    - "Identify latest VCP picks with strong fundamentals and technical scores."
+    - "Filter for stocks creating new highs or breakout scenarios."
+sql_templates:
+  -
+    name: "latest_vcp_picks_with_fundamentals"
+    description: "Identify top VCP picks based on latest scores and enhanced fundamentals."
+    sql: "WITH latest_vcp AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)), latest_scores AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2') SELECT vcp.symbol, vcp.company_name, vcp.price, scores.enhanced_fund_score, scores.technical_score FROM latest_vcp vcp JOIN latest_scores scores ON vcp.symbol = scores.symbol WHERE scores.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY vcp.vcp_score DESC, vcp.rank ASC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure the SQL queries adhere strictly to the approved schema and global rules."
+  - "The final set of candidates must be capped with a LIMIT to ensure manageability."
+synthesis_guidance: "{'maximize_quality': True, 'prioritize_freshness': True}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:41"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,65 @@
+id: "market_3m_rotation_swing_0497_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0497"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for weekly review: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "SQL and optional Python evidence tools"
+sql_templates:
+  -
+    name: "Index Performance"
+    template: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY trade_date DESC;"
+  -
+    name: "Sector Leadership"
+    template: "SELECT sector, AVG(relative_strength) as avg_relative_strength FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_relative_strength DESC;"
+  -
+    name: "Stage Distribution Change"
+    template: "SELECT stage, COUNT(symbol) as count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY stage;"
+python_tools:
+  -
+    id: "interpret_market_rotation"
+    language: "python"
+    mode: "read_only"
+    inputs:
+
+    outputs:
+
+    approved_tables:
+
+    code: "def run(context):\n    # Function to interpret market rotation based on SQL results.\n    pass"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all date calculations use a 3-month window from the current date."
+  - "Verify sector-relative comparison reflects average relative strength order."
+synthesis_guidance: "Use evidence from SQL queries to assess leading sectors and potential swing candidates, tailoring the results towards a portfolio-aware output."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:48:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.avg_relative_strength is not approved"

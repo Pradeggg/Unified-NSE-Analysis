@@ -1,0 +1,52 @@
+id: "quarterly_results_quality_review_0481_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0481"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: intraday context; response style: portfolio-aware output."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for intraday context: latest quarterly results analysis"
+  - "which companies had strong quarterly results as portfolio-aware output"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Plan: Fetch latest quarterly results, analyze revenue and PAT growth, identify margin trends, check filing dates, and assess narrative quality. Provide output with portfolio-aware recommendations."
+sql_templates:
+  quarterly_results_analysis:
+    template: "WITH latest_quarters AS (SELECT DISTINCT ON (symbol) symbol, period_end, revenue, pat, opm_pct FROM scores.quarterly_results WHERE period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC) SELECT q.symbol, q.revenue, q.pat, q.opm_pct, ra.verdict FROM latest_quarters q INNER JOIN scores.results_analysis ra ON q.symbol = ra.symbol AND q.period_end = ra.period_end WHERE ra.verdict IN ('beat', 'inline', 'miss', 'mixed') AND q.revenue IS NOT NULL AND q.pat IS NOT NULL ORDER BY q.revenue DESC LIMIT 10;"
+    description: "Fetch latest quarter results and analysis with verdicts, filtering for symbols with reliable revenue and PAT data."
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Output must include a sorted list of companies based on revenue."
+  - "Each company must have a verdict such as beat, miss, or inline."
+  - "Ensure margin movements are highlighted accurately."
+synthesis_guidance: "['Summarize findings in a portfolio-aware manner.', 'Highlight companies with strong potential in quick-scan output.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:12"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

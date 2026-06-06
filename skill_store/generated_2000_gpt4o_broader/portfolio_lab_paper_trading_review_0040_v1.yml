@@ -1,0 +1,65 @@
+id: "portfolio_lab_paper_trading_review_0040_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0040"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: TradingView export; timeframe: last 20 sessions; response style: concise table."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "TradingView export for last 20 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as concise table"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review paper trading portfolios by analyzing signals, trading strategy entries, exits, and risk management. Generate a concise table with state of strategies."
+sql_templates:
+  -
+    name: "fetch_recent_signals"
+    template: "SELECT symbol, date_issued, signal, entry_low, entry_high, stop_loss, target_1, target_2, price_at_issue FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '20 days' ORDER BY date_issued DESC;"
+python_tools:
+  -
+    id: "run_optimized_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signals"
+    outputs:
+      - "strategy_summary"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context):\n    # Analyze trading signals and summarize performance\n    signals_log = context['signals.signal_log']\n    recent_strategies = signals_log[signals_log['date_issued'] >= pd.Timestamp.today() - pd.Timedelta(days=20)]\n    summary = recent_strategies[['symbol', 'signal', 'entry_low', 'entry_high', 'stop_loss']].drop_duplicates()\n    return summary.to_dict(orient='records')"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Verify data representation against recent market trends."
+  - "Ensure output aligns with paper trading context."
+synthesis_guidance: "Outline the analysis of recent paper trading strategy performance with a focus on compliance to set entry and exit rules, and identify any potential strategy deviations."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:28"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_optimized_analysis: execution failed: KeyError: 'signals.signal_log'"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_optimized_analysis: execution failed: KeyError: 'signals.signal_log'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

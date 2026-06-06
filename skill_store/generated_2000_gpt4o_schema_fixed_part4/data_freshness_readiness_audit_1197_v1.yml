@@ -1,0 +1,62 @@
+id: "data_freshness_readiness_audit_1197_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1197"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: weekly review; response style: narrative plus evidence."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for weekly review: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as narrative plus evidence"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    description: "Perform a weekly review of data freshness readiness with a focus on sector-relative comparison. Provide a narrative plus evidence using SQL evidence templates."
+sql_templates:
+  -
+    title: "Latest EOD Trade Dates"
+    description: "Find the latest EOD trade dates for indices and equities."
+    template: "SELECT MAX(trade_date) AS latest_trade_date FROM market.index_eod UNION SELECT MAX(trade_date) FROM market.equity_eod;"
+  -
+    title: "Sector Comparison of Latest Data"
+    description: "Compare sectors based on the latest available data for readiness."
+    template: "SELECT sector, COUNT(*) AS sector_count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure latest dates are within the expected thresholds."
+  - "Verify that necessary sectors are represented in the data."
+synthesis_guidance: "Focus on combining data date recency with sector readiness. Highlight differences in data availability and impact on reports."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

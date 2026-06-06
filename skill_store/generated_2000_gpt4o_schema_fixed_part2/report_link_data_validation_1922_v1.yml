@@ -1,0 +1,52 @@
+id: "report_link_data_validation_1922_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1922"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: comparison matrix."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  - "Check broken links in enhanced report links"
+  - "Validate missing data in HTML generation"
+  - "Deep review for last 5 sessions as comparison matrix"
+sql_templates:
+  - "WITH latest_runs AS (SELECT run_id FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 5) SELECT e.run_id, e.symbol, e.current_price, e.open_price, e.volume FROM report.enhanced_filtered_stocks e INNER JOIN latest_runs lr ON e.run_id = lr.run_id"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure no join errors between enhanced_runs and enhanced_filtered_stocks"
+  - "Check report.links for completeness and accessibility"
+  - "Verify existence of data for each stock in enhanced_filtered_stocks"
+synthesis_guidance: "Construct a matrix contrasting the findings of each session to pinpoint recurrent data issues."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:37"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

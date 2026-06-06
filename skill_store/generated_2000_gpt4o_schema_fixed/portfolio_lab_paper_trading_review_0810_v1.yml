@@ -1,0 +1,58 @@
+id: "portfolio_lab_paper_trading_review_0810_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0810"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: TradingView export; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "TradingView export for today: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as action watchlist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "TradingView_export"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  strategy_state: "Review status of paper trading strategies and identify any deviations or alerts."
+  open_trades: "List all currently open trades in the paper trading portfolio."
+  entry_exit_rules: "Detail rules related to entry and exit strategies in use."
+  exposure: "Analyze exposure in different sectors and positions."
+  exceptions: "Highlight any inconsistencies or unplanned events."
+sql_templates:
+  -
+    description: "Retrieve latest trades and strategies"
+    query: "SELECT s.symbol, s.signal, s.entry_low, s.entry_high, s.stop_loss, s.target_1, s.target_2 FROM signals.signal_log s WHERE s.date_issued = (SELECT MAX(date_issued) FROM signals.signal_log) AND s.symbol IN (SELECT symbol FROM portfolio.holdings) LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all resulting lists are aligned with the paper trading portfolio and do not mix with real holdings."
+  - "Results must be specific to today's date for relevant analysis."
+synthesis_guidance: "['Focus on providing a clear action watchlist and summary of findings.', 'Recommendations should detail next steps in refining strategies.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:04"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

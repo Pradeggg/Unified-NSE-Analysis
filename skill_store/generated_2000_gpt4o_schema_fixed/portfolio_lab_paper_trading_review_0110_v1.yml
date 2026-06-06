@@ -1,0 +1,69 @@
+id: "portfolio_lab_paper_trading_review_0110_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0110"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: TradingView export; timeframe: today; response style: narrative plus evidence."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "TradingView export for today: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "TradingView_export"
+  - "today"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  task: "analyze_paper_trading"
+  strategy: "Review paper trading portfolio independently, focusing on trading signals and market performance."
+  tools:
+    -
+      id: "sql_tool_1"
+      type: "SQL"
+      description: "Fetch latest market data for paper trading symbols."
+      inputs:
+
+      outputs:
+
+      approved_tables:
+        - "market.equity_eod"
+      sql_query:
+        description: "Get the latest EOD data for paper trading symbols."
+        command: "SELECT symbol, close FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND symbol IN (SELECT DISTINCT symbol FROM signals.signal_log);"
+sql_templates:
+  -
+    description: "Retrieve the latest signals and EOD data for paper trading review."
+    template: "WITH latest_signals AS (SELECT * FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log)), latest_eod AS (SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)) SELECT ls.symbol, ls.signal, le.close FROM latest_signals ls JOIN latest_eod le ON ls.symbol = le.symbol;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure only paper trading related symbols are included in the analysis."
+  - "Validate that SQL queries are read-only and adhere to approved schema."
+synthesis_guidance: "['Provide a narrative that highlights key signal actions and resulting market performance.', 'Segregate paper trading findings from real holdings.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

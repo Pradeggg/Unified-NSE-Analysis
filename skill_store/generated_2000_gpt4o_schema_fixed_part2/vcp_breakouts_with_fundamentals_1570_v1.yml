@@ -1,0 +1,64 @@
+id: "vcp_breakouts_with_fundamentals_1570_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1570"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Research-focused summary with SQL evidence generation for TradingView export."
+sql_templates:
+  - "WITH latest_stage_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_vcp_picks AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)) SELECT eod.symbol, eod.trade_date, eod.close, snapshots.enhanced_fund_score, vcp.vcp_score FROM market.equity_eod AS eod JOIN latest_stage_snapshots AS snapshots ON eod.symbol = snapshots.symbol JOIN latest_vcp_picks AS vcp ON eod.symbol = vcp.symbol WHERE eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND snapshots.stage = 'STAGE_2' AND snapshots.trading_signal IN ('BUY', 'STRONG_BUY') AND vcp.vcp_score > 80 ORDER BY vcp.vcp_score DESC LIMIT 50"
+python_tools:
+  -
+    id: "calculate_vcp_strength"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "vcp_score"
+      - "enhanced_fund_score"
+    outputs:
+      - "vcp_strength"
+    approved_tables:
+      - "scores.stage2_vcp_picks"
+      - "scores.stage_snapshots"
+    code: "def calculate_vcp_strength(vcp_score, enhanced_fund_score): return 0.5 * vcp_score + 0.5 * enhanced_fund_score"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure SQL outputs are consistent with intended input patterns."
+  - "Verify relevance to VCP, breakout, and fundamental criteria."
+synthesis_guidance: "['Synthesize insights in a research-only format.', 'Highlight significance in Indian markets.', 'Use technical indicators to assess candidate stocks.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_vcp_strength: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_vcp_strength: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

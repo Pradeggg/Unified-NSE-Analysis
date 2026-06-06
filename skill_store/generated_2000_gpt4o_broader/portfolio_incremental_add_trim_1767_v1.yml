@@ -1,0 +1,68 @@
+id: "portfolio_incremental_add_trim_1767_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1767"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: post results; response style: QA checklist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for post results: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Select data for review using table evidence, contextualize within sector performance post results, and construct decision-making checklist for add/trim actions."
+sql_templates:
+  -
+    template_name: "sector_performance"
+    template: "WITH sector_summary AS (SELECT sector, AVG(change_1w_pct) as avg_change_1w, AVG(trend_signal) as avg_trend_signal FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE GROUP BY sector) SELECT * FROM sector_summary WHERE avg_change_1w > 0.05 OR avg_trend_signal > 1;"
+  -
+    template_name: "portfolio_positions"
+    template: "SELECT symbol, qty, avg_cost FROM portfolio.holdings;"
+python_tools:
+  -
+    id: "calculate_exposure_risk"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "portfolio_data"
+      - "sector_data"
+    outputs:
+      - "risk_analysis"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context): # Perform calculations to assess risk levels based on input data."
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all columns in evidence are present and correct."
+  - "Verify SQL templates are read-only."
+  - "Check if the output contract satisfies all patterns."
+synthesis_guidance: "Craft responses based on sector-relative performance data, highlight key areas for add/trim, and ensure comprehensive exposure risk analysis."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:46"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_exposure_risk: python syntax error: expected an indented block after function definition on line 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_exposure_risk: python syntax error: expected an indented block after function definition on line 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

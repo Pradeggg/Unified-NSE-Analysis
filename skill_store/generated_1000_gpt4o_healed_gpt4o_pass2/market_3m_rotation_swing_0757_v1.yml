@@ -1,0 +1,144 @@
+card:
+  created_at: "2026-06-06T12:51:17"
+  created_by: "llm_generated"
+  description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: QA checklist."
+  domain: "market_analysis"
+  evidence_required:
+    tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "market_3m_rotation_swing_0757_v1"
+  input_patterns:
+    - "last 3 months market analysis"
+    - "find swing candidates from recent sector rotation"
+    - "market regime and stage 2 leadership over 3 months"
+    - "sector-relative comparison for quarter to date: last 3 months market analysis"
+    - "market regime and stage 2 leadership over 3 months as QA checklist"
+  output_contract:
+    - "as_of_date"
+    - "index_returns"
+    - "leading_sectors"
+    - "primary_candidates"
+    - "risks"
+  python_tools:
+    -
+      approved_tables:
+        - "scores.stage_snapshots"
+      code: "def run(context): \n  stage_distribution_change = context.get('stage_distribution_change', [])\n  return sorted(stage_distribution_change, key=lambda x: x['stage_score'], reverse=True)"
+      id: "sector_leadership_analysis"
+      inputs:
+        - "stage_distribution_change"
+        - "sector"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "leading_sectors"
+  sql_templates:
+    - "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= current_date - interval '3 months';"
+    - "SELECT sector, COUNT(*) as count, AVG(stage_score) as stage_score FROM scores.stage_snapshots WHERE snapshot_date >= current_date - interval '3 months' GROUP BY sector ORDER BY stage_score DESC;"
+  status: "generated"
+  synthesis_guidance:
+    - "Evaluate the top-performing sectors relative to market index performance."
+    - "Identify swing candidates with high stage scores and technical signals."
+  tags:
+    - "market_regime"
+    - "sector_rotation"
+    - "stage_analysis"
+    - "swing_trading"
+    - "sector-relative_comparison"
+    - "quarter_to_date"
+    - "QA_checklist"
+  title: "3M Market Rotation Swing Assessment Variant 0757"
+  tool_plan_template: "Analyze market regime and sector leadership using SQL templates. Supplement with Python tool for complex aggregation."
+  validation_rules:
+    - "Ensure all computations are based on data within the last 3 months."
+    - "Sector analysis must use properly aggregated stage scores."
+  version: 1
+created_at: "2026-06-06T12:51:17"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: QA checklist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0757_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context): \n  # Analyze and aggregate stage scores by sector\n  return sorted(context['stage_distribution_change'], key=lambda x: x['avg_stage_score'], reverse=True)"
+    id: "sector_leadership_analysis"
+    inputs:
+      - "stage_distribution_change"
+      - "sector"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "leading_sectors"
+review:
+  attempts: 3
+  findings:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  - "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= current_date - interval '3 months';"
+  - "SELECT sector, COUNT(*) as count, AVG(stage_score) as avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date >= current_date - interval '3 months' GROUP BY sector ORDER BY avg_stage_score DESC;"
+status: "test_failed"
+synthesis_guidance: "['Evaluate the top-performing sectors relative to market index performance.', 'Identify swing candidates with high stage scores and technical signals.']"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "QA_checklist"
+title: "3M Market Rotation Swing Assessment Variant 0757"
+tool_plan_template: "Analyze market regime and sector leadership using SQL templates. Supplement with Python tool for complex aggregation."
+validation_errors:
+  - "description is required"
+  - "domain is required"
+  - "evidence_required is required"
+  - "id is required"
+  - "input_patterns is required"
+  - "output_contract is required"
+  - "tags is required"
+  - "title is required"
+  - "validation_rules is required"
+  - "version is required"
+  - "version must be a positive integer"
+validation_rules:
+  - "Ensure all computations are based on data within the last 3 months."
+  - "Sector analysis must use properly aggregated stage scores."
+version: 1

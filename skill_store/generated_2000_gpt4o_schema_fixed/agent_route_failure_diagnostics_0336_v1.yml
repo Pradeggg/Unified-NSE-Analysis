@@ -1,0 +1,52 @@
+id: "agent_route_failure_diagnostics_0336_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0336"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: last 20 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as exceptions and gaps first"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "Evaluate evidence to identify gaps in tool availability and symbol resolution."
+  - "Audit data freshness and recent report discrepancies for last 20 sessions."
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts, analysis_date, notes FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '7 days' AND notes LIKE '%tool missing%' ORDER BY run_ts DESC LIMIT 20;"
+    description: "Check for missing tools in recent runs."
+  -
+    template: "SELECT er.run_id, ef.symbol, ef.recommendation FROM report.enhanced_filtered_stocks ef JOIN report.enhanced_runs er ON er.run_id = ef.run_id WHERE er.run_ts >= NOW() - INTERVAL '7 days' AND ef.recommendation = 'HOLD';"
+    description: "Identify HOLD recommendations in the latest reports."
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure each diagnostic maintains a focus on identifying missing tools or incorrect symbol resolutions."
+  - "Results must prioritize exceptions and current gaps for transparency."
+synthesis_guidance: "['Prioritize exceptions in the diagnostics to highlight immediate concerns.', 'Ensure route fixes consider current fresh data constraints for accuracy.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:09"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.now is not approved"

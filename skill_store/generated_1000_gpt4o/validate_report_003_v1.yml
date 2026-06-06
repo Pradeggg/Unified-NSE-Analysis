@@ -1,0 +1,55 @@
+id: "validate_report_003_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Validate Report Links and Missing Data"
+description: "Review and validate report links for the last 3 months focusing on missing data in position-sizing."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data in a concise table"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "last_3_months"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  mode: "report_analysis"
+  actions:
+    - "Validate report run metadata"
+    - "Identify broken report links"
+    - "Pinpoint missing data in the last 3 months"
+  response_format: "table"
+  response_detail: "concise"
+sql_templates:
+  -
+    name: "fetch_recent_runs"
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE run_ts >= DATEADD(MONTH, -3, CURRENT_DATE)"
+  -
+    name: "fetch_filtered_stocks"
+    template: "SELECT run_id, symbol, score, volume, trading_value_cr FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= DATEADD(MONTH, -3, CURRENT_DATE))"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "date_checks"
+  - "link_integrity"
+synthesis_guidance: "Summarize findings in a concise table highlighting key insights from available evidence."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:41:28"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.dateadd is not approved"
+  - "report.enhanced_runs.month is not approved"

@@ -1,0 +1,61 @@
+id: "market_3m_rotation_swing_1121_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1121"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: last 5 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for last 5 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as narrative plus evidence"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "last_5_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  sql_queries:
+    -
+      description: "Fetch latest index performance."
+      query: "SELECT index_symbol, close, change_pct FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+    -
+      description: "Fetch Stage 2 leaders."
+      query: "SELECT symbol, company_name, sector, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY');"
+    -
+      description: "Identify top VCP candidates."
+      query: "SELECT symbol, company_name, vcp_score, change_1w_pct FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC, rank ASC LIMIT 10;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure recent date queries use the latest date filtering as per _global_rules."
+  - "Restrict result sets to top candidates with LIMIT to avoid extensive output."
+synthesis_guidance: "['Combine quantitative index performance with qualitative sector analysis.', 'Highlight leading sectors and swing candidates with supporting data.', 'Discuss potential risks by considering index volatility and trend changes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:22"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

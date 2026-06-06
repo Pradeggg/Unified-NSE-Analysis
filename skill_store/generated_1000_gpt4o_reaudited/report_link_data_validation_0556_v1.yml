@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:49:12"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: quarter to date; response style: research-only summary."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0556_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for quarter to date: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  check_freshness: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts >= (CURRENT_DATE - interval '3 months')"
+  identify_missing_data: "SELECT run_id, symbol FROM report.enhanced_filtered_stocks WHERE score IS NULL OR recommendation IS NULL"
+status: "validated"
+synthesis_guidance: "['Summarize freshness status and data completeness.', 'Highlight any issues with data consistency.', 'Formulate recommendations for remediation.']"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "research-only_summary"
+title: "Enhanced Report Data Validation Variant 0556"
+tool_plan_template:
+  step1: "Review `report.enhanced_runs` for metadata consistency and freshness."
+  step2: "Cross-check `report.enhanced_filtered_stocks` for missing data or inconsistencies."
+  step3: "Compile findings and create a research-only summary."
+validation_rules:
+  - "Verify all timestamps are within the quarter."
+  - "Ensure no stocks have null scores or recommendations."
+  - "All report links should resolve without error."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,65 @@
+id: "market_3m_rotation_swing_1009_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1009"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: today; response style: concise table."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "{sql_templates}"
+sql_templates:
+  -
+    description: "Get index returns over the last 3 months."
+    template: "SELECT index_symbol, (MAX(close) - MIN(close)) / MIN(close) * 100 AS return_3m FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol;"
+  -
+    description: "Determine stage distribution change between now and 3 months ago."
+    template: "SELECT stage, COUNT(symbol) AS count FROM scores.stage_snapshots WHERE snapshot_date IN ((SELECT MAX(snapshot_date) FROM scores.stage_snapshots), (SELECT MAX(snapshot_date) FROM scores.stage_snapshots WHERE snapshot_date <= CURRENT_DATE - INTERVAL '3 months')) GROUP BY stage;"
+  -
+    description: "Identify leading sectors based on relative strength metrics."
+    template: "SELECT sector, AVG(relative_strength) AS avg_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY avg_strength DESC LIMIT 5;"
+  -
+    description: "List primary stage 2 candidates with buy signals."
+    template: "SELECT symbol, price, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY stage_score DESC LIMIT 10;"
+  -
+    description: "Identify potential risks based on VCP breakout."
+    template: "SELECT symbol, vcp_score, vcp_breakout_pct FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND vcp_breakout_pct < 0 ORDER BY vcp_breakout_pct ASC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+synthesis_guidance: "Combine index returns, stage distribution, sector strength, and VCP risks into a coherent market overview."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.return_3m is not approved"

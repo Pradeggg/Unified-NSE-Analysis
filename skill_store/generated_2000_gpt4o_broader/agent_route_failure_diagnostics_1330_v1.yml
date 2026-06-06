@@ -1,0 +1,61 @@
+id: "agent_route_failure_diagnostics_1330_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1330"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for last 5 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as exceptions and gaps first"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze failures using available SQL evidence and Python tools for complex logic."
+sql_templates:
+  -
+    name: "recent_enhanced_runs"
+    query: "SELECT * FROM report.enhanced_runs WHERE run_ts >= now() - interval '5 sessions';"
+  -
+    name: "recent_filtered_stocks"
+    query: "SELECT * FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= now() - interval '5 sessions');"
+python_tools:
+  -
+    id: "symbol_resolution_checker"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "recent_filtered_stocks"
+    outputs:
+      - "symbol_resolution_issues"
+    approved_tables:
+      - "report.enhanced_filtered_stocks"
+    code: "# Analyzes symbol resolution loops for recent runs\ndef run(context):\n    # Placeholder: complex Python logic for analyzing symbol resolution\n    # Assume context contains recent_filtered_stocks data\n    pass"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure outputs specify failure modes and route fixes."
+  - "Check for missing tools and symbol resolution loops."
+  - "Highlight any evidence gaps or exceptions in diagnostics."
+synthesis_guidance: "['Use SQL templates for initial evidence gathering.', \"Apply Python tools for complex logic outside SQL's scope.\"]"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.now is not approved"

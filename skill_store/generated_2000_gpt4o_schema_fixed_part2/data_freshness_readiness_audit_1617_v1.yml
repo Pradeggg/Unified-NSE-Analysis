@@ -1,0 +1,65 @@
+id: "data_freshness_readiness_audit_1617_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1617"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: debug trace."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for latest EOD: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as debug trace"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  context: "Check the freshness of evidence tables based on the latest available data."
+  objective: "Ensure all necessary data is up-to-date and identify any gaps."
+sql_templates:
+  -
+    name: "latest_index_date"
+    query: "SELECT MAX(trade_date) AS latest_date FROM market.index_eod;"
+  -
+    name: "latest_equity_date"
+    query: "SELECT MAX(trade_date) AS latest_date FROM market.equity_eod;"
+  -
+    name: "latest_stage_snapshot_date"
+    query: "SELECT MAX(snapshot_date) AS latest_date FROM scores.stage_snapshots;"
+  -
+    name: "latest_market_daily_date"
+    query: "SELECT MAX(trade_date) AS latest_date FROM breadth.market_daily;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure query results match expected structure for latest dates."
+  - "Identify any tables not reporting recent data."
+synthesis_guidance: "['Review result set for any outliers in data freshness.', 'Cross-reference sector-relative performance for context.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.latest_date is not approved"
+  - "market.equity_eod.latest_date is not approved"
+  - "market.index_eod.latest_date is not approved"
+  - "scores.stage_snapshots.latest_date is not approved"

@@ -1,0 +1,54 @@
+id: "report_link_data_validation_1600_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1600"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for weekly review: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Select latest enhanced report runs for weekly review."
+    sql: "SELECT * FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '7 days';"
+  -
+    description: "Join to identify potential missing stock data for report runs."
+    sql: "SELECT ers.run_id, ers.symbol FROM report.enhanced_filtered_stocks ers LEFT JOIN report.enhanced_runs er ON ers.run_id = er.run_id WHERE er.run_id IS NULL;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Use SQL join rules from the schema."
+  - "Ensure only evidence_required tables are queried."
+synthesis_guidance: "Focus on research-only summaries and avoid direct actions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:04"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

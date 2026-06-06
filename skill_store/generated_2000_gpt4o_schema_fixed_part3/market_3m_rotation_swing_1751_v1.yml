@@ -1,0 +1,73 @@
+id: "market_3m_rotation_swing_1751_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1751"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: quarter to date; response style: QA checklist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  tool_steps:
+    -
+      step: "Index returns"
+      sql:
+        template: "SELECT index_symbol, AVG(close) as avg_close, MAX(trade_date) as latest_date FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol;"
+    -
+      step: "Stage distribution change"
+      sql:
+        template: "SELECT stage, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY stage;"
+    -
+      step: "Leading sectors"
+      sql:
+        template: "SELECT sector, AVG(relative_strength) as avg_relative_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY avg_relative_strength DESC LIMIT 5;"
+    -
+      step: "Primary swing candidates"
+      sql:
+        template: "SELECT symbol, company_name FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC, rank ASC LIMIT 10;"
+    -
+      step: "Risks"
+      sql:
+        template: "SELECT index_symbol, MIN(trend_signal) as market_trend FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) GROUP BY index_symbol;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "['Create a concise QA checklist summarizing the findings from SQL queries.', 'Align results with the latest available data for a three-month period.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:51"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

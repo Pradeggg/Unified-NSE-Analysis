@@ -1,0 +1,73 @@
+id: "agent_route_failure_diagnostics_1344_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1344"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: last 3 months; response style: exceptions and gaps first."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for last 3 months: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as exceptions and gaps first"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Analyze recent enhanced runs for potential issues in Agent Adda."
+    template: "SELECT run_id, run_ts, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    description: "Fetch filtered stocks and ranks in recent runs."
+    template: "SELECT symbol, rank, score FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months');"
+  -
+    description: "Check for significant price change or signal issues in recent snapshots."
+    template: "SELECT symbol, change_1d_pct, trend_signal FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' AND change_1d_pct > 5.0;"
+python_tools:
+  -
+    id: "route_diagnostics_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "diagnostic_report"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # This code would be a read-only tool checking diagnostics within context.\n    diagnostic_report = {}\n    # Analyze context for errors and fill report.\n    return diagnostic_report"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure data freshness by filtering the last 3 months."
+  - "Highlight any missing data that could cause diagnostic gaps."
+  - "Capture any route irregularities or unexpected behavior in the journey."
+synthesis_guidance: "['Focus on highlighting failures and gaps in process steps.', 'Identify missing tools or symbols causing diagnostic issues.', 'Recommend modifications or fixes based on gathered evidence.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "route_diagnostics_tool: missing output diagnostic_report"
+review:
+  status: "needs_heal"
+  findings:
+    - "route_diagnostics_tool: missing output diagnostic_report"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

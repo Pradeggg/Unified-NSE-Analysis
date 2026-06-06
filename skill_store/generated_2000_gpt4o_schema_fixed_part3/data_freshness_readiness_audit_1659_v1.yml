@@ -1,0 +1,78 @@
+id: "data_freshness_readiness_audit_1659_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1659"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for quarter to date: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as debug trace"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  id: "example_tool_plan"
+  description: "Plan to validate data freshness using SQL templates based on the approved schema."
+  steps:
+
+sql_templates:
+  -
+    purpose: "Check latest index EOD data"
+    template: "SELECT MAX(trade_date) AS latest_date FROM market.index_eod;"
+  -
+    purpose: "Check latest equity EOD data"
+    template: "SELECT MAX(trade_date) AS latest_date FROM market.equity_eod;"
+  -
+    purpose: "Check latest stage snapshot data"
+    template: "SELECT MAX(snapshot_date) AS latest_date FROM scores.stage_snapshots;"
+python_tools:
+  -
+    id: "calculate_freshness_scores"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "latest_index_date"
+      - "latest_equity_date"
+      - "latest_stage_snapshot_date"
+    outputs:
+      - "freshness_scores"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Insert logic to calculate freshness scores based on input dates\n    return {'freshness_scores': {}}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all SQL statements only perform SELECT operations."
+  - "Confirm data freshness with respect to quarter to date."
+  - "Verify that all joins use approved _join_rules."
+synthesis_guidance: "['Generate a debug trace that outlines the source freshness and any identified gaps.', 'Provide actionable insights for improving data readiness.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:29"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_date is not approved"
+  - "market.index_eod.latest_date is not approved"
+  - "scores.stage_snapshots.latest_date is not approved"

@@ -1,0 +1,50 @@
+id: "report_link_data_validation_0704_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0704"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: today; response style: QA checklist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for today: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "today"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "This plan involves querying the `report.enhanced_runs` and `report.enhanced_filtered_stocks` tables to validate report links and ensure data completeness as part of a QA checklist for today's generated reports."
+sql_templates:
+  -
+    template: "SELECT er.run_id, er.run_ts, er.analysis_date, er.stocks_filtered, es.symbol, es.day_change_pct FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks es ON er.run_id = es.run_id WHERE er.run_ts = CURRENT_DATE;"
+    description: "Fetch today's report run data with filtered stocks for validation."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Check if all expected report runs have corresponding filtered stock data."
+  - "Identify any reports with missing or incomplete required fields."
+synthesis_guidance: "['Generate a QA checklist format for findings and validations.', 'Ensure clear identification of problems and proposed solutions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:35:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

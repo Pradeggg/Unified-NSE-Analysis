@@ -1,0 +1,48 @@
+id: "signal_outcome_feedback_review_1299_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1299"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: weekly review; response style: ranked candidates."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for weekly review: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as ranked candidates"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze the outcomes of trading signals over the past week, identifying which met targets or hit stop losses, and determine patterns or insights for future signal generation."
+sql_templates:
+  -
+    query: "SELECT \n  s.symbol, \n  s.signal, \n  s.date_issued, \n  s.hit_target, \n  s.hit_stop, \n  s.return_pct\nFROM \n  signals.signal_log s\nWHERE \n  s.date_issued >= CURRENT_DATE - INTERVAL '1 week'\n  AND (s.hit_target = true OR s.hit_stop = true)\nORDER BY \n  s.date_issued DESC\nLIMIT 10;"
+    description: "Retrieve the latest 10 signals from the past week that either hit targets or stop losses."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all filters for date ranges use PostgreSQL date syntax."
+  - "Queries must remain bounded using LIMIT."
+synthesis_guidance: "['Use the outcome data to identify patterns in successful signals versus those that hit stop losses.', 'Look for potential improvements in the setup classes or signal attributes that contributed to profitable outcomes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.s is not approved"

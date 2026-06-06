@@ -1,0 +1,79 @@
+created_at: "2026-06-06T12:42:00"
+created_by: "llm_generated"
+description: "Perform data validation of enhanced report metadata and filtered stock data with focus on TradingView export for latest EOD."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_card_001_0120_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for latest EOD: review report links not working"
+  - "validate generated report links and missing data as narrative plus evidence"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context): \n    # Example Python tool logic\n    # Validate consistency and find missing data\n    # This is a placeholder for actual code implementation\n    return {\n        'consistency_check_results': {},\n        'missing_data_points': []\n    }"
+    id: "tool_001"
+    inputs:
+      - "run_id"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "consistency_check_results"
+      - "missing_data_points"
+sql_templates:
+  -
+    description: "Retrieve metadata for a specific report run."
+    template: "SELECT * FROM report.enhanced_runs WHERE run_id = ?;"
+  -
+    description: "Fetch filtered stock data for the report run."
+    template: "SELECT * FROM report.enhanced_filtered_stocks WHERE run_id = ?;"
+status: "validated"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "narrative_plus_evidence"
+title: "Enhanced Report Data Validation"
+tool_plan_template:
+  inputs:
+    - "run_id"
+  outputs:
+    - "findings"
+    - "broken_links"
+    - "missing_data"
+    - "remediation"
+    - "verification"
+  synthesis_guidance: "Provide narrative insights backed by quantitative evidence from the SQL queries."
+  validation_rules:
+    - "Ensure all expected reports have valid links."
+    - "Confirm stock data is fully populated and consistent."
+    - "Check TradingView export aligns with latest EOD expectations."
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

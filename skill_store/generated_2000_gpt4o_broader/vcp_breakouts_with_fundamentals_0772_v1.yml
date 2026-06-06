@@ -1,0 +1,50 @@
+id: "vcp_breakouts_with_fundamentals_0772_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0772"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: pre market; response style: QA checklist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "find_vcp_breakouts"
+    template: "\n            SELECT \n                p.symbol, \n                p.company_name, \n                p.sector, \n                p.live_price, \n                p.vcp_score, \n                p.vcp_breakout_pct, \n                p.fundamental_score,\n                p.enhanced_fund_score, \n                p.institutional_backing \n            FROM \n                scores.stage2_vcp_picks p \n            WHERE \n                p.live_price > p.price AND\n                (p.vcp_breakout_pct > 10 OR p.fundamental_score > 75) \n            ORDER BY \n                p.vcp_score DESC\n        "
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure VCP breakout stocks have high scores in fundamentals and institutional backing."
+synthesis_guidance: "Focus on identifying high-potential breakouts with strong fundamentals; use scores to highlight potential candidates."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:33"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.fundamental_score is not approved"
+  - "scores.stage2_vcp_picks.institutional_backing is not approved"
+  - "scores.stage2_vcp_picks.p is not approved"

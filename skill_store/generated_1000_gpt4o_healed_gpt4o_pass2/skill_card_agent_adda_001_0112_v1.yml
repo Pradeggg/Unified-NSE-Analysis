@@ -1,0 +1,48 @@
+created_at: "2026-06-06T12:42:00"
+created_by: "llm_generated"
+description: "Perform deep institutional analysis for enhanced report validation. Evaluate report link functionality and examine data completeness in the Indian market context."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "skill_card_agent_adda_001_0112_v1"
+input_patterns:
+  - "validate and analyze enhanced report data"
+  - "check report links for stock data issues"
+  - "narrative analysis on missing data and report links"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "ValidateEnhancedRuns"
+    template: "SELECT run_id, run_ts, market_sentiment FROM report.enhanced_runs WHERE run_ts >= (CURRENT_DATE - INTERVAL '1 day')"
+  -
+    name: "AnalyzeFilteredStocks"
+    template: "SELECT symbol, score FROM report.enhanced_filtered_stocks WHERE score IS NULL OR symbol IS NULL"
+status: "validated"
+synthesis_guidance: "Provide narrative alongside evidence findings, ensuring institutional depth and relevance to the latest market data."
+tags:
+  - "data_validation"
+  - "report_analysis"
+  - "Indian_market"
+  - "institutional_review"
+title: "Agent Adda Enhanced Data Validation"
+tool_plan_template: "Use narrative and evidence-based methods for validating enhanced report data by examining approved tables."
+validation_rules:
+  - "Status must be generated."
+  - "Ensure all inputs are within schema."
+version: 1

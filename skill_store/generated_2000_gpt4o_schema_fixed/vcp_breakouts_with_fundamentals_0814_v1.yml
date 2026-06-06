@@ -1,0 +1,53 @@
+id: "vcp_breakouts_with_fundamentals_0814_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0814"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Create action watchlists for stocks hitting new highs or VCP levels with strong fundamentals and liquidity from the latest technical and fundamental data."
+sql_templates:
+  -
+    query: "WITH latest_eod AS ( SELECT symbol, close, high, low FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND series = 'EQ' ), latest_stage AS ( SELECT symbol, stage, trading_signal, fundamental_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') ) SELECT e.symbol, e.close, e.high, e.low, s.stage, s.trading_signal, s.fundamental_score FROM latest_eod e JOIN latest_stage s ON e.symbol = s.symbol LIMIT 50;"
+    description: "Selects stocks with the latest EOD data, stage 2, strong buy signals, and good fundamentals."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Verify the query returns stocks that match the latest VCP and fundamentals criteria."
+  - "Ensure the trading symbols can be imported into TradingView."
+  - "Check if data integrity aligns with the latest schema."
+synthesis_guidance: "['Emphasize actionable insights from high-quality filters.', 'Integrate liquidity metrics if available for enhanced selection.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

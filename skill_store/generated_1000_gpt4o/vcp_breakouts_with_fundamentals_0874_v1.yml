@@ -1,0 +1,58 @@
+id: "vcp_breakouts_with_fundamentals_0874_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0874"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters: "Identify stocks that are creating new highs, VCP or breakouts with robust fundamentals and liquidity."
+  candidates: "Use historical data and VCP frameworks to find quality breakouts."
+  tradingview_symbols: "Provide TradingView symbols for easy tracking."
+  evidence: "Gather evidence from approved tables."
+  risks: "Highlight potential risks using fundamental and technical discrepancies."
+sql_templates:
+  -
+    template: "WITH vcp_candidates AS (SELECT symbol, company_name, sector, price FROM scores.stage2_vcp_picks WHERE vcp_score > 80 AND enhanced_fund_score > 70), fundamentals AS (SELECT symbol, company_name, market_cap_cr, turnover_cr, volume FROM market.equity_eod WHERE trade_date = CURRENT_DATE) SELECT vcp_candidates.symbol, vcp_candidates.company_name, vcp_candidates.sector, fundamentals.market_cap_cr, fundamentals.turnover_cr FROM vcp_candidates JOIN fundamentals ON vcp_candidates.symbol = fundamentals.symbol WHERE fundamentals.market_cap_cr > 5000 AND fundamentals.turnover_cr > 100 ORDER BY fundamentals.turnover_cr DESC, fundamentals.market_cap_cr DESC"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all symbols meet VCP breakout criteria."
+  - "Cross-reference with fundamentals for consistency."
+  - "Verify tradingview_symbols are correctly formatted."
+synthesis_guidance: "Prioritize symbols with high liquidity and robust fundamentals. Focus on generating actionable insights for pre-market watchlist creation."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:52:27"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table fundamentals.market_cap_cr"
+  - "unknown table fundamentals.symbol"
+  - "unknown table fundamentals.turnover_cr"
+  - "unknown table vcp_candidates.company_name"
+  - "unknown table vcp_candidates.sector"
+  - "unknown table vcp_candidates.symbol"

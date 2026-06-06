@@ -1,0 +1,1 @@
+def run(context): return [url for url in context['report_urls'] if not validate_url(url)]

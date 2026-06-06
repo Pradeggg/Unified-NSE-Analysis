@@ -1,0 +1,59 @@
+id: "fii_dii_regime_breadth_review_1618_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1618"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: latest EOD; response style: debug trace."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for latest EOD: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as debug trace"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    steps:
+      - "Fetch the latest FII/DII flow data."
+      - "Assess current market regime using regime history."
+      - "Evaluate market breadth using daily breadth data."
+      - "Verify index movements with EOD data."
+sql_templates:
+  - "SELECT * FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+  - "SELECT * FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history);"
+  - "SELECT * FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+  - "SELECT * FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all SQL queries are read-only and adhere to the schema."
+  - "Confirm data integrity and co-relevance using approved join rules."
+synthesis_guidance: "['Explain risk context using a combination of FII/DII flows, regime state, and breadth data.', 'Use debug trace style to provide transparency in results synthesis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

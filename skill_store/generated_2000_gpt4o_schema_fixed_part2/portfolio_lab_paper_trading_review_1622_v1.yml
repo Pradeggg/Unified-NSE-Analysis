@@ -1,0 +1,72 @@
+id: "portfolio_lab_paper_trading_review_1622_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1623"
+description: "Review of paper trading strategies with a focus on entries, exits, stops, targets, and exposure over the last 5 sessions. This variant concentrates on a deep institutional review with a debug trace style."
+input_patterns:
+  - "analyze my paper trading portfolio"
+  - "review paper trading strategy entries exits stop loss targets"
+  - "portfolio review focusing on paper trades only"
+  - "deep institutional review: last 5 sessions paper trading report"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  tools:
+    -
+      type: "python"
+      id: "debug_trace_tool"
+      name: "Debug Trace Tool"
+      description: "A Python tool to generate debug traces for strategy reviews."
+      policies:
+        -
+          policy_field: "language"
+          policy_value: "python"
+        -
+          policy_field: "mode"
+          policy_value: "read_only"
+        -
+          policy_field: "blocked_capabilities"
+          policy_value:
+            - "network"
+            - "subprocess"
+            - "filesystem_write"
+            - "db_write"
+            - "broker_api"
+      required_function: "run(context)"
+sql_templates:
+  -
+    description: "Fetch the latest signals for paper trading strategies over the last 5 sessions."
+    template: "SELECT s.date_issued, s.symbol, s.signal, s.entry_low, s.entry_high, s.stop_loss, s.target_1, s.target_2, s.return_pct FROM signals.signal_log s WHERE s.date_issued > (CURRENT_DATE - INTERVAL '5 days') AND s.stage IN ('BUY', 'SELL');"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure that signal data corresponds to the last 5 trading sessions."
+  - "Verify that the signal and entry/exit data is correctly parsed."
+  - "Check if the debug trace provides a clear step-by-step strategy analysis."
+synthesis_guidance: "Focus the discussion on the precision of entries, exits, stop-losses, and targets in the recent 5-session timeframe. Highlight discrepancies and improvement areas."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:26"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.s is not approved"
+  - "signals.signal_log.stage is not approved"

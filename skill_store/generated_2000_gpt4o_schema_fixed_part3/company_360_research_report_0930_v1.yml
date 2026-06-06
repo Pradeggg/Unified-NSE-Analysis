@@ -1,0 +1,64 @@
+id: "company_360_research_report_0930_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0930"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: TradingView export; timeframe: last 5 sessions; response style: comparison matrix."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "TradingView export for last 5 sessions: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as comparison matrix"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Exchange top-performing and risk symbols in trading signal space to generate a competitive map."
+    - "Integrate narratives from structured results for the last reporting period ensuring captured context and snapshot descriptive elements."
+    - "Highlight financial health over the last five sessions by merging cash and earnings signals."
+sql_templates:
+  -
+    statement: "SELECT e.symbol, e.close, s.stage, s.stage_score, s.trend_signal FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND e.symbol = '{{symbol}}' LIMIT 1;"
+    context: "Obtain latest stock EOD with aligned stage data for {{symbol}}."
+  -
+    statement: "SELECT symbol, period_label, revenue, opm_pct, pat, eps FROM scores.quarterly_results WHERE symbol = '{{symbol}}' AND period_type = 'quarter' ORDER BY period_end DESC LIMIT 1;"
+    context: "Fetch latest quarterly results for {{symbol}}."
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure inclusion of at least one narrative element in synthesis globally."
+  - "Verify five-session rolling trends accurately described."
+synthesis_guidance: "['Combine schematic trends to enable a holistic view in a compact format.', 'Express technical setups and emerging trends using effective comparative matrices.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

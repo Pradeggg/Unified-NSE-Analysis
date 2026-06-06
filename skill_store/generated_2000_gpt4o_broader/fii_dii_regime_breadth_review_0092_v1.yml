@@ -1,0 +1,64 @@
+id: "fii_dii_regime_breadth_review_0092_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0092"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: weekly review; response style: concise table."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as concise table"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Create weekly review using FII/DII flows, market regime history, breadth indicators and index confirmation to determine risk context."
+sql_templates:
+  -
+    name: "FII_DII_Flows_Summary"
+    template: "SELECT trade_date, fii_net_5d, dii_net_5d, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= DATE_SUB(CURRENT_DATE, INTERVAL 7 DAY)"
+  -
+    name: "Regime_History"
+    template: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date >= DATE_SUB(CURRENT_DATE, INTERVAL 7 DAY)"
+  -
+    name: "Market_Breadth"
+    template: "SELECT trade_date, adv_volume, dec_volume, ad_signal, market_sentiment FROM breadth.market_daily WHERE trade_date >= DATE_SUB(CURRENT_DATE, INTERVAL 7 DAY)"
+  -
+    name: "Index_Confirmation"
+    template: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= DATE_SUB(CURRENT_DATE, INTERVAL 7 DAY) AND index_symbol = 'NIFTY50'"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all selected templates are read-only."
+  - "Verify that outputs align with the defined output contract."
+synthesis_guidance: "Integrate signals from different tables to provide a comprehensive view of the market context. Use concise tables to present both quantitative and qualitative evidence."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:09"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.date_sub is not approved"
+  - "breadth.market_daily.day is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.day is not approved"
+  - "signals.fii_dii_flows.date_sub is not approved"
+  - "signals.fii_dii_flows.day is not approved"
+  - "signals.regime_history.date_sub is not approved"
+  - "signals.regime_history.day is not approved"

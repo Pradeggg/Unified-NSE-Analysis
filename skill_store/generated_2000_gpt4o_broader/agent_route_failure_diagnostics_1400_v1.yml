@@ -1,0 +1,55 @@
+id: "agent_route_failure_diagnostics_1400_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1400"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for weekly review: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as exceptions and gaps first"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze collected evidence for exceptions and gaps in Agent Adda routes focusing on failure modes, and identify required tool/missing components."
+sql_templates:
+  -
+    template: "SELECT run_id, universe_size, stocks_filtered, market_composite_score, market_sentiment FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '7 days';"
+    description: "Retrieve the latest weekly analysis runs."
+  -
+    template: "SELECT symbol, recommendation, rsi, week52_position, volume_ratio FROM report.enhanced_filtered_stocks WHERE weekly_signal = 'buy';"
+    description: "Fetch stocks with a weekly buy signal."
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Output must identify exceptions first."
+  - "Ensure tool gap analysis covers missing dependencies."
+  - "Recommend regression tests based on identified failures."
+synthesis_guidance: "Focus on analyzing data quality and identifying system/tool gaps for Indian market contexts."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:50"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,59 @@
+id: "sector_breadth_rotation_watchlist_0923_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0923"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: comparison matrix."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for last 5 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as comparison matrix"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Use a SQL template to aggregate sector performance based on the last 5 sessions."
+  - "Incorporate stage data to evaluate sector participation in Stage 2."
+  - "Rank sectors based on their breadth signals and stage participation."
+  - "Generate a list of potential stocks for TradingView based on RS and price performance."
+sql_templates:
+  - "WITH latest_stage AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2'),"
+  - "latest_breadth AS (SELECT * FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)),"
+  - "combined_data AS (SELECT lb.sector, lb.breadth_signal, lb.change_5d, ls.symbol, ls.relative_strength FROM latest_breadth lb JOIN latest_stage ls ON lb.sector = ls.sector)"
+  - "SELECT sector, AVG(relative_strength) AS avg_rs, AVG(change_5d) AS avg_change FROM combined_data GROUP BY sector ORDER BY avg_change DESC, avg_rs DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure the output includes the top 10 sectors by average change and relative strength."
+  - "Check that the sectors listed have an increasing trend in the last 5 days."
+  - "Stocks should be in Stage 2 and in the BUY or STRONG BUY category."
+synthesis_guidance: "Construct a user-friendly comparison matrix highlighting sectors with the most significant breadth improvement and Stage 2 stock candidates."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:21"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

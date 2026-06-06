@@ -1,0 +1,52 @@
+id: "sector_breadth_rotation_watchlist_0937_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0937"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for last 20 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as comparison matrix"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Generate a sector-relative watchlist focusing on breadth, stage 2 migration, and momentum."
+sql_templates:
+  sector_breadth_query: "WITH latest_breadth AS (\n    SELECT sector, avg(pct_above_50dma) AS avg_pct_above_50dma,\n           avg(change_5d) AS avg_change_5d\n    FROM breadth.sector_daily\n    WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '20 days')\n    GROUP BY sector\n),\nlatest_stages AS (\n    SELECT sector, count(*) FILTER (WHERE stage = 'STAGE_2') AS stage2_count,\n           count(*) AS total_count\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n    GROUP BY sector\n)\nSELECT lb.sector, lb.avg_pct_above_50dma, lb.avg_change_5d,\n       ls.stage2_count, ls.total_count,\n       (ls.stage2_count::decimal / ls.total_count) AS stage2_pct\nFROM latest_breadth lb\nJOIN latest_stages ls ON lb.sector = ls.sector\nORDER BY stage2_pct DESC;"
+  candidate_symbols_query: "SELECT symbol, company_name, relative_strength, stage_score\nFROM scores.stage_snapshots\nWHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n  AND stage = 'STAGE_2'\n  AND trading_signal IN ('BUY', 'STRONG_BUY')\nORDER BY relative_strength DESC\nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sector_ranks are correctly ordered by stage 2 participation."
+  - "Check candidate_symbols are ranked by relative strength."
+synthesis_guidance: "Summarize sector momentum and stage transition with emphasis on top candidates. Include potential symbols for TradingView watchlist."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:04"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

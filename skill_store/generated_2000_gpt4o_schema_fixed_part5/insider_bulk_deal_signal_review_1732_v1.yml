@@ -1,0 +1,57 @@
+id: "insider_bulk_deal_signal_review_1732_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1732"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for last 20 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as QA checklist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Fetch latest insider alerts with technical confirmation"
+    template: "SELECT ia.symbol, ia.alert_date, ia.alert_type, ia.entity, ia.qty, ia.value_cr, ia.insider_score, ss.stage, ss.trading_signal, ss.technical_score FROM signals.insider_alerts ia JOIN (SELECT symbol, MAX(alert_date) AS max_alert_date FROM signals.insider_alerts GROUP BY symbol) latest_ia ON ia.symbol = latest_ia.symbol AND ia.alert_date = latest_ia.max_alert_date JOIN scores.stage_snapshots ss ON ia.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.stage = 'STAGE_2' AND ss.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY ia.insider_score DESC LIMIT 100;"
+  -
+    description: "Fetch latest bulk or block deals with positive setups"
+    template: "SELECT bbd.symbol, bbd.deal_date, bbd.deal_type, bbd.qty, bbd.price, ss.stage, ss.trading_signal, ss.technical_score FROM signals.bulk_block_deals bbd JOIN (SELECT symbol, MAX(deal_date) AS max_deal_date FROM signals.bulk_block_deals GROUP BY symbol) latest_bbd ON bbd.symbol = latest_bbd.symbol AND bbd.deal_date = latest_bbd.max_deal_date JOIN scores.stage_snapshots ss ON bbd.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.stage = 'STAGE_2' AND ss.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY bbd.deal_date DESC LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure the insider alerts and bulk/block deals are aligned with the latest technical confirmation data."
+  - "Symbols must have a trading signal of 'BUY' or 'STRONG_BUY' and be in 'STAGE_2'."
+  - "Limit outputs to the most recent 100 records."
+synthesis_guidance: "['Focus on providing a QA checklist format for institutional or insider accumulation assessments.', 'Highlight significant insider or institutional activities and their alignment with technical signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:21"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

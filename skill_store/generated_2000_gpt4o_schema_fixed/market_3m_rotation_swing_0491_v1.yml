@@ -1,0 +1,67 @@
+id: "market_3m_rotation_swing_0491_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0491"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for weekly review: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  steps:
+    - "Get latest index data to assess overall market regime."
+    - "Identify leading sectors by analyzing changes in stage distribution."
+    - "Select primary Stage 2 liquid swing candidates from the latest stage snapshots."
+    - "Cross-check swing candidates with VCP picks for alignment."
+sql_templates:
+  -
+    description: "Fetch latest index performance for market regime analysis."
+    template: "SELECT index_symbol, close, change_pct FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+  -
+    description: "Identify leading sectors with changes in stage distribution."
+    template: "SELECT sector, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector ORDER BY count DESC LIMIT 5;"
+  -
+    description: "Select primary Stage 2 swing candidates."
+    template: "SELECT symbol, company_name, change_1w_pct, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY change_1w_pct DESC LIMIT 10;"
+  -
+    description: "Cross-check with VCP picks for aligned criteria."
+    template: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL statements are SELECT queries."
+  - "Validate that all template parameters are safe and bounded."
+synthesis_guidance: "['Summarize broad market regime conditions.', 'Highlight sector leadership shifts over the last 3 months.', 'List top Stage 2 swing candidates and check for VCP alignment.', 'Provide a portfolio-aware summary of risks and opportunities.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:14"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

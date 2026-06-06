@@ -1,0 +1,59 @@
+created_at: "2026-06-06T12:50:57"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: latest EOD; response style: QA checklist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0713_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Get index performance over the last 3 months."
+    template: "SELECT trade_date, index_symbol, change_pct, trend_signal FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 MONTHS' ORDER BY trade_date DESC;"
+  -
+    description: "Identify stage 2 leadership qualities."
+    template: "SELECT symbol, company_name, sector, stage, stage_score FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= CURRENT_DATE - INTERVAL '3 MONTHS' ORDER BY stage_score DESC;"
+status: "validated"
+synthesis_guidance: "Combine index performance and stage analysis to create a comprehensive market overview."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "latest_EOD"
+  - "QA_checklist"
+title: "3M Market Rotation Swing Assessment Variant 0713"
+tool_plan_template: "Analyze market trends and sector rotations using select evidence."
+validation_errors:
+
+validation_rules:
+  - "Ensure all output elements are present."
+  - "Verify SQL templates return non-null data."
+  - "Check adherence to approved schema."
+version: 1
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"

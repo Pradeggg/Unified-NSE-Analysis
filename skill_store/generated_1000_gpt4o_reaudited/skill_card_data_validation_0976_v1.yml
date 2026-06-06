@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:53:20"
+created_by: "llm_generated"
+description: "Skill for validating enhanced report run metadata and filtered stock rows with a focus on freshness audit for the Indian market pre-market period."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "skill_card_data_validation_0976_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for pre market: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  - "SELECT run_id, run_ts FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '1 DAY';"
+  - "SELECT symbol, current_price, rsi FROM report.enhanced_filtered_stocks WHERE run_id = :run_id AND above_50dma = 'Y';"
+status: "validated"
+synthesis_guidance: "['Compare the retrieved data against verified market indicators for discrepancies.', 'Generate a matrix that highlights freshness issues for pre-market stocks.', 'Formulate remediation paths and verify fixes.']"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "pre_market"
+  - "comparison_matrix"
+title: "Enhanced Report Data Validation Variant 0976"
+tool_plan_template:
+  framing: "Perform the validation with a primary focus on Indian market indicators, ensuring that reports reflect the most recent data pre-market."
+  purpose: "To create an automated data validation system for enhanced report metadata focused on the freshness and integrity of pre-market data links."
+  steps:
+    - "Extract report run metadata from enhanced_reports."
+    - "Inspect filtered stock data and validate against market conditions."
+    - "Identify discrepancies in data freshness for pre-market analysis."
+validation_rules:
+  - "Ensure timestamps in enhanced report runs are within the last 24 hours for freshness."
+  - "Check that filtered stocks have complete data for pre-market analysis."
+  - "Verify current prices correspond with pre-market expectations."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

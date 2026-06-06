@@ -1,0 +1,54 @@
+id: "report_link_data_validation_1852_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation"
+description: "Validate report links and stock data for quarter-to-date institutional reviews and action watchlists."
+input_patterns:
+  - "validate report links and stock data"
+  - "check report data for institutions"
+  - "quarter-to-date action watchlist validation"
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "links"
+  - "action_watchlist"
+  - "quarter_to_date"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "validation_query"
+    description: "Check for reports and data validity for the latest quarter-to-date."
+    template: "WITH recent_runs AS (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= (CURRENT_DATE - INTERVAL '3 months')) SELECT ers.run_id, ers.symbol, ers.recommendation FROM report.enhanced_filtered_stocks AS ers JOIN recent_runs AS rr ON ers.run_id = rr.run_id WHERE ers.symbol IS NOT NULL;"
+  -
+    name: "broken_links_query"
+    description: "Identify any incomplete data records for report links."
+    template: "SELECT run_id, notes FROM report.enhanced_runs WHERE commentary LIKE '%link not working%';"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure SQL queries adhere strictly to provided schema and do not infer unknown columns."
+  - "Results should address specified findings around data presence and link functionality."
+synthesis_guidance: "['Aggregate findings into a comprehensive action plan for institutional stakeholders.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:32"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.commentary is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "report.enhanced_runs.commentary is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

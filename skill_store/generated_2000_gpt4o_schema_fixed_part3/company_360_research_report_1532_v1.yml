@@ -1,0 +1,61 @@
+id: "company_360_research_report_1532_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1532"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: deep institutional review; timeframe: last 20 sessions; response style: research-only summary."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "deep institutional review for last 20 sessions: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as research-only summary"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "deep_institutional_review"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template: "Generate a comprehensive research card using the latest data from the specified tables. Follow research-only summary guidance and deep institutional review framing."
+sql_templates:
+  -
+    template: "SELECT company_name, sector, market_cap_cat, price, stage, can_slim_score, minervini_score FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    description: "Fetch latest company snapshot and scores."
+  -
+    template: "SELECT revenue, operating_profit, opm_pct, pat, eps FROM scores.quarterly_results WHERE symbol = 'RELIANCE' AND period_end = (SELECT MAX(period_end) FROM scores.quarterly_results WHERE symbol = 'RELIANCE');"
+    description: "Retrieve latest quarterly financial performance."
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL queries are read-only and use the approved schema."
+  - "Verify that all joins use the approved join rules."
+  - "Check output contract keys are populated from SQL results."
+synthesis_guidance: "Use collected data to provide a detailed and research-focused summary. Highlight key strengths and risks, including valuation gaps and technical setup."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

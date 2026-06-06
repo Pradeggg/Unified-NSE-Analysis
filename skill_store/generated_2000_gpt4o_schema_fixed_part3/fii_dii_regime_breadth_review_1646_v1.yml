@@ -1,0 +1,51 @@
+id: "fii_dii_regime_breadth_review_1646_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1646"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for last 3 months: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as debug trace"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "SELECT /* Use for determining FII/DII flow and market regime context */"
+sql_templates:
+  fii_dii_regime_breadth: "WITH recent_flows AS (SELECT * FROM signals.fii_dii_flows WHERE trade_date > CURRENT_DATE - INTERVAL '3 months'), recent_regime AS (SELECT * FROM signals.regime_history WHERE trade_date > CURRENT_DATE - INTERVAL '3 months'), recent_breadth AS (SELECT * FROM breadth.market_daily WHERE trade_date > CURRENT_DATE - INTERVAL '3 months'), recent_index AS (SELECT * FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months' AND index_symbol = 'Nifty 50') SELECT f.trade_date, f.fii_net_today, f.dii_net_today, r.regime, r.confidence, b.market_sentiment, i.close FROM recent_flows f JOIN recent_regime r ON f.trade_date = r.trade_date JOIN recent_breadth b ON f.trade_date = b.trade_date JOIN recent_index i ON f.trade_date = i.trade_date ORDER BY f.trade_date DESC;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all columns referenced exist in approved schema tables."
+  - "Use PostgreSQL syntax for date range filtering."
+  - "Do not update any database records."
+synthesis_guidance: "['Synthesize data from FII/DII flows, market regime, and breadth to infer the market context.', 'Consider recent trend and volume signals for market analysis.', 'Explain findings as a debug trace, focusing on the past three months.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

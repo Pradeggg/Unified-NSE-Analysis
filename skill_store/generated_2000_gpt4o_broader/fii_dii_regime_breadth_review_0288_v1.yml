@@ -1,0 +1,62 @@
+id: "fii_dii_regime_breadth_review_0288_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0288"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for intraday context: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as ranked candidates"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Within the position-sizing context, analyze the intraday market regime using FII/DII flow trends, market breadth, and index confirmations. Provide ranked candidates for risk-on or risk-off evaluations."
+sql_templates:
+  -
+    description: "Get the latest FII/DII flows and trends."
+    template: "SELECT trade_date, fii_net_today, dii_net_today, flow_signal FROM signals.fii_dii_flows ORDER BY trade_date DESC LIMIT 1;"
+  -
+    description: "Retrieve current market regime and confidence."
+    template: "SELECT trade_date, regime, confidence FROM signals.regime_history ORDER BY trade_date DESC LIMIT 1;"
+  -
+    description: "Collect breadth indicators and sentiments."
+    template: "SELECT trade_date, advances, declines, ad_signal, market_sentiment FROM breadth.market_daily ORDER BY trade_date DESC LIMIT 1;"
+  -
+    description: "Fetch latest index EOD data."
+    template: "SELECT trade_date, index_symbol, close, trend_signal, trading_signal FROM market.index_eod WHERE index_symbol = 'NIFTY' ORDER BY trade_date DESC LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all SQL queries use read-only SELECT templates."
+  - "Verify that context is summarized fairly from the evidence tables."
+  - "Check that results are presented as ranked candidates for risk evaluations."
+synthesis_guidance: "Synthesize insights by analyzing the FII/DII flows in relation to regime history and market breadth. Focus on weaving index confirmation with sentiment and flow trends to inform position-sizing and intraday context."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:35"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

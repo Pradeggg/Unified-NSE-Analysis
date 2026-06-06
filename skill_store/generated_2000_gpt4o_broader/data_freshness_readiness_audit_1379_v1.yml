@@ -1,0 +1,54 @@
+id: "data_freshness_readiness_audit_1379_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Pre-Market Data Freshness Audit"
+description: "Validate the freshness of sources used by Agent Adda before the market opens. Focus on source-trail gaps."
+input_patterns:
+  - "Check data freshness readiness thresholds before the market opens"
+  - "Verify pre-market readiness by identifying any missing history from DB loaders"
+  - "Audit source trails for data freshness issues"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "pre_market"
+  - "source-trail"
+  - "gaps"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "breadth.market_daily"
+tool_plan_template: "Validate the currency of the data against required freshness thresholds and identify any gaps in the source trail."
+sql_templates:
+  -
+    name: "Check_Index_EOD_Freshness"
+    template: "SELECT MAX(trade_date) as last_update FROM market.index_eod WHERE trade_date < CURRENT_DATE"
+    description: "Find the latest update for index EOD data before market opens."
+  -
+    name: "Check_Equity_EOD_Freshness"
+    template: "SELECT MAX(trade_date) as last_update FROM market.equity_eod WHERE trade_date < CURRENT_DATE"
+    description: "Find the latest update for equity EOD data before market opens."
+  -
+    name: "Check_Market_Breadth_Freshness"
+    template: "SELECT MAX(trade_date) as last_update FROM breadth.market_daily WHERE trade_date < CURRENT_DATE"
+    description: "Find the latest update for market breadth data before market opens."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+validation_rules:
+  - "Ensure all required tables have data updated at least by the previous trading day."
+  - "Identify and list any data gaps or missing histories."
+  - "Recommend actions for loaders if freshness criteria are not met."
+synthesis_guidance: "Compile a comprehensive report on pre-market data readiness, highlighting areas of concern and recommended actions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:33"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.last_update is not approved"
+  - "market.equity_eod.last_update is not approved"
+  - "market.index_eod.last_update is not approved"

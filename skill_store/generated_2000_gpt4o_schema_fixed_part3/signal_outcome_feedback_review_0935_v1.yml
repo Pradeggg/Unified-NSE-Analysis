@@ -1,0 +1,52 @@
+id: "signal_outcome_feedback_review_0935_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0935"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for last 20 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as comparison matrix"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Evaluate the results of the last 20 sessions' signals focusing on targets hit or stopped out including associated outcomes."
+sql_templates:
+  -
+    template: "WITH ordered_signals AS (SELECT * FROM signals.signal_log ORDER BY date_issued DESC LIMIT 20) SELECT os.symbol, os.signal, os.date_issued, os.price_at_issue, os.price_at_resolution, os.return_pct, os.hit_target, os.hit_stop FROM ordered_signals os WHERE os.hit_target = TRUE OR os.hit_stop = TRUE;"
+    purpose: "Fetch the last 20 signals that either hit target or stop."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure evidence tables only include approved columns."
+  - "Align evidence queries with _global_rules to use latest rows."
+synthesis_guidance: "['Focus on comparison of successful and unsuccessful signals.', 'Highlight lessons and trends in outcomes for risk-first improvements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

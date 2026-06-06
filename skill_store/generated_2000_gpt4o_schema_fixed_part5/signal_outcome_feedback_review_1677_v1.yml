@@ -1,0 +1,69 @@
+id: "signal_outcome_feedback_review_1677_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1677"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: pre market; response style: debug trace."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for pre market: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as debug trace"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    python_tools:
+
+    evidence_gaps:
+
+sql_templates:
+  -
+    description: "Identify winning and losing signals with their outcomes and motivations."
+    sql: "\n            SELECT s.symbol, s.sector, s.company, s.signal, s.date_issued, s.date_resolved, \n                   s.price_at_issue, s.price_at_resolution, s.return_pct, s.hit_target, s.hit_stop,\n                   ss.stage, ss.technical_score, ss.investment_score\n            FROM signals.signal_log s\n            JOIN scores.stage_snapshots ss ON s.symbol = ss.symbol \n            WHERE s.date_resolved IS NOT NULL \n            AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n            "
+  -
+    description: "Compare sectors for outcome efficiency."
+    sql: "\n            SELECT s.sector, COUNT(s.id) AS signals_issued, \n                   SUM(CASE WHEN s.hit_target THEN 1 ELSE 0 END) AS targets_hit,\n                   SUM(CASE WHEN s.hit_stop THEN 1 ELSE 0 END) AS stops_hit\n            FROM signals.signal_log s\n            WHERE s.date_resolved IS NOT NULL\n            GROUP BY s.sector\n            ORDER BY targets_hit DESC\n            "
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure no modifications are made to the tables."
+  - "All SQL queries should be read-only."
+  - "Results should provide clear sector-relative insights."
+synthesis_guidance: "['Summarize key patterns observed in successful and failing signals.', 'Identify areas for skill improvement based on past performance.', 'Propose next steps or checks based on the analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.s is not approved"
+  - "signals.signal_log.signals_issued is not approved"
+  - "signals.signal_log.stops_hit is not approved"
+  - "signals.signal_log.targets_hit is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "signals.signal_log.s is not approved"
+    - "signals.signal_log.signals_issued is not approved"
+    - "signals.signal_log.stops_hit is not approved"
+    - "signals.signal_log.targets_hit is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

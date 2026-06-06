@@ -1,0 +1,53 @@
+id: "insider_bulk_deal_signal_review_0514_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0514"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: latest EOD; response style: research-only summary."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for latest EOD: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as research-only summary"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  sql:
+    query: "WITH latest_stage AS (SELECT symbol, stage, stage_score, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY')), latest_eod AS (SELECT symbol, trade_date, close, volume FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)), insider_signals AS (SELECT symbol, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts)), bulk_deals AS (SELECT symbol, entity, qty, price FROM signals.bulk_block_deals WHERE deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals)) SELECT l.symbol, l.stage, l.stage_score, l.trading_signal, e.close, e.volume, i.qty AS insider_qty, i.value_cr AS insider_value, i.insider_score, b.qty AS bulk_qty, b.price AS bulk_price FROM latest_stage l JOIN latest_eod e ON l.symbol = e.symbol LEFT JOIN insider_signals i ON l.symbol = i.symbol LEFT JOIN bulk_deals b ON l.symbol = b.symbol ORDER BY l.stage_score DESC LIMIT 10;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all tables and columns match approved_schema."
+  - "Do not perform any data modifications."
+  - "All joins must adhere to approved_schema._join_rules."
+synthesis_guidance: "['Summarize signals, focusing on accumulation clues.', 'Discuss stage and technical confirmation.', 'Highlight potential risks in the notes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:40"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

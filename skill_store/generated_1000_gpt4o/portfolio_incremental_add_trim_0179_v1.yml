@@ -1,0 +1,60 @@
+id: "portfolio_incremental_add_trim_0179_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0179"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: pre market; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for pre market: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "pre_market"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  type: "portfolio_review_tool"
+  tasks:
+    - "Analyze current portfolio holdings and market signals."
+    - "Identify potential incremental add or trim candidates."
+    - "Validate source-trail for market signals pre-market."
+sql_templates:
+  -
+    id: "current_holdings"
+    description: "Fetch current holdings and relevant scores."
+    template: "SELECT h.symbol, h.qty, h.avg_cost, s.stage, s.stage_score, s.technical_score, s.trading_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "must_validate_against"
+  - "status_must_be"
+synthesis_guidance: "{'type': 'narrative_plus_evidence', 'format': 'Provide a narrative review followed by tabular evidence from SQL result sets.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:42:37"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table h.avg_cost"
+  - "unknown table h.qty"
+  - "unknown table h.symbol"
+  - "unknown table s.snapshot_date"
+  - "unknown table s.stage"
+  - "unknown table s.stage_score"
+  - "unknown table s.symbol"
+  - "unknown table s.technical_score"
+  - "unknown table s.trading_signal"

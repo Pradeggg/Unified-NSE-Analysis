@@ -1,0 +1,81 @@
+id: "corporate_events_results_watchlist_1395_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1395"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: risk-first review; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "risk-first review for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as exceptions and gaps first"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "risk-first_review"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    tools:
+      -
+        function: "run"
+        language: "python"
+        mode: "read_only"
+        inputs:
+          context: "Filter corporate events for upcoming or recent results-related actions, emphasizing risk and exceptions."
+        outputs:
+          event_calendar:
+
+          symbol_watchlist:
+
+          result_context:
+
+          action_bucket:
+
+          source_trail:
+
+        approved_tables:
+          - "signals.corporate_events"
+          - "scores.results_analysis"
+          - "scores.stage_snapshots"
+        code:
+          - "# Example Python code to filter events and results"
+          - "def run(context):"
+          - "    # Implement logic here"
+sql_templates:
+  -
+    name: "fetch_events_upcoming"
+    query: "SELECT * FROM signals.corporate_events WHERE event_date > CURRENT_DATE ORDER BY event_date LIMIT 10;"
+  -
+    name: "fetch_latest_results"
+    query: "WITH latest_results AS (SELECT DISTINCT ON (symbol) * FROM scores.results_analysis ORDER BY symbol, period_end DESC, updated_at DESC) SELECT * FROM latest_results LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event_calendar entries have future dates."
+  - "Verify symbol_watchlist contains symbols with recent activities."
+synthesis_guidance: "Focus on events with significant deviations or missing data, highlighting potential opportunities or risks first."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:11"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

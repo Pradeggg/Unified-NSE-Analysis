@@ -1,0 +1,57 @@
+id: "agent_route_failure_diagnostics_1064_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1064"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: post results; response style: concise table."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for post results: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as concise table"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "post_results"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  type: "SQL"
+  description: "Select latest runs and filtered stocks where issues occurred"
+  steps:
+    - "Join report.enhanced_runs with report.enhanced_filtered_stocks using run_id."
+    - "Filter for recent runs using run_ts."
+    - "Identify anomalies in stock scores or recommendations."
+  sql_templates:
+    diagnostic_query: "WITH latest_runs AS (SELECT run_id, run_ts FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 1) SELECT efs.symbol, efs.recommendation FROM report.enhanced_filtered_stocks efs JOIN latest_runs lr ON efs.run_id = lr.run_id WHERE efs.recommendation != 'BUY';"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure join condition uses run_id."
+  - "Filter results to recent entries using run_ts."
+synthesis_guidance: "['Synthesize findings as a concise table with columns: failure_mode, source_trail, route_fix, tool_gap, regression_tests.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

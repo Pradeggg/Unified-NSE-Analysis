@@ -1,0 +1,64 @@
+created_at: "2026-06-06T12:44:22"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: today; response style: exceptions and gaps first."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0301_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as exceptions and gaps first"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    query: "SELECT index_symbol, AVG(change_pct) as avg_return FROM market.index_eod WHERE trade_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE GROUP BY index_symbol;"
+    type: "index_returns"
+  -
+    query: "SELECT stage, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE GROUP BY stage;"
+    type: "stage_distribution_change"
+  -
+    query: "SELECT sector, AVG(change_1m_pct) as avg_monthly_change FROM scores.stage_snapshots WHERE snapshot_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE GROUP BY sector ORDER BY avg_monthly_change DESC;"
+    type: "leading_sectors"
+  -
+    query: "SELECT symbol, company_name, sector FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE AND trend_signal = 'buy';"
+    type: "primary_candidates"
+  -
+    query: "SELECT symbol, sector, change_1d_pct FROM market.equity_eod WHERE trade_date = CURRENT_DATE AND change_1d_pct < -2;"
+    type: "risks"
+status: "test_failed"
+synthesis_guidance: "['Focus on finding exceptions and identifying gaps in stage and sector performance.', \"Emphasize quick scanning capability for today's market context.\"]"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "today"
+  - "exceptions_and_gaps_first"
+title: "3M Market Rotation Swing Assessment Variant 0301"
+tool_plan_template: "Analyze market trends and standout sectoral movements over past 3 months with focus on stage 2 candidates. Identify potential swing trades for today using exceptions and gaps framing."
+validation_rules:
+  - "Ensure output matches the schema and required fields are present."
+  - "Avoid any write operations in SQL templates."
+version: 1
+validation_errors:
+  - "market.equity_eod.change_1d_pct is not approved"
+  - "market.equity_eod.sector is not approved"
+  - "market.index_eod.avg_return is not approved"
+  - "scores.stage_snapshots.avg_monthly_change is not approved"

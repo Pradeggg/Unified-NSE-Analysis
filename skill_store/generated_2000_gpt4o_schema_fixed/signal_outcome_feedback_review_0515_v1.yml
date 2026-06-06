@@ -1,0 +1,73 @@
+id: "signal_outcome_feedback_review_0515_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0515"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: latest EOD; response style: research-only summary."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for latest EOD: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as research-only summary"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "latest_EOD"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Research-only research to analyze signal outcomes, focusing on targets and stops. Review latest EOD data to evaluate performance."
+sql_templates:
+  - "WITH latest_signals AS (SELECT * FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log)), stage_data AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), price_data AS (SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)) SELECT latest_signals.symbol, latest_signals.signal, latest_signals.hit_target, latest_signals.hit_stop, stage_data.stage, price_data.close FROM latest_signals JOIN stage_data ON latest_signals.symbol = stage_data.symbol JOIN price_data ON latest_signals.symbol = price_data.symbol LIMIT 100;"
+python_tools:
+  -
+    id: "aggregate_outcome_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "signal"
+      - "hit_target"
+      - "hit_stop"
+      - "stage"
+      - "close"
+    outputs:
+      - "outcome_summary"
+      - "winner_patterns"
+      - "failure_patterns"
+      - "route_improvements"
+      - "next_checks"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context): outcome_summary = {} winner_patterns = [] failure_patterns = [] route_improvements = [] next_checks = [] for record in context.rows: if record['hit_target']: winner_patterns.append(record['symbol']) if record['hit_stop']: failure_patterns.append(record['symbol']) outcome_summary['total_targets_hit'] = len(winner_patterns) outcome_summary['total_stops_hit'] = len(failure_patterns) return {'outcome_summary': outcome_summary, 'winner_patterns': winner_patterns, 'failure_patterns': failure_patterns, 'route_improvements': route_improvements, 'next_checks': next_checks}"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure outcome analysis is consistent with input patterns."
+  - "Check data accuracy and integrity across evidence_tables."
+synthesis_guidance: "['Focus on risk assessment and lessons derived from signal outcomes.', 'Provide a concise research-only summary, not actionable investment advice.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:39"
+generation_model: "gpt-4o"
+validation_errors:
+  - "aggregate_outcome_analysis: python syntax error: invalid syntax"
+review:
+  status: "needs_heal"
+  findings:
+    - "aggregate_outcome_analysis: python syntax error: invalid syntax"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

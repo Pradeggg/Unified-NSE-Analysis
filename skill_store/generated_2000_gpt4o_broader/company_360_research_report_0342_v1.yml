@@ -1,0 +1,74 @@
+id: "company_360_research_report_0342_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0342"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: deep institutional review; timeframe: last 3 months; response style: exceptions and gaps first."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "deep institutional review for last 3 months: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as exceptions and gaps first"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Select recent stage snapshot for a company."
+    template: "SELECT * FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)"
+  -
+    description: "Select latest quarterly results."
+    template: "SELECT * FROM scores.quarterly_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1"
+python_tools:
+  -
+    id: "data_analyzer_001"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      -
+        type: "pandas.DataFrame"
+        description: "Input table result"
+    outputs:
+      -
+        type: "dict"
+        description: "Extracted insights and anomalies"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "scores.quarterly_results"
+    code: "def run(context):\n    df = context['inputs'][0]\n    insights = {'changes': [], 'anomalies': []}\n    # Example analysis: trend in revenue\n    if 'revenue' in df.columns:\n        revenue_change = df['revenue'].pct_change().last_valid_index()\n        insights['changes'].append({'field': 'revenue', 'change': revenue_change})\n    return insights"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure data freshness: latest quarter must be within the last 3 months."
+  - "Confirm gaps are addressed with narrative evidence."
+synthesis_guidance: "['Focus on changes and anomalies in financials and technicals.', 'Highlight sector-specific risks and institutional insights.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"

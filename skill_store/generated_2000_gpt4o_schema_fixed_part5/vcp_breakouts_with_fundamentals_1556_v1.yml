@@ -1,0 +1,68 @@
+id: "vcp_breakouts_with_fundamentals_1556_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1556"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: quarter to date; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    python_tools:
+      -
+        id: "run"
+        language: "python"
+        mode: "read_only"
+        inputs:
+          - "context"
+        outputs:
+          - "result"
+        approved_tables:
+          - "market.equity_eod"
+          - "scores.stage_snapshots"
+          - "scores.stage2_vcp_picks"
+        code: "def run(context):\n    pass"
+sql_templates:
+  -
+    name: "VCP_Breakouts"
+    template: "WITH latest_data AS (\n    SELECT symbol, high, volume, change_pct, market_cap_cr\n    FROM market.equity_eod\n    WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)\n      AND series = 'EQ'\n), \nscores_data AS (\n    SELECT ss.symbol, ss.enhanced_fund_score, ss.stage, svp.vcp_score\n    FROM scores.stage2_vcp_picks svp\n    JOIN scores.stage_snapshots ss ON svp.symbol = ss.symbol\n    WHERE svp.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)\n      AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n      AND ss.trading_signal IN ('BUY', 'STRONG_BUY')\n)\nSELECT ld.symbol, ld.high, ld.volume, sd.enhanced_fund_score, sd.vcp_score\nFROM latest_data ld\nJOIN scores_data sd ON ld.symbol = sd.symbol\nORDER BY sd.vcp_score DESC\nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all joins follow approved_schema._join_rules."
+  - "Use global_sql_rules for syntax and latest-date filtering."
+  - "Limit evidence set to top-ranked VCP stocks by vcp_score."
+synthesis_guidance: "['Generate summary focusing on breakout candidates with strong fundamentals.', 'Highlight any potential risks derived from the scores.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:14"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

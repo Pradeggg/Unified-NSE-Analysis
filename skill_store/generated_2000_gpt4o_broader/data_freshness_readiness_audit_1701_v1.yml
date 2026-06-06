@@ -1,0 +1,91 @@
+id: "data_freshness_readiness_audit_1701_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1701"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: today; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for today: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "today"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Evaluate data freshness for approved sources with focus on Indian market use. Consolidate findings into QA checklist."
+sql_templates:
+  -
+    query: "SELECT max(trade_date) as last_update FROM market.index_eod"
+    description: "Fetch last update date for index data."
+  -
+    query: "SELECT max(trade_date) as last_update FROM market.equity_eod"
+    description: "Fetch last update date for equity data."
+  -
+    query: "SELECT max(snapshot_date) as last_snapshot FROM scores.stage_snapshots"
+    description: "Fetch last snapshot date for stage scores."
+  -
+    query: "SELECT max(trade_date) as last_breadth_update FROM breadth.market_daily"
+    description: "Fetch last update date for market breadth data."
+  -
+    query: "SELECT max(snapshot_date) as last_ma_update FROM breadth.ma_pct_above"
+    description: "Fetch last update date for moving average percentage data."
+  -
+    query: "SELECT max(run_ts) as last_run FROM report.enhanced_runs"
+    description: "Fetch last enhanced report run timestamp."
+python_tools:
+  -
+    id: "data_freshness_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "last_update_indices"
+      - "last_update_equity"
+      - "last_snapshot_scores"
+      - "last_breadth_update"
+      - "last_ma_update"
+      - "last_run"
+    outputs:
+      - "freshness_matrix"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "breadth.market_daily"
+      - "breadth.ma_pct_above"
+      - "report.enhanced_runs"
+    code: "def run(context):\n    freshness_matrix = {}\n    # Populate freshness matrix with context data\n    freshness_matrix['indices'] = context['last_update_indices']\n    freshness_matrix['equity'] = context['last_update_equity']\n    freshness_matrix['scores'] = context['last_snapshot_scores']\n    freshness_matrix['breadth'] = context['last_breadth_update']\n    freshness_matrix['moving_avg'] = context['last_ma_update']\n    freshness_matrix['reports'] = context['last_run']\n    return freshness_matrix"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "allowed_statements"
+  - "readonly"
+synthesis_guidance: "Aggregate the SQL results to outline which data sources are current and which have potential freshness issues."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.last_ma_update is not approved"
+  - "breadth.market_daily.last_breadth_update is not approved"
+  - "market.equity_eod.last_update is not approved"
+  - "market.index_eod.last_update is not approved"
+  - "report.enhanced_runs.last_run is not approved"
+  - "scores.stage_snapshots.last_snapshot is not approved"

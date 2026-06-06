@@ -1,0 +1,61 @@
+created_at: "2026-06-06T12:44:26"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: latest EOD; response style: exceptions and gaps first."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0320_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for latest EOD: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_runs"
+    code: "def run(context):\n  # Simulate checking report links\n  invalid_links = []\n  # Imagine validation logic here...\n  for link in context['report_links']:\n    if 'invalid' in link:  # Example condition\n      invalid_links.append(link)\n  return {'invalid_links': invalid_links}"
+    id: "validate_report_links"
+    inputs:
+      - "report_links"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "invalid_links"
+sql_templates:
+  filtered_stocks_check: "SELECT run_id, symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE day_change_pct IS NULL OR current_price IS NULL;"
+  metadata_check: "SELECT run_id, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '1 day';"
+status: "test_failed"
+synthesis_guidance: "Prioritize exception-first reporting for Indian market context with focus on TradingView export."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+title: "Enhanced Report Data Validation Variant 0320"
+tool_plan_template: "Use tables and columns from approved_schema to identify broken report links and fill evidence gaps. Return findings with exceptions and missing data marked clearly."
+validation_rules:
+  - "Ensure no use of unauthorized tables."
+  - "Only read-only operations on SQL templates."
+version: 1
+validation_errors:
+  - "validate_report_links: execution failed: KeyError: 'report_links'"
+review:
+  status: "needs_heal"
+  findings:
+    - "validate_report_links: execution failed: KeyError: 'report_links'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

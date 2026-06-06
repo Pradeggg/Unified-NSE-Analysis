@@ -1,0 +1,72 @@
+id: "data_freshness_readiness_audit_0595_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0595"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: risk-first review; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "risk-first review for weekly review: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as research-only summary"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "risk-first_review"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  context: "Analyze data readiness and identify freshness issues to prevent risks."
+  steps:
+    - "Review evidence tables for missing history and delayed updates."
+    - "Identify if any crucial data is unavailable or outdated."
+    - "Summarize findings in a research-only format."
+sql_templates:
+  -
+    description: "Check for the most recent data update in market.index_eod table."
+    template: "SELECT MAX(trade_date) as last_update FROM market.index_eod;"
+  -
+    description: "Check for the most recent data update in market.equity_eod table."
+    template: "SELECT MAX(trade_date) as last_update FROM market.equity_eod;"
+python_tools:
+  -
+    id: "check_data_freshness"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "approved_tables"
+    outputs:
+      - "freshness_status"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Simulated function to check data freshness\n    # This function will inspect the 'trade_date' in each table\n    return 'freshness_status not implemented yet'"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure SQL templates are strictly for read-only SELECT queries."
+  - "Validate all approved tables and columns are used accurately."
+  - "Do not generate data-modifying queries."
+synthesis_guidance: "Focus on identifying critical freshness issues that could impact decision-making. Provide a clear, concise summary of findings and recommended actions."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:58:47"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.last_update is not approved"
+  - "market.index_eod.last_update is not approved"

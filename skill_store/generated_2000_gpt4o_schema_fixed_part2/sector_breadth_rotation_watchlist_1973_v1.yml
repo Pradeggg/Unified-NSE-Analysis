@@ -1,0 +1,70 @@
+id: "sector_breadth_rotation_watchlist_1973_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1973"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: pre market; response style: comparison matrix."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for pre market: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as comparison matrix"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    template_name: "sector_breadth_analysis"
+    description: "Analyze sectors with stage 2 participation and breadth signals."
+    sql: "WITH latest_snapshots AS (SELECT * FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)), latest_stages AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2') SELECT l.sector, l.pct_above_50dma, l.breadth_signal FROM latest_snapshots l JOIN latest_stages s ON l.sector = s.sector WHERE s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY l.pct_above_50dma DESC"
+python_tools:
+  -
+    id: "calculate_sector_momentum"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector"
+      - "pct_above_50dma"
+    outputs:
+      - "momentum_score"
+    approved_tables:
+      - "breadth.sector_daily"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Calculate momentum score based on given inputs\n    sector_data = context['sector']\n    pct_above_data = context['pct_above_50dma']\n    context['momentum_score'] = pct_above_data * 1.1  # Example calculation\n    return context['momentum_score']"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure candidate list is sorted by pct_above_50dma descending."
+  - "Verify latest date filter for snapshots is applied."
+  - "Check sector alignment between breadth and stage snapshots."
+synthesis_guidance: "Generate a report showing sectors ranked by their breadth and participation in Stage 2, identifying potential trading opportunities pre market. Present the data in a comparison matrix format for clarity."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:22"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_sector_momentum: execution failed: KeyError: 'sector'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_sector_momentum: execution failed: KeyError: 'sector'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

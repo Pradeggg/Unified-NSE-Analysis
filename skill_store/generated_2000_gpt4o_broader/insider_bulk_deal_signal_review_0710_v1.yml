@@ -1,0 +1,76 @@
+id: "insider_bulk_deal_signal_review_0710_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0710"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: today; response style: QA checklist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for today: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as QA checklist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "today"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+    -
+      id: "insider_bulk_deal_tool"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "context"
+      outputs:
+        - "deal_summary"
+        - "insider_context"
+        - "technical_confirmation"
+      approved_tables:
+        - "signals.insider_alerts"
+        - "signals.bulk_block_deals"
+        - "scores.stage_snapshots"
+        - "market.equity_eod"
+      code: "def run(context):\n    # Processing logic here\n    return deal_summary, insider_context, technical_confirmation"
+sql_templates:
+  -
+    description: "Fetch recent insider alerts"
+    template: "SELECT * FROM signals.insider_alerts WHERE alert_date = CURRENT_DATE"
+  -
+    description: "Fetch recent bulk/block deals"
+    template: "SELECT * FROM signals.bulk_block_deals WHERE deal_date = CURRENT_DATE"
+  -
+    description: "Fetch today's technical scores"
+    template: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure datasets are current to today"
+  - "Verify technical scores for significance"
+  - "Cross-check insider alerts with bulk deals"
+synthesis_guidance: "['Integrate alerts and deals to identify accumulation patterns', 'Employ technical scores to confirm trends', 'Construct ranked symbols for potential actions']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:48"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

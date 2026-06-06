@@ -1,0 +1,52 @@
+id: "report_link_data_validation_1880_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "TradingView Pre Market Analysis for Report Validation"
+description: "Analyze TradingView export discrepancies in pre-market reporting links. Focus: Enhanced report link functionality and data availability."
+input_patterns:
+  - "validate pre-market TradingView reports"
+  - "check TradingView links in pre-market reports"
+  - "identify missing data in pre-market TradingView exports"
+tags:
+  - "report_qa"
+  - "TradingView"
+  - "pre_market"
+  - "link_validation"
+  - "data_availability"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    step: "Verify report link functionality"
+    action: "Validate the integrity of the generated report links within the pre-market TradingView exports."
+  -
+    step: "Check for missing data"
+    action: "Identify any absent or incomplete data points in the TradingView pre-market reports."
+sql_templates:
+  -
+    description: "Find pre-market TradingView reports with missing data or broken links."
+    template: "SELECT ers.run_id, ers.run_ts, efs.symbol, efs.recommendation, efs.score FROM report.enhanced_runs ers JOIN report.enhanced_filtered_stocks efs ON ers.run_id = efs.run_id WHERE ers.run_ts::date = CURRENT_DATE - INTERVAL '1 day' AND (efs.recommendation IS NULL OR efs.score IS NULL) LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure report links are functional and resolve correctly."
+  - "Verify the completeness of TradingView exports in terms of recommendations and scores."
+synthesis_guidance: "['Summarize discrepancies found in the report links and data.', 'Provide actionable insights to improve future report exports.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

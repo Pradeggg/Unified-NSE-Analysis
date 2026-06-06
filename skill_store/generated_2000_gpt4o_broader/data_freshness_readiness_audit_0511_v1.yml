@@ -1,0 +1,91 @@
+id: "data_freshness_readiness_audit_0511_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0511"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: latest EOD; response style: research-only summary."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for latest EOD: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as research-only summary"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "latest_EOD"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Perform a readiness audit with emphasis on freshness. Utilize approved tables to confirm data timeliness and identify any missing sources."
+sql_templates:
+  -
+    description: "Check the latest available trade date for indexes."
+    template: "SELECT MAX(trade_date) AS latest_trade_date FROM market.index_eod;"
+  -
+    description: "Check the latest available trade date for equities."
+    template: "SELECT MAX(trade_date) AS latest_trade_date FROM market.equity_eod;"
+  -
+    description: "Check the last snapshot date from stage snapshots."
+    template: "SELECT MAX(snapshot_date) AS latest_snapshot_date FROM scores.stage_snapshots;"
+  -
+    description: "Check the latest update on market daily breadth."
+    template: "SELECT MAX(trade_date) AS latest_breadth_date FROM breadth.market_daily;"
+  -
+    description: "Check the last updated moving average percentages."
+    template: "SELECT MAX(snapshot_date) AS latest_ma_date FROM breadth.ma_pct_above;"
+  -
+    description: "Get recent enhanced report run timestamp."
+    template: "SELECT MAX(run_ts) AS latest_run_ts FROM report.enhanced_runs;"
+python_tools:
+  -
+    id: "evidence_date_check"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "latest_trade_date"
+      - "latest_snapshot_date"
+      - "latest_breadth_date"
+      - "latest_ma_date"
+      - "latest_run_ts"
+    outputs:
+      - "freshness_matrix"
+      - "blocking_gaps"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "breadth.market_daily"
+      - "breadth.ma_pct_above"
+      - "report.enhanced_runs"
+    code: "def run(context):\n    # Logic to evaluate data freshness based on inputs\n    # Return mock outputs for structure demonstration\n    return {\n        'freshness_matrix': {\n            'index_eod': context['latest_trade_date'],\n            'equity_eod': context['latest_trade_date'],\n            'stage_snapshots': context['latest_snapshot_date'],\n            'market_daily': context['latest_breadth_date'],\n            'ma_pct_above': context['latest_ma_date'],\n            'enhanced_runs': context['latest_run_ts']\n        },\n        'blocking_gaps': []\n    }"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Check for latest dates across tables."
+  - "Identify any gaps in the data timeline."
+synthesis_guidance: "Analyze available data dates to ensure timelines align with required freshness thresholds. Identify any missing sources and propose actions to address data gaps."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:48:04"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.latest_ma_date is not approved"
+  - "breadth.market_daily.latest_breadth_date is not approved"
+  - "market.equity_eod.latest_trade_date is not approved"
+  - "market.index_eod.latest_trade_date is not approved"
+  - "report.enhanced_runs.latest_run_ts is not approved"
+  - "scores.stage_snapshots.latest_snapshot_date is not approved"

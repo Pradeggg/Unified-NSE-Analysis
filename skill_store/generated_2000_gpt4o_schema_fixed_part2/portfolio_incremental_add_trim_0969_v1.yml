@@ -1,0 +1,61 @@
+id: "portfolio_incremental_add_trim_0969_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0969"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: post results; response style: comparison matrix."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for post results: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "post_results"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  steps:
+    - "Fetch latest stage and score data for portfolio holdings."
+    - "Identify add candidates based on constructive buy signals."
+    - "Identify trim candidates based on reduced scores or negative signals."
+    - "Prepare comparison matrix for sector exposure."
+sql_templates:
+  fetch_latest_data:
+    type: "WITH"
+    template: "WITH latest_stages AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT h.symbol, h.qty, h.avg_cost, s.stage, s.trading_signal FROM portfolio.holdings h JOIN latest_stages s ON h.symbol = s.symbol;"
+  find_add_candidates:
+    type: "SELECT"
+    template: "SELECT symbol FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+  find_trim_candidates:
+    type: "SELECT"
+    template: "SELECT symbol FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal = 'SELL' LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure SQL templates adhere to read-only SQL standard."
+  - "Verify the existence of required evidence tables in the schema."
+synthesis_guidance: "{'framework': 'matrix_analysis', 'comparison_basis': 'sector_exposure'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:48"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

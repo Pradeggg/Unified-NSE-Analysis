@@ -1,0 +1,87 @@
+id: "signal_outcome_feedback_review_1509_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1509"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: today; response style: research-only summary."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for today: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as research-only summary"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "today"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    step: "SQL query signal outcomes"
+    description: "Identify which signals hit their targets or stops."
+    table: "signals.signal_log"
+    columns:
+      - "symbol"
+      - "date_issued"
+      - "price_at_issue"
+      - "target_1"
+      - "target_2"
+      - "stop_loss"
+      - "date_resolved"
+      - "price_at_resolution"
+      - "hit_target"
+      - "hit_stop"
+    sample_criteria: "Return records from the last 3 months."
+    result_description: "Summary of outcomes for each signal."
+  -
+    step: "Compute success and failure patterns"
+    description: "Analyze patterns in successful and failed signals."
+    table: "scores.stage_snapshots"
+    columns:
+      - "symbol"
+      - "snapshot_date"
+      - "price"
+      - "change_1d_pct"
+      - "stage"
+      - "technical_score"
+    join_with: "signals.signal_log on symbol"
+    sample_criteria: "Align with the latest stage data per symbol."
+    result_description: "Correlate signal outcomes with market stages and technical scores."
+sql_templates:
+  -
+    template_id: "signal_outcomes_summary"
+    description: "Summarize signal outcomes including targets and stops hit."
+    sql: "SELECT symbol, date_issued, price_at_issue, target_1, target_2, stop_loss, date_resolved, price_at_resolution, hit_target, hit_stop FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    template_id: "stage_signal_correlation"
+    description: "Correlate signals with stages and scores."
+    sql: "WITH latest_stages AS (SELECT symbol, price, stage, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT s.symbol, s.date_issued, s.hit_target, s.hit_stop, st.price, st.stage, st.technical_score FROM signals.signal_log s JOIN latest_stages st ON s.symbol = st.symbol WHERE s.date_issued >= CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure signal and stage data alignment."
+synthesis_guidance: "['Provide insights on improving future signal accuracy based on historical outcomes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:48"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

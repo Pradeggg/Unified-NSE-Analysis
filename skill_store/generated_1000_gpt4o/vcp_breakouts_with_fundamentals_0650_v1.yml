@@ -1,0 +1,59 @@
+id: "vcp_breakouts_with_fundamentals_0650_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0650"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "select_vcp_breakouts_with_fundamentals"
+    description: "Select VCP and breakout stocks with strong fundamentals for TradingView export."
+    template: "WITH recent_stocks AS (\n    SELECT symbol, MAX(trade_date) AS recent_date\n    FROM market.equity_eod\n    WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'\n    GROUP BY symbol\n),\nlatest_fundamentals AS (\n    SELECT symbol, fundamental_score, earnings_quality, sales_growth, financial_strength\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n    AND fundamental_score > 70\n)\nSELECT e.symbol, e.high, e.close, f.fundamental_score\nFROM market.equity_eod e\nJOIN recent_stocks r ON e.symbol = r.symbol AND e.trade_date = r.recent_date\nJOIN latest_fundamentals f ON e.symbol = f.symbol\nWHERE e.high = e.week52_high\nOR e.symbol IN (SELECT symbol FROM scores.stage2_vcp_picks WHERE vcp_score > 70)\nORDER BY e.trade_date DESC, f.fundamental_score DESC"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:50:29"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table e.close"
+  - "unknown table e.high"
+  - "unknown table e.symbol"
+  - "unknown table e.trade_date"
+  - "unknown table e.week52_high"
+  - "unknown table f.fundamental_score"
+  - "unknown table f.symbol"
+  - "unknown table r.recent_date"
+  - "unknown table r.symbol"

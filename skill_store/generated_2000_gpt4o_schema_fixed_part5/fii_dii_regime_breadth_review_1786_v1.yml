@@ -1,0 +1,60 @@
+id: "fii_dii_regime_breadth_review_1786_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1786"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: intraday context; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for intraday context: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "intraday_context"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    sql_templates:
+      -
+        id: "check_fii_dii_regime"
+        template: "SELECT sf.trade_date, sf.fii_net_today, sf.dii_net_today, sf.flow_signal, sr.regime, sr.confidence FROM signals.fii_dii_flows sf JOIN signals.regime_history sr ON sf.trade_date = sr.trade_date WHERE sf.trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+      -
+        id: "check_market_breadth"
+        template: "SELECT bm.trade_date, bm.advances, bm.declines, bm.ad_signal FROM breadth.market_daily bm WHERE bm.trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+      -
+        id: "check_index_confirmation"
+        template: "SELECT ie.trade_date, ie.index_symbol, ie.close, ie.trend_signal FROM market.index_eod ie WHERE ie.trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND ie.index_symbol = 'Nifty 50';"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "{'global_rules': ['Use PostgreSQL syntax.', 'Follow date syntax from _global_rules.'], 'join_rules': '_join_rules'}"
+synthesis_guidance: "Provide a QA checklist summarizing the latest market regime, institutional flows, market breadth, and index confirmation."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

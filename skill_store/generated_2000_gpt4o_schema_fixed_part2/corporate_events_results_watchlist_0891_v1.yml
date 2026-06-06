@@ -1,0 +1,54 @@
+id: "corporate_events_results_watchlist_0891_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0891"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as action watchlist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Generate a quick weekly scan watchlist for upcoming or recent corporate events, including results, dividends, splits, bonuses, and AGMs, using events and analysis tables. Focus on actionable symbols with relevant context and source-trail evidence."
+sql_templates:
+  event_calendar: "SELECT id, symbol, event_type, event_date, purpose_raw, detail FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '1 week' AND event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM') ORDER BY event_date;"
+  symbol_watchlist: "WITH latest_stage AS ( SELECT DISTINCT ON (symbol) symbol, stage, snapshot_date FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY symbol, snapshot_date DESC ) SELECT ce.symbol, ce.event_type, ce.event_date, ra.verdict, ss.stage FROM signals.corporate_events ce JOIN scores.results_analysis ra ON ce.symbol = ra.symbol JOIN latest_stage ss ON ce.symbol = ss.symbol WHERE ce.event_date >= CURRENT_DATE - INTERVAL '1 week';"
+  result_context: "SELECT symbol, period_end, growth_yoy_revenue_pct, growth_qoq_revenue_pct, eps_yoy_pct FROM scores.results_analysis WHERE filing_date >= CURRENT_DATE - INTERVAL '1 month' ORDER BY filing_date DESC;"
+  action_bucket: "SELECT symbol, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+  source_trail: "SELECT symbol, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '1 week' ORDER BY event_date;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure that all returned symbols have valid and existing events within the last week."
+  - "Validate that the trading signals and stages are aligned with the latest snapshot."
+  - "Check that the results context provides recent filing data with positive growth percentages."
+synthesis_guidance: "['Prioritize symbols with impactful upcoming events or strong recent results.', 'Highlight symbols with positive trading signals from the latest analysis.', 'Provide a concise list of actionable items in the action bucket for quick decision-making.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

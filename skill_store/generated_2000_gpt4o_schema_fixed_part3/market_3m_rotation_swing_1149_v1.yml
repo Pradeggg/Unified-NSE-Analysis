@@ -1,0 +1,55 @@
+id: "market_3m_rotation_swing_1149_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1149"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for last 3 months: market analysis"
+  - "market regime and stage 2 leadership over 3 months as narrative plus evidence"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze the market regime, identify sector leadership, and select swing trade candidates using approved tables."
+sql_templates:
+  -
+    description: "Calculate the latest 3 months index returns."
+    sql: "SELECT index_symbol, (close - LAG(close, 1) OVER (PARTITION BY index_symbol ORDER BY trade_date)) / LAG(close, 1) OVER (PARTITION BY index_symbol ORDER BY trade_date) * 100 AS change_pct FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 months') AND trade_date <= CURRENT_DATE;"
+  -
+    description: "Identify sector leadership and Stage 2 stocks."
+    sql: "WITH latest_stage AS (SELECT symbol, sector, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2') SELECT sector, COUNT(symbol) AS num_stage_2 FROM latest_stage GROUP BY sector ORDER BY num_stage_2 DESC;"
+  -
+    description: "Select top swing trade candidates."
+    sql: "SELECT symbol, company_name, trading_signal FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure the SQL uses approved tables and columns only."
+  - "Verify response templates follow the narrative and evidence format."
+synthesis_guidance: "['Create a cohesive narrative summary of market regime and sector performance.', 'Highlight top swing trade candidates with evidence from approved data sources.', 'Validate the source-trail using the evidence listed.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:55:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.lag is not approved"

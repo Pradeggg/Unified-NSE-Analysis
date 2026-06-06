@@ -1,0 +1,161 @@
+card:
+  created_at: "2026-06-06T12:50:03"
+  created_by: "llm_generated"
+  description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: today; response style: debug trace."
+  domain: "screening"
+  evidence_required:
+    tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "vcp_breakouts_with_fundamentals_0602_v1"
+  input_patterns:
+    - "stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "VCP breakout stocks for TradingView"
+    - "quality breakouts with strong fundamentals"
+    - "deep institutional review for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "quality breakouts with strong fundamentals as debug trace"
+  output_contract:
+    - "filters"
+    - "candidates"
+    - "tradingview_symbols"
+    - "evidence"
+    - "risks"
+  python_tools:
+    -
+      approved_tables:
+        - "scores.stage_snapshots"
+      code: "def run(context):\n    \n    recommendation_score = 0  # Placeholder for operations involving context data\n    return {'recommendation_score': recommendation_score}"
+      id: "fundamental_analysis"
+      inputs:
+        - "symbol"
+        - "price"
+        - "trading_signal"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "recommendation_score"
+  review:
+    attempts: 1
+    findings:
+      - "fundamental_analysis: execution failed: NameError: name 'compute_score' is not defined"
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "generated"
+  sql_templates:
+    query: "SELECT e.symbol, e.close, e.high AS week52_high, s.company_name, s.sector, s.market_cap_cat, s.rsi, s.trend_signal, s.trading_signal, s.enhanced_fund_score, s.institutional_backing FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date = CURRENT_DATE AND e.high >= e.week52_high AND s.enhanced_fund_score > 70 AND s.trading_signal = 'BUY'"
+  status: "test_failed"
+  synthesis_guidance: "Emphasize the significance of VCP patterns with strong fundamentals and institutional backing to potential investors."
+  tags:
+    - "vcp"
+    - "breakout"
+    - "new_high"
+    - "fundamentals"
+    - "tradingview"
+    - "deep_institutional_review"
+    - "today"
+    - "debug_trace"
+  title: "VCP Breakouts With Fundamentals Variant 0602"
+  tool_plan_template: "Analyze VCP breakouts using approved tables, focusing on price movement, trading signals, and fundamental scores."
+  validation_errors:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  validation_rules:
+    - "Ensure SQL template only performs read-only operations."
+    - "Verify that all tables and columns used are from the approved schema."
+    - "Check response includes an institutional review focus for current day."
+  version: 1
+created_at: "2026-06-06T12:50:03"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: today; response style: debug trace."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0602_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Placeholder for operations involving context data\n    recommendation_score = compute_score(context['symbol'], context['price'])\n    return {'recommendation_score': recommendation_score}"
+    id: "fundamental_analysis"
+    inputs:
+      - "symbol"
+      - "price"
+      - "trading_signal"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "recommendation_score"
+review:
+  attempts: 3
+  findings:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  query: "SELECT e.symbol, e.close, e.high AS week52_high, s.company_name, s.sector, s.market_cap_cat, s.rsi, s.trend_signal, s.trading_signal, s.enhanced_fund_score, s.institutional_backing FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date = CURRENT_DATE AND e.high >= e.week52_high AND s.enhanced_fund_score > 70 AND s.trading_signal = 'BUY'"
+status: "test_failed"
+synthesis_guidance: "Emphasize the significance of VCP patterns with strong fundamentals and institutional backing to potential investors."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "today"
+  - "debug_trace"
+title: "VCP Breakouts With Fundamentals Variant 0602"
+tool_plan_template: "Analyze VCP breakouts using approved tables, focusing on price movement, trading signals, and fundamental scores."
+validation_errors:
+  - "description is required"
+  - "domain is required"
+  - "evidence_required is required"
+  - "id is required"
+  - "input_patterns is required"
+  - "output_contract is required"
+  - "tags is required"
+  - "title is required"
+  - "validation_rules is required"
+  - "version is required"
+  - "version must be a positive integer"
+validation_rules:
+  - "Ensure SQL template only performs read-only operations."
+  - "Verify that all tables and columns used are from the approved schema."
+  - "Check response includes an institutional review focus for current day."
+version: 1

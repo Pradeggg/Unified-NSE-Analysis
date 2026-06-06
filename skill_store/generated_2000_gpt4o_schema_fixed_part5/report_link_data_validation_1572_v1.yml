@@ -1,0 +1,82 @@
+id: "report_link_data_validation_1572_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1572"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for pre market: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    description: "Plan involves data validation checks for enhanced reports, focusing on broken links and missing data using pre-approved report datasets."
+sql_templates:
+  validation_check: "SELECT r.run_id, r.run_ts, COUNT(f.symbol) AS filtered_count FROM report.enhanced_runs r LEFT JOIN report.enhanced_filtered_stocks f ON r.run_id = f.run_id WHERE r.run_ts > CURRENT_DATE - INTERVAL '1 month' GROUP BY r.run_id, r.run_ts;"
+python_tools:
+  -
+    data_analysis_tool:
+      id: "data_analysis"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "run_id"
+        - "run_ts"
+        - "filtered_count"
+      outputs:
+        - "anomalies"
+      approved_tables:
+        - "report.enhanced_runs"
+        - "report.enhanced_filtered_stocks"
+      code:
+        - "def run(context):"
+        - "    anomalies = []"
+        - "    for run in context['report.enhanced_runs']:"
+        - "        if run['filtered_count'] < run['stocks_filtered']:"
+        - "            anomalies.append(run['run_id'])"
+        - "    return {'anomalies': anomalies}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure no gaps or duplicates in run IDs."
+  - "Validate timestamp consistency for each report run."
+synthesis_guidance: "Synthesize report validation findings into actionable recommendations for pre-market deep institutional review."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:23"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: language must be python"
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: code is required"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: language must be python"
+    - "<missing-id>: mode must be read_only"
+    - "<missing-id>: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

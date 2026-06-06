@@ -1,0 +1,60 @@
+created_at: "2026-06-06T12:42:37"
+created_by: "llm_generated"
+description: "Inspect report links and data accuracy for TradingView export before market opens."
+domain: "report_qa"
+evidence_required:
+  tables:
+
+generation_model: "gpt-4o"
+id: "agent_adda_skill_card_001_0180_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate TradingView export report links and missing data"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Simulate HTML parsing\n    return {'parsed_data': 'sample data extracted from HTML file'}"
+    id: "parse_html_tool_001"
+    inputs:
+      - "html_file_path"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "parsed_data"
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Fetches report runs from a specified time for timeline validation."
+    query: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts >= '2023-01-01';"
+  -
+    description: "Checks stocks with significant volume for potential data accuracy issues."
+    query: "SELECT symbol, current_price, volume FROM report.enhanced_filtered_stocks WHERE volume > 1000;"
+status: "validated"
+synthesis_guidance: "['Combine SQL insights to narratively explain disrupted links and data gaps.', 'Propose data corrections and re-run timelines for invalidated reports.']"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "pre_market"
+title: "Report Link Data Validation for TradingView Export"
+tool_plan_template: "Inspect report link validity and stock data consistency using SQL reads."
+validation_rules:
+  - "Status must be 'generated'."
+  - "Use SELECT SQL statements to ensure they are read-only."
+  - "Do not invent new tables or columns beyond what's approved."
+version: 1

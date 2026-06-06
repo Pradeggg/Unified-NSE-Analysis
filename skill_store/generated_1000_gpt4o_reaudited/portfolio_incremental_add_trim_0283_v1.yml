@@ -1,0 +1,59 @@
+created_at: "2026-06-06T12:44:06"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: ranked candidates."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0283_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for intraday context: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select symbols and scores to determine potential add candidates based on technical signals and recent performance."
+    statement: "SELECT symbol, stage_score, change_1d_pct, change_1w_pct, change_1m_pct FROM scores.stage_snapshots WHERE stage_score > 7 AND change_1d_pct > 0 AND change_1w_pct > 0 ORDER BY stage_score DESC;"
+    template_id: "001"
+  -
+    description: "Select current holdings for potential trim based on underperformance."
+    statement: "SELECT h.symbol, h.qty, s.change_1m_pct FROM portfolio.holdings AS h JOIN scores.stage_snapshots AS s ON h.symbol = s.symbol WHERE s.change_1m_pct < -5 ORDER BY s.change_1m_pct ASC;"
+    template_id: "002"
+status: "validated"
+synthesis_guidance: "['Prioritize stocks with high stage scores for addition.', 'Focus on reducing exposure to stocks with substantial negative monthly change percentages for trimming.', 'Consider sector concentration in overall exposure.']"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "ranked_candidates"
+title: "Portfolio Incremental Add Trim Review Variant 0283"
+tool_plan_template:
+  inputs:
+    - "data from the scores.stage_snapshots table"
+    - "data from the portfolio.holdings table"
+  processing_strategy: "Use relevant SQL templates to query necessary data. Identify patterns or signals for add/trim decisions."
+validation_rules:
+  - "Ensure data freshness is within the last trading day for all queries."
+  - "Cross-reference holdings against scores to validate position relevance."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,52 @@
+id: "sector_breadth_rotation_watchlist_1413_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1413"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: latest EOD; response style: portfolio-aware output."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for latest EOD: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as portfolio-aware output"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "latest_EOD"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Evaluate sectors based on breadth, stage, and momentum indicators using the latest EOD data. Rank them by performance and highlight those showing improvement."
+sql_templates:
+  -
+    query: "SELECT s.sector, AVG(s.pct_above_50dma) AS avg_pct_above_50dma, AVG(m.stage2_pct) AS avg_stage2_pct FROM breadth.sector_daily s JOIN breadth.ma_pct_above m ON s.snapshot_date = m.snapshot_date AND s.sector = m.sector WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) GROUP BY s.sector ORDER BY avg_pct_above_50dma DESC, avg_stage2_pct DESC;"
+    type: "sector_performance"
+  -
+    query: "SELECT st.symbol, st.company_name, st.sector, st.market_cap_cat, st.price FROM scores.stage_snapshots st WHERE st.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND st.stage = 2 AND st.stage_score > 70;"
+    type: "stage2_candidates"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sector ranking utilizes breadth and stage participation."
+  - "Symbols for TradingView should reflect sectors with improving breadth."
+synthesis_guidance: "['Focus on sectors showing the best improvement indicators.', 'Align stock candidates with portfolio-awareness by considering sector weight.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:59"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.sector is not approved"

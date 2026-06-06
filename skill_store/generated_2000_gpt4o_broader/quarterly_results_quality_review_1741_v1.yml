@@ -1,0 +1,63 @@
+id: "quarterly_results_quality_review_1741_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1741"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: last 3 months; response style: QA checklist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for last 3 months: latest quarterly results analysis"
+  - "which companies had strong quarterly results as QA checklist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "last_3_months"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    step: "Extract quarterly results and related insights from approved tables."
+    instructions: "Utilize SQL templates to gather necessary data for analysis."
+sql_templates:
+  -
+    query: "SELECT symbol, period_label, filing_date, revenue, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct, opm_delta_pp FROM scores.results_analysis WHERE period_end >= DATEADD(month, -3, CURRENT_DATE) AND audited = TRUE ORDER BY growth_yoy_revenue_pct DESC;"
+    description: "Retrieve quarterly results data for the last 3 months, focusing on revenue and PAT growth."
+python_tools:
+  -
+    id: "growth_analysis_helper"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "company_data"
+    outputs:
+      - "growth_summary"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+    code: "def run(context):\n    # Process company_data to synthesize a growth summary\n    growth_summary = {\n        'strong_growth_companies': []\n    }\n    # Example processing\n    for record in context['company_data']:\n        if record['growth_yoy_revenue_pct'] > 20:\n            growth_summary['strong_growth_companies'].append(\n                record['symbol']\n            )\n    return growth_summary"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure timeframe is within the last three months."
+  - "Data used must be audited and filed within the required timeframe."
+synthesis_guidance: "['Prioritize companies with the highest year-over-year revenue growth.', 'Provide concise summaries of key growth metrics and filing details.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.dateadd is not approved"
+  - "scores.results_analysis.month is not approved"
+  - "scores.results_analysis.revenue is not approved"

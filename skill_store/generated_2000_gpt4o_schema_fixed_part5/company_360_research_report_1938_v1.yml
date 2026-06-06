@@ -1,0 +1,68 @@
+id: "company_360_research_report_1938_v1"
+version: 1
+status: "review_pending"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1938"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "position-sizing context for last 20 sessions: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as comparison matrix"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    python_tools:
+
+    evidence_gaps:
+
+sql_templates:
+  -
+    template: "SELECT symbol, company_name, sector, market_cap_cat, price, trading_signal, narrative FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    template: "SELECT period_label, revenue, expenses, operating_profit FROM scores.quarterly_results WHERE symbol = 'RELIANCE' AND period_type = 'quarter' AND period_end = (SELECT MAX(period_end) FROM scores.quarterly_results WHERE symbol = 'RELIANCE');"
+  -
+    template: "SELECT period_label, total_assets, total_liabilities FROM scores.balance_sheet WHERE symbol = 'RELIANCE' AND period_type = 'annual' AND period_end = (SELECT MAX(period_end) FROM scores.balance_sheet WHERE symbol = 'RELIANCE');"
+  -
+    template: "SELECT trade_date, open, high, low, close FROM market.equity_eod WHERE symbol = 'RELIANCE' AND series = 'EQ' ORDER BY trade_date DESC LIMIT 20;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,62 @@
+id: "report_link_data_validation_1124_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Validate Enhanced Report Links and Data"
+description: "Verify the integrity of report links and data for the Indian market over the last 5 sessions, focusing on watchlist creation. Combine narrative with direct evidence."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for last 5 sessions: review report links not working"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "last_5_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Using the 'report.enhanced_runs' and 'report.enhanced_filtered_stocks' tables, join them on 'run_id'. Focus on verifying report runs within the last 5 sessions."
+sql_templates:
+  -
+    template: "WITH latest_runs AS (SELECT run_id, run_ts FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 5) SELECT er.run_id, er.run_ts, es.symbol, es.score, es.recommendation FROM latest_runs lr JOIN report.enhanced_filtered_stocks es ON lr.run_id = es.run_id; -- Apply additional WHERE clauses as needed"
+python_tools:
+  -
+    id: "latest_run_verification_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_data"
+    outputs:
+      - "issues_found"
+      - "suggestions"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "\n def run(context):\n    latest_runs = context['run_data']  # Access the input data\n    issues = []\n    for run in latest_runs:\n        if not run['symbol'] or run['score'] is None:\n            issues.append({'run_id': run['run_id'], 'issue': 'Missing symbol or score'})\n    return {'issues_found': issues, 'suggestions': ['Check if stock data sources are complete.']}\n"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Check for missing data in stock HTML files by verifying against 'report.enhanced_filtered_stocks'."
+  - "Ensure all links in downloaded reports are working by cross-referencing with 'report.enhanced_runs'."
+synthesis_guidance: "Frame your findings using narratives supported by evidence from the SQL output. Any identified issues require suggested remediations and verification steps."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:55:30"
+generation_model: "gpt-4o"
+validation_errors:
+  - "latest_run_verification_tool: python syntax error: unexpected indent"
+review:
+  status: "needs_heal"
+  findings:
+    - "latest_run_verification_tool: python syntax error: unexpected indent"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

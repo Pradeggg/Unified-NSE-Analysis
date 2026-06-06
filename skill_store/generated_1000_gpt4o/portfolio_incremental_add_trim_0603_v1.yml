@@ -1,0 +1,57 @@
+id: "portfolio_incremental_add_trim_0603_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0603"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: today; response style: debug trace."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for today: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  steps:
+    - "Review current portfolio holdings."
+    - "Analyze sector exposure based on current holdings."
+    - "Evaluate stage and signals for each holding."
+    - "Identify potential candidates for incremental add or trim actions."
+sql_templates:
+  portfolio_state: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings"
+  sector_exposure: "SELECT sector, SUM(qty) as total_qty FROM portfolio.holdings INNER JOIN scores.stage_snapshots ON portfolio.holdings.symbol = scores.stage_snapshots.symbol GROUP BY sector"
+  add_candidates: "SELECT symbol, company_name, technical_score, stage FROM scores.stage_snapshots WHERE stage IN ('1', '2') AND change_1d_pct > 0 ORDER BY technical_score DESC LIMIT 5"
+  trim_candidates: "SELECT symbol, company_name, technical_score, stage FROM scores.stage_snapshots WHERE stage IN ('3', '4') AND change_1d_pct < 0 ORDER BY technical_score ASC LIMIT 5"
+  risk_flags: "SELECT symbol, narrative FROM scores.stage_snapshots WHERE investment_score < 50"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure sector exposure sums are correct."
+  - "Verify that candidates for add/trim are appropriately filtered by stage and score."
+synthesis_guidance: "['Summarize findings and decisions in a clear and concise manner.', 'Highlight key risks and opportunities based on scores and signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:50:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

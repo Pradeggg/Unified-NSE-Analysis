@@ -1,0 +1,73 @@
+id: "fii_dii_regime_breadth_review_1926_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1926"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: last 5 sessions; response style: comparison matrix."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for last 5 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as comparison matrix"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  python_tools:
+    -
+      id: "run"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "fii_dii_flows"
+        - "regime_history"
+        - "market_daily"
+        - "index_eod"
+      outputs:
+        - "analysis_output"
+      approved_tables:
+        - "signals.fii_dii_flows"
+        - "signals.regime_history"
+        - "breadth.market_daily"
+        - "market.index_eod"
+      code: "# Read-only Python tool logic here"
+sql_templates:
+  -
+    template: "SELECT fii.trade_date, fii.fii_net_today, fii.dii_net_today, fii.flow_signal, reg.regime, reg.confidence, breadth.advances, breadth.declines, breadth.ad_signal, idx.close, idx.change_pct FROM signals.fii_dii_flows fii JOIN signals.regime_history reg ON fii.trade_date = reg.trade_date JOIN breadth.market_daily breadth ON fii.trade_date = breadth.trade_date JOIN market.index_eod idx ON fii.trade_date = idx.trade_date WHERE fii.trade_date >= (CURRENT_DATE - INTERVAL '5 days') AND idx.index_symbol = 'Nifty 50' ORDER BY fii.trade_date DESC LIMIT 5"
+    description: "Fetch latest 5 sessions data for flow, regime, breadth, and index."
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  -
+    must_have_columns:
+      - "trade_date"
+      - "fii_net_today"
+      - "regime"
+      - "advances"
+      - "close"
+    within_last_days: 5
+    must_have_rows: true
+synthesis_guidance: "{'insights': 'Generate a comparative analysis of FII/DII flows, market regime, market breadth, and index movements for the last 5 sessions to identify risk-on or risk-off context.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:46"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.market_daily is not approved"

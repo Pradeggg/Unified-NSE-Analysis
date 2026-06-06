@@ -1,0 +1,52 @@
+id: "report_link_data_validation_1600_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1600"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for weekly review: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  - "Gather enhanced report metadata and filtered stock rows."
+  - "Identify broken links and missing data."
+  - "Provide findings, suggested remediation, and verification details."
+sql_templates:
+  -
+    description: "Fetch latest run metadata and stock data"
+    template: "WITH latest_runs AS (SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered, indices_analyzed, market_composite_score, market_sentiment, notes FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)), filtered_stocks AS (SELECT run_id, rank, symbol, score, recommendation, current_price FROM report.enhanced_filtered_stocks) SELECT lr.run_id, lr.run_ts, lr.analysis_date, lr.universe_size, lr.stocks_analyzed, lr.stocks_filtered, lr.indices_analyzed, lr.market_composite_score, lr.market_sentiment, fs.symbol, fs.score, fs.recommendation FROM latest_runs lr JOIN filtered_stocks fs ON lr.run_id = fs.run_id;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "ensure_latest_date"
+synthesis_guidance: "['Summarize findings from SQL query results, focusing on report accuracy and completeness.', 'Identify any gaps in the data, and recommend next steps for addressing identified issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

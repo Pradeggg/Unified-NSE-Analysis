@@ -1,0 +1,67 @@
+id: "portfolio_incremental_add_trim_1725_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1725"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for last 5 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  - "Analyze the portfolio holdings for last 5 sessions."
+  - "Determine add/trim actions based on risk exposure and signals."
+sql_templates:
+  -
+    purpose: "Determine current holdings with buy/trim signals."
+    template: "WITH latest_snapshots AS (\n    SELECT *\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n), portfolio_analysis AS (\n    SELECT h.symbol, h.qty, h.avg_cost, s.change_1w_pct, s.trading_signal, s.stage\n    FROM portfolio.holdings h\n    JOIN latest_snapshots s ON h.symbol = s.symbol\n)\nSELECT *\nFROM portfolio_analysis\nWHERE trading_signal IN ('BUY', 'STRONG_BUY', 'SELL')\nORDER BY trading_signal DESC, change_1w_pct DESC\nLIMIT 10;"
+python_tools:
+  -
+    id: "evaluate_portfolio_risk"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      holding_data: "DataFrame"
+      stage_snapshot: "DataFrame"
+    outputs:
+      risk_assessment: "Dict"
+    approved_tables:
+      - "portfolio.holdings"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    holdings = context['holding_data']\n    snapshots = context['stage_snapshot']\n    # Perform analysis logic\n    high_risk = snapshots[snapshots['trading_signal'] == 'SELL']\n    low_risk = snapshots[snapshots['trading_signal'] == 'BUY']\n    return {\"high_risk\": high_risk.to_dict('records'), \"low_risk\": low_risk.to_dict('records')}"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "{'must_have_tables': ['scores.stage_snapshots', 'portfolio.holdings']}"
+synthesis_guidance: "['Focus on last 5 sessions for risk exposure analysis.', 'Prepare a QA checklist for add/trim actions based on signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:21"
+generation_model: "gpt-4o"
+validation_errors:
+  - "evaluate_portfolio_risk: inputs must be a list"
+  - "evaluate_portfolio_risk: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "evaluate_portfolio_risk: inputs must be a list"
+    - "evaluate_portfolio_risk: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

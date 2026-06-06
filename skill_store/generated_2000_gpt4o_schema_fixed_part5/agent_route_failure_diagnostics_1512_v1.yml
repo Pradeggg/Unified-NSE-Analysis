@@ -1,0 +1,63 @@
+id: "agent_route_failure_diagnostics_1512_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1512"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: latest EOD; response style: research-only summary."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for latest EOD: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as research-only summary"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "latest_EOD"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "Examine the latest enhanced report runs for any anomalies or missing tools."
+  - "Check for symbol resolution issues and review fallback triggers."
+  - "Conduct a deep analysis of stage snapshots for stage misalignment or signal mismatch."
+  - "Synthesize findings into a coherent research-only summary focused on deep institutional review."
+sql_templates:
+  -
+    template_name: "latest_enhanced_report_runs"
+    template: "SELECT run_id, run_ts, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+    approved_tables:
+      - "report.enhanced_runs"
+  -
+    template_name: "symbol_mismatch_diagnostics"
+    template: "SELECT ers.run_id, efs.symbol FROM report.enhanced_filtered_stocks efs JOIN report.enhanced_runs ers ON ers.run_id = efs.run_id WHERE ers.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+    approved_tables:
+      - "report.enhanced_filtered_stocks"
+      - "report.enhanced_runs"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all diagnostics use the latest enhanced report runs."
+  - "Validate the consistency of stage and symbol data for errors."
+synthesis_guidance: "['Compile all identified failure modes into a detailed summary.', 'Where possible, provide insights on potential fixes for route issues.', 'Identify tool gaps and suggest integration points for improvements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:47"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

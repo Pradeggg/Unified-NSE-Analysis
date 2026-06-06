@@ -1,0 +1,85 @@
+id: "fii_dii_regime_breadth_review_0400_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0400"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as exceptions and gaps first"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  tool: "Agent Adda"
+  purpose: "Generate market risk context based on approved evidence."
+  strategy: "Fetch historical FII/DII trends, regime states, breadth indicators, and index confirmations."
+  mode: "read-only analytics"
+sql_templates:
+  -
+    description: "Select recent flow trends and signals for FII/DII."
+    template: "SELECT trade_date, fii_net_5d, dii_net_5d, flow_signal FROM signals.fii_dii_flows ORDER BY trade_date DESC LIMIT 5;"
+  -
+    description: "Fetch current market regime and confidence."
+    template: "SELECT regime, confidence FROM signals.regime_history ORDER BY trade_date DESC LIMIT 1;"
+  -
+    description: "Retrieve market breadth indicators such as net advances and TRIN."
+    template: "SELECT net_ad, ad_oscillator, trin_signal FROM breadth.market_daily ORDER BY trade_date DESC LIMIT 5;"
+  -
+    description: "Get latest Nifty 50 index close and trend signal."
+    template: "SELECT close, trend_signal FROM market.index_eod WHERE index_symbol = 'NIFTY50' ORDER BY trade_date DESC LIMIT 1;"
+python_tools:
+  -
+    id: "trend_analyzer"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "flow_data"
+      - "regime_data"
+      - "breadth_data"
+      - "index_data"
+    outputs:
+      - "flow_context"
+      - "breadth_context"
+      - "risk_flags"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context):\n    # Example read-only analysis code\n    analyze_trends(context['flow_data'], context['regime_data'], context['breadth_data'], context['index_data'])\n    return {'flow_context': {}, 'breadth_context': {}, 'risk_flags': {}}"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all queried data aligns with specified timeframe."
+  - "Report any missing or null fields in the data."
+synthesis_guidance: "['Focus on exceptions and gaps in flow trends and regime signals.', 'Highlight discrepancies between breadth indicators and index confirmations to assess risk context.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:48"
+generation_model: "gpt-4o"
+validation_errors:
+  - "trend_analyzer: execution failed: NameError: name 'analyze_trends' is not defined"
+review:
+  status: "needs_heal"
+  findings:
+    - "trend_analyzer: execution failed: NameError: name 'analyze_trends' is not defined"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

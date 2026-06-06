@@ -1,0 +1,51 @@
+id: "signal_outcome_feedback_review_0893_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0893"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for weekly review: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as action watchlist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Evaluate prior outcomes and refine signal strategies using daily updates."
+sql_templates:
+  -
+    description: "Retrieve signals where target or stop was hit in the last week with outcomes."
+    template: "SELECT s.symbol, s.signal, s.date_issued, s.price_at_issue, s.target_1, s.target_2, s.stop_loss, s.hit_target, s.hit_stop, s.return_pct FROM signals.signal_log s WHERE s.date_issued >= CURRENT_DATE - INTERVAL '1 week' AND (s.hit_target IS TRUE OR s.hit_stop IS TRUE) ORDER BY s.date_issued DESC;"
+  -
+    description: "Join latest stage snapshot data with signals for a complete view."
+    template: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT s.symbol, s.signal, ss.stage, ss.technical_score FROM signals.signal_log s INNER JOIN latest_snapshots ss ON s.symbol = ss.symbol WHERE s.date_issued >= CURRENT_DATE - INTERVAL '1 week';"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure only the last week's data is considered for outcomes."
+  - "Verify the presence of both target and stop-hit signals."
+synthesis_guidance: "['Focus on emerging patterns for winners and failures.', 'Recommend route improvements based on latest data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:28"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.s is not approved"

@@ -1,0 +1,64 @@
+id: "data_freshness_readiness_audit_1981_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1981"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for intraday context: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as comparison matrix"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Identify data sources and evaluate freshness thresholds for current intraday context using comparison matrix."
+sql_templates:
+  -
+    template: "SELECT MAX(trade_date) AS last_index_eod_date FROM market.index_eod;"
+    description: "Get the most recent index EOD trade date for freshness check."
+  -
+    template: "SELECT MAX(trade_date) AS last_equity_eod_date FROM market.equity_eod;"
+    description: "Get the most recent equity EOD trade date for freshness check."
+  -
+    template: "SELECT MAX(snapshot_date) AS last_snapshot_date FROM scores.stage_snapshots;"
+    description: "Get the latest snapshot date from stage_snapshots for freshness validation."
+  -
+    template: "SELECT MAX(trade_date) AS last_market_daily_date FROM breadth.market_daily;"
+    description: "Get the most recent market daily date for breadth data freshness."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all SQL templates are read-only."
+  - "Compare query results against current date to assess freshness."
+  - "If data is stale, identify potential reasons or gaps."
+synthesis_guidance: "Summarize findings into a matrix, highlighting data freshness and actionable improvements."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:59"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.last_market_daily_date is not approved"
+  - "market.equity_eod.last_equity_eod_date is not approved"
+  - "market.index_eod.last_index_eod_date is not approved"
+  - "scores.stage_snapshots.last_snapshot_date is not approved"

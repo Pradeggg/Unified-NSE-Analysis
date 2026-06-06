@@ -1,0 +1,56 @@
+id: "portfolio_incremental_add_trim_1781_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review - Quick Scan"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Focus: quick scan; timeframe: intraday context; response style: QA checklist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for intraday context: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "intraday_context"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Generate a quick scan report for incremental add/trim decisions by reviewing the latest stage, signals, and holdings."
+sql_templates:
+  -
+    output_key: "portfolio_state"
+    template: "SELECT h.symbol, h.qty, h.avg_cost, s.stage, s.trading_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    output_key: "add_candidates"
+    template: "SELECT symbol, company_name, sector FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+  -
+    output_key: "trim_candidates"
+    template: "SELECT h.symbol, h.qty, s.trading_signal, s.stage FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal = 'SELL' LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure correct use of latest snapshot_date for data relevance."
+  - "Validate presence and syntax of trading_signal filters."
+synthesis_guidance: "Highlight key portfolio opportunities and risks using intraday context. Use a concise checklist format focusing on practical decision-making."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:54"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

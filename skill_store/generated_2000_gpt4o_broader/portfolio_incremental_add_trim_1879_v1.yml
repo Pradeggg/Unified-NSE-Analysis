@@ -1,0 +1,59 @@
+id: "portfolio_incremental_add_trim_1879_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1879"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for pre market: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as action watchlist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "{summary}, pre market timeframe, action watchlist style."
+sql_templates:
+  -
+    template_name: "fetch_current_holdings"
+    description: "Select current holdings and their details."
+    sql: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+  -
+    template_name: "fetch_market_data"
+    description: "Select recent market data for each holding."
+    sql: "SELECT symbol, company_name, sector, live_price, stage, stage_score, change_1d_pct, change_1w_pct, relative_strength FROM scores.stage_snapshots WHERE snapshot_date = current_date;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  -
+    rule_type: "consistency"
+    description: "Ensure holdings are cross-verified with live market data."
+  -
+    rule_type: "exposure"
+    description: "Check sector and stock exposure aligns with predefined limits."
+synthesis_guidance: "{'strategy': 'Focus on high RSI stocks for add, low stage_score for trim.', 'timing': 'Consider pre-market changes to adjust positions.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:59"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

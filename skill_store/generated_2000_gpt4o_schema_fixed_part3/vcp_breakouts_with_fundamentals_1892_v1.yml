@@ -1,0 +1,55 @@
+id: "vcp_breakouts_with_fundamentals_1892_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1892"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "VCP Breakouts With Fundamentals"
+    description: "Fetch VCP breakout stocks with enhanced fundamentals."
+    query: "SELECT DISTINCT v.symbol, v.company_name, v.sector, v.price, v.change_1d_pct, v.enhanced_fund_score, v.rsi, v.vcp_score FROM scores.stage2_vcp_picks v JOIN scores.stage_snapshots s ON v.symbol = s.symbol AND v.snapshot_date = s.snapshot_date WHERE v.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND s.trading_signal IN ('BUY', 'STRONG_BUY') AND v.enhanced_fund_score > 7 ORDER BY v.vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:56"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

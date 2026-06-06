@@ -1,0 +1,74 @@
+id: "fii_dii_regime_breadth_review_1968_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1968"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: post results; response style: comparison matrix."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for post results: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as comparison matrix"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "post_results"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  tool_usage: "Use SQL and Python tools to analyze market conditions."
+  approved_tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+sql_templates:
+  -
+    template_id: "latest_flow_regime_breadth_index"
+    description: "Get latest date FII/DII flows, market regimes, breadth, and Nifty 50 index data."
+    sql: "WITH latest_date AS (SELECT MAX(trade_date) AS trade_date FROM signals.fii_dii_flows)\nSELECT\n    f.trade_date,\n    f.fii_net_today, f.dii_net_today, f.flow_signal, f.fii_trend, f.dii_trend,\n    r.regime, r.confidence, r.days_in_regime,\n    b.advances, b.declines, b.ad_signal, b.market_sentiment,\n    i.close AS nifty500_close, i.trend_signal, i.trading_signal\nFROM\n    signals.fii_dii_flows f\nJOIN\n    signals.regime_history r ON f.trade_date = r.trade_date\nJOIN\n    breadth.market_daily b ON f.trade_date = b.trade_date\nJOIN\n    market.index_eod i ON f.trade_date = i.trade_date AND i.index_symbol = 'NIFTY_50'\nWHERE\n    f.trade_date = (SELECT trade_date FROM latest_date);"
+python_tools:
+  -
+    id: "fii_dii_trend_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      fii: "fii_net_5d"
+      dii: "dii_net_5d"
+    outputs:
+      trending_up: "boolean"
+    approved_tables:
+      - "signals.fii_dii_flows"
+    code: "def run(context):\n    fii_trend = context['fii'] > 0\n    dii_trend = context['dii'] > 0\n    return fii_trend or dii_trend"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all fields are populated in the context of the latest market data."
+  - "Check that data types match expected formats according to the approved schema."
+synthesis_guidance: "{'contextual_analysis': 'Focus on combining flow, regime, breadth, and index data to frame a risk-on or risk-off market view.', 'highlight_patterns': 'Identify consistent trends or anomalies within institutional flows and market breadth.', 'application': 'Apply insights to the post-results position-sizing context, using comparison matrices.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:47"
+generation_model: "gpt-4o"
+validation_errors:
+  - "fii_dii_trend_analysis: inputs must be a list"
+  - "fii_dii_trend_analysis: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "fii_dii_trend_analysis: inputs must be a list"
+    - "fii_dii_trend_analysis: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

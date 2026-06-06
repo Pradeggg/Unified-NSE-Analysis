@@ -1,0 +1,66 @@
+id: "fii_dii_regime_breadth_review_1408_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1408"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for today: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as portfolio-aware output"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Summarize the market regime, institutional flows, and breadth context today."
+sql_templates:
+  main_query: "WITH latest_date AS (SELECT MAX(trade_date) AS trade_date FROM market.index_eod) SELECT rf.trade_date, rh.regime, rf.flow_signal, rh.confidence, md.ad_signal, md.trin_signal, md.market_sentiment, ieod.index_symbol, ieod.close, ieod.change_pct FROM signals.fii_dii_flows rf JOIN signals.regime_history rh ON rf.trade_date = rh.trade_date JOIN breadth.market_daily md ON rf.trade_date = md.trade_date JOIN market.index_eod ieod ON rf.trade_date = ieod.trade_date WHERE rf.trade_date = (SELECT trade_date FROM latest_date) AND ieod.index_symbol = 'NIFTY 50';"
+python_tools:
+  -
+    id: "fii_dii_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "fii_trend"
+      - "dii_trend"
+      - "market_sentiment"
+    outputs:
+      - "flow_context"
+      - "risk_flags"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "breadth.market_daily"
+    code: "# Analyze FII/DII trends and market sentiment\n\ndef run(context):\n    fii_trend = context['fii_trend']\n    dii_trend = context['dii_trend']\n    sentiment = context['market_sentiment']\n    # Simple analysis logic\n    if fii_trend == 'POSITIVE' and dii_trend == 'POSITIVE':\n        flow_context = 'Strong institutional buying'\n        risk_flags = 'Risk-on'\n    elif fii_trend == 'NEGATIVE' or dii_trend == 'NEGATIVE':\n        flow_context = 'Institutional selling pressure'\n        risk_flags = 'Risk-off'\n    else:\n        flow_context = 'Mixed flows'\n        risk_flags = 'Neutral'\n\n    if sentiment == 'BEARISH':\n        risk_flags = 'Risk-off'\n\n    return {'flow_context': flow_context, 'risk_flags': risk_flags}"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "value_validations"
+  - "structural_validations"
+synthesis_guidance: "Formulate insights considering the combined regime, flow trends, market breadth, and index performance today."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:29"
+generation_model: "gpt-4o"
+validation_errors:
+  - "fii_dii_analysis_tool: execution failed: KeyError: 'fii_trend'"
+review:
+  status: "needs_heal"
+  findings:
+    - "fii_dii_analysis_tool: execution failed: KeyError: 'fii_trend'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,68 @@
+id: "signal_outcome_feedback_review_1173_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review - Skill Card"
+description: "Analyze and review prior trading signals with an emphasis on understanding successful and unsuccessful strategies. Strengthen future signal development through outcome analysis and evidence-based improvements."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for pre market: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as narrative plus evidence"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review and analyze historical signal performance, focusing on targets and stops. Update and enhance future strategies based on outcome patterns and evidence."
+sql_templates:
+  -
+    name: "SuccessfulSignals"
+    query: "SELECT s.symbol, s.date_issued, s.price_at_issue, s.target_1, e.close FROM signals.signal_log s JOIN market.equity_eod e ON s.symbol = e.symbol WHERE s.hit_target = TRUE AND e.trade_date = s.date_resolved AND e.series = 'EQ';"
+  -
+    name: "FailedSignals"
+    query: "SELECT s.symbol, s.date_issued, s.price_at_issue, s.stop_loss, e.close FROM signals.signal_log s JOIN market.equity_eod e ON s.symbol = e.symbol WHERE s.hit_stop = TRUE AND e.trade_date = s.date_resolved AND e.series = 'EQ';"
+python_tools:
+  -
+    id: "SignalOutcomeAnalyzer"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "data_context"
+    outputs:
+      - "analysis_insights"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Quarantined logic for signal outcome analysis\n    pass"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure SQL only uses authorized columns and tables."
+  - "Check SQL against approved schema for compliance."
+synthesis_guidance: "['Use insights from signal outcomes to suggest improvements in trading strategies.', 'Focus on enhancing future performance through evidence-based adjustments.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:56:11"
+generation_model: "gpt-4o"
+validation_errors:
+  - "SignalOutcomeAnalyzer: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "SignalOutcomeAnalyzer: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

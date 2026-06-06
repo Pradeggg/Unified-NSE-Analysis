@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:46:14"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: weekly review; response style: exceptions and gaps first."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0394_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Identify VCP breakout stocks with strong fundamentals."
+    template: "SELECT sp.symbol, sp.company_name, sp.price, sp.vcp_score, sp.enhanced_fund_score, eod.high, eod.low, eod.close FROM scores.stage2_vcp_picks sp JOIN market.equity_eod eod ON sp.symbol = eod.symbol WHERE sp.vcp_score > 80 AND sp.enhanced_fund_score > 70 AND eod.high >= eod.week52_high - (eod.week52_high * 0.05)"
+status: "validated"
+synthesis_guidance: "{'approach': 'Address exceptions and data gaps first, ensuring integration readiness for TradingView.'}"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+title: "VCP Breakouts With Fundamentals Variant 0394"
+tool_plan_template:
+  candidates: "Stocks identified with key breakout patterns like VCP alongside comprehensive fundamental scores."
+  evidence: "Detailed analysis using approved market and scoring tables."
+  filters: "Select symbols with strong fundamentals and liquidity from VCP picks and EOD data."
+  risks: "Market volatility and data incompleteness."
+  tradingview_symbols: "Formatted symbols for integration with TradingView watchlists."
+validation_rules:
+  - "status"
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

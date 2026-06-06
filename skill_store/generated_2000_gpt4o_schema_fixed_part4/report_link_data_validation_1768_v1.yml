@@ -1,0 +1,55 @@
+id: "report_link_data_validation_1768_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1768"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: post results; response style: QA checklist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for post results: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "post_results"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    description: "Analyze and validate report metadata and stock data for completeness and accuracy post-result declaration."
+sql_templates:
+  -
+    description: "Fetch the latest enhanced report runs with potential data issues."
+    template: "SELECT r.run_id, r.run_ts, r.analysis_date, r.universe_size, r.stocks_analyzed, r.stocks_filtered, r.market_composite_score, r.market_sentiment FROM report.enhanced_runs r WHERE r.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+  -
+    description: "Check if stock data is present for a given session's run."
+    template: "SELECT s.run_id, s.symbol, s.current_price FROM report.enhanced_filtered_stocks s JOIN report.enhanced_runs r ON s.run_id = r.run_id WHERE r.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all relevant stock data is present and accurate based on the latest run."
+  - "Identify and list any broken links or missing data components."
+synthesis_guidance: "Use findings to perform a QA checklist review, encompassing any date, data, and source validation for recent report runs. Highlight broken or missing data instances."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:43:43"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 3 months; response style: ranked candidates."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0246_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    name: "fetch_vcp_breakouts"
+    template: "SELECT s.symbol, s.company_name, s.price, s.vcp_score, e.high, e.close, ss.enhanced_fund_score FROM scores.stage2_vcp_picks AS s JOIN market.equity_eod AS e ON s.symbol = e.symbol AND e.trade_date > current_date - interval '3 months' JOIN scores.stage_snapshots AS ss ON s.symbol = ss.symbol WHERE s.vcp_breakout_pct > 0 AND ss.enhanced_fund_score > 70 ORDER BY s.vcp_score DESC;"
+status: "validated"
+synthesis_guidance: "['Focus on VCP and breakout characteristics.', 'Rank by VCP score and enhanced fund score.', 'Provide TradingView-compatible symbol lists.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_3_months"
+  - "ranked_candidates"
+title: "VCP Breakouts With Fundamentals Variant 0246"
+tool_plan_template:
+
+validation_rules:
+  - "Ensure data integrity across tables."
+  - "Validate symbol consistency."
+  - "Confirm timeframe adherence: last 3 months."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

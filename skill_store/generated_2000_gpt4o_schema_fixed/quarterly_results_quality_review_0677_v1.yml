@@ -1,0 +1,55 @@
+id: "quarterly_results_quality_review_0677_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0677"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: sector-relative comparison; timeframe: pre market; response style: debug trace."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "sector-relative comparison for pre market: latest quarterly results analysis"
+  - "which companies had strong quarterly results as debug trace"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  sequential: true
+  steps:
+    -
+      tool: "SQLTemplate"
+      params:
+        template_name: "latest_quarterly_results"
+        description: "Fetch the latest quarterly results with sector-relative comparisons."
+sql_templates:
+  -
+    template_name: "latest_quarterly_results"
+    template: "WITH latest_results AS (SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.period_end, qr.revenue, qr.pat, qr.opm_pct FROM scores.quarterly_results qr WHERE qr.period_type = 'quarter' ORDER BY qr.symbol, qr.period_end DESC NULLS LAST, qr.fetched_at DESC), latest_analysis AS (SELECT DISTINCT ON (ra.symbol) ra.symbol, ra.verdict, ra.growth_yoy_revenue_pct, ra.growth_qoq_revenue_pct FROM scores.results_analysis ra WHERE ra.period_type = 'quarter' ORDER BY ra.symbol, ra.period_end DESC NULLS LAST, ra.updated_at DESC) SELECT lr.symbol, lr.revenue, lr.pat, lr.opm_pct, la.verdict, la.growth_yoy_revenue_pct, la.growth_qoq_revenue_pct FROM latest_results lr JOIN latest_analysis la ON lr.symbol = la.symbol;"
+    notes: "Fetch latest quarterly results and analysis with sector-relative comparisons."
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure DISTINCT ON is used for fetching latest results."
+  - "Verify results include sector-relative contexts."
+synthesis_guidance: "['Provide a debug trace style response highlighting SQL logic and sector-relative implications.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:40"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.period_type is not approved"

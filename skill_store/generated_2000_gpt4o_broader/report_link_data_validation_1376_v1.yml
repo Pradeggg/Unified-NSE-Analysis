@@ -1,0 +1,48 @@
+id: "report_link_data_validation_1376_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1376"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: pre market; response style: exceptions and gaps first."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for pre market: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  action: "Data Validation"
+  goal: "Identify and log links and data gaps in pre-market reports."
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts FROM report.enhanced_runs WHERE run_ts > NOW() - INTERVAL '1 DAY';"
+    description: "Fetches recent runs within a day for freshness audit."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Analyze data discrepancies primarily from recent runs."
+  - "Focus on missing data and broken links as priorities."
+synthesis_guidance: "['Integrate findings to form a complete narrative of data validation.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:32"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.now is not approved"

@@ -1,0 +1,57 @@
+id: "vcp_breakouts_with_fundamentals_1584_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1584"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: intraday context; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "intraday_context"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  steps:
+    -
+      description: "Identify Stage 2 VCP candidates with strong fundamentals and trading signals."
+      sql_template: "WITH latest_vcp AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)) SELECT symbol, company_name, sector, price, vcp_score, enhanced_fund_score FROM latest_vcp WHERE trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY vcp_score DESC, symbol LIMIT 50;"
+    -
+      description: "Fetch the latest EOD data for identified symbols."
+      sql_template: "SELECT e.symbol, e.trade_date, e.close, e.volume, s.enhanced_fund_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND e.symbol IN ({{candidate_symbols}});"
+sql_templates:
+  - "WITH latest_vcp AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)) SELECT symbol, company_name, sector, price, vcp_score, enhanced_fund_score FROM latest_vcp WHERE trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY vcp_score DESC, symbol LIMIT 50;"
+  - "SELECT e.symbol, e.trade_date, e.close, e.volume, s.enhanced_fund_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND e.symbol IN ({{candidate_symbols}});"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'guidelines': ['Once candidates are identified, summarize key metrics as a research-centric input.', 'Discuss breakout patterns and consolidation specifics in the context of Indian markets.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

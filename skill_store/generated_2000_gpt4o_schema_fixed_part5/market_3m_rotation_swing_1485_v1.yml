@@ -1,0 +1,60 @@
+id: "market_3m_rotation_swing_1485_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1485"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: intraday context; response style: portfolio-aware output."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    steps:
+      - "Analyze the broad market regime using index returns over the last 3 months."
+      - "Determine sector leadership change based on the latest stage distribution."
+      - "Identify primary swing candidates from Stage 2 stocks."
+      - "Evaluate risks in the current market context."
+sql_templates:
+  index_returns: "SELECT index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' AND trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+  stage_distribution_change: "SELECT sector, COUNT(DISTINCT symbol) AS count FROM scores.stage_snapshots WHERE stage = 'STAGE_2' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY count DESC;"
+  leading_sectors: "SELECT sector, AVG(relative_strength) as avg_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY avg_strength DESC LIMIT 5;"
+  primary_candidates: "SELECT symbol, trading_signal, investment_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC, rank ASC LIMIT 10;"
+  risks: "SELECT symbol, change_pct FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND change_pct < 0 ORDER BY change_pct ASC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "{'as_of_date': 'Ensure the date is updated to the most recent trading day.', 'index_returns': 'Validate that all major indices are represented with non-null values.', 'stage_distribution_change': 'Ensure no sectors have missing or inconsistent stage data.', 'leading_sectors': 'Confirm the presence of at least three leading sectors.', 'primary_candidates': 'All candidates should have non-null trading signals and scores.', 'risks': 'List should contain the five most declining symbols with appropriate context.'}"
+synthesis_guidance: "{'approach': 'Deliver results with a focus on risk management. Highlight potential opportunities within the 3-month perspective, considering portfolio implications. Ensure clarity in presenting sector roles and swing candidates.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:37"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

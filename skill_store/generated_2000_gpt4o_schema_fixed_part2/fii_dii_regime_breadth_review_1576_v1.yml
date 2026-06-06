@@ -1,0 +1,88 @@
+id: "fii_dii_regime_breadth_review_1576_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1576"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for pre market: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as research-only summary"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  tool_name: "MarketAnalysisRunner"
+  tool_inputs:
+    - "market regime with FII DII and breadth"
+  tool_description: "Run context analysis using pre-defined inputs."
+sql_templates:
+  -
+    name: "get_latest_fii_dii_flows"
+    query: "SELECT * FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+  -
+    name: "get_latest_regime_history"
+    query: "SELECT * FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history);"
+  -
+    name: "get_latest_market_breadth"
+    query: "SELECT * FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+  -
+    name: "get_latest_index_eod"
+    query: "SELECT * FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND index_symbol = 'Nifty 50';"
+python_tools:
+  -
+    id: "market_analysis_calculator"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "get_latest_fii_dii_flows"
+      - "get_latest_regime_history"
+      - "get_latest_market_breadth"
+      - "get_latest_index_eod"
+    outputs:
+      - "regime"
+      - "flow_context"
+      - "breadth_context"
+      - "index_confirmation"
+      - "risk_flags"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context):\n    # Process context to analyze FII/DII flows, regime, and breadth\n    pass"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data freshness for pre-market analysis."
+  - "Only use evidence from approved schemas and tables."
+  - "Maintain research-only framing."
+synthesis_guidance: "['Synthesize evidence to determine risk-on or risk-off context.', 'Highlight any significant changes in FII/DII flows or market breadth.', 'Provide insights using the latest index and regime data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market_analysis_calculator: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "market_analysis_calculator: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

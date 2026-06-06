@@ -1,0 +1,75 @@
+id: "portfolio_lab_paper_trading_review_0334_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0334"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for last 20 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    step_number: 1
+    description: "Identify open trades in paper trading strategies."
+    action: "Use open trade entries from signals.signal_log where date_resolved is null."
+  -
+    step_number: 2
+    description: "Analyze historical entries, exits, stops, and targets for performance review."
+    action: "Select historical trades from signals.signal_log within the last 20 sessions."
+  -
+    step_number: 3
+    description: "Assess strategy state using latest technical scores and stage information."
+    action: "Join signals.signal_log with scores.stage_snapshots using approved schema join rules."
+  -
+    step_number: 4
+    description: "Generate a watchlist based on identified strategies needing review."
+    action: "Compile symbols from signals.signal_log where there are gaps or exceptions in performance."
+sql_templates:
+  -
+    name: "latest_open_trades"
+    template: "SELECT symbol, date_issued, signal FROM signals.signal_log WHERE date_resolved IS NULL LIMIT 100;"
+  -
+    name: "past_trades_20_sessions"
+    template: "SELECT symbol, date_issued, signal, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued >= (CURRENT_DATE - INTERVAL '20 days') AND date_resolved IS NOT NULL LIMIT 100;"
+  -
+    name: "strategy_state_review"
+    template: "SELECT s.symbol, s.date_issued, ss.stage, ss.technical_score FROM signals.signal_log s JOIN scores.stage_snapshots ss ON s.symbol = ss.symbol WHERE s.date_resolved IS NULL AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all open trades are current within the last 20 sessions."
+  - "Verify successful retrieval of technical scores using latest snapshots."
+synthesis_guidance: "Focus on identifying gaps and exceptions within the last 20 trading sessions for paper trading strategies."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

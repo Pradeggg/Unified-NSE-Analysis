@@ -1,0 +1,69 @@
+id: "market_3m_rotation_swing_0617_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0617"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: debug trace."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  evidence_pipeline:
+    -
+      step: "Calculate index returns for the past 3 months."
+      type: "sql"
+      template: "SELECT index_symbol, AVG(change_pct) as avg_return_3m FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol;"
+    -
+      step: "Determine stage distribution changes for liquid symbols."
+      type: "sql"
+      template: "SELECT sector, stage, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector, stage;"
+    -
+      step: "Find leading sectors based on stage data."
+      type: "sql"
+      template: "SELECT sector, AVG(relative_strength) as avg_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector ORDER BY avg_strength DESC LIMIT 3;"
+    -
+      step: "Identify primary candidates for swing."
+      type: "sql"
+      template: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 10;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "['Explain the market regime and index performance over the last 3 months.', 'Highlight sector strength shifts and identify top-performing sectors.', 'Discuss stage distribution changes and highlight stage 2 leadership.', 'Provide a list of strong swing candidates, focusing on stage 2 VCP picks.', 'Assess inferred market risks based on current data patterns.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

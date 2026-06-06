@@ -1,0 +1,84 @@
+id: "quarterly_results_quality_review_0635_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0635"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: risk-first review; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "risk-first review for last 20 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as debug trace"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "risk-first_review"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  context: "Extract latest quarterly results and analyze revenue, PAT growth, margin movement, and narrative. Focus on reviewing risks and providing a debug trace."
+  output_contract:
+    - "filing_window"
+    - "beat_miss_summary"
+    - "margin_drivers"
+    - "ranked_companies"
+    - "risks"
+sql_templates:
+  -
+    name: "fetch_latest_quarterly_results"
+    sql: "WITH latest_results AS (SELECT DISTINCT ON (symbol) * FROM scores.quarterly_results WHERE period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC) SELECT lr.symbol, lr.period_end, lr.revenue, lr.pat, lr.opm_pct FROM latest_results lr;"
+  -
+    name: "fetch_results_analysis"
+    sql: "WITH latest_analysis AS (SELECT DISTINCT ON (symbol) * FROM scores.results_analysis WHERE verdict IN ('beat', 'inline', 'miss', 'mixed') ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC) SELECT la.symbol, la.period_end, la.verdict, la.growth_yoy_revenue_pct, la.growth_yoy_pat_pct, la.opm_delta_pp FROM latest_analysis la;"
+  -
+    name: "fetch_stage_snapshots"
+    sql: "SELECT ss.symbol, ss.stage, ss.trading_signal FROM scores.stage_snapshots ss WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+  -
+    id: "run_quarterly_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "latest_quarterly_results"
+      - "latest_results_analysis"
+      - "latest_stage_snapshots"
+    outputs:
+      - "filing_window"
+      - "beat_miss_summary"
+      - "margin_drivers"
+      - "ranked_companies"
+      - "risks"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+      - "scores.stage_snapshots"
+    code: "# Placeholder for analysis logic\n\n# Function to analyze quarterly results and risks\ndef run(context):\n    # Use provided context data to generate insights\n    # Example steps might involve calculating risk metrics, summarizing beats/misses\n    pass"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "sql_validation"
+  - "output_structure"
+synthesis_guidance: "{'description': 'Integrate results analysis and identify key companies with strong results and minimal risks, constructing a debug trace.', 'method': 'Merge evidence from SQL outputs, focusing on companies with significant growth and stability indicators.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:13"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_quarterly_analysis: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_quarterly_analysis: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,84 @@
+id: "company_360_research_report_1756_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1756"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: freshness audit; timeframe: quarter to date; response style: QA checklist."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "freshness audit for quarter to date: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as QA checklist"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  guidance: "Use SELECT queries to source data from necessary tables and columns. For complex calculations, use Python tools in a read-only mode. Ensure freshness by checking the latest available data quarter to date."
+  steps:
+    - "Extract company snapshot using recent data from scores.stage_snapshots."
+    - "Use scores.quarterly_results and scores.annual_results for financial trends comparison."
+    - "Analyze technical setup using market.equity_eod for quarter to date."
+    - "Identify valuation gaps utilizing scores.balance_sheet and scores.cash_flow."
+    - "Formulate thesis and assess risks with insights from scores.results_analysis."
+sql_templates:
+  -
+    description: "Fetch recent company snapshot."
+    template: "SELECT company_name, sector, market_cap_cat, price, live_price, stage, stage_score, fundamental_score, technical_score FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' ORDER BY snapshot_date DESC LIMIT 1;"
+  -
+    description: "Get quarterly financial trends."
+    template: "SELECT symbol, period_label, revenue, operating_profit, eps FROM scores.quarterly_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 4;"
+  -
+    description: "Retrieve annual financial data."
+    template: "SELECT symbol, period_label, revenue, expenses, pat, eps FROM scores.annual_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 3;"
+  -
+    description: "Check latest stock price and volume movements."
+    template: "SELECT trade_date, open, high, low, close, volume, delivery_pct FROM market.equity_eod WHERE symbol = 'RELIANCE' ORDER BY trade_date DESC LIMIT 20;"
+python_tools:
+  -
+    id: "calculate_trend_strength"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "recent_price_data"
+    outputs:
+      - "trend_strength"
+    approved_tables:
+      - "market.equity_eod"
+    code: "def run(context): return max(context['close']) / min(context['close']) - 1"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'advice': 'Integrate multinational perspectives, ensure evidence traceability, and present a cohesive narrative highlighting potential catalysts and risks.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:44"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_trend_strength: execution failed: KeyError: 'close'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_trend_strength: execution failed: KeyError: 'close'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

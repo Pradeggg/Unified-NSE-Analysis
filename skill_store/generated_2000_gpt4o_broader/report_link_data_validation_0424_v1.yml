@@ -1,0 +1,49 @@
+id: "report_link_data_validation_0424_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Report Data Validation and Watchlist Creation"
+description: "Validates report data and generates a watchlist for the last 5 sessions using Indian market context."
+input_patterns:
+  - "review report links not working"
+  - "validate generated report links and missing data"
+  - "watchlist creation for last 5 sessions"
+tags:
+  - "report_qa"
+  - "links"
+  - "data_validation"
+  - "watchlist_creation"
+  - "last_5_sessions"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Validate report data and create a watchlist by extracting and analyzing report metadata and filtered stock data."
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE run_ts >= (CURRENT_DATE - INTERVAL '5 days');"
+    description: "Fetch enhanced report run metadata for the last 5 sessions."
+  -
+    template: "SELECT symbol, score, recommendation, current_price FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= (CURRENT_DATE - INTERVAL '5 days'));"
+    description: "Fetch filtered stock data for the last 5 sessions."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure extracted timestamps are correct."
+  - "Verify all necessary stock data fields are retrieved."
+synthesis_guidance: "Compile findings into portfolio-aware observations considering Indian market specifics."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

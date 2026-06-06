@@ -1,0 +1,72 @@
+id: "vcp_breakouts_with_fundamentals_0766_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0766"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: post results; response style: QA checklist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "post_results"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  steps:
+    - "Analyze recent price movements for new highs and VCP formations."
+    - "Evaluate fundamental scores for financial strength and growth potential."
+    - "Curate stocks with high trading signals and relative strength."
+sql_templates:
+  -
+    template_name: "vcp_breakouts_query"
+    sql: "SELECT e.symbol, e.trade_date, e.close, s.fundamental_score, s.enhanced_fund_score, v.vcp_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol JOIN scores.stage2_vcp_picks v ON e.symbol = v.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND (e.close >= e.week52_high OR v.vcp_breakout_pct > 0) AND s.enhanced_fund_score > 7;"
+python_tools:
+  -
+    id: "validate_vcp_patterns"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "price_data"
+    outputs:
+      - "is_valid_pattern"
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context): pass"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "status"
+synthesis_guidance: "{'insights': ['Focus on liquidity and fundamental strength for VCP breakout validation.', 'Ensure alignment with post-results financial scrutiny.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:51:24"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table e.close"
+  - "unknown table e.symbol"
+  - "unknown table e.trade_date"
+  - "unknown table e.week52_high"
+  - "unknown table s.enhanced_fund_score"
+  - "unknown table s.fundamental_score"
+  - "unknown table s.symbol"
+  - "unknown table v.symbol"
+  - "unknown table v.vcp_breakout_pct"
+  - "unknown table v.vcp_score"

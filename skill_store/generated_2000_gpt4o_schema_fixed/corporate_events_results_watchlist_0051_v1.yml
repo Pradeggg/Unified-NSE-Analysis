@@ -1,0 +1,48 @@
+id: "corporate_events_results_watchlist_0051_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0051"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: quarter to date; response style: concise table."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for quarter to date: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as concise table"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Generate a concise table with a quick scan for quarter-to-date corporate events and results."
+sql_templates:
+  -
+    description: "Fetch corporate events with stage and results context for the quarter to date."
+    sql: "SELECT DISTINCT ON (ce.symbol) ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, ss.stage, ra.verdict FROM signals.corporate_events ce LEFT JOIN scores.stage_snapshots ss ON ce.symbol = ss.symbol LEFT JOIN scores.results_analysis ra ON ce.symbol = ra.symbol WHERE ce.event_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY ce.symbol, ce.event_date DESC, ss.updated_at DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event_date is within the last quarter."
+  - "Use DISTINCT ON (symbol) to get the latest event per symbol."
+  - "Limit result set to 10 entries for concise output."
+synthesis_guidance: "Focus on retrieving a concise overview of corporate events from the past quarter with clear context on stage and results. Prioritize recent and significant events with valid stage and result verdicts."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:11"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.updated_at is not approved"

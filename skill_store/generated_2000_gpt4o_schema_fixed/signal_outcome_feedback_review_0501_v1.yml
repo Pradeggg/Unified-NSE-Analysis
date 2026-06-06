@@ -1,0 +1,82 @@
+id: "signal_outcome_feedback_review_0501_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review"
+description: "Analyze the outcomes of trading signals to identify winning and failing patterns, enhancing skill selection with an emphasis on Indian market conditions. Focus on providing a research-only summary for today's quick scan."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for today: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as research-only summary"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "today"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    tool: "Review"
+    inputs:
+      - "symbol"
+      - "date_issued"
+      - "hit_target"
+      - "hit_stop"
+      - "return_pct"
+    description: "Analyze past signals to determine success or failure."
+    outputs:
+      - "outcome_summary"
+      - "winner_patterns"
+      - "failure_patterns"
+sql_templates:
+  -
+    action: "FetchResolvedSignals"
+    query: "SELECT symbol, date_issued, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_resolved = (SELECT MAX(date_resolved) FROM signals.signal_log) AND (hit_target OR hit_stop)"
+    parameters:
+
+python_tools:
+  -
+    id: "outcome_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signals_data"
+    outputs:
+      - "outcome_summary"
+      - "winner_patterns"
+      - "failure_patterns"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context):\n    results = analyze_signals(context['signals_data'])\n    return results\n\ndef analyze_signals(data):\n    # Analysis logic goes here\n    return {\n        'outcome_summary': 'Summary of results...',\n        'winner_patterns': 'Patterns of successful signals...',\n        'failure_patterns': 'Patterns of failing signals...'\n    }"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure outcome_summary captures overall performance trends."
+  - "Identify clear winner and failure patterns based on hit rates."
+  - "Propose actionable route improvements aligned with market conditions."
+synthesis_guidance: "['Focus on providing concise research-focused summaries.', 'Highlight Indian market-specific trends and opportunities where applicable.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:23"
+generation_model: "gpt-4o"
+validation_errors:
+  - "outcome_analysis_tool: execution failed: NameError: name 'analyze_signals' is not defined"
+review:
+  status: "needs_heal"
+  findings:
+    - "outcome_analysis_tool: execution failed: NameError: name 'analyze_signals' is not defined"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

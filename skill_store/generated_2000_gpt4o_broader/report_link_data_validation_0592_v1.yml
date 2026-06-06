@@ -1,0 +1,58 @@
+id: "report_link_data_validation_0592_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0592"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for weekly review: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+  columns:
+
+tool_plan_template:
+  sql_templates:
+    -
+      template_name: "Select Report Runs"
+      sql: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= CAST(CURDATE() - INTERVAL 7 DAY AS DATE);"
+    -
+      template_name: "Select Filtered Stocks"
+      sql: "SELECT symbol, score, recommendation, current_price, weekly_signal FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CAST(CURDATE() - INTERVAL 7 DAY AS DATE));"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all report links are valid and accessible."
+  - "Verify that underlying HTML files contain expected data."
+  - "Check consistency between report metadata and filtered stock data."
+synthesis_guidance: "['Summarize findings with a focus on data gaps and quality issues.', 'Highlight major trends in missing data and their potential impact.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:58:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

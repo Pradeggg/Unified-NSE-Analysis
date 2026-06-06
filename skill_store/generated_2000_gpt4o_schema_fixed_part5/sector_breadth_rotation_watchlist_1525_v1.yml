@@ -1,0 +1,63 @@
+id: "sector_breadth_rotation_watchlist_1525_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1525"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: risk-first review; timeframe: last 5 sessions; response style: research-only summary."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "risk-first review for last 5 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as research-only summary"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "risk-first_review"
+  - "last_5_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    title: "Rank Sectors by Breadth and Stage 2 Participation"
+    description: "Identify sectors with improving breadth signals and high stage 2 participation for the last 5 sessions."
+    steps:
+      - "Join breadth.sector_daily with breadth.ma_pct_above on snapshot_date."
+      - "Filter sectors with the highest pct_above_50dma and stage2_pct."
+      - "Join filtered sectors with scores.stage_snapshots to get stage and trading signals."
+      - "Filter stocks within these sectors for stage = 'STAGE_2' and trading_signal IN ('BUY', 'STRONG_BUY')."
+      - "Order results by breadth_signal, change_5d, and relative_strength."
+sql_templates:
+  -
+    template: "WITH ranked_sectors AS (SELECT sd.sector, sd.breadth_signal, sd.change_5d FROM breadth.sector_daily sd JOIN breadth.ma_pct_above ma ON sd.snapshot_date = ma.snapshot_date WHERE sd.snapshot_date >= CURRENT_DATE - INTERVAL '5 days' ORDER BY ma.stage2_pct DESC, sd.pct_above_50dma DESC), candidate_stocks AS (SELECT ss.symbol, ss.company_name, ss.relative_strength FROM scores.stage_snapshots ss JOIN ranked_sectors rs ON ss.sector = rs.sector WHERE ss.stage = 'STAGE_2' AND ss.trading_signal IN ('BUY', 'STRONG_BUY') AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT * FROM candidate_stocks LIMIT 100;"
+    read_only: true
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sectors are correctly ranked by breadth_signal, change_5d, and stage2_pct."
+  - "Verify candidate_symbols are filtered to stage = 'STAGE_2' with constructive trading signals."
+  - "Check for correct date range (last 5 sessions) in the query."
+synthesis_guidance: "Provide insights on which sectors are gaining momentum and highlight potential stock picks based on stage analysis and trading signals. Ensure the summary is research-focused with a risk-first perspective."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:58"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

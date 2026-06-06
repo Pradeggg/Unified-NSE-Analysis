@@ -1,0 +1,64 @@
+id: "insider_bulk_deal_signal_review_0990_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0990"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for intraday context: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as comparison matrix"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Focus on creating a filtered signal review leveraging insider alerts and bulk deal context with technical signals for stock evaluation. Use outputs to feed into a comparison matrix."
+sql_templates:
+  -
+    template_name: "get_insider_bulk_deals_with_technical"
+    sql: "WITH latest_snapshot AS (SELECT symbol, stage, rsi, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT a.symbol, a.alert_date, a.entity, a.qty, a.value_cr, b.deal_date, b.side, b.qty AS deal_qty, b.price, c.stage, c.rsi, c.trading_signal FROM signals.insider_alerts a JOIN signals.bulk_block_deals b ON a.symbol = b.symbol JOIN latest_snapshot c ON a.symbol = c.symbol WHERE a.alert_date > CURRENT_DATE - INTERVAL '3 months' AND b.deal_date > CURRENT_DATE - INTERVAL '3 months' AND c.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 50"
+python_tools:
+  -
+    id: "run_technical_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "alert_date"
+    outputs:
+      - "trend_strength"
+      - "volatility_indicator"
+    approved_tables:
+
+    code: "def run(context): return {'trend_strength': 'Strong', 'volatility_indicator': 'Low'}"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure columns align with table definitions."
+  - "Apply the latest date filter using MAX function as specified."
+synthesis_guidance: "Prioritize combining insider alerts with bulk deal insights alongside technical signals, ensuring that the resulting comparison matrix highlights potential accumulation patterns."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:56"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,61 @@
+id: "vcp_breakouts_with_fundamentals_0506_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0506"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: today; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "today"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    template: "SELECT e.symbol, e.high, e.close, e.volume, e.market_cap_cr, s.fundamental_score, s.enhanced_fund_score, v.vcp_score FROM market.equity_eod e INNER JOIN scores.stage_snapshots s ON e.symbol = s.symbol INNER JOIN scores.stage2_vcp_picks v ON e.symbol = v.symbol WHERE e.trade_date = CURRENT_DATE AND (v.trend_signal = 'Breakout' OR v.trend_signal = 'VCP') AND s.fundamental_score > 70 AND e.market_cap_cr > 500;"
+    type: "SELECT"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:48:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table e.close"
+  - "unknown table e.high"
+  - "unknown table e.market_cap_cr"
+  - "unknown table e.symbol"
+  - "unknown table e.trade_date"
+  - "unknown table e.volume"
+  - "unknown table s.enhanced_fund_score"
+  - "unknown table s.fundamental_score"
+  - "unknown table s.symbol"
+  - "unknown table v.symbol"
+  - "unknown table v.trend_signal"
+  - "unknown table v.vcp_score"

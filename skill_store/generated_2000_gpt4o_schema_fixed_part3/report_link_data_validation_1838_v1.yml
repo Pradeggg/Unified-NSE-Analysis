@@ -1,0 +1,54 @@
+id: "report_link_data_validation_1838_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Validate Report Links and Missing Data"
+description: "Ensures that report links function correctly and data is not missing in the context of position-sizing over the last 20 sessions."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  task: "Determine if report links are valid and data is complete for both enhanced runs and filtered stocks."
+  steps:
+    - "Verify all run IDs in the enhanced runs table have corresponding entries in the filtered stocks table."
+    - "Check for any missing or incomplete data in filtered stocks related to each run."
+sql_templates:
+  valid_links_check: "SELECT er.run_id FROM report.enhanced_runs er LEFT JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id WHERE efs.run_id IS NULL;"
+  missing_data_check: "SELECT efs.run_id, efs.symbol FROM report.enhanced_filtered_stocks efs LEFT JOIN report.enhanced_runs er ON efs.run_id = er.run_id WHERE efs.current_price IS NULL OR efs.volume IS NULL;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure SQL joins accurately reflect the schema join rules."
+  - "All SQL queries must be read-only and conform to the approved schema."
+  - "Output adheres to the specified output contract structure with all keys populated."
+synthesis_guidance: "Combine findings from the SQL templates into a coherent validation narrative, aligning with the action watchlist format."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:15"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

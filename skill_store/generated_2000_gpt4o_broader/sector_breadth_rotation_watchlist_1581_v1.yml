@@ -1,0 +1,62 @@
+id: "sector_breadth_rotation_watchlist_1581_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1581"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: intraday context; response style: research-only summary."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for intraday context: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as research-only summary"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "intraday_context"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  required_function: "run(context)"
+  language: "python"
+  mode: "read_only"
+  inputs:
+
+  outputs:
+
+  approved_tables:
+
+  code: ""
+sql_templates:
+  sector_ranks_query: "SELECT sector, AVG(pct_above_50dma) as avg_above_50dma FROM breadth.sector_daily GROUP BY sector ORDER BY avg_above_50dma DESC;"
+  improving_sectors_query: "SELECT sector, AVG(breadth_signal) as avg_breadth_signal FROM breadth.sector_daily WHERE snapshot_date = CURRENT_DATE - INTERVAL '1 day' GROUP BY sector HAVING avg_breadth_signal > 0;"
+  stage_2_symbols_query: "SELECT symbol FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date = CURRENT_DATE - INTERVAL '1 day';"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+synthesis_guidance: "Focus on sectors showing improvement in breadth and stocks transitioning to Stage 2. Contextualize findings in the Indian market with an intraday perspective, suitable for research summaries."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.sector_daily.avg_above_50dma is not approved"
+  - "breadth.sector_daily.avg_breadth_signal is not approved"

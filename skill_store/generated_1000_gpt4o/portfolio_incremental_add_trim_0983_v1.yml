@@ -1,0 +1,68 @@
+id: "portfolio_incremental_add_trim_0983_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0983"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for intraday context: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  inputs:
+    - "symbol"
+    - "sector"
+    - "stage"
+    - "stage_score"
+    - "qty"
+    - "avg_cost"
+    - "live_price"
+    - "change_1d_pct"
+  outputs:
+    - "add_candidates"
+    - "trim_candidates"
+    - "risk_flags"
+sql_templates:
+  -
+    name: "fetch_current_holdings"
+    type: "SELECT"
+    implementation: "SELECT h.symbol, s.sector, h.qty, h.avg_cost, s.live_price, s.change_1d_pct, s.stage, s.stage_score FROM portfolio.holdings AS h JOIN scores.stage_snapshots AS s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "checks"
+synthesis_guidance: "{'use_recent_data': True, 'focus_on_discrepancies': True}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:53:20"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table h.avg_cost"
+  - "unknown table h.qty"
+  - "unknown table h.symbol"
+  - "unknown table s.change_1d_pct"
+  - "unknown table s.live_price"
+  - "unknown table s.sector"
+  - "unknown table s.snapshot_date"
+  - "unknown table s.stage"
+  - "unknown table s.stage_score"
+  - "unknown table s.symbol"

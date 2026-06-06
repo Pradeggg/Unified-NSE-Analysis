@@ -1,0 +1,53 @@
+id: "signal_outcome_feedback_review_0235_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0235"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for last 20 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as ranked candidates"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze historical signals to determine their effectiveness based on specific metrics and outcomes. Focus on recent sessions to ensure relevant insights."
+sql_templates:
+  -
+    name: "Calculate_hit_rate"
+    query: "SELECT symbol, COUNT(*) AS total_signals, SUM(CASE WHEN hit_target = TRUE THEN 1 ELSE 0 END) AS total_hits FROM signals.signal_log WHERE date_issued > CURRENT_DATE - INTERVAL '20 days' GROUP BY symbol"
+  -
+    name: "Analyze_trends"
+    query: "SELECT symbol, AVG(change_1m_pct) AS avg_monthly_change FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL '20 days' GROUP BY symbol"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure inputs are structurally valid and correspond to correct symbols."
+  - "Verify outcome patterns are aligned with recent market behaviors."
+synthesis_guidance: "['Focus on providing actionable insights especially around improved signal effectiveness.', 'Highlight key patterns that can be leveraged for future signal improvements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:56"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.avg_monthly_change is not approved"
+  - "signals.signal_log.total_hits is not approved"
+  - "signals.signal_log.total_signals is not approved"

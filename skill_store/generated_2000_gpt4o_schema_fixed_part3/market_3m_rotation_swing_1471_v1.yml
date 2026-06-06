@@ -1,0 +1,58 @@
+id: "market_3m_rotation_swing_1471_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1471"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: pre market; response style: portfolio-aware output."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "pre_market"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze 3-month market trends using the approved tables and columns to assess sector performance and identify swing trading candidates."
+sql_templates:
+  index_returns:
+    template: "SELECT index_symbol, AVG(change_pct) AS avg_3m_return FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol;"
+  stage_distribution_change:
+    template: "WITH latest_stages AS (SELECT sector, stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector, stage) SELECT sector, SUM(count) AS stage_2_count FROM latest_stages GROUP BY sector;"
+  leading_sectors:
+    template: "SELECT sector, AVG(change_1m_pct) AS avg_1m_return FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_1m_return DESC LIMIT 3;"
+  primary_candidates:
+    template: "SELECT symbol, company_name, price, sector FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 5;"
+  risks:
+    template: "SELECT symbol, change_1m_pct FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND change_1m_pct < -5;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Expect up to 5 primary candidates."
+  - "Ensure at least 3 leading sectors are identified."
+  - "Risks should include stocks with more than a 5% decline over the past month."
+synthesis_guidance: "Combine the evidence to generate a comprehensive summary of the market's current state, highlighting potential opportunities and risks."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_3m_return is not approved"
+  - "scores.stage_snapshots.avg_1m_return is not approved"

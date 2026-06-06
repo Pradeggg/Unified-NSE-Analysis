@@ -1,0 +1,55 @@
+id: "signal_outcome_feedback_review_0991_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0991"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: quick scan; timeframe: weekly review; response style: comparison matrix."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for weekly review: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as comparison matrix"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "weekly_review"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  evidence_gaps:
+
+  python_tools:
+
+sql_templates:
+  -
+    description: "Retrieve summary of past signals including hits and stops."
+    query: "SELECT symbol, COUNT(*) AS total_signals, SUM(CASE WHEN hit_target THEN 1 ELSE 0 END) AS hit_target_count, SUM(CASE WHEN hit_stop THEN 1 ELSE 0 END) AS hit_stop_count FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '1 week' GROUP BY symbol;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure data retrieval respects approved schema and global rules."
+  - "Verify all tables used are in evidence_required.tables."
+  - "SQL queries must be read-only and follow approved syntax."
+synthesis_guidance: "[\"Provide a quick summary of past week's signals.\", 'Identify patterns in successful and unsuccessful recommendations.', 'Suggest improvements based on outcome analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:05"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.hit_stop_count is not approved"
+  - "signals.signal_log.hit_target_count is not approved"
+  - "signals.signal_log.total_signals is not approved"

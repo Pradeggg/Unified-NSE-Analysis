@@ -1,0 +1,54 @@
+id: "fii_dii_regime_breadth_review_1212_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1212"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: latest EOD; response style: ranked candidates."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for latest EOD: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as ranked candidates"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    description: "Combine FII/DII flows and market regime evidence with breadth and index context to analyze risk status for the latest EOD."
+sql_templates:
+  -
+    template: "WITH latest_date AS (SELECT MAX(trade_date) AS trade_date FROM market.index_eod) SELECT f.trade_date, f.fii_net_today, f.dii_net_today, m.regime, m.confidence, b.ad_signal, i.trend_signal FROM signals.fii_dii_flows f JOIN signals.regime_history m ON f.trade_date = m.trade_date JOIN breadth.market_daily b ON f.trade_date = b.trade_date JOIN market.index_eod i ON f.trade_date = i.trade_date WHERE f.trade_date = (SELECT trade_date FROM latest_date) AND i.index_symbol = 'Nifty 50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Rank potential risk candidates based on the latest evidence."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:36"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

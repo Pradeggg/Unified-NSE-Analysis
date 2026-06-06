@@ -1,0 +1,51 @@
+id: "fii_dii_regime_breadth_review_1156_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1156"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: quarter to date; response style: narrative plus evidence."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for quarter to date: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as narrative plus evidence"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Combine insights from FII/DII flows, market regime, breadth, and index data to narrate the market context. Ensure freshness for quarter to date."
+sql_templates:
+  latest_fii_dii_flows: "SELECT trade_date, fii_net_today, dii_net_today, fii_net_5d, dii_net_5d, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  latest_regime_history: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  latest_market_breadth: "SELECT trade_date, adv_signal, ad_oscillator FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  latest_index_eod: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "date_range"
+  - "fii_dii_balance"
+  - "regime_consistency"
+  - "breadth_checks"
+synthesis_guidance: "{'narrative_structure': 'Start with regime context, followed by flow analysis, breadth conditions, and confirm with index data.', 'evidence_presentation': 'Support assertions with data excerpts and highlight potential risk flags.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:56:00"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.adv_signal is not approved"

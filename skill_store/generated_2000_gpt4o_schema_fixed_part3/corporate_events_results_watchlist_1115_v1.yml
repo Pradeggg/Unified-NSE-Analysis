@@ -1,0 +1,48 @@
+id: "corporate_events_results_watchlist_1115_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1115"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: risk-first review; timeframe: latest EOD; response style: narrative plus evidence."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "risk-first review for latest EOD: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as narrative plus evidence"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "risk-first_review"
+  - "latest_EOD"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "{narrative}\nCorresponding source details:\n{sources}"
+sql_templates:
+  - "WITH latest_stage AS (\n    SELECT DISTINCT ON (symbol) \n        symbol, \n        snapshot_date, \n        trading_signal \n    FROM scores.stage_snapshots \n    WHERE \n        snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) \n        AND trading_signal IN ('BUY', 'STRONG_BUY')\n), \nlatest_events AS (\n    SELECT \n        ce.symbol, \n        ce.event_type, \n        ce.event_date, \n        ce.detail \n    FROM signals.corporate_events ce\n    WHERE \n        ce.event_date = (SELECT MAX(event_date) FROM signals.corporate_events)\n        AND ce.event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM')\n)\nSELECT \n    le.symbol, \n    le.event_type, \n    le.event_date, \n    le.detail, \n    ls.trading_signal \nFROM latest_events le\nJOIN latest_stage ls ON le.symbol = ls.symbol\nLIMIT 50;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "result_context"
+synthesis_guidance: "{'summary': 'Analyze key corporate events and results for the most recent trading sessions, highlighting stocks with significant upcoming or recent events such as dividends, splits, or AGM announcements. Provide a narrative summary accompanied by evidence trails for validation.', 'suggestions': ['Focus on providing actionable insights for risk assessment.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:55:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

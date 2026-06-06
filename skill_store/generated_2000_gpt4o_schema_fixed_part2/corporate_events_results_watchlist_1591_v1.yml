@@ -1,0 +1,55 @@
+id: "corporate_events_results_watchlist_1591_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1591"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as research-only summary"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  use_cases: "Identify upcoming or recent corporate events and related stock movements."
+  research_task: "Provide a summary of stocks with notable events and their financial performance."
+  output_requirements: "Summarize events, align with latest results, and provide potential watchlist actions."
+  data_processing_approach: "Join corporate events with results analysis to provide context and recommendations."
+sql_templates:
+  corporate_events_watchlist:
+    query: "WITH latest_stages AS (SELECT DISTINCT ON (symbol) symbol, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY symbol, snapshot_date DESC), upcoming_events AS (SELECT symbol, event_type, event_date FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY event_date) SELECT le.symbol, le.event_type, le.event_date, ls.stage FROM latest_stages ls JOIN upcoming_events le ON ls.symbol = le.symbol WHERE ls.stage = 'STAGE_2' LIMIT 50;"
+    description: "Fetch upcoming corporate events for stocks in Stage 2 with associated market and technical data."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "ensure_not_empty"
+  - "limit_results"
+synthesis_guidance: "{'summary_styles': ['concise', 'analytical', 'fact-based'], 'highlight_factors': ['event type', 'technical stage', 'market implications']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

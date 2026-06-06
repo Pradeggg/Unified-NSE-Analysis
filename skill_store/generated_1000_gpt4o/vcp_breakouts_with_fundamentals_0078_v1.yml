@@ -1,0 +1,60 @@
+id: "vcp_breakouts_with_fundamentals_0078_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0078"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: pre market; response style: concise table."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "pre_market"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters:
+    - "high > prev_close"
+    - "vcp_score > 70"
+    - "enhanced_fund_score > 70"
+  candidates: "symbols"
+  tradingview_symbols: "trading_signal"
+  evidence:
+    - "price"
+    - "vcp_score"
+    - "enhanced_fund_score"
+  risks:
+    - "trend_signal"
+sql_templates:
+  -
+    template_id: "select_breakouts"
+    query: "SELECT symbol, company_name, sector, price, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE vcp_score > 70 AND enhanced_fund_score > 70 AND price > prev_close"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure data consistency across evidence tables."
+  - "Check for null values in critical columns."
+synthesis_guidance: "['Provide results in a concise table format.', 'Focus on clear presentation of VCP stocks with strong fundamentals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:41:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.prev_close is not approved"

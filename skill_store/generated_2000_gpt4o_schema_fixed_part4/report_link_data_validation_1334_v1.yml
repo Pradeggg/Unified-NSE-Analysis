@@ -1,0 +1,55 @@
+id: "report_link_data_validation_1334_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1334"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    templates:
+      - "Evidence tables and joins as per approved schema."
+    sql_templates:
+      -
+        template: "WITH latest_runs AS (\n    SELECT * FROM report.enhanced_runs\n    WHERE run_ts > (CURRENT_DATE - INTERVAL '20 days')\n), latest_filtered_stocks AS (\n    SELECT * FROM report.enhanced_filtered_stocks\n    WHERE run_id IN (SELECT run_id FROM latest_runs)\n)\nSELECT run.run_id, run.stocks_analyzed, run.stocks_filtered, stock.symbol, stock.recommendation\nFROM latest_runs AS run\nJOIN latest_filtered_stocks AS stock ON run.run_id = stock.run_id\nORDER BY run.run_ts DESC, stock.rank ASC\nLIMIT 100;"
+        explanation: "This template retrieves enhanced report metadata and filtered stock data for the last 20 sessions."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Confirm enhanced report entries match metadata and filtered stock conditions."
+  - "Identify and document any exceptions or data gaps in report links or html data."
+synthesis_guidance: "['Focus on recent reports and stock lists; ensure integrity in linking and data completeness.', 'Prioritize exceptions and gaps in reporting of stock data for actionable insights.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:30"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

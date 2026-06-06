@@ -1,0 +1,51 @@
+id: "corporate_events_results_watchlist_0373_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0373"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: pre market; response style: exceptions and gaps first."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for pre market: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as exceptions and gaps first"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze data from corporate events table for upcoming events and blend with results analysis for insights."
+sql_templates:
+  -
+    template: "SELECT symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY event_date;"
+    description: "Fetch upcoming corporate events."
+  -
+    template: "SELECT symbol, company_name, growth_yoy_revenue_pct FROM scores.results_analysis WHERE filing_date >= DATE_SUB(CURRENT_DATE, INTERVAL 7 DAY);"
+    description: "Fetch results analysis for the last 7 days."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event dates are future dates for upcoming events."
+  - "Reconcile results with present market conditions from stage snapshots."
+synthesis_guidance: "['Highlight gaps and exceptions in market responses to events.', 'Prioritize events with impactful results or deviations.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:22"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.date_sub is not approved"
+  - "scores.results_analysis.day is not approved"

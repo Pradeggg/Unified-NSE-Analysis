@@ -1,0 +1,62 @@
+created_at: "2026-06-06T12:51:34"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: intraday context; response style: QA checklist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0785_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  index_returns: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  leading_sectors: "SELECT snapshot_date, sector, AVG(stage_score) as stage_score FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY snapshot_date, sector ORDER BY stage_score DESC LIMIT 5;"
+  primary_candidates: "SELECT snapshot_date, symbol, company_name, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY vcp_score DESC LIMIT 10;"
+  risks: "SELECT trade_date, symbol, change_pct FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' AND change_pct <= -10 ORDER BY change_pct ASC;"
+  stage_distribution_change: "SELECT snapshot_date, stage, COUNT(*) FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY snapshot_date, stage;"
+status: "validated"
+synthesis_guidance:
+  - "Present the analysis as a QA checklist for easy review."
+  - "Highlight risk considerations prominently."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "intraday_context"
+  - "QA_checklist"
+title: "3M Market Rotation Swing Assessment Variant 0785"
+tool_plan_template:
+  - "Analyze the market regime, sector leadership, stages, and swing candidates."
+  - "Focus on a risk-first review with intraday context."
+  - "Respond in a QA checklist format."
+validation_errors:
+
+validation_rules:
+  - "Verify the SQL templates execute without errors and return data as expected."
+  - "Ensure data is limited to the last 3 months where applicable."
+version: 1
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"

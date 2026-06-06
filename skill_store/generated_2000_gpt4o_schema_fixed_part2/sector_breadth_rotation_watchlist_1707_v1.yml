@@ -1,0 +1,75 @@
+id: "sector_breadth_rotation_watchlist_1707_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1707"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: today; response style: QA checklist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for today: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as QA checklist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "today"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    name: "sector_ranks"
+    template: "SELECT sector, pct_above_50dma, change_5d FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) ORDER BY pct_above_50dma DESC LIMIT 5;"
+  -
+    name: "improving_sectors"
+    template: "SELECT sector, breadth_signal FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) AND breadth_signal = 'improving';"
+  -
+    name: "candidate_symbols"
+    template: "SELECT symbol, company_name, stage, relative_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY relative_strength DESC LIMIT 10;"
+  -
+    name: "tradingview_symbols"
+    template: "SELECT symbol FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND symbol IN (SELECT symbol FROM scores.stage_snapshots WHERE stage = 'STAGE_2');"
+sql_templates:
+  -
+    name: "sector_rank_query"
+    template: "SELECT sector, pct_above_50dma, change_5d FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) ORDER BY pct_above_50dma DESC LIMIT 5;"
+  -
+    name: "improving_sectors_query"
+    template: "SELECT sector, breadth_signal FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) AND breadth_signal = 'improving';"
+  -
+    name: "candidate_symbols_query"
+    template: "SELECT symbol, company_name, stage, relative_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY relative_strength DESC LIMIT 10;"
+  -
+    name: "tradingview_symbols_query"
+    template: "SELECT symbol FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND symbol IN (SELECT symbol FROM scores.stage_snapshots WHERE stage = 'STAGE_2');"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure the latest date filters are used in each query."
+  - "Bounds must be respected using LIMIT when producing candidate lists."
+  - "Ensure joins follow approved schema join rules."
+synthesis_guidance: "['Provide sector-relative rankings along with improvement signals.', 'Highlight stocks suitable for trading platforms like TradingView, focusing on stage and signal criteria.', 'Present results as a checklist for investors.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

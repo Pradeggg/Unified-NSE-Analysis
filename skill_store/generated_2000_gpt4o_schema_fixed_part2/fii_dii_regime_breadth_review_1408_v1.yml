@@ -1,0 +1,56 @@
+id: "fii_dii_regime_breadth_review_1408_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1408"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for today: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as portfolio-aware output"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "{}"
+sql_templates:
+  -
+    description: "Get latest FII/DII flow and regime for position-sizing analysis."
+    sql: "\nSELECT \n    f.trade_date, \n    f.flow_signal, \n    f.fii_trend, \n    f.dii_trend, \n    r.regime, \n    r.confidence, \n    r.days_in_regime \nFROM \n    signals.fii_dii_flows f \nJOIN \n    signals.regime_history r \nON \n    f.trade_date = r.trade_date \nWHERE \n    f.trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);\n"
+  -
+    description: "Retrieve latest market breadth and index confirmation."
+    sql: "\nSELECT \n    b.trade_date, \n    b.market_sentiment, \n    e.index_symbol, \n    e.close, \n    e.change_pct, \n    e.trend_signal \nFROM \n    breadth.market_daily b \nJOIN \n    market.index_eod e \nON \n    b.trade_date = e.trade_date \nWHERE \n    b.trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily) AND \n    e.index_symbol = 'Nifty 50';\n"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Combine FII/DII flow trends, regime data, and breadth metrics to construct a portfolio-aware output focused on today's market risk orientation in the context of position sizing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:59"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

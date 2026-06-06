@@ -1,0 +1,65 @@
+id: "agent_route_failure_diagnostics_1946_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1946"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for last 3 months: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as comparison matrix"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Analyze Agent Adda routes and perform a freshness audit"
+sql_templates:
+  -
+    description: "Select latest runs from enhanced report for the last 3 months"
+    template: "SELECT run_id, run_ts, universe_size, stocks_analyzed, stocks_filtered, market_composite_score FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months'"
+python_tools:
+  -
+    id: "audit_latest_run_freshness"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_ts"
+    outputs:
+      - "freshness_status"
+    approved_tables:
+      - "report.enhanced_runs"
+    code: "def run(context):\n    # Check if the latest run is within the last 3 months\n    is_fresh = context['run_ts'] >= (CURRENT_DATE - INTERVAL '3 months')\n    return 'Fresh' if is_fresh else 'Stale'"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all failure modes are identified."
+  - "Confirm freshness of data within the last 3 months."
+synthesis_guidance: "Compile results into a comparison matrix highlighting discrepancies and resolutions."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:57"
+generation_model: "gpt-4o"
+validation_errors:
+  - "audit_latest_run_freshness: python syntax error: invalid syntax. Perhaps you forgot a comma?"
+review:
+  status: "needs_heal"
+  findings:
+    - "audit_latest_run_freshness: python syntax error: invalid syntax. Perhaps you forgot a comma?"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

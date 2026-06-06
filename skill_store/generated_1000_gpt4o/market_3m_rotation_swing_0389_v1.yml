@@ -1,0 +1,64 @@
+id: "market_3m_rotation_swing_0389_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0389"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: intraday context; response style: exceptions and gaps first."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as exceptions and gaps first"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  description: "Plan to extract insights from evidence tables"
+  steps:
+    - "Analyze market index trends over the last 3 months using 'market.index_eod'."
+    - "Identify sector trends using 'market.equity_eod' and significant percentage changes."
+    - "Evaluate stage transitions using 'scores.stage_snapshots'."
+    - "Identify swing candidates using 'scores.stage2_vcp_picks'."
+sql_templates:
+  -
+    description: "Fetch index performance over last 3 months"
+    sql: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    description: "Identify sector performance changes"
+    sql: "SELECT trade_date, symbol, sector, change_pct FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    description: "Retrieve stage transitions"
+    sql: "SELECT snapshot_date, symbol, sector, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    description: "Fetch swing candidates"
+    sql: "SELECT snapshot_date, symbol, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "exceptions_handling"
+  - "gaps_identification"
+synthesis_guidance: "{'approach': 'Synthesize data by evaluating sector leadership and identifying stage 2 transitions for swing trades.', 'focus': 'Emphasize gaps and anomalies first, ensuring reliability in sector rotation analysis.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:46:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.sector is not approved"

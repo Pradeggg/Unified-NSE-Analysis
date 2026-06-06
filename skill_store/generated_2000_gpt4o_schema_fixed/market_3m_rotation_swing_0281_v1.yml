@@ -1,0 +1,60 @@
+id: "market_3m_rotation_swing_0281_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0281"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  tool_type: "SQL_Query"
+  required_tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+sql_templates:
+  -
+    id: "stage2_leadership_latest"
+    description: "Identify latest Stage 2 leadership with high technical scores."
+    template: "WITH latest_snapshots AS (\n SELECT symbol, sector, technical_score, relative_strength,\n trading_signal, price\n FROM scores.stage_snapshots\n WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n AND stage = 'STAGE_2'\n AND trading_signal IN ('BUY', 'STRONG_BUY')\n ORDER BY technical_score DESC, relative_strength DESC\n LIMIT 10\n)\nSELECT * FROM latest_snapshots;"
+  -
+    id: "sector_performance_3m"
+    description: "Analyze sector performance over the last 3 months."
+    template: "SELECT sector, AVG(change_pct) AS avg_change\n FROM market.index_eod\n WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 months')\n GROUP BY sector\n ORDER BY avg_change DESC;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "mandatory_fields"
+  - "field_types"
+synthesis_guidance: "{'highlight': 'Focus on sectors with the highest average change and Stage 2 leaders with strong technical scores.', 'context': 'Quick scan for intraday trading opportunities based on recent momentum.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:57"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_change is not approved"
+  - "market.index_eod.sector is not approved"

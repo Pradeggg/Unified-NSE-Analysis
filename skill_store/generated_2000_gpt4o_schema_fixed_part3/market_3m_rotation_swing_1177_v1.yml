@@ -1,0 +1,52 @@
+id: "market_3m_rotation_swing_1177_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1177"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: pre-market; response style: narrative plus evidence."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as narrative plus evidence"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze 3M market rotation trends focusing on sector-relative comparisons and stage 2 leadership."
+sql_templates:
+  - "WITH index_changes AS (SELECT index_symbol, close, trade_date FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'), stage_info AS (SELECT symbol, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2') SELECT i.index_symbol, AVG(i.close) AS avg_close, COUNT(DISTINCT s.symbol) AS stage2_leaders FROM index_changes i JOIN stage_info s ON i.index_symbol = s.symbol GROUP BY i.index_symbol"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure each index_symbol is not null."
+  - "avg_close must be a positive number."
+  - "Count of stage2_leaders should be greater than zero for leading sectors."
+synthesis_guidance: "Provide insights with a narrative focusing on market regime, sector-relative performance, and potential swing candidates based on Stage 2 leadership."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:56:15"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

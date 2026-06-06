@@ -1,0 +1,56 @@
+id: "market_3m_rotation_swing_0771_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0771"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: pre market; response style: QA checklist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "pre_market"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  - "1. Retrieve index data for the last 3 months for market regime analysis."
+  - "2. Identify leading sectors based on sector rotation."
+  - "3. Analyze Stage 2 leadership for potential swing candidates."
+  - "4. Compile a QA checklist for pre-market briefing."
+sql_templates:
+  index_returns: "SELECT index_symbol, AVG(change_pct) as avg_return FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol;"
+  stage_distribution_change: "SELECT stage, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY stage;"
+  leading_sectors: "SELECT sector, AVG(change_1m_pct) as avg_monthly_change FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY avg_monthly_change DESC LIMIT 5;"
+  primary_candidates: "SELECT symbol, trading_signal FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY vcp_score DESC, rank ASC LIMIT 10;"
+  risks: "SELECT sector, COUNT(*) as risk_count FROM scores.stage_snapshots WHERE stage = 'STAGE_3' OR stage = 'STAGE_4' GROUP BY sector ORDER BY risk_count DESC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL operations use read-only SELECT/WITH statements."
+  - "Ensure all results respect the latest-date filters from _global_rules."
+synthesis_guidance: "['Summarize the average return of key indices over the last 3 months.', 'Capture sector trends and the top 5 leading sectors by average monthly change.', 'Compile top 10 Stage 2 swing candidates with a preview of trading signals.', 'Assess risks by counting sectors in later stages (3 and 4) and present the top 5.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:28"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_return is not approved"
+  - "scores.stage_snapshots.risk_count is not approved"

@@ -1,0 +1,69 @@
+id: "quarterly_results_quality_review_1391_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1391"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for weekly review: latest quarterly results analysis"
+  - "which companies had strong quarterly results as exceptions and gaps first"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  python_tool_policy:
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    required_fields:
+      - "id"
+      - "language"
+      - "mode"
+      - "inputs"
+      - "outputs"
+      - "approved_tables"
+      - "code"
+sql_templates:
+  -
+    template: "WITH latest_quarterly AS (SELECT DISTINCT ON (symbol) symbol, revenue, opm_pct, pat, period_end FROM scores.quarterly_results WHERE period_type = 'quarter' ORDER BY symbol, period_end DESC, fetched_at DESC), latest_analysis AS (SELECT DISTINCT ON (symbol) symbol, verdict, growth_yoy_revenue_pct, growth_yoy_pat_pct, opm_delta_pp FROM scores.results_analysis ORDER BY symbol, period_end DESC, updated_at DESC) SELECT lq.symbol, lq.revenue, lq.opm_pct, lq.pat, la.verdict, la.growth_yoy_revenue_pct, la.growth_yoy_pat_pct, la.opm_delta_pp FROM latest_quarterly lq JOIN latest_analysis la ON lq.symbol = la.symbol"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "['Focus on exceptions and gaps in data.', 'Highlight discrepancies between structured data and generated narratives.', 'Ensure results are aligned with latest quarterly filings.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:19"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

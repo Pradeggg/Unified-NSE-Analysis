@@ -1,0 +1,53 @@
+id: "corporate_events_results_watchlist_1591_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1591"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as research-only summary"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  description: "Generate a weekly corporate events results watchlist with associated actions using the approved tables."
+  steps:
+    - "Step 1: Extract relevant upcoming or recent corporate events using corporate_events table."
+    - "Step 2: Analyze results for the specific stocks using the results_analysis table to provide a narrative and identify growth trends."
+    - "Step 3: Summarize stage and market data for these stocks from the stage_snapshots table."
+sql_templates:
+  corporate_events_query: "SELECT symbol, event_type, event_date, purpose_raw, detail FROM signals.corporate_events WHERE event_date >= CURRENT_DATE AND event_date < CURRENT_DATE + INTERVAL '7 days';"
+  results_analysis_query: "SELECT symbol, company_name, growth_yoy_revenue_pct, growth_qoq_revenue_pct, eps_yoy_pct, verdict FROM scores.results_analysis WHERE filing_date >= DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '7 days' AND filing_date < DATE_TRUNC('week', CURRENT_DATE);"
+  stage_snapshots_query: "SELECT symbol, snapshot_date, stage, market_cap_cat, relative_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event_date is within the upcoming week for corporate events."
+  - "Verify results analysis includes the correct weekly timeframe."
+  - "Check stage snapshots are the latest available for relevant symbols."
+synthesis_guidance: "{'guidelines': ['Prioritize events with significant market impact such as earnings announcements or dividend declarations.', 'Provide a summary highlighting key growth metrics and any emerging trends.', 'Include actionable insights or suggested watchlist movements based on recent performance data.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:15"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.date_trunc is not approved"

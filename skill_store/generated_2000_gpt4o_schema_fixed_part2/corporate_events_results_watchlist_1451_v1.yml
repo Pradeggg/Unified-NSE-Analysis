@@ -1,0 +1,51 @@
+id: "corporate_events_results_watchlist_1451_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1451"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for quarter to date: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  version: "1.0"
+sql_templates:
+  -
+    template_id: "event_results_watchlist"
+    template: "WITH latest_stage AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_results AS (SELECT DISTINCT ON (symbol) symbol, period_end, company_name, industry, filing_date, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct, eps_yoy_pct, verdict FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC), event_filtered AS (SELECT * FROM signals.corporate_events WHERE event_date > CURRENT_DATE - INTERVAL '3 MONTHS' AND event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM')) SELECT e.symbol, e.event_type, e.event_date, e.detail, e.source, ls.stage, ls.price, ls.change_1d_pct, lr.verdict FROM event_filtered e JOIN latest_stage ls ON e.symbol = ls.symbol JOIN latest_results lr ON e.symbol = lr.symbol ORDER BY e.event_date ASC LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'notes': 'Ensure the output emphasizes the timeframe of quarter to date and uses portfolio-aware language for Indian market relevance.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

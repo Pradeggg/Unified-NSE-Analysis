@@ -1,0 +1,79 @@
+id: "signal_outcome_feedback_review_1117_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1117"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: narrative plus evidence."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for latest EOD: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as narrative plus evidence"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  overview: "Analyze signal outcomes and compile detailed feedback."
+  steps:
+    - "Retrieve the latest signal events and market context."
+    - "Compare signal outcomes with targets and stops."
+    - "Analyze successful and failed signals."
+    - "Synthesize findings into a narrative with actionable insights."
+sql_templates:
+  -
+    description: "Retrieve latest signal data and outcomes."
+    template: "SELECT * FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log);"
+  -
+    description: "Join and get stage snapshots for current context."
+    template: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    description: "Fetch latest EOD data for market relevance."
+    template: "SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND series = 'EQ';"
+python_tools:
+  -
+    id: "run_context"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "date_range"
+    outputs:
+      - "context_analysis"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Analyze context\n    return {'analysis': 'Result of the context analysis'}"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "sql"
+  - "evidence_integrity"
+synthesis_guidance: "{'narrative_framework': 'Focus on sector-relative insights, emphasizing learning outcomes.', 'quantitative_analysis': 'Highlight statistical significance where applicable.', 'actionable_insights': 'Recommend improvements based on signal performance trends.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:55:27"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_context: missing output context_analysis"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_context: missing output context_analysis"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

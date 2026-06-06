@@ -1,0 +1,57 @@
+id: "report_link_data_validation_1824_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1824"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "To validate data integrity, identify broken links in reports, trace source trails, and generate an action-oriented watchlist over the last 5 sessions. The purpose is to ensure reports are reliable for decision-making in the Indian market."
+sql_templates:
+  -
+    type: "SELECT"
+    description: "Retrieve recent report run metadata for the last 5 sessions."
+    template: "SELECT run_id, run_ts, universe_size, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '5 days';"
+  -
+    type: "SELECT"
+    description: "Fetch filtered stock data related to recent runs."
+    template: "SELECT symbol, score, recommendation, current_price, daily_signal FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '5 days');"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure report data includes all required metadata for recent runs."
+  - "Identify and list any broken report links."
+  - "Verify data completeness in stock HTML files."
+  - "Generate a valid action watchlist based on filtered data."
+synthesis_guidance: "Compile findings into an actionable watchlist, contextualizing the data such that stakeholders can easily identify opportunities and anomalies in the recent market data over the last five sessions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,67 @@
+created_at: "2026-06-06T12:48:22"
+created_by: "llm_generated"
+description: "This skill validates the integrity of report links and checks for missing data within a portfolio-aware context for enhanced reports, focused on position-sizing post results."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "skill_card_validation_001_0468_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for post results: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_runs"
+    code: "def run(context):\n    evaluated_data = []\n    for row in context:\n        missing = row['stocks_analyzed'] - row['stocks_filtered']\n        evaluated_data.append({'run_id': row['run_id'], 'missing': missing})\n    return {'evaluated_data': evaluated_data}"
+    id: "missing_data_evaluator"
+    inputs:
+      - "run_id"
+      - "stocks_analyzed"
+      - "stocks_filtered"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "evaluated_data"
+review:
+  attempts: 3
+  findings:
+    - "report.enhanced_runs.missing_count is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    context: "Identify runs where stock analysis is incomplete."
+    template: "SELECT run_id, stocks_analyzed - stocks_filtered AS missing_count FROM report.enhanced_runs WHERE stocks_analyzed > stocks_filtered;"
+  -
+    context: "Identify stocks with incomplete price data."
+    template: "SELECT run_id, symbol FROM report.enhanced_filtered_stocks WHERE current_price IS NULL;"
+status: "test_failed"
+synthesis_guidance: "Summarize the findings, highlight broken links and data gaps, propose remediation strategies, and describe verification methods."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "post_results"
+  - "portfolio-aware_output"
+title: "Report Link & Data Validation"
+tool_plan_template: "Analyze the tables for discrepancies in report links and stocks data post results."
+validation_errors:
+  - "report.enhanced_runs.missing_count is not approved"
+validation_rules:
+  - "Check report.enhanced_runs for runs with high \"universe_size\" but missing stocks."
+  - "Ensure report.enhanced_filtered_stocks have non-null price data."
+version: 1

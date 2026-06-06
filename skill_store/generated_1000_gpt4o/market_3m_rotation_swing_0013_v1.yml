@@ -1,0 +1,54 @@
+id: "market_3m_rotation_swing_0013_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0013"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: latest EOD; response style: concise table."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "latest_EOD"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze sector rotation and swing trade candidates using EOD data. Highlight dominant sectors and individual stocks with Stage 2 characteristics. Use tables to extract necessary information."
+sql_templates:
+  -
+    query: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'"
+  -
+    query: "SELECT symbol, sector, stage FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' AND stage = 2"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all data is sourced from approved tables."
+  - "Limit SQL queries to SELECT/WITH templates."
+synthesis_guidance: "Combine the latest EOD data to showcase market stage changes and highlight leading sectors. Identify stocks with Stage 2 VCP potential for swing trade opportunities."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:40:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

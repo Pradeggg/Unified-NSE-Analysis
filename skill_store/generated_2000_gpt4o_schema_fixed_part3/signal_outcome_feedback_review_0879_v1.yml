@@ -1,0 +1,71 @@
+id: "signal_outcome_feedback_review_0879_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0879"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for pre market: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as action watchlist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze trading signals and evaluate outcomes for hits on targets or stops. Categorize results into winning and losing patterns to enhance future strategy."
+sql_templates:
+  -
+    template_name: "signal_outcome_analysis"
+    template:
+      - "WITH latest_snapshot AS ("
+      - "    SELECT *"
+      - "    FROM scores.stage_snapshots"
+      - "    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+      - "), signal_outcomes AS ("
+      - "    SELECT"
+      - "        sl.symbol,"
+      - "        sl.hit_target,"
+      - "        sl.hit_stop,"
+      - "        sl.return_pct"
+      - "    FROM"
+      - "        signals.signal_log sl"
+      - "    JOIN latest_snapshot ls ON sl.symbol = ls.symbol"
+      - "    WHERE"
+      - "        sl.date_resolved IS NOT NULL"
+      - "    ORDER BY sl.date_issued DESC"
+      - "    LIMIT 100"
+      - ")"
+      - "SELECT * FROM signal_outcomes"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure SQL only retrieves data via SELECT statements."
+  - "Confirm JOIN rules comply with _join_rules definitions."
+synthesis_guidance: "Aggregate signal outcomes to distinguish successful patterns from failed ones, offering actionable insights for future strategy adjustments."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

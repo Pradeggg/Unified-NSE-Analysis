@@ -1,0 +1,54 @@
+id: "market_3m_rotation_swing_1387_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1387"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: intraday context; response style: exceptions and gaps first."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as exceptions and gaps first"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Fetch stage 2 leadership over the last 3 months."
+    query: "SELECT ss.symbol, ss.company_name, ss.sector, ss.stage, ss.trading_signal, ss.snapshot_date FROM scores.stage_snapshots ss WHERE ss.stage = 'STAGE_2' AND ss.snapshot_date >= (CURRENT_DATE - INTERVAL '3 months') ORDER BY ss.snapshot_date DESC, ss.trading_signal ASC LIMIT 10;"
+  -
+    description: "Identify leading sectors with intraday context."
+    query: "SELECT e.index_symbol, e.close, e.trade_date, e.change_pct FROM market.index_eod e WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.index_eod) ORDER BY e.change_pct DESC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:48"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.ss is not approved"

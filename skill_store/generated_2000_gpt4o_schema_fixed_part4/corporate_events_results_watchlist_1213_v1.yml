@@ -1,0 +1,57 @@
+id: "corporate_events_results_watchlist_1213_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1213"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: latest EOD; response style: ranked candidates."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for latest EOD: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as ranked candidates"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Analyze the latest corporate events and results using the signals and scores, with a focus on daily updates. Use PostgreSQL queries and prioritize read-only structures."
+sql_templates:
+  -
+    description: "Select the latest corporate events and corresponding stage information."
+    query: "SELECT ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, ce.detail, ss.stage, ss.trading_signal FROM signals.corporate_events ce JOIN scores.stage_snapshots ss ON ce.symbol = ss.symbol AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) WHERE ce.event_date >= CURRENT_DATE LIMIT 100;"
+    purpose: "Retrieve recent or upcoming corporate events with stage labels and trading signals."
+  -
+    description: "Select results analysis for recent filings."
+    query: "SELECT ra.symbol, ra.company_name, ra.filing_date, ra.verdict, ra.growth_yoy_revenue_pct, ra.growth_qoq_revenue_pct FROM scores.results_analysis ra WHERE ra.filing_date = (SELECT MAX(filing_date) FROM scores.results_analysis) AND ra.verdict IS NOT NULL ORDER BY ra.filing_date DESC LIMIT 50;"
+    purpose: "Retrieve latest company filings and results analysis scores."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "{'key_rules': [{'key': 'symbol', 'description': 'Symbol must match known NSE symbols.'}, {'key': 'event_date', 'description': 'Event date must not be in the past beyond 3 months.'}]}"
+synthesis_guidance: "Focus on integrating event and results data to identify actionable watchlist candidates. Rank and classify based on current stage and trading signals."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

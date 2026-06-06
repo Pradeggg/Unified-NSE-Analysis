@@ -1,0 +1,68 @@
+id: "portfolio_incremental_add_trim_0363_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0363"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: post results; response style: exceptions and gaps first."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for post results: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Analyze portfolio positions for incremental add/trim decisions using stage scores and technical indicators, focusing on gaps and exceptions first."
+sql_templates:
+  -
+    name: "GetStageSnapshots"
+    template: "SELECT snapshot_date, symbol, company_name, sector, stage, stage_score, technical_score, rsi, can_slim_score, minervini_score FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+  -
+    name: "GetPortfolioHoldings"
+    template: "SELECT symbol, qty, avg_cost FROM portfolio.holdings;"
+python_tools:
+  -
+    id: "calculate_gap_exceptions"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "stage_snapshots"
+    outputs:
+      - "gaps_exceptions"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n  # Example logic to simulate processing of input snapshot data\n  input_data = context['stage_snapshots']\n  gaps_exceptions = []\n  for record in input_data:\n    # Logic to determine gaps/exceptions\n    if record['stage_score'] < 50 and record['rsi'] > 70:\n      gaps_exceptions.append(record)\n  return gaps_exceptions"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+synthesis_guidance: "Focus on identifying gaps and exceptions in current portfolio strategy using Indian market context and validated evidence."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:46:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_gap_exceptions: execution failed: KeyError: 'stage_snapshots'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_gap_exceptions: execution failed: KeyError: 'stage_snapshots'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

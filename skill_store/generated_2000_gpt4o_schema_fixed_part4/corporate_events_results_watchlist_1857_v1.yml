@@ -1,0 +1,70 @@
+id: "corporate_events_results_watchlist_1857_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1857"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: action watchlist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for quarter to date: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as action watchlist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    name: "Corporate Events Results Watchlist Tool"
+    version: "1.0.0"
+    type: "SQL"
+    execution_policy: "manual"
+    inputs:
+      dates:
+        description: "User-supplied date range for upcoming or past events."
+        type: "date_range"
+        optional: true
+      sector:
+        description: "Sector filter for companies."
+        type: "string"
+        optional: true
+    outputs:
+      - "event_calendar"
+      - "symbol_watchlist"
+      - "result_context"
+      - "action_bucket"
+      - "source_trail"
+sql_templates:
+  event_watchlist:
+    description: "Retrieve symbols with upcoming or recent corporate events and sector-relative comparison."
+    template: "WITH latest_stage AS (SELECT symbol, stage, trading_signal, snapshot_date FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT e.symbol, e.event_date, e.event_type, ra.verdict, ss.stage, ss.trading_signal FROM signals.corporate_events e INNER JOIN latest_stage ss ON e.symbol = ss.symbol LEFT JOIN scores.results_analysis ra ON e.symbol = ra.symbol WHERE e.event_date >= CURRENT_DATE - INTERVAL '3 months' AND ss.stage = 'STAGE_2' ORDER BY e.event_date DESC, ss.trading_signal LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "{'symbols_validation': 'Ensure symbol names are canonical and belong to NSE.', 'dates_validation': 'Validate user-supplied dates are within correct range.'}"
+synthesis_guidance: "{'use_case': 'Provide a comprehensive watchlist of symbols for current or upcoming corporate events.', 'business_context': 'Relevant for investors and analysts focusing on event-driven strategies in the Indian stock market.', 'response_format': 'Structured data with categorized watchlist symbols, their events and results context.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:51"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

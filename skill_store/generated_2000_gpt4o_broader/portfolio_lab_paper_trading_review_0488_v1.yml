@@ -1,0 +1,70 @@
+id: "portfolio_lab_paper_trading_review_0488_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0488"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: position-sizing context; timeframe: intraday context; response style: portfolio-aware output."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "position-sizing context for intraday context: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Separately analyze paper trading strategies by extracting relevant entries, exits, and position-sizing details."
+sql_templates:
+  -
+    name: "Extract_Paper_Trades"
+    template: "SELECT symbol, date_issued, signal, setup_class, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE action_reason = 'Paper Trading';"
+  -
+    name: "Current_Holdings"
+    template: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "Extract_Paper_Trades"
+      - "Current_Holdings"
+    outputs:
+      - "strategy_state"
+      - "entry_exit_rules"
+    approved_tables:
+      - "signals.signal_log"
+      - "portfolio.holdings"
+    code: "def run(context):\n    # Compare extracted signals to current holdings for strategy insights\n    signals = context['Extract_Paper_Trades']\n    holdings = context['Current_Holdings']\n    result = {'strategy_state': [], 'entry_exit_rules': []}\n    # Implement logic to analyze strategies\n    for signal in signals:\n        strategy = analyze_strategy(signal, holdings)\n        result['strategy_state'].append(strategy)\n    return result"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure_No_Mix"
+synthesis_guidance: "Generate insights to optimize strategy execution without affecting actual portfolio balance."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: execution failed: KeyError: 'Extract_Paper_Trades'"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: execution failed: KeyError: 'Extract_Paper_Trades'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,1 @@
+def run(context): return {'successful_signals': [], 'unsuccessful_signals': []}

@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:46:27"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: last 5 sessions; response style: portfolio-aware output."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0428_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    name: "FetchEnhancedRuns"
+    query: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '5 days';"
+  -
+    name: "FetchFilteredStocks"
+    query: "WITH recent_runs AS (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '5 days') SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM recent_runs);"
+status: "validated"
+synthesis_guidance: "['Summarize metadata and stock trends for portfolio-awareness.', 'Identify any missing or broken report data.', 'Suggest remediations based on broken data paths.']"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "portfolio-aware_output"
+title: "Enhanced Report Data Validation Variant 0428"
+tool_plan_template: "Use schema-safe selectors to analyze report run metadata and validate stock-specific data."
+validation_rules:
+  - "All SQL queries must be read-only."
+  - "Ensure data continuity across last 5 sessions."
+  - "Portfolio-aware analysis using filtered stock data."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

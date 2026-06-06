@@ -1,0 +1,81 @@
+id: "portfolio_incremental_add_trim_1571_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1571"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for pre market: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as research-only summary"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  -
+    description: "Use SQL to retrieve and review the latest stage and signal data for current holdings."
+sql_templates:
+  -
+    description: "Retrieve latest stage and signal data for portfolio holdings."
+    template: "WITH latest_stage AS (\n    SELECT *\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n),\nportfolio_analysis AS (\n    SELECT ph.symbol, ph.qty, ph.avg_cost, lss.stage, lss.trading_signal, lss.change_1d_pct, lss.change_1w_pct\n    FROM portfolio.holdings ph\n    JOIN latest_stage lss ON ph.symbol = lss.symbol\n)\nSELECT *\nFROM portfolio_analysis\nLIMIT 10;"
+python_tools:
+  -
+    run_context:
+      language: "python"
+      mode: "read_only"
+      inputs:
+        tables:
+          - "scores.stage_snapshots"
+          - "portfolio.holdings"
+      outputs:
+        - "portfolio_state"
+        - "sector_exposure"
+        - "add_candidates"
+        - "trim_candidates"
+        - "risk_flags"
+      approved_tables:
+        - "scores.stage_snapshots"
+        - "portfolio.holdings"
+      code: "# Example pseudocode for processing evidence\n# This tool analyzes the holdings and stages to determine add/trim candidates.\n\nportfolio_state = 'Assessed'\nsector_exposure = 'Analyzed'\nadd_candidates = []\ntrim_candidates = []\nrisk_flags = []\n\n# Place appropriate logic here utilizing data from inputs to populate outputs.\n\nreturn portfolio_state, sector_exposure, add_candidates, trim_candidates, risk_flags"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure consistency with the latest data snapshot."
+  - "Adhere strictly to join conditions using approved schema."
+synthesis_guidance: "Summarize findings with emphasis on buy/trim signals based on the latest stage data."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:22"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: language must be python"
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: code is required"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: language must be python"
+    - "<missing-id>: mode must be read_only"
+    - "<missing-id>: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,65 @@
+id: "market_3m_rotation_swing_0333_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0333"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: last 20 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for last 20 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as exceptions and gaps first"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  read_only_analysis:
+    goal: "Generate insights on market regime, sector leadership, and identify swing candidates."
+    tasks:
+      - "Identify significant sector rotations and market regime changes over the last 3 months."
+      - "Determine top sectors leading in stage 2."
+      - "Identify promising swing candidates based on volatility contraction patterns."
+      - "Evaluate overall market risks and exceptions."
+sql_templates:
+  index_returns: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  leading_sectors: "SELECT sector, AVG(change_1m_pct) AS avg_monthly_change FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_monthly_change DESC LIMIT 5;"
+  stage_distribution_change: "WITH sector_stages AS (SELECT sector, stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector, stage) SELECT sector, stage, count FROM sector_stages WHERE stage IN (1, 2, 3);"
+python_tools:
+  -
+    id: "calculate_vcp_risks"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "score_data"
+    outputs:
+      - "vcp_risks"
+    approved_tables:
+      - "scores.stage2_vcp_picks"
+    code: "def run(context): \n    # Analyze VCP scores to identify potential risks \n    vcp_risks = [] \n    for record in context['score_data']: \n        if record['vcp_score'] < 50: \n            vcp_risks.append(record['symbol']) \n    return vcp_risks"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "consistency"
+synthesis_guidance: "{'exceptions_first': ['Highlight gaps in market performance and anomalies in sector leadership.', 'Prioritize swing candidates with exceptional VCP scores.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:45:49"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.avg_monthly_change is not approved"

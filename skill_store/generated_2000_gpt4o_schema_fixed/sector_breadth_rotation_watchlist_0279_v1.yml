@@ -1,0 +1,51 @@
+id: "sector_breadth_rotation_watchlist_0279_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0279"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: pre market; response style: ranked candidates."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for pre market: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as ranked candidates"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Use sector breadth data to evaluate and rank sectors for pre-market. Select candidates from top sectors in stage 2."
+sql_templates:
+  sector_ranking: "SELECT s.sector, s.pct_above_50dma, b.stage2_pct FROM breadth.sector_daily s JOIN breadth.ma_pct_above b ON s.snapshot_date = b.snapshot_date WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) ORDER BY s.pct_above_50dma DESC LIMIT 5;"
+  candidate_selection: "SELECT s.symbol, s.company_name, s.price, s.change_1d_pct FROM scores.stage_snapshots s JOIN breadth.sector_daily b ON s.sector = b.sector WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.stage = 'STAGE_2' AND s.trading_signal IN ('BUY', 'STRONG_BUY') AND b.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) ORDER BY s.relative_strength DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sector breadth and stage signals are ordered correctly for pre-market actionability."
+synthesis_guidance: "['Integrate evidence from SQL results to create ranked watchlist for TradingView.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:59"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,65 @@
+id: "corporate_events_results_watchlist_0681_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0681"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: intraday context; response style: debug trace."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for intraday context: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as debug trace"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Evaluate upcoming corporate events and analyze expected market reactions. Provide actionable alerts and debug trace for intraday watchlist."
+sql_templates:
+  - "WITH event_watchlist AS (SELECT symbol, event_type, event_date, detail FROM signals.corporate_events WHERE event_date >= CURRENT_DATE) SELECT symbol, event_type, event_date FROM event_watchlist"
+  - "SELECT symbol, filing_date, growth_yoy_revenue_pct, growth_qoq_revenue_pct FROM scores.results_analysis WHERE filing_date = CURRENT_DATE"
+  - "SELECT symbol, technical_score, stage FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE"
+python_tools:
+  -
+    id: "calculate_growth_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "growth_yoy_revenue_pct"
+      - "growth_qoq_revenue_pct"
+    outputs:
+      - "growth_trend"
+      - "alert_flag"
+    approved_tables:
+      - "scores.results_analysis"
+    code: "def run(context):\n    growth_yoy = context['growth_yoy_revenue_pct']\n    growth_qoq = context['growth_qoq_revenue_pct']\n    trend = 'upward' if growth_qoq > 0 else 'downward'\n    alert = growth_yoy > 10 and growth_qoq > 5\n    return {'growth_trend': trend, 'alert_flag': alert}"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event_date is within the specified timeframe."
+  - "Verify technical_score thresholds for actionable alerts."
+synthesis_guidance: "['Correlate events to market conditions using a debug trace.', 'Identify symbols with upcoming events and strong technical profiles.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:33"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_growth_analysis: execution failed: KeyError: 'growth_yoy_revenue_pct'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_growth_analysis: execution failed: KeyError: 'growth_yoy_revenue_pct'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

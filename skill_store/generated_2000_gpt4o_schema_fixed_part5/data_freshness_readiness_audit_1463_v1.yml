@@ -1,0 +1,95 @@
+id: "data_freshness_readiness_audit_1463_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1463"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for post results: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as portfolio-aware output"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    python_tools:
+      -
+        id: "calculate_freshness_matrix"
+        language: "python"
+        mode: "read_only"
+        inputs:
+          evidence_data: "evidence required as list"
+        outputs:
+          freshness_matrix: "matrix"
+          missing_sources: "list"
+          blocking_gaps: "list"
+        approved_tables:
+          - "market.index_eod"
+          - "market.equity_eod"
+          - "scores.stage_snapshots"
+        code: "def run(context): return {'freshness_matrix': [], 'missing_sources': [], 'blocking_gaps': []}"
+      -
+        id: "identify_loader_actions"
+        language: "python"
+        mode: "read_only"
+        inputs:
+          gaps: "list"
+        outputs:
+          loader_actions: "list"
+        approved_tables:
+
+        code: "def run(context): return {'loader_actions': []}"
+sql_templates:
+  -
+    id: "fetch_latest_equity_date"
+    template: "SELECT MAX(trade_date) AS latest_date FROM market.equity_eod"
+  -
+    id: "fetch_latest_index_date"
+    template: "SELECT MAX(trade_date) AS latest_date FROM market.index_eod"
+  -
+    id: "fetch_latest_stage_snapshot_date"
+    template: "SELECT MAX(snapshot_date) AS latest_date FROM scores.stage_snapshots"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all required columns exist in evidence tables."
+  - "Check SQL templates for read-only compliance."
+synthesis_guidance: "['Aggregate data freshness and identify gaps.', 'Determine actions to address data loading issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:22"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_date is not approved"
+  - "market.index_eod.latest_date is not approved"
+  - "scores.stage_snapshots.latest_date is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "market.equity_eod.latest_date is not approved"
+    - "market.index_eod.latest_date is not approved"
+    - "scores.stage_snapshots.latest_date is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,55 @@
+id: "vcp_breakouts_with_fundamentals_1892_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1892"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  - "1. Extract latest VCP breakout candidates with strong fundamentals from `scores.stage2_vcp_picks`."
+  - "2. Fetch additional technical and score data from `scores.stage_snapshots`."
+  - "3. Supplement with EOD market data from `market.equity_eod` for liquidity verification."
+sql_templates:
+  -
+    name: "fetch_candidates"
+    sql: "WITH latest_vcp AS ( SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC, rank ASC LIMIT 20 ) SELECT vcp.symbol, vcp.price, vcp.vcp_score, ss.enhanced_fund_score, ss.trading_signal FROM latest_vcp vcp JOIN scores.stage_snapshots ss ON vcp.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal IN ('BUY', 'STRONG_BUY');"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all candidates have latest snapshot data."
+  - "Confirm candidates are Buy or Strong Buy according to trading_signal."
+synthesis_guidance: "['Combine technical and fundamental scores for overall assessment.', 'Highlight candidates with top VCP scores and strong fundamental support.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

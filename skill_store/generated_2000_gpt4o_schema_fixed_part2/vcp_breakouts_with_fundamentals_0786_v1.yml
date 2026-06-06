@@ -1,0 +1,57 @@
+id: "vcp_breakouts_with_fundamentals_0786_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0786"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: intraday context; response style: QA checklist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "intraday_context"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters: "symbols creating new highs or VCP"
+  candidates: "top stocks by VCP score with enhanced fundamental score"
+  tradingview_symbols: "symbols formatted for TradingView integration"
+  evidence: "latest EOD and snapshots data"
+  risks: "potential risks based on liquidity and volatility"
+sql_templates:
+  -
+    description: "Select VCP candidates with strong fundamentals."
+    template: "SELECT v.symbol, v.company_name, v.price, v.rsi, v.enhanced_fund_score FROM scores.stage2_vcp_picks v JOIN scores.stage_snapshots s ON v.symbol = s.symbol WHERE v.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND v.vcp_score > 70 AND v.enhanced_fund_score > 50 ORDER BY v.vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure the candidates have the latest snapshot date."
+  - "Check the enhanced fundamental score is above threshold."
+synthesis_guidance: "['Ensure synthesis aligns with the latest market EOD data.', 'Correctly map VCP candidates to TradingView integration.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

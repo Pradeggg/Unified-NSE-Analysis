@@ -1,0 +1,54 @@
+id: "fii_dii_regime_breadth_review_1520_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1520"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: latest EOD; response style: research-only summary."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for latest EOD: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as research-only summary"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    tool: "run(context)"
+    description: "Use Python tool to gather complex calculations if necessary, within read-only mode."
+sql_templates:
+  -
+    description: "Get latest FII/DII flow, regime, and breadth data."
+    sql: "WITH latest_trade_date AS (SELECT MAX(trade_date) AS max_trade_date FROM signals.fii_dii_flows) SELECT f.trade_date, f.fii_net_today, f.dii_net_today, r.regime, r.confidence, b.advances, b.declines, i.close, i.trend_signal FROM signals.fii_dii_flows AS f JOIN signals.regime_history AS r ON f.trade_date = r.trade_date JOIN breadth.market_daily AS b ON f.trade_date = b.trade_date JOIN market.index_eod AS i ON f.trade_date = i.trade_date WHERE f.trade_date = (SELECT max_trade_date FROM latest_trade_date) AND i.index_symbol = 'NIFTY_50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "{'data_integrity': 'Ensure all join keys are present and match expected formats.', 'numeric_limits': 'Flows should be within realistic min/max ranges observed historically.'}"
+synthesis_guidance: "{'context_explanation': 'Explain the interactions and impacts of FII/DII flows, market regime, and breadth on market direction\u2014either risk-on or risk-off.', 'narrative_structure': 'Begin with flow context, evaluate breadth, confirm with index action, and discuss regime\u2014conclude with risk assessment.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:46"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

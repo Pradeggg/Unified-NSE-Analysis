@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:52:51"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 5 sessions; response style: comparison matrix."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0926_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Identify stocks from the last 5 sessions with new highs or VCP breakouts with strong fundamentals."
+    template: "WITH recent_vcp AS (SELECT symbol, MAX(snapshot_date) AS snapshot_date FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '5 days' GROUP BY symbol), recent_highs AS (SELECT symbol, MAX(trade_date) AS trade_date FROM market.equity_eod WHERE high = week52_high AND trade_date >= CURRENT_DATE - INTERVAL '5 days' GROUP BY symbol) SELECT v.symbol, v.company_name, v.price, v.enhanced_fund_score FROM recent_vcp rv INNER JOIN scores.stage2_vcp_picks v ON rv.symbol = v.symbol AND rv.snapshot_date = v.snapshot_date WHERE v.enhanced_fund_score > (SELECT AVG(enhanced_fund_score) FROM scores.stage_snapshots) UNION SELECT h.symbol, s.company_name, s.price, s.enhanced_fund_score FROM recent_highs h INNER JOIN scores.stage_snapshots s ON h.symbol = s.symbol AND h.trade_date = s.snapshot_date WHERE s.enhanced_fund_score > (SELECT AVG(enhanced_fund_score) FROM scores.stage_snapshots);"
+status: "validated"
+synthesis_guidance: "{'comparison_matrix': 'Present stocks as a matrix of tickers with columns for fundamental scores and breakout indicators.'}"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "comparison_matrix"
+title: "VCP Breakouts With Fundamentals Variant 0926"
+tool_plan_template:
+  candidates: "Select from high relative strength and fundamental scores"
+  filters: "Stocks must be newly breaking out with strong fundamentals"
+  tradingview_symbols: "Identify symbols supporting TradingView VCP pattern recognition"
+validation_rules:
+  - "Ensure data is from the last 5 trading sessions."
+  - "Verify all selected stocks have above average fundamental scores."
+version: 1

@@ -1,0 +1,59 @@
+created_at: "2026-06-06T12:45:56"
+created_by: "llm_generated"
+description: "This skill card focuses on validating enhanced report run metadata, filtered stock data, and identifying exceptions in report links. Special emphasis on analyzing position-sizing context for the last 3 months."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_card_0001_0348_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for last 3 months: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    description: "Retrieve last 3 months of report runs for analysis"
+    query: "SELECT run_id, run_ts, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+    read_only: true
+  -
+    description: "Identify missing or low score report data"
+    query: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE score IS NULL OR score < 50;"
+    read_only: true
+status: "validated"
+synthesis_guidance: "Prioritize identifying missing data and broken links, capture exceptions early and suggest remediation steps."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+title: "Enhanced Report Data Validation Skill Card"
+tool_plan_template:
+  methodology: "Leverage SQL queries to inspect report metadata and filtered stock performance, summarize findings."
+  use_case: "Identify and report broken links and missing data in generated reports"
+validation_errors:
+
+validation_rules:
+  - "Ensure queries are read-only and use approved columns only."
+  - "Report output must include exceptions and gaps first."
+version: 1
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"

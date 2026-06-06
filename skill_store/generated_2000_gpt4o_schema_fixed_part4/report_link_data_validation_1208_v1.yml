@@ -1,0 +1,52 @@
+id: "report_link_data_validation_1208_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Report Link and Data Validation - Today's Context"
+description: "Validate report links and data for today's position-sizing context. This card focuses on identifying broken links and missing data with a ranked candidate style."
+input_patterns:
+  - "check report links not working for today"
+  - "validate today's report for missing data"
+  - "rank candidates based on missing data in today's report"
+tags:
+  - "report_qa"
+  - "validate_links"
+  - "data_absence"
+  - "position-sizing"
+  - "today"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    steps:
+      - "Validate dataset integrity across tables for todays' reports using approved joins and latest date filters."
+      - "Identify all missing or incomplete data by comparing expected records against active ones."
+      - "Explain any discrepancies using ranked findings."
+sql_templates:
+  -
+    template_name: "validate_links_and_data"
+    template_code: "SELECT r.run_id, r.run_ts, r.universe_size, r.stocks_analyzed, r.stocks_filtered, s.rank, s.symbol, s.current_price FROM report.enhanced_runs AS r JOIN report.enhanced_filtered_stocks AS s ON r.run_id = s.run_id WHERE r.run_ts = CURRENT_DATE::date ORDER BY r.run_ts DESC LIMIT 20;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure prepared SELECT statements adhere to read-only guidelines."
+  - "Maintain strict PostgreSQL syntax as outlined in global rules."
+  - "Carefully follow join and date filter guidelines."
+synthesis_guidance: "{'framework': 'Use research-only framing specific to the Indian market, focusing on evidence and data quality assurance.', 'visualization': 'Provide ranked lists of findings, highlighting specific issues with links and data completeness.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:39"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,49 @@
+id: "fii_dii_regime_breadth_review_1002_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1002"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: today; response style: concise table."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for today: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as concise table"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Review signal tables for current market flows and breadth insights."
+sql_templates:
+  fii_dii_flows_query: "SELECT trade_date, fii_net_today, dii_net_today, flow_signal FROM signals.fii_dii_flows WHERE trade_date = CURRENT_DATE;"
+  regime_history_query: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date = CURRENT_DATE;"
+  market_breadth_query: "SELECT trade_date, adv_signal, trin_signal FROM breadth.market_daily WHERE trade_date = CURRENT_DATE;"
+  index_eod_query: "SELECT index_symbol, change_pct, trend_signal FROM market.index_eod WHERE trade_date = CURRENT_DATE;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure 'CURRENT_DATE' in queries matches the date of execution."
+  - "Check each result set for nulls and handle gracefully."
+synthesis_guidance: "Combine data insights into a status summary about market risk context, focusing on institutional action and breadth signals."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:12"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.adv_signal is not approved"

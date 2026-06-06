@@ -1,0 +1,67 @@
+id: "agent_route_failure_diagnostics_1960_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1960"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for quarter to date: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as comparison matrix"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "{ the template string }"
+sql_templates:
+  -
+    name: "QuarterToDate_Failure_Diagnostics"
+    query: "WITH latest_runs AS (SELECT run_id FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '3 months'), failures AS (SELECT r.run_id, r.stocks_analyzed, r.stocks_filtered, f.symbol, f.score FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks f ON r.run_id = f.run_id WHERE r.run_id IN (SELECT run_id FROM latest_runs) AND f.recommendation IS NULL) SELECT * FROM failures;"
+python_tools:
+  -
+    id: "symbol_vs_tools_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "report.enhanced_filtered_stocks"
+    outputs:
+      - "tool_gap"
+      - "route_fix"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Analyze symbol usage against available tools\n    return {'tool_gap': [], 'route_fix': []}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all output fields are non-null."
+  - "Confirm consistency with approved symbols and tools used."
+synthesis_guidance: "['Focus on identifying tools missing in the process and potential routes causing failures.', 'Use a comparison matrix to highlight symbol resolution issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:48"
+generation_model: "gpt-4o"
+validation_errors:
+  - "symbol_vs_tools_analysis: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "symbol_vs_tools_analysis: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

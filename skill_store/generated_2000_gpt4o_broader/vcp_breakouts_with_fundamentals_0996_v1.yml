@@ -1,0 +1,51 @@
+id: "vcp_breakouts_with_fundamentals_0996_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0996"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: weekly review; response style: comparison matrix."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "weekly_review"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Provide a comparison matrix for stocks creating new highs, VCP or breakout candidates with good fundamentals. Focus on freshness audit and liquidity."
+sql_templates:
+  - "WITH latest_vcp AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)), high_liquidity AS (SELECT symbol, MAX(volume) as max_volume FROM market.equity_eod GROUP BY symbol HAVING max_volume > 1000000) SELECT vcp.symbol, vcp.company_name, vcp.sector, vcp.price, vcp.rsi, vcp.relative_strength, vcp.vcp_score, vcp.enhanced_fund_score, vcp.earnings_quality, vcp.sales_growth FROM latest_vcp vcp JOIN high_liquidity liq ON vcp.symbol = liq.symbol WHERE vcp.vcp_score > 70"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "status"
+  - "sql_read_only"
+  - "python_tool_read_only"
+synthesis_guidance: "{'methodology': 'Use the latest evidence to form a view on breakout stocks with strong fundamentals and construct a comparison matrix for analyst review.', 'risk_assessment': 'Consider volatility and market sentiment when analyzing stock breakouts.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

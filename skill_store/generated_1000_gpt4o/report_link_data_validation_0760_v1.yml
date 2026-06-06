@@ -1,0 +1,63 @@
+id: "report_link_data_validation_0760_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0760"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: quarter to date; response style: QA checklist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for quarter to date: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  steps:
+    -
+      action: "Retrieve metadata"
+      focus: "Collect data for report runs"
+      tables:
+        - "report.enhanced_runs"
+    -
+      action: "Assess stock data"
+      focus: "Evaluate filtered stocks data consistency"
+      tables:
+        - "report.enhanced_filtered_stocks"
+sql_templates:
+  -
+    template_name: "ValidateReportLinks"
+    sql: "SELECT er.run_id, er.run_ts, es.symbol, es.current_price FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks es ON er.run_id = es.run_id WHERE er.market_sentiment IS NOT NULL;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all report links are active"
+  - "Confirm HTML reports have data"
+  - "Validate consistency of report metadata and stock data"
+synthesis_guidance: "['Cross-reference SQL output with input patterns and validation rules', 'Compile QA checklist from gathered findings']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:51:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table er.market_sentiment"
+  - "unknown table er.run_id"
+  - "unknown table er.run_ts"
+  - "unknown table es.current_price"
+  - "unknown table es.run_id"
+  - "unknown table es.symbol"

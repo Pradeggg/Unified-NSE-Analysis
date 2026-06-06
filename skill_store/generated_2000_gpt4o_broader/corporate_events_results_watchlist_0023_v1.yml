@@ -1,0 +1,51 @@
+id: "corporate_events_results_watchlist_0023_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0023"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: concise table."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for last 5 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as concise table"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "last_5_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Focus on recent corporate events and results affecting watchlists, with a refresh for the last 5 sessions."
+sql_templates:
+  -
+    name: "recent_events_watchlist"
+    query: "WITH recent_events AS (SELECT id, symbol, event_type, event_date, purpose_raw, detail, source FROM signals.corporate_events WHERE event_date > CURRENT_DATE - INTERVAL '5 DAY' ORDER BY event_date DESC) SELECT * FROM recent_events;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "event_date"
+  - "response_format"
+synthesis_guidance: "Generate a watchlist table that highlights recent and upcoming corporate events with relevant context and source references."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:16"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

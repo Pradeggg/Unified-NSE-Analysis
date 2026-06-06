@@ -1,0 +1,68 @@
+id: "data_freshness_readiness_audit_0161_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0161"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: post results; response style: narrative plus evidence."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for post results: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as narrative plus evidence"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "post_results"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Perform a quick scan of relevant tables to determine the data freshness readiness."
+sql_templates:
+  -
+    purpose: "Check the latest trade date in market.index_eod for freshness."
+    query: "SELECT MAX(trade_date) AS latest_trade_date FROM market.index_eod;"
+  -
+    purpose: "Check the latest trade date in market.equity_eod for freshness."
+    query: "SELECT MAX(trade_date) AS latest_trade_date FROM market.equity_eod WHERE series = 'EQ';"
+python_tools:
+  -
+    id: "freshness_calculator"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      latest_dates:
+        - "latest_trade_date"
+    outputs:
+      freshness_summary: "text"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+    code: "def run(context):\n    latest_dates = context['inputs']['latest_dates']\n    summary = f\"Data is fresh as of {max(latest_dates)}.\"\n    return {'freshness_summary': summary}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "['Synthesize results into a narrative that highlights data freshness and identifies missing history.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:37"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_trade_date is not approved"
+  - "market.index_eod.latest_trade_date is not approved"

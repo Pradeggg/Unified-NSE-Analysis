@@ -1,0 +1,58 @@
+id: "corporate_events_results_watchlist_0779_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0779"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: pre market; response style: QA checklist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for pre market: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as QA checklist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "pre_market"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  inputs:
+    - "Identify stocks with recent or upcoming events (e.g., RESULTS, DIVIDEND, etc.) by querying signals.corporate_events."
+    - "Combine the event data with the latest stage and technical data from scores.stage_snapshots."
+    - "Validate results using the latest results analysis from scores.results_analysis."
+  outputs:
+    - "Compose a watchlist including symbols, events, and stages."
+    - "Generate source-trail validation notes."
+    - "Form a QA checklist for event-driven stocks."
+sql_templates:
+  template_1: "WITH latest_events AS (SELECT symbol, event_type, event_date FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '3 months'), latest_stage AS (SELECT DISTINCT ON (symbol) symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_analysis AS (SELECT DISTINCT ON (symbol) symbol, verdict FROM scores.results_analysis WHERE period_end = (SELECT MAX(period_end) FROM scores.results_analysis)) SELECT le.symbol, le.event_type, le.event_date, ls.stage, ls.trading_signal, la.verdict FROM latest_events le JOIN latest_stage ls ON le.symbol = ls.symbol JOIN latest_analysis la ON le.symbol = la.symbol WHERE ls.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Verify that all included symbols have an upcoming or recent event."
+  - "Ensure all source-trail validations are supported by records in the signals and scores tables."
+  - "Check that the QA checklist addresses each input pattern."
+synthesis_guidance: "['Emphasize upcoming corporate events with potential market impact.', 'Prioritize symbols with strong or buy signals.', 'Highlight any discrepancies or gaps in the available evidence.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

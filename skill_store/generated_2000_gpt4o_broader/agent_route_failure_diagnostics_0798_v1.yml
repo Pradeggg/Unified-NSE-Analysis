@@ -1,0 +1,59 @@
+id: "agent_route_failure_diagnostics_0798_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0798"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for weekly review: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as QA checklist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "Review enhanced runs and snapshots to identify route failures."
+  - "Check missing tools and diagnostics in the toolset."
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts, notes FROM report.enhanced_runs WHERE universe_size = 0 OR stocks_analyzed = 0"
+    description: "Identify runs with potential initialization failures."
+  -
+    template: "SELECT symbol, rank, score FROM report.enhanced_filtered_stocks WHERE recommendation IS NULL"
+    description: "Check filtered stocks with recommendation gaps."
+  -
+    template: "SELECT symbol, change_1w_pct, stage FROM scores.stage_snapshots WHERE change_1w_pct < 0 AND stage = 'Failing'"
+    description: "Detect failing stocks in stage snapshots over the week."
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all runs have non-zero universe size."
+  - "Verify all filtered stocks have recommendations."
+synthesis_guidance: "['Integrate SQL findings to outline diagnostic steps.', 'Provide corrective measures based on identified gaps.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:59"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

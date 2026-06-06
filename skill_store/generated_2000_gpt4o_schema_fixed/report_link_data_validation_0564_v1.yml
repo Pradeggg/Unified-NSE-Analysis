@@ -1,0 +1,50 @@
+id: "report_link_data_validation_0564_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Report Link Verification and Data Completeness"
+description: "Assess the integrity of report links and ensure completeness of data in Indian market reports post analysis. Focus: watchlist creation following result releases."
+input_patterns:
+  - "verify report links are active"
+  - "check for missing data in stock reports"
+  - "assess report link functionality post-results"
+  - "summarize issues with report link generation"
+tags:
+  - "report_qa"
+  - "link_verification"
+  - "data_completeness"
+  - "post_results"
+  - "watchlist_creation"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+  tool_plan_template:
+    - "Perform a SELECT query to verify report link functionality and data presence post-results using the approved schema."
+tool_plan_template:
+
+sql_templates:
+  -
+    template_id: "verify_report_links"
+    description: "Verify that each report link is active and data is complete for post-results analysis."
+    sql: "SELECT er.run_id, er.run_ts, efs.symbol, efs.current_price FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id WHERE er.run_ts > CURRENT_DATE - INTERVAL '1 month' AND efs.current_price IS NOT NULL LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "verification"
+  - "recommendations"
+validation_rules:
+  - "approved_schema"
+synthesis_guidance: "['Review report link functionality for integrity and ensure data is not missing or incomplete.', 'Provide a research-only summary suitable for the Indian market context.', 'Focus on recent reports generated within the past month.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:25:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

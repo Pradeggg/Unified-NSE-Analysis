@@ -1,0 +1,55 @@
+id: "data_freshness_readiness_audit_0735_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0735"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: risk-first review; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "risk-first review for last 20 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "risk-first_review"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Agent Adda interprets the DB loader freshness and missing approved history; normalizes responses as follows: engage Indian market evidence and research-only framing to ensure QA checklist readiness."
+sql_templates:
+  -
+    template: "WITH latest_trade_date AS (SELECT MAX(trade_date) FROM market.equity_eod) SELECT eod.symbol, eod.trade_date, eod.close FROM market.equity_eod eod WHERE eod.trade_date = (SELECT * FROM latest_trade_date) ORDER BY eod.symbol LIMIT 100;"
+    description: "Retrieve the latest EOD close prices for 100 equities."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure SQL templates are read-only and only use approved tables and columns."
+  - "Verify that Python tools, if used, are read-only and adhere to the blocked capabilities list."
+synthesis_guidance: "Focus interrogation on Indian market context with emphasis on data freshness, completeness, and QA check integrity."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:13"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

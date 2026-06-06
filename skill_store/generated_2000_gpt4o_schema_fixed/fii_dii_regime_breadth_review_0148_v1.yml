@@ -1,0 +1,51 @@
+id: "fii_dii_regime_breadth_review_0148_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0148"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for last 3 months: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as narrative plus evidence"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Gather evidence from required tables to generate insights on FII/DII flows, market regime, breadth, and index behavior over the last 3 months."
+sql_templates:
+  -
+    query: "WITH filtered_flows AS (SELECT trade_date, fii_net_today, dii_net_today, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'), filtered_regime AS (SELECT trade_date, regime FROM signals.regime_history WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'), filtered_market AS (SELECT trade_date, advances, declines, ad_signal FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'), filtered_index AS (SELECT trade_date, index_symbol, close FROM market.index_eod WHERE index_symbol = 'Nifty 50' AND trade_date >= CURRENT_DATE - INTERVAL '3 months') SELECT f.trade_date, f.fii_net_today, f.dii_net_today, f.flow_signal, r.regime, m.advances, m.declines, m.ad_signal, i.close FROM filtered_flows f JOIN filtered_regime r ON f.trade_date = r.trade_date JOIN filtered_market m ON f.trade_date = m.trade_date JOIN filtered_index i ON f.trade_date = i.trade_date ORDER BY f.trade_date ASC;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure date filters are applied from 3 months prior to current date."
+  - "Verify all joins use approved rules."
+synthesis_guidance: "{'style': 'narrative plus evidence', 'focus': 'position-sizing', 'timeframe': 'last 3 months'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:21"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

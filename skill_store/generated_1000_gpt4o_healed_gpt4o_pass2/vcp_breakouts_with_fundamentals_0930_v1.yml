@@ -1,0 +1,68 @@
+created_at: "2026-06-06T12:52:51"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 5 sessions; response style: comparison matrix."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0930_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+
+status: "validated"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "comparison_matrix"
+title: "VCP Breakouts With Fundamentals Variant 0930"
+tool_plan_template:
+  candidates:
+    Python:
+      approved_tables:
+        - "scores.stage_snapshots"
+        - "scores.stage2_vcp_picks"
+      code: "def run(context): comparison_matrix = [] for row in context['input']: comparison_matrix.append({...}) return comparison_matrix"
+      inputs:
+        - "fundamentals"
+        - "breakouts"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "comparison_matrix"
+  filters:
+    description: "Select stocks based on VCP, breakout, new high with strong fundamentals."
+    template:
+      SQL: "WITH recent AS (SELECT symbol, MAX(trade_date) AS last_trade_date FROM market.equity_eod WHERE trade_date > DATE_ADD(CURRENT_DATE, INTERVAL -5 DAY) GROUP BY symbol), fundamentals AS (SELECT s.symbol, s.company_name, s.enhanced_fund_score FROM scores.stage_snapshots s JOIN recent r ON s.symbol = r.symbol WHERE s.enhanced_fund_score > 80 AND s.snapshot_date = r.last_trade_date), breakouts AS (SELECT v.symbol, v.vcp_score, e.close FROM scores.stage2_vcp_picks v JOIN market.equity_eod e ON v.symbol = e.symbol WHERE v.snapshot_date > DATE_ADD(CURRENT_DATE, INTERVAL -5 DAY) AND v.vcp_score > 75 AND e.close >= e.week52_high) SELECT * FROM fundamentals f JOIN breakouts b ON f.symbol = b.symbol"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+version: 1

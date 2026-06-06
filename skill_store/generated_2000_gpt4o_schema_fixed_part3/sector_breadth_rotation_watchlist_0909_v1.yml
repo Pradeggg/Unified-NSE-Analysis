@@ -1,0 +1,55 @@
+id: "sector_breadth_rotation_watchlist_0909_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0909"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: today; response style: comparison matrix."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for today: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as comparison matrix"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "today"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Retrieve latest sector data with Stage 2 participation."
+    sql: "\n            SELECT \n                sd.sector, \n                sd.breadth_signal, \n                ssp.stage2_pct, \n                AVG(ss.stage_score) AS avg_stage_score \n            FROM \n                breadth.sector_daily sd \n            JOIN \n                scores.stage_snapshots ss \n            ON \n                sd.sector = ss.sector \n            JOIN \n                breadth.ma_pct_above ssp \n            ON \n                sd.snapshot_date = ssp.snapshot_date \n            WHERE \n                sd.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) \n            GROUP BY \n                sd.sector, \n                sd.breadth_signal, \n                ssp.stage2_pct \n            ORDER BY \n                avg_stage_score DESC, \n                ssp.stage2_pct DESC \n            LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:35"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

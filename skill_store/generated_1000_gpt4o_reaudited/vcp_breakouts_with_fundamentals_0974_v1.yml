@@ -1,0 +1,68 @@
+created_at: "2026-06-06T12:53:13"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: pre market; response style: comparison matrix."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0974_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+
+status: "validated"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "pre_market"
+  - "comparison_matrix"
+title: "VCP Breakouts With Fundamentals Variant 0974"
+tool_plan_template:
+  evidence_gaps:
+
+  output_contract:
+    - "filters"
+    - "candidates"
+    - "tradingview_symbols"
+    - "evidence"
+    - "risks"
+  sql_templates:
+    -
+      name: "Fetch_Recent_VCP_Breakouts"
+      template: "SELECT v.symbol, v.company_name, v.price, v.vcp_score, v.enhanced_fund_score, e.market_cap_cr FROM scores.stage2_vcp_picks v JOIN market.equity_eod e ON v.symbol = e.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND v.vcp_score > 70 AND v.enhanced_fund_score > 75 AND e.volume > 100000 AND e.close > e.week52_high * 0.9;"
+  synthesis_guidance: "Generate a comparison matrix focusing on high VCP score stocks with strong fundamentals and recent market activity."
+  validation_rules:
+    - "Ensure VCP score is above threshold."
+    - "Ensure enhanced fund score is above threshold."
+    - "Ensure current volume is adequate for liquidity."
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

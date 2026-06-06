@@ -1,0 +1,77 @@
+id: "report_link_data_validation_0480_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "TradingView Export Report QA"
+description: "Validate TradingView export report metadata and data integrity for pre-market analysis."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for pre market: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "pre_market"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  inputs:
+    - "required_fields: [run_id, analysis_date, symbol]"
+    - "optional_fields: [current_price, recommendation, volume, trading_value_cr]"
+    - "output_fields: [broken_links, missing_data, remediation, verification]"
+  steps:
+    - "Verify run metadata for completeness."
+    - "Validate stock data against expected record counts."
+    - "Check integrity of data links and HTML availability."
+    - "Output remediation plan if any issues detected."
+sql_templates:
+  -
+    description: "Check for missing data and broken report links."
+    template: "SELECT r.run_id, r.analysis_date, COUNT(s.symbol) as filtered_stocks FROM report.enhanced_runs r LEFT JOIN report.enhanced_filtered_stocks s ON r.run_id = s.run_id WHERE r.analysis_date = $1 GROUP BY r.run_id, r.analysis_date HAVING COUNT(s.symbol) = 0"
+python_tools:
+  -
+    id: "data_validation_tool_01"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      run_id: "string"
+    outputs:
+      missing_data_count: "integer"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context): missing_data_count = 0; for stock in context['stock_data']: if not stock['current_price']: missing_data_count += 1; return {'missing_data_count': missing_data_count}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure run metadata completeness."
+  - "All HTML export links must be accessible."
+  - "Complete stock analysis recordings without gaps."
+synthesis_guidance: "['Summarize broken link issues.', 'Identify critical data missing points.', 'Propose remediation with significant findings.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "data_validation_tool_01: inputs must be a list"
+  - "data_validation_tool_01: outputs must be a non-empty list"
+  - "data_validation_tool_01: python syntax error: invalid syntax"
+review:
+  status: "needs_heal"
+  findings:
+    - "data_validation_tool_01: inputs must be a list"
+    - "data_validation_tool_01: outputs must be a non-empty list"
+    - "data_validation_tool_01: python syntax error: invalid syntax"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

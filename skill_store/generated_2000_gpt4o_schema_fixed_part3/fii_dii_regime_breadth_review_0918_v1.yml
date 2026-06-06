@@ -1,0 +1,54 @@
+id: "fii_dii_regime_breadth_review_0918_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0918"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for latest EOD: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as comparison matrix"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Combine FII/DII flow, regime history, market breadth, and index data to review current market context."
+sql_templates:
+  -
+    type: "trade_data"
+    template: "SELECT fii_dii_flows.trade_date, fii_net_today, dii_net_today, fii_net_5d, dii_net_5d, flow_signal, regime, market_sentiment FROM signals.fii_dii_flows JOIN signals.regime_history ON signals.fii_dii_flows.trade_date = signals.regime_history.trade_date JOIN breadth.market_daily ON signals.fii_dii_flows.trade_date = breadth.market_daily.trade_date WHERE signals.fii_dii_flows.trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+    description: "Collect data on FII/DII flows, regimes, and market sentiment for the latest available EOD."
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Present the gathered data in a comparison matrix format to show current positions of FII/DII flows, market regimes, and market breadth."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

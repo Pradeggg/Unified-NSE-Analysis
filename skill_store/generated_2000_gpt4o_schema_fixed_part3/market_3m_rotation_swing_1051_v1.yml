@@ -1,0 +1,100 @@
+id: "market_3m_rotation_swing_1051_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1051"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: quarter to date; response style: concise table."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  version: 1
+  parameters:
+    as_of_date:
+      table: "market.index_eod"
+      column: "trade_date"
+    index_returns:
+      table: "market.index_eod"
+      columns:
+        - "index_symbol"
+        - "change_pct"
+    stage_distribution_change:
+      table: "scores.stage_snapshots"
+      columns:
+        - "sector"
+        - "stage"
+    leading_sectors:
+      table: "scores.stage2_vcp_picks"
+      columns:
+        - "sector"
+        - "vcp_score"
+    primary_candidates:
+      table: "scores.stage_snapshots"
+      columns:
+        - "symbol"
+        - "trading_signal"
+      filters:
+        - "stage = 'STAGE_2'"
+        - "trading_signal IN ('BUY', 'STRONG_BUY')"
+    risks:
+      table: "market.equity_eod"
+      columns:
+        - "symbol"
+        - "change_pct"
+sql_templates:
+  latest_index: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+  stage_distribution: "SELECT sector, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  vcp_picks: "SELECT sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 5;"
+  primary_candidates: "SELECT symbol, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+python_tools:
+  -
+    id: "analyze_vcp_changes"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector"
+      - "vcp_score"
+    outputs:
+      - "sector_trend_analysis"
+    approved_tables:
+      - "scores.stage2_vcp_picks"
+    code: "def run(context): sectors = context['sector']; scores = context['vcp_score']; return { 'sector_trend_analysis': analyze_sectors(sectors, scores) }"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all percentages are between -100 and 100."
+  - "Validate that no symbol appears in both primary_candidates and risks."
+synthesis_guidance: "['Prioritize sectors with consistent stage 2 leadership.', 'Highlight VCP score trends and fluctuations.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:39"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analyze_vcp_changes: execution failed: KeyError: 'sector'"
+review:
+  status: "needs_heal"
+  findings:
+    - "analyze_vcp_changes: execution failed: KeyError: 'sector'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

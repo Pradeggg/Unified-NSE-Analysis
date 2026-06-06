@@ -1,0 +1,79 @@
+created_at: "2026-06-06T12:50:22"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: last 3 months; response style: debug trace."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0645_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    code: "def run(context):\n    pass"
+    description: "Defines the execution context."
+    name: "run"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: language must be python"
+    - "<missing-id>: mode must be read_only"
+    - "<missing-id>: outputs must be a non-empty list"
+    - "market.index_eod.avg_index_return is not approved"
+    - "scores.stage_snapshots.avg_change is not approved"
+    - "scores.stage_snapshots.change_pct is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    id: "leading_sectors_query"
+    query: "SELECT sector, AVG(change_pct) as avg_change FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_change DESC LIMIT 5"
+  -
+    id: "index_returns_query"
+    query: "SELECT index_symbol, AVG(change_pct) as avg_index_return FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol"
+  -
+    id: "stage_distribution_change_query"
+    query: "SELECT stage, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY stage"
+status: "test_failed"
+synthesis_guidance: "Compile the results from SQL queries, ensuring coverage of key market regime indicators and risk-first considerations. Develop narratives reflecting sector dynamics across the timeframe. Address evidence gaps as required."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "last_3_months"
+  - "debug_trace"
+title: "3M Market Rotation Swing Assessment Variant 0645"
+tool_plan_template: "Use evidence from the specified tables to generate output data based on the output contract."
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: language must be python"
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: outputs must be a non-empty list"
+  - "market.index_eod.avg_index_return is not approved"
+  - "scores.stage_snapshots.avg_change is not approved"
+  - "scores.stage_snapshots.change_pct is not approved"
+validation_rules:
+  - "Output index_returns must contain entries for each index available in the data."
+  - "Ensure stage_distribution_change captures transitions within stages over the period."
+  - "Leverage debug traces to ensure swing candidates align with anticipated rotations."
+version: 1

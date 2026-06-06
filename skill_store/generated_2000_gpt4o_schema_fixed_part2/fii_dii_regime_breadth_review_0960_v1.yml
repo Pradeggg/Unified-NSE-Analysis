@@ -1,0 +1,77 @@
+id: "fii_dii_regime_breadth_review_0960_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0960"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for quarter to date: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as comparison matrix"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+  missing:
+    - "concept not available for direct SQL transformation"
+tool_plan_template:
+  python_tool_policy:
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    required_fields:
+      - "id"
+      - "language"
+      - "mode"
+      - "inputs"
+      - "outputs"
+      - "approved_tables"
+      - "code"
+sql_templates:
+  fii_dii_summary:
+    template: "WITH latest_flows AS (SELECT * FROM signals.fii_dii_flows WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 months')) SELECT trade_date, SUM(fii_net_today) AS total_fii, SUM(dii_net_today) AS total_dii FROM latest_flows GROUP BY trade_date;"
+    description: "Summarize net FII and DII flows for the latest quarter."
+  regime_overview:
+    template: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 months') ORDER BY trade_date DESC;"
+    description: "Retrieve regime and confidence for the latest quarter."
+  breadth_analysis:
+    template: "SELECT trade_date, advances, declines, ad_signal FROM breadth.market_daily WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 months');"
+    description: "Analyze market breadth indicators for the latest quarter."
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'guidelines': ['Cross-verify regime insights with breadth indicators to ensure alignment.', 'Factor in flows when assessing market risk-on or risk-off position.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:41"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

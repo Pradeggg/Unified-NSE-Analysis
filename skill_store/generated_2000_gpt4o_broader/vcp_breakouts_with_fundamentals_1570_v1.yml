@@ -1,0 +1,58 @@
+id: "vcp_breakouts_with_fundamentals_1570_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1570"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters: "Identify stocks with VCP patterns and strong fundamentals by filtering on VCP score, enhanced fund score, and recent price changes."
+  candidates: "Select candidates based on strong fundamental scores and VCP breakout recognition."
+  tradingview_symbols: "Export symbol list for TradingView integrations."
+  evidence: "Compile evidence from approved tables with scores and EOD data."
+  risks: "Highlight potential risks such as overbought technical indicators or low liquidity."
+sql_templates:
+  -
+    description: "Select potential breakout stocks with VCP pattern and strong fundamentals."
+    template: "SELECT se.symbol, se.company_name, se.price, se.live_price, se.change_1d_pct, sp.vcp_score, sp.enhanced_fund_score FROM scores.stage2_vcp_picks sp JOIN scores.stage_snapshots se ON sp.symbol = se.symbol WHERE sp.vcp_score > 80 AND sp.enhanced_fund_score > 70 AND se.change_1d_pct > 0.5"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all data processing avoids updates to source data and remains read-only"
+  - "Utilize only approved tables and columns for SQL queries"
+  - "Document limitations in evidence compilation if schema omissions exist"
+synthesis_guidance: "{'strategy': 'Summarize findings with emphasis on evidence-backed insights; no market predictions', 'presentation': 'Format output as research-only summary for decision support'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,59 @@
+id: "data_freshness_readiness_audit_1267_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1267"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: post results; response style: ranked candidates."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for post results: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as ranked candidates"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Generate a tool plan that evaluates and ranks evidence sources based on freshness, comparing sector-related data post-results."
+sql_templates:
+  -
+    description: "Check freshness of market index EOD data."
+    template: "SELECT MAX(trade_date) AS last_update FROM market.index_eod;"
+  -
+    description: "Check freshness of equity EOD data."
+    template: "SELECT MAX(trade_date) AS last_update FROM market.equity_eod;"
+  -
+    description: "Check freshness of stage snapshots."
+    template: "SELECT MAX(snapshot_date) AS last_update FROM scores.stage_snapshots;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all evidence sources are updated within the last acceptable interval."
+  - "Rank data sources by the recency of their last update."
+synthesis_guidance: "['Identify which sectors lag in data freshness.', 'Develop a ranked list of sectors based on data freshness discrepancies.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:23"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.last_update is not approved"
+  - "market.index_eod.last_update is not approved"
+  - "scores.stage_snapshots.last_update is not approved"

@@ -1,0 +1,52 @@
+id: "vcp_breakouts_with_fundamentals_1822_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1822"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Provide a screening tool to analyze the VCP breakouts with strong fundamentals."
+sql_templates:
+  -
+    description: "Fetch top VCP candidates for the latest date"
+    query: "WITH latest_vcp AS (\n    SELECT \n        symbol, \n        company_name, \n        sector, \n        price, \n        vcp_score, \n        enhanced_fund_score\n    FROM \n        scores.stage2_vcp_picks\n    WHERE \n        snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)\n    ORDER BY \n        vcp_score DESC, \n        rank ASC\n    LIMIT 20\n)\nSELECT \n    eod.symbol, \n    eod.close AS latest_close_price, \n    vcp.company_name, \n    vcp.sector, \n    vcp.vcp_score, \n    vcp.enhanced_fund_score\nFROM \n    latest_vcp AS vcp\nJOIN \n    market.equity_eod AS eod\nON \n    vcp.symbol = eod.symbol\nWHERE \n    eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure SQL query returns non-null candidates with positive VCP scores."
+  - "Confirm data alignment between latest trade_date and snapshot_date."
+synthesis_guidance: "['Emphasize liquidity and fundamental strengths in the watchlist.', 'Include a brief summary of the market environment in the last 5 sessions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:19"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

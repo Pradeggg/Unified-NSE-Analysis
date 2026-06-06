@@ -1,0 +1,59 @@
+id: "market_3m_rotation_swing_0569_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0569"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as research-only summary"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Retrieve index performance over the last 3 months."
+    sql: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= DATEADD(MONTH, -3, CURRENT_DATE)"
+  -
+    description: "Get the stage distribution changes for sectors."
+    sql: "SELECT sector, COUNT(*) AS num_companies, SUM(stage_score) AS total_stage_score FROM scores.stage_snapshots WHERE snapshot_date >= DATEADD(MONTH, -3, CURRENT_DATE) GROUP BY sector"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure that data is current as of the latest available date."
+  - "Validate that SQL queries return non-empty datasets."
+  - "Ensure stage distribution change reflects recent data."
+synthesis_guidance: "['Summarize leading sectors based on stage score improvement.', 'Identify primary swing candidates from VCP picks.', 'Assess overall market regime changes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:49:13"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.dateadd is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage_snapshots.dateadd is not approved"
+  - "scores.stage_snapshots.month is not approved"
+  - "scores.stage_snapshots.num_companies is not approved"
+  - "scores.stage_snapshots.total_stage_score is not approved"

@@ -1,0 +1,66 @@
+id: "sector_breadth_rotation_watchlist_1301_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1301"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: today; response style: exceptions and gaps first."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for today: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as exceptions and gaps first"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "today"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+
+  sql_templates:
+    -
+      name: "sector_relative_strength"
+      operation: "SELECT"
+      query: "SELECT b.sector, b.pct_above_50dma, b.change_5d FROM breadth.sector_daily b WHERE b.snapshot_date = CURRENT_DATE ORDER BY b.pct_above_50dma DESC, b.change_5d DESC;"
+    -
+      name: "stage_2_participation"
+      operation: "SELECT"
+      query: "SELECT a.sector, a.stage2_pct FROM breadth.ma_pct_above a WHERE a.snapshot_date = CURRENT_DATE ORDER BY a.stage2_pct DESC;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates, if any, must be read-only SELECT/WITH templates."
+  - "Python evidence tools are allowed only when SQL would become complex; keep them read-only and quarantined."
+  - "Use only these approved tables and columns; do not invent tables, aliases, or columns."
+  - "If a required concept is missing from the approved schema, place it in evidence_gaps instead of inventing SQL."
+  - "Use evidence_required.tables exactly; do not use primary_tables or required_tables."
+synthesis_guidance: "{'perspective': 'Agent Adda Indian market research', 'exceptions_first': True}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:41"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

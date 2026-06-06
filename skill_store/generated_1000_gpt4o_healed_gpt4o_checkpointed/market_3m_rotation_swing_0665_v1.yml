@@ -1,0 +1,62 @@
+created_at: "2026-06-06T12:50:34"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: post results; response style: debug trace."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0665_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Identify stage changes over the last 3 months."
+    template: "SELECT symbol, stage, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date >= '2023-07-01' GROUP BY symbol, stage;"
+  -
+    description: "Find leading sectors based on stage 2 counts."
+    template: "SELECT sector, COUNT(*) as stage2_count FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= '2023-07-01' GROUP BY sector ORDER BY stage2_count DESC;"
+  -
+    description: "Identify primary candidates for swing trading."
+    template: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= '2023-07-01' AND vcp_score > 7 ORDER BY vcp_score DESC;"
+status: "test_failed"
+synthesis_guidance: "Focus on recent post-result data to identify emerging trends. Emphasize risk factors impacting market regime shifts."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "post_results"
+  - "debug_trace"
+title: "3M Market Rotation Swing Assessment Variant 0665"
+tool_plan_template: "Assess the recent market regime by analyzing sector and stage distributions, and identify potential swing trading candidates using approved market data."
+validation_errors:
+  - "scores.stage_snapshots.stage2_count is not approved"
+validation_rules:
+  - "Ensure index returns are calculated based on accurate data."
+  - "Sector leadership should reflect latest available data."
+  - "Swing candidates must have recent positive performance indicators."
+version: 1
+review:
+  attempts: 3
+  findings:
+    - "scores.stage_snapshots.stage2_count is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"

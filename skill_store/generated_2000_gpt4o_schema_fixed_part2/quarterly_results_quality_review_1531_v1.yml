@@ -1,0 +1,48 @@
+id: "quarterly_results_quality_review_1531_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1531"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: last 20 sessions; response style: research-only summary."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for last 20 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as research-only summary"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Fetch the latest quarterly results including revenue, PAT growth, margin changes, and freshness of filings. Analyze quality narratives for recent sessions."
+sql_templates:
+  latest_quarterly_results: "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.period_end, qr.revenue, qr.pat, qr.opm_pct FROM scores.quarterly_results qr WHERE qr.period_type = 'quarter' AND qr.period_end >= (CURRENT_DATE - INTERVAL '3 months') ORDER BY qr.symbol, qr.period_end DESC NULLS LAST, qr.fetched_at DESC LIMIT 10;"
+  results_analysis_summary: "SELECT DISTINCT ON (ra.symbol) ra.symbol, ra.period_end, ra.verdict, ra.growth_yoy_revenue_pct, ra.growth_qoq_revenue_pct FROM scores.results_analysis ra WHERE ra.verdict IN ('beat', 'inline') ORDER BY ra.symbol, ra.period_end DESC NULLS LAST, ra.updated_at DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure selected companies have recent quarterly filings."
+  - "Verify margin trends and assessment notes are included for each symbol."
+  - "Identify any narrative discrepancies or risks mentioned in reports."
+synthesis_guidance: "['Synthesize evidence into a concise research summary highlighting key insights.', 'Clearly state the beat/miss context and any identified growth drivers.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:08"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.quarterly_results.qr is not approved"
+  - "scores.results_analysis.ra is not approved"

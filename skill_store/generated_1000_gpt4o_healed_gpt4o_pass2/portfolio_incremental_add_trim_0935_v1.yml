@@ -1,0 +1,57 @@
+created_at: "2026-06-06T12:52:57"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: last 20 sessions; response style: comparison matrix."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0935_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for last 20 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  latest_prices_and_signals:
+    query: "WITH latest_snapshots AS (SELECT symbol, company_name, sector, price, change_1d_pct, change_1w_pct, stage_score, technical_score, rsi, trend_signal, trading_signal FROM scores.stage_snapshots WHERE snapshot_date IN (SELECT MAX(snapshot_date) FROM scores.stage_snapshots GROUP BY symbol)) SELECT h.symbol, h.qty, h.avg_cost, s.company_name, s.sector, s.price, s.change_1d_pct, s.change_1w_pct, s.stage_score, s.technical_score, s.rsi, s.trend_signal, s.trading_signal FROM portfolio.holdings h JOIN latest_snapshots s ON h.symbol = s.symbol;"
+    secure: true
+status: "validated"
+synthesis_guidance: "['Focus on risk analysis and allocation balance.', 'Highlight key candidates for add/trim based on composite scores and trends.', 'Present in a comparison matrix format for clarity.']"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "last_20_sessions"
+  - "comparison_matrix"
+title: "Portfolio Incremental Add Trim Review Variant 0935"
+tool_plan_template:
+  plan:
+    - "Analyze the last 20 sessions of price and technical data for each holding."
+    - "Compare sector exposures to identify potential over/under-allocation."
+    - "Determine risk flags from volatility and trend signals."
+    - "Identify potential add candidates based on technical and stage scores."
+    - "Identify trim candidates by evaluating price change, scores, and risk factors."
+validation_rules:
+  - "Ensure query includes latest snapshot per symbol."
+  - "Confirm join between portfolio holdings and stage_snapshots."
+  - "Validate risk signals are based on latest technical scores."
+version: 1

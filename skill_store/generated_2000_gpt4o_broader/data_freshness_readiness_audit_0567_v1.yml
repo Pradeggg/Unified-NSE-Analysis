@@ -1,0 +1,74 @@
+id: "data_freshness_readiness_audit_0567_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0567"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for post results: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as research-only summary"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  freshness_matrix: "Assess data recency and availability across sectors using relevant tables."
+  missing_sources: "Identify any missing data elements blocking comprehensive sector analysis."
+  blocking_gaps: "Explain any critical gaps between available data and required freshness."
+  loader_actions: "Propose high-level adjustments to enhance data loader timeliness."
+  verification_queries: "Develop queries to validate data freshness and readiness."
+sql_templates:
+  sector_freshness_check:
+    operation: "SELECT"
+    query: "SELECT trade_date, COUNT(*) AS fresh_count FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) GROUP BY trade_date"
+python_tools:
+  -
+    id: "data_freshness_analyzer_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "trade_date"
+    outputs:
+      - "freshness_analysis"
+    approved_tables:
+      - "market.index_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze data freshness using available dates.\n    fresh_data_dates = context['market.index_eod']['trade_date']\n    result = {'data_freshness': max(fresh_data_dates)}\n    return result"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "schema_consistency"
+  - "temporal_relevance"
+  - "research_pragmatics"
+synthesis_guidance: "{'sector_comparison': 'Explore how data variability impacts sector analysis relative to freshness.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:58:29"
+generation_model: "gpt-4o"
+validation_errors:
+  - "data_freshness_analyzer_tool: execution failed: KeyError: 'market.index_eod'"
+review:
+  status: "needs_heal"
+  findings:
+    - "data_freshness_analyzer_tool: execution failed: KeyError: 'market.index_eod'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

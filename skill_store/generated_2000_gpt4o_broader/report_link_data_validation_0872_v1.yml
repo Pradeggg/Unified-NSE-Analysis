@@ -1,0 +1,54 @@
+id: "report_link_data_validation_0872_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0872"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for pre market: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "The plan involves validating the metadata of enhanced reports and filtering relevant stock rows. Focus on identifying any missing or incorrect data in pre-market institutional reviews."
+sql_templates:
+  -
+    name: "Validate Enhanced Runs"
+    query: "SELECT run_id, analysis_date, universe_size, stocks_analyzed, notes FROM report.enhanced_runs WHERE market_composite_score IS NULL OR stocks_filtered < universe_size;"
+  -
+    name: "Check Filtered Stocks"
+    query: "SELECT symbol, current_price, volume, day_change_pct FROM report.enhanced_filtered_stocks WHERE day_change_pct IS NULL OR volume = 0;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Check if market composite score is null in enhanced runs."
+  - "Verify that stocks filtered are less than universe size."
+  - "Identify stocks with null day change percentage or zero volume."
+synthesis_guidance: "Focus on revealing gaps in data readiness and completeness, especially around key market indicators."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

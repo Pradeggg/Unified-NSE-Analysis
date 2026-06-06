@@ -1,0 +1,70 @@
+id: "data_freshness_readiness_audit_1421_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1421"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: last 5 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for last 5 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as portfolio-aware output"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "last_5_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Implement a portfolio-aware quick scan strategy using minimal API calls to verify data freshness across evidence sources for the last 5 sessions."
+sql_templates:
+  -
+    name: "last_5_sessions_check"
+    template: "SELECT DISTINCT trade_date FROM market.equity_eod ORDER BY trade_date DESC LIMIT 5;"
+  -
+    name: "freshness_check"
+    template: "WITH latest_dates AS ( SELECT MAX(trade_date) AS max_trade_date FROM market.equity_eod UNION SELECT MAX(snapshot_date) AS max_snapshot_date FROM scores.stage_snapshots ) SELECT * FROM latest_dates;"
+python_tools:
+  -
+    id: "calculate_freshness_score"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "max_dates"
+    outputs:
+      - "freshness_score"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context): max_dates = context.inputs['max_dates']; return {'freshness_score': min(max_dates.values())}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure freshness data covers the last 5 sessions."
+  - "Validate database loader's sync against expected schema updates."
+synthesis_guidance: "Focus on ensuring that key datasets are up-to-date for informed decision-making in market analysis."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:08"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_freshness_score: execution failed: AttributeError: 'dict' object has no attribute 'inputs'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_freshness_score: execution failed: AttributeError: 'dict' object has no attribute 'inputs'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

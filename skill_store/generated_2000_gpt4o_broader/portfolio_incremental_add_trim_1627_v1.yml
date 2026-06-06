@@ -1,0 +1,65 @@
+id: "portfolio_incremental_add_trim_1627_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1627"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: debug trace."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for last 5 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Monitor portfolio sector-relative performance over the last five sessions. Determine incremental add/trim decisions by analyzing exposure, signals, and comparative sector movement."
+sql_templates:
+  -
+    name: "Sector_Performance_Last_5_Sessions"
+    query: "WITH recent_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL '5 days') SELECT sector, AVG(change_1d_pct) as avg_daily_change, AVG(change_1w_pct) as avg_weekly_change FROM recent_snapshots GROUP BY sector;"
+python_tools:
+  -
+    id: "calculate_add_trim_suggestions"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "recent_sector_performance"
+      - "current_holdings"
+    outputs:
+      - "add_candidates"
+      - "trim_candidates"
+    approved_tables:
+
+    code: "def run(context):\n    sector_performance = context['recent_sector_performance']\n    holdings = context['current_holdings']\n    # Logic to identify add/trim candidates\n    add_candidates, trim_candidates = [], [] \n    for sector_data in sector_performance:\n        if sector_data['avg_weekly_change'] > 0.05:\n            # Sector is robust, consider hold positions for addition\n            for holding in holdings:\n                if holding['sector'] == sector_data['sector']:\n                    add_candidates.append(holding['symbol'])\n        elif sector_data['avg_weekly_change'] < -0.05:\n            # Sector is weak, consider trim positions in that sector\n            for holding in holdings:\n                if holding['sector'] == sector_data['sector']:\n                    trim_candidates.append(holding['symbol'])\n    return {'add_candidates': add_candidates, 'trim_candidates': trim_candidates}"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "type_check"
+  - "null_check"
+  - "consistency_check"
+synthesis_guidance: "{'approach': 'Compare sector performance over the last 5 sessions against current holdings, identifying sectors and stocks for potential adds or trims.', 'prioritization': \"Focus on sectors with either strong or weak relative performance against the portfolio's current exposure.\"}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:31"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_add_trim_suggestions: execution failed: KeyError: 'recent_sector_performance'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_add_trim_suggestions: execution failed: KeyError: 'recent_sector_performance'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,72 @@
+id: "corporate_events_results_watchlist_0093_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0093"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: concise table."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as concise table"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "weekly_review"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  intents:
+    - "corporate event monitoring"
+    - "result analytics"
+  operations:
+    - "fetch_event_data"
+    - "analyze_results"
+sql_templates:
+  fetch_corporate_events:
+    query: "SELECT symbol, event_type, event_date, purpose_raw, detail FROM signals.corporate_events WHERE event_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days' ORDER BY event_date ASC"
+  fetch_results_analysis:
+    query: "SELECT symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct, eps_yoy_pct, verdict FROM scores.results_analysis WHERE period_end > CURRENT_DATE - INTERVAL '90 days' ORDER BY filing_date DESC"
+python_tools:
+  -
+    id: "run_context_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "event_data"
+      - "results_data"
+    outputs:
+      - "integrated_insights"
+    approved_tables:
+      - "signals.corporate_events"
+      - "scores.results_analysis"
+    code: "def run(context):\n    event_data = context['event_data']\n    results_data = context['results_data']\n    insights = []\n    for event in event_data:\n        matched_results = [result for result in results_data if result['symbol'] == event['symbol']]\n        insights.append({'symbol': event['symbol'], 'event_detail': event['detail'], 'results': matched_results})\n    return {'integrated_insights': insights}"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Verify event_date is within the next 7 days for upcoming events."
+  - "Analyze recent 90 days results for YoY and QoQ metrics."
+synthesis_guidance: "['Integrate corporate events and results data into a concise watchlist format.', 'Provide insights on event-driven and result-driven stock actions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:11"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_context_analysis: execution failed: KeyError: 'event_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_context_analysis: execution failed: KeyError: 'event_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

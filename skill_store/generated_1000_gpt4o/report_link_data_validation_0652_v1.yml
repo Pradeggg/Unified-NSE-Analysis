@@ -1,0 +1,54 @@
+id: "report_link_data_validation_0652_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0652"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for quarter to date: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Review all report link generation and filter logic for potential errors, focusing on the last quarter's institutional impacts and source integrity."
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE analysis_date >= '2023-01-01' ORDER BY run_ts DESC;"
+    description: "Fetch recent enhanced report runs, filtering by quarter to date."
+  -
+    template: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = ? AND score IS NULL;"
+    description: "Identify stocks with missing scores for a specific run."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all report runs have valid analysis dates."
+  - "Check that all filtered stock entries have non-null scores."
+  - "Verify all generated links resolve correctly."
+synthesis_guidance: "Assemble findings into a debug trace focusing on data integrity and link validation. Prioritize missing data and its impact on institutional assessments."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:50:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

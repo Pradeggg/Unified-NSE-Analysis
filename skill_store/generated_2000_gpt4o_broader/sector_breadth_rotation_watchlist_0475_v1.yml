@@ -1,0 +1,81 @@
+id: "sector_breadth_rotation_watchlist_0475_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0475"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: risk-first review; timeframe: pre market; response style: portfolio-aware output."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "risk-first review for pre market: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as portfolio-aware output"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "risk-first_review"
+  - "pre_market"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Fetch latest sector breadth data for pre-market India session."
+  - "Identify sectors with improving breadth and stage 2 participation."
+  - "Rank sectors based on relative strength and price momentum factors."
+  - "Highlight candidate stocks for portfolio watchlist."
+sql_templates:
+  -
+    description: "Select top 3 sectors with highest change in 5-day breadth."
+    template: "SELECT sector, change_5d FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) ORDER BY change_5d DESC LIMIT 3;"
+python_tools:
+  -
+    id: "run_sector_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      -
+        name: "sql_result"
+        type: "DataFrame"
+    outputs:
+      -
+        name: "sector_insights"
+        type: "dict"
+    approved_tables:
+      - "breadth.sector_daily"
+      - "breadth.ma_pct_above"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run_sector_analysis(sql_result):\n    # Extract improving sectors based on change\n    improving_sectors = sql_result.head(3)['sector'].tolist()\n    return {'improving_sectors': improving_sectors}"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure SQL result is non-empty."
+  - "Validate sector listings against defined thresholds."
+  - "Candidate symbols must map to approved sectors."
+synthesis_guidance: "['Focus on sectors with strong breadth signals.', 'Quantify stage 2 transitions and highlight stocks.', 'Prepare data for use in TradingView and portfolio analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:40"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_sector_analysis: inputs must contain only strings"
+  - "run_sector_analysis: must define run(context)"
+  - "run_sector_analysis: outputs must contain only strings"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_sector_analysis: inputs must contain only strings"
+    - "run_sector_analysis: must define run(context)"
+    - "run_sector_analysis: outputs must contain only strings"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

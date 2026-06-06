@@ -1,0 +1,70 @@
+created_at: "2026-06-06T12:44:14"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata and filtered stock rows. Focus on position-sizing context for intraday timeframe; response style ranks candidates."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0288_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for intraday context: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    name: "validate_data_integrity"
+    function: "def run(context):\n    missing_data_query = '''SELECT run_id, analysis_date, universe_size - stocks_analyzed AS missing_data_count \n                            FROM report.enhanced_runs \n                            WHERE universe_size > stocks_analyzed;'''\n    broken_links_query = '''SELECT run_id, symbol \n                            FROM report.enhanced_filtered_stocks \n                            WHERE recommendation IS NULL;'''\n    missing_data_results = context.execute_query(missing_data_query)\n    broken_links_results = context.execute_query(broken_links_query)\n    findings = []\n    for row in missing_data_results:\n        findings.append({'run_id': row['run_id'], 'issue': 'missing_data', 'details': row['missing_data_count']})\n    for row in broken_links_results:\n        findings.append({'run_id': row['run_id'], 'issue': 'broken_link', 'details': row['symbol']})\n    return findings"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: code is required"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: language must be python"
+    - "<missing-id>: mode must be read_only"
+    - "<missing-id>: outputs must be a non-empty list"
+    - "report.enhanced_runs.missing_data_count is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  check_missing_data:
+    description: "Identify missing data in the report metadata by comparing universe size to stocks analyzed."
+    statement: "SELECT run_id, analysis_date, universe_size - stocks_analyzed AS missing_data_count FROM report.enhanced_runs WHERE universe_size > stocks_analyzed;"
+  find_broken_links:
+    description: "Detect potential broken links by finding stocks without a recommendation."
+    statement: "SELECT run_id, symbol FROM report.enhanced_filtered_stocks WHERE recommendation IS NULL;"
+status: "test_failed"
+synthesis_guidance: "Synthesize findings by cross-referencing identified missing or incomplete data with relevant report metadata and stock details. Rank issues based on severity and impact."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "ranked_candidates"
+title: "Enhanced Report Data Validation Variant 0288"
+tool_plan_template: "Using the provided schemas and tables, validate report metadata and ensure data integrity for position-sizing with intraday context. Determine broken links, missing data, and provide ranked candidate solutions."
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: language must be python"
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: outputs must be a non-empty list"
+  - "report.enhanced_runs.missing_data_count is not approved"
+validation_rules:
+  - "Ensure all referenced run_ids are valid and exist in metadata tables."
+  - "Validate that non-empty result sets from SQL indicate potential issues."
+  - "Confirm data consistency across all provided inputs."
+version: 1

@@ -1,0 +1,58 @@
+id: "report_link_data_validation_1810_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1810"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for today: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  use_cases:
+    -
+      title: "Verify Enhanced Report Links"
+      sql_templates:
+        -
+          description: "Find missing data and broken links from today's report"
+          readOnly: true
+          sql: "WITH latest_run AS (SELECT MAX(run_ts) as latest_run_ts FROM report.enhanced_runs) SELECT er.run_id, er.analysis_date, er.universe_size, ef.symbol, ef.recommendation FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id WHERE er.run_ts = (SELECT latest_run_ts FROM latest_run) AND (ef.symbol IS NULL OR ef.recommendation IS NULL);"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  -
+    check: "run_id existence"
+    table: "report.enhanced_runs"
+    message: "Ensure run_id matches between report metadata and filtered stocks."
+synthesis_guidance: "{'capture': ['Identify key data points missing from reports.', 'Link run metadata with stock filter details.'], 'output': ['Provide actionable insights to repair links and fill missing data.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,53 @@
+id: "insider_bulk_deal_signal_review_1634_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1634"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for last 20 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as debug trace"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Select latest insider alerts and bulk deal symbols with relevant stage and score information."
+    sql: "WITH recent_insider_alerts AS ( SELECT symbol, MAX(alert_date) as latest_alert_date FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '20 days' GROUP BY symbol ), recent_bulk_deals AS ( SELECT symbol, MAX(deal_date) as latest_deal_date FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '20 days' GROUP BY symbol ) SELECT DISTINCT s.symbol, s.stage, s.technical_score, s.trading_signal FROM scores.stage_snapshots s JOIN recent_insider_alerts i ON s.symbol = i.symbol JOIN recent_bulk_deals b ON s.symbol = b.symbol WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY s.technical_score DESC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all JOIN conditions align symbols correctly across tables."
+  - "Validate date filters align with input pattern constraints."
+synthesis_guidance: "['Focus on identifying patterns of accumulation or distribution.', 'Confirm technical indicators align with insider or institutional actions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

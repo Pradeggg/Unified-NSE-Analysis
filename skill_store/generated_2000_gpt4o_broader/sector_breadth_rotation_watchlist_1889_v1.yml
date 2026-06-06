@@ -1,0 +1,54 @@
+id: "sector_breadth_rotation_watchlist_1889_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1889"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for intraday context: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as action watchlist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Construct SQL to extract sector ranking based on breadth, stage2 participation, and price momentum. Enhance with source-trail validation in Python if needed."
+sql_templates:
+  -
+    name: "sector_breadth_ranking"
+    description: "Rank sectors by breadth, stage2 participation, and trend signals."
+    sql: "SELECT b.snapshot_date, b.sector, b.pct_above_50dma, m.stage2_pct, s.stage_score, s.trend_signal FROM breadth.sector_daily b JOIN breadth.ma_pct_above m ON b.snapshot_date = m.snapshot_date JOIN scores.stage_snapshots s ON b.snapshot_date = s.snapshot_date AND b.sector = s.sector WHERE b.breadth_signal = 'positive' ORDER BY s.stage_score DESC;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sectors are ranked based on combined breadth and stage2 participation metrics."
+  - "Identify improving sectors and their candidate symbols."
+synthesis_guidance: "Focus on sectors showing strong breadth and participation in Stage 2, validating rankings with price momentum. Enhance final output with source-trail verification for context reliability."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

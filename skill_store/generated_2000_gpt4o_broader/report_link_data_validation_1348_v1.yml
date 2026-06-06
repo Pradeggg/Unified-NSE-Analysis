@@ -1,0 +1,54 @@
+id: "report_link_data_validation_1348_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1348"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: last 3 months; response style: exceptions and gaps first."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for last 3 months: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Analyze report links and stock data for gaps/errors in position-sizing over the last three months."
+sql_templates:
+  -
+    name: "FetchEnhancedRunMetadata"
+    query: "SELECT run_id, analysis_date, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    name: "FetchFilteredStockRows"
+    query: "SELECT run_id, symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months');"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Status must be generated."
+  - "SQL queries must not involve data manipulation beyond read operations."
+  - "Ensure evidence aligns with the Indian market context."
+synthesis_guidance: "Focus on identifying exceptions and gaps in the data validation first, particularly those impacting position-sizing context."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

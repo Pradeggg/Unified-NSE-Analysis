@@ -1,0 +1,151 @@
+card:
+  created_at: "2026-06-06T12:50:58"
+  created_by: "llm_generated"
+  description: "QA audit for report links, data presence, and freshness. Focus on Indian market latest EOD."
+  domain: "report_qa"
+  evidence_required:
+    tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+  generation_model: "gpt-4o"
+  id: "skill_card_agent_adda_001_0716_v1"
+  input_patterns:
+    - "Check broken report links and data absence for Indian market EOD reports"
+    - "Verify latest EOD reports for data presence and correct links"
+    - "Freshness check for report link and data issues"
+  output_contract:
+    - "findings"
+    - "broken_links"
+    - "missing_data"
+    - "remediation"
+    - "verification"
+  python_tools:
+    -
+      name: "tool_1"
+      run: "def run(context): pass"
+      type: "object"
+  review:
+    attempts: 3
+    findings:
+      - "description is required"
+      - "domain is required"
+      - "evidence_required is required"
+      - "id is required"
+      - "input_patterns is required"
+      - "output_contract is required"
+      - "tags are required"
+      - "title is required"
+      - "validation_rules are required"
+      - "version is required"
+      - "version must be a positive integer"
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "pending"
+  sql_templates:
+    metadata_extraction: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+    stock_data_validation: "SELECT symbol, current_price, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = ?;"
+  status: "generated"
+  synthesis_guidance:
+    - "For links verification, cross-check against extracted run metadata."
+    - "Correlate missing data with stock data validation results."
+  tags:
+    - "report_qa"
+    - "links"
+    - "data_validation"
+    - "freshness_audit"
+    - "EOD_reports"
+  title: "Enhanced Report Link QA Audit"
+  tool_plan_template:
+    id: "agent_tool_plan_001"
+    steps:
+      - "Extract metadata and stock data from approved tables."
+      - "Validate run timestamps for freshness (latest EOD)."
+      - "Ensure links generated from metadata are accessible."
+      - "Check the presence and integrity of data in related HTML files."
+      - "Compile findings into a QA checklist report."
+  validation_rules:
+    - "Ensure the latest run timestamp corresponds with latest EOD."
+    - "All links in metadata should be verified for access."
+    - "Check HTML data presence according to metadata rules."
+  version: 1
+created_at: "2026-06-06T12:50:58"
+created_by: "llm_generated"
+description: "QA audit for report links, data presence, and freshness. Focus on Indian market latest EOD."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+findings:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: language must be python"
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: outputs must be a non-empty list"
+generation_model: "gpt-4o"
+id: "skill_card_agent_adda_001_0716_v1"
+input_patterns:
+  - "Check broken report links and data absence for Indian market EOD reports"
+  - "Verify latest EOD reports for data presence and correct links"
+  - "Freshness check for report link and data issues"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  - "tool_1"
+review:
+  attempts: 3
+  findings:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  metadata_extraction: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+  stock_data_validation: "SELECT symbol, current_price, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = ?;"
+status: "test_failed"
+synthesis_guidance: "['For links verification, cross-check against extracted run metadata.', 'Correlate missing data with stock data validation results.']"
+tags:
+  - "report_qa"
+  - "links"
+  - "data_validation"
+  - "freshness_audit"
+  - "EOD_reports"
+title: "Enhanced Report Link QA Audit"
+tool_plan_template:
+  id: "agent_tool_plan_001"
+  steps:
+    - "Extract metadata and stock data from approved tables."
+    - "Validate run timestamps for freshness (latest EOD)."
+    - "Ensure links generated from metadata are accessible."
+    - "Check the presence and integrity of data in related HTML files."
+    - "Compile findings into a QA checklist report."
+validation_errors:
+  - "description is required"
+  - "domain is required"
+  - "evidence_required is required"
+  - "id is required"
+  - "input_patterns is required"
+  - "output_contract is required"
+  - "tags is required"
+  - "title is required"
+  - "validation_rules is required"
+  - "version is required"
+  - "version must be a positive integer"
+validation_rules:
+  - "Ensure the latest run timestamp corresponds with latest EOD."
+  - "All links in metadata should be verified for access."
+  - "Check HTML data presence according to metadata rules."
+version: 1

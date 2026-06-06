@@ -1,0 +1,53 @@
+id: "signal_outcome_feedback_review_1537_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1537"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: research-only summary."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for last 20 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as research-only summary"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze recent signal performance and sector-relative comparisons for the last 20 sessions."
+sql_templates:
+  -
+    description: "Fetch signal outcomes and performance metrics for the last 20 sessions"
+    sql: "SELECT s.symbol, s.sector, s.signal, s.date_issued, s.hit_target, s.hit_stop, e.close AS price_at_resolution, e.change_pct AS resolution_change FROM signals.signal_log s JOIN market.equity_eod e ON s.symbol = e.symbol AND e.trade_date = s.date_resolved WHERE s.date_issued >= CURRENT_DATE - INTERVAL '20 days';"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure results cover all sectors"
+  - "Check hit_target and hit_stop indicators"
+  - "Summarize outcome success and failure patterns"
+synthesis_guidance: "['Evaluate signal effectiveness across sectors', 'Identify patterns in successful and failed signals']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

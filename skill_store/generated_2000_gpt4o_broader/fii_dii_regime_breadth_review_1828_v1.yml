@@ -1,0 +1,79 @@
+id: "fii_dii_regime_breadth_review_1828_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1828"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for last 5 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as action watchlist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  - "Analyze trade_date, fii_net_5d, dii_net_5d from signals.fii_dii_flows to assess flow context."
+  - "Evaluate current market regime and confidence from signals.regime_history."
+  - "Determine breadth_context using ad_oscillator and ad_signal from breadth.market_daily."
+  - "Confirm index trends with trend_signal from market.index_eod."
+sql_templates:
+  -
+    query: "SELECT trade_date, fii_net_5d, dii_net_5d, flow_signal FROM signals.fii_dii_flows WHERE trade_date BETWEEN CURRENT_DATE - INTERVAL 5 DAY AND CURRENT_DATE"
+    description: "Retrieve FII and DII net flows for the last 5 sessions to establish flow context."
+  -
+    query: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date BETWEEN CURRENT_DATE - INTERVAL 5 DAY AND CURRENT_DATE"
+    description: "Retrieve regime and confidence data for the last 5 sessions."
+  -
+    query: "SELECT trade_date, ad_signal, ad_oscillator FROM breadth.market_daily WHERE trade_date BETWEEN CURRENT_DATE - INTERVAL 5 DAY AND CURRENT_DATE"
+    description: "Retrieve adv/dec signal data for assessing market breadth context."
+  -
+    query: "SELECT trade_date, trend_signal FROM market.index_eod WHERE trade_date BETWEEN CURRENT_DATE - INTERVAL 5 DAY AND CURRENT_DATE"
+    description: "Retrieve index trend signals to confirm market direction."
+python_tools:
+  -
+    id: "compute_risk_flags"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "flow_context"
+      - "regime"
+      - "breadth_context"
+      - "index_confirmation"
+    outputs:
+      - "risk_flags"
+    approved_tables:
+
+    code: "def run(context): \n    # Mock risk flag computation logic\n    if context['flow_context']['fii_net_5d'] > 500 and context['flow_context']['dii_net_5d'] < -500:\n        return {'risk_flags': 'Risk-On'}\n    else:\n        return {'risk_flags': 'Neutral'}"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data freshness within the last 5 trading sessions."
+  - "Validate flow_signal consistency with fii_net_5d and dii_net_5d."
+  - "Check alignment between regime and confidence levels."
+  - "Verify that breadth_context reflects recent ad_oscillator trends."
+synthesis_guidance: "['Summarize the integrated context of FII/DII flows, market regime, and breadth.', 'Highlight key points for action watchlist based on confirmed trends.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:26"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.day is not approved"
+  - "market.index_eod.day is not approved"
+  - "signals.fii_dii_flows.day is not approved"
+  - "signals.regime_history.day is not approved"

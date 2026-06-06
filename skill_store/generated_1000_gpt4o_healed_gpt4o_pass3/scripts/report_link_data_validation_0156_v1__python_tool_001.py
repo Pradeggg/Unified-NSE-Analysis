@@ -1,0 +1,1 @@
+def run(context): findings = {'broken_links': [], 'missing_data': [], 'findings': []}; return findings

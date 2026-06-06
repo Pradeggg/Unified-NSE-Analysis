@@ -1,0 +1,88 @@
+id: "data_freshness_readiness_audit_1001_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1001"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: today; response style: concise table."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for today: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as concise table"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    tool_id: "run_freshness_check"
+    instruction: "Execute queries to assess data freshness for today's needs."
+    evidence_inputs:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "breadth.market_daily"
+      - "breadth.ma_pct_above"
+      - "report.enhanced_runs"
+    tool_type: "python_tool"
+    attribute_name: "freshness_check_output"
+sql_templates:
+
+python_tools:
+  -
+    id: "run_freshness_check"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "breadth.market_daily"
+      - "breadth.ma_pct_above"
+      - "report.enhanced_runs"
+    outputs:
+      - "freshness_matrix"
+      - "missing_sources"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "breadth.market_daily"
+      - "breadth.ma_pct_above"
+      - "report.enhanced_runs"
+    code: "def run(context):\n    # Check the latest trade_date or snapshot_date for each table\n    # Return freshness_matrix and missing_sources\n    pass"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all required evidence sources are checked"
+  - "Confirm data freshness against today's date"
+synthesis_guidance: "['Compile a concise table showing freshness status', 'Highlight any tables with missing updates']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:09"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_freshness_check: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_freshness_check: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

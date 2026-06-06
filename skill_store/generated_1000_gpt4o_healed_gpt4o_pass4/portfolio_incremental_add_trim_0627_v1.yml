@@ -1,0 +1,64 @@
+created_at: "2026-06-06T12:50:14"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: debug trace."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0627_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for last 5 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze recent performance to determine potential adds and trims\n    # Placeholder for actual analysis logic\n    return {\n        'potential_adds': [],\n        'potential_trims': []\n    }"
+    id: "recent_performance_analysis"
+    inputs:
+      - "recent_performance"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "potential_adds"
+      - "potential_trims"
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  select_recent_performance:
+    params:
+      - "sector"
+    template: "WITH recent_performance AS (SELECT symbol, sector, change_1w_pct, stage_score FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '7 days') SELECT * FROM recent_performance WHERE sector = :sector"
+status: "validated"
+synthesis_guidance: "{'combine_data_sources': 'Aggregate data from stage_snapshots and holdings to identify add/trim candidates.', 'sector_comparison': 'Use sector-relative performance to make decisions.'}"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "debug_trace"
+title: "Portfolio Incremental Add Trim Review Variant 0627"
+tool_plan_template:
+  narrative: "We will evaluate the portfolio performance and make decisions on adding or trimming based on sector-relative performance and technical signals over the last 5 sessions."
+  template_id: "add_trim_evaluate_tool_0627"
+validation_rules:
+  - "ensure_holdings_exist"
+  - "validate_sector_data"
+version: 1

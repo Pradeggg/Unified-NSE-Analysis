@@ -1,0 +1,53 @@
+id: "insider_bulk_deal_signal_review_0710_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0710"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: today; response style: QA checklist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for today: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as QA checklist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "today"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review insider and bulk deals with technical context. Export findings for today's TradingView analysis."
+sql_templates:
+  -
+    name: "insider_and_bulk_deals_today"
+    template: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), insider_deals AS (SELECT symbol, entity, qty, value_cr, source, insider_score FROM signals.insider_alerts WHERE alert_date = CURRENT_DATE), bulk_deals AS (SELECT symbol, entity, side, qty, price, source FROM signals.bulk_block_deals WHERE deal_date = CURRENT_DATE), combined AS (SELECT i.symbol, i.entity AS insider_entity, b.entity AS bulk_entity, i.qty AS insider_qty, b.qty AS bulk_qty, i.value_cr, b.price, i.source AS insider_source, b.source AS bulk_source, s.stage, s.trading_signal FROM insider_deals i JOIN bulk_deals b ON i.symbol = b.symbol JOIN latest_snapshots s ON i.symbol = s.symbol) SELECT * FROM combined WHERE s.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all required evidence tables are used."
+  - "Verify SQL syntax aligns with PostgreSQL standards."
+  - "Check output against the defined contract fields."
+synthesis_guidance: "Focus on extracting actionable accumulation or distribution signals from today's insider and bulk deals."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:59"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

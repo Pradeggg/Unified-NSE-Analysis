@@ -1,0 +1,64 @@
+created_at: "2026-06-06T12:51:25"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: pre market; response style: QA checklist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0778_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Fetch VCP breakout stocks with strong fundamentals."
+    template: "SELECT symbol, company_name, price, rsi, relative_strength, enhanced_fund_score \nFROM scores.stage2_vcp_picks \nWHERE vcp_score > 7 AND enhanced_fund_score > 7 \nORDER BY vcp_score DESC;"
+status: "validated"
+synthesis_guidance: "['Use the output of SQL templates to generate a list of strong VCP breakout candidates.', 'Combine SQL and Python tool outputs to create a comprehensive QA checklist for pre-market preparation.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "pre_market"
+  - "QA_checklist"
+title: "VCP Breakouts With Fundamentals Variant 0778"
+tool_plan_template:
+  python_tools:
+    -
+      approved_tables:
+        - "market.equity_eod"
+        - "scores.stage_snapshots"
+        - "scores.stage2_vcp_picks"
+      code: "def run(context):\n    # Code to filter symbols based on criteria\n    pass"
+      id: "run"
+      inputs: "context"
+      language: "python"
+      mode: "read_only"
+      outputs: "filtered_symbols"
+validation_rules:
+  - "Ensure the filters are applied correctly based on the VCP and fundamental scores."
+  - "Validate that SQL queries only perform read operations."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

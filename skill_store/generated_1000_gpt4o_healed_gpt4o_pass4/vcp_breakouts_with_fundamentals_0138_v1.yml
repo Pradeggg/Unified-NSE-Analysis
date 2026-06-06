@@ -1,0 +1,145 @@
+card:
+  created_at: "2026-06-06T12:42:21"
+  created_by: "llm_generated"
+  description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: narrative plus evidence."
+  domain: "screening"
+  evidence_required:
+    tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "vcp_breakouts_with_fundamentals_0138_v1"
+  input_patterns:
+    - "stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "VCP breakout stocks for TradingView"
+    - "quality breakouts with strong fundamentals"
+    - "position-sizing context for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "quality breakouts with strong fundamentals as narrative plus evidence"
+  output_contract:
+    - "filters"
+    - "candidates"
+    - "tradingview_symbols"
+    - "evidence"
+    - "risks"
+  python_tools:
+    -
+      approved_tables:
+        - "market.equity_eod"
+        - "scores.stage_snapshots"
+      code: "def run(context):\n    evidence = []\n    for stock in context.get('stocks', []):\n        symbol = stock.get('symbol')\n        if symbol:\n            evidence.append({'symbol': symbol, 'insight': 'Potential breakout with strong fundamentals'})\n    return evidence"
+      inputs:
+        - "stocks"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "narrative_evidence"
+      required_function: "run(context)"
+  review:
+    attempts: 3
+    findings:
+
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "healed"
+  sql_templates:
+    -
+      name: "HighVolumeNewHighs"
+      query: "WITH RecentHighs AS (SELECT symbol, MAX(high) AS recent_high FROM market.equity_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '20 days') GROUP BY symbol) SELECT e.symbol, e.trade_date, e.close, e.volume FROM market.equity_eod e JOIN RecentHighs rh ON e.symbol = rh.symbol WHERE e.high = rh.recent_high AND e.volume > (SELECT AVG(volume) FROM market.equity_eod WHERE symbol = e.symbol AND trade_date >= (CURRENT_DATE - INTERVAL '20 days'))"
+    -
+      name: "VCPBreakouts"
+      query: "SELECT sp.symbol, sp.price, sp.change_1d_pct, sp.vcp_score FROM scores.stage2_vcp_picks sp WHERE sp.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND sp.vcp_breakout_pct > 0 ORDER BY sp.vcp_score DESC LIMIT 50"
+  status: "generated"
+  synthesis_guidance:
+    focus: "Highlight stocks with potential breakouts that align with high fundamental scores."
+    style: "narrative_plus_evidence"
+  tags:
+    - "vcp"
+    - "breakout"
+    - "new_high"
+    - "fundamentals"
+    - "tradingview"
+    - "position-sizing_context"
+    - "last_20_sessions"
+    - "narrative_plus_evidence"
+  title: "VCP Breakouts With Fundamentals Variant 0138"
+  tool_plan_template:
+    strategy: "Identify stocks demonstrating VCP and breakout patterns, then filter based on strong fundamentals."
+    timeline: "Focus on data from the last 20 trading sessions."
+  validation_errors:
+
+  validation_rules:
+    - "Ensure only stocks with positive VCP breakout percentage are selected."
+    - "Stocks must demonstrate recent price highs with significant volume."
+  version: 1
+created_at: "2026-06-06T12:42:21"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: narrative plus evidence."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0138_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Example code for interpreting narrative evidence\n    evidence = []\n    for symbol in context['symbol']:\n        # Custom analysis logic here\n        evidence.append({'symbol': symbol, 'insight': 'Potential breakout with strong fundamentals'})\n    return evidence"
+    inputs:
+      - "symbol"
+      - "trade_date_range"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "narrative_evidence"
+    required_function: "run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: execution failed: KeyError: 'symbol'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    name: "HighVolumeNewHighs"
+    query: "WITH RecentHighs AS (SELECT symbol, MAX(high) AS recent_high FROM market.equity_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '20 days') GROUP BY symbol) SELECT e.symbol, e.trade_date, e.close, e.volume FROM market.equity_eod e JOIN RecentHighs rh ON e.symbol = rh.symbol WHERE e.high = rh.recent_high AND e.volume > (SELECT AVG(volume) FROM market.equity_eod WHERE symbol = e.symbol AND trade_date >= (CURRENT_DATE - INTERVAL '20 days'))"
+  -
+    name: "VCPBreakouts"
+    query: "SELECT sp.symbol, sp.price, sp.change_1d_pct, sp.vcp_score FROM scores.stage2_vcp_picks sp WHERE sp.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND sp.vcp_breakout_pct > 0 ORDER BY sp.vcp_score DESC LIMIT 50"
+status: "test_failed"
+synthesis_guidance: "{'style': 'narrative_plus_evidence', 'focus': 'Highlight stocks with potential breakouts that align with high fundamental scores.'}"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "narrative_plus_evidence"
+task: "Heal an untrusted generated Agent Adda skill card."
+title: "VCP Breakouts With Fundamentals Variant 0138"
+tool_plan_template:
+  strategy: "Identify stocks demonstrating VCP and breakout patterns, then filter based on strong fundamentals."
+  timeline: "Focus on data from the last 20 trading sessions."
+validation_errors:
+  - "<missing-id>: execution failed: KeyError: 'symbol'"
+validation_rules:
+  - "Ensure only stocks with positive VCP breakout percentage are selected."
+  - "Stocks must demonstrate recent price highs with significant volume."
+version: 1

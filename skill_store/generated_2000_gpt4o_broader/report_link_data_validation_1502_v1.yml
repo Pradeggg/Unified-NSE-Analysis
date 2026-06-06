@@ -1,0 +1,46 @@
+id: "report_link_data_validation_1502_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1502"
+description: "Provide a research-only summary to validate enhanced report metadata, filtered stock data, and source trails. Focus on deep institutional review for the Indian market today."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for today: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "today"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "The tool will perform a read-only validation of report links and missing data by analyzing the tables `report.enhanced_runs` and `report.enhanced_filtered_stocks`."
+sql_templates:
+  validate_run_links: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE DATE(run_ts) = CURDATE();"
+  validate_stock_data: "SELECT run_id, symbol, current_price, recommendation FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE DATE(run_ts) = CURDATE());"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Check that all report links correspond to data present in `report.enhanced_runs` and `report.enhanced_filtered_stocks`."
+  - "Confirm the presence of stock data for each report link generated today."
+synthesis_guidance: "Summarize the essential findings in a research-only manner, highlighting any validation issues and suggesting research-focused approaches."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:09:22"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.curdate is not approved"
+  - "report.enhanced_runs.date is not approved"

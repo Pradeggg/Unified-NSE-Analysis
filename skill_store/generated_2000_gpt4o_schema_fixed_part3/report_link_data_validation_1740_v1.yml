@@ -1,0 +1,67 @@
+id: "report_link_data_validation_1740_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Check Report Link Integrity and Data Completeness"
+description: "Analyze enhanced report data for broken links and missing content related to Indian market analysis exported to TradingView."
+input_patterns:
+  - "analyze report links for data gaps"
+  - "check integrity of generated links"
+  - "evaluate TradingView report export links"
+tags:
+  - "report_sanity_check"
+  - "link_validation"
+  - "TradingView_data"
+  - "QA_checklist"
+  - "Indian_market_analysis"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    step: "Load and join tables run metadata with filtered stock data."
+    technical_detail: "Use a join on run_id to merge tables."
+  -
+    step: "Apply filters to highlight incomplete or inconsistent data."
+    technical_detail: "Look for null or unexpected values in key data columns."
+  -
+    step: "Identify URLs in notes for broken links."
+    technical_detail: "Use a Python tool to simulate link check."
+sql_templates:
+  -
+    description: "Identify reports with potentially missing stock data in the last 20 sessions."
+    sql: "SELECT er.run_id, er.run_ts, er.notes, COUNT(ehs.symbol) AS filtered_stocks\nFROM report.enhanced_runs er\nLEFT JOIN report.enhanced_filtered_stocks ehs ON er.run_id = ehs.run_id\nWHERE er.run_ts >= CURRENT_DATE - INTERVAL '20 days'\nGROUP BY er.run_id, er.run_ts, er.notes\nHAVING COUNT(ehs.symbol) < 5\nORDER BY er.run_ts DESC;"
+python_tools:
+  -
+    id: "url_link_checker"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "url_list"
+    outputs:
+      - "valid_urls"
+      - "invalid_urls"
+    approved_tables:
+
+    code: "def run(context):\n    results = {'valid_urls': [], 'invalid_urls': []}\n    for url in context['url_list']:\n        # Dummy check; replace with actual HTTP HEAD method\n        if 'http://' in url or 'https://' in url:\n            results['valid_urls'].append(url)\n        else:\n            results['invalid_urls'].append(url)\n    return results"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'guidance': ['Explain results based on the SQL query findings.', 'Highlight action items for broken links and missing data.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:53"
+generation_model: "gpt-4o"
+validation_errors:
+  - "url_link_checker: execution failed: KeyError: 'url_list'"
+review:
+  status: "needs_heal"
+  findings:
+    - "url_link_checker: execution failed: KeyError: 'url_list'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,59 @@
+id: "sector_breadth_rotation_watchlist_0769_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0769"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: post results; response style: QA checklist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for post results: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as QA checklist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "post_results"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "1. Collect timeframe for post-results market assessment.\n2. Extract sector breadth data focusing on pct_above_50dma and breadth_signal.\n3. Identify sectors with increasing stage2_pct and positive changes over 5 days.\n4. Gather stocks from improved sectors with positive technical scores.\n5. Output a ranked sector list and stock symbols for watchlist inclusion."
+sql_templates:
+  -
+    task: "Fetch sector breadth data"
+    query: "SELECT sector, snapshot_date, pct_above_50dma, change_5d, breadth_signal FROM breadth.sector_daily WHERE snapshot_date = {date} AND breadth_signal = 'positive';"
+  -
+    task: "Fetch stage 2 participation"
+    query: "SELECT sector, snapshot_date, stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date = {date} ORDER BY stage2_pct DESC;"
+  -
+    task: "Fetch stock performance data"
+    query: "SELECT symbol, sector, technical_score FROM scores.stage_snapshots WHERE snapshot_date = {date} AND stage = 2 AND technical_score > 0;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sector rankings align with breadth improvements and stage 2 participation."
+  - "Verify candidate symbols have stage 2 designation and positive technical score."
+  - "Check date alignment across data sources."
+synthesis_guidance: "Aggregate data to interpret sector health and produce a prioritized watchlist with potential high-interest symbols."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:34"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.date is not approved"
+  - "breadth.ma_pct_above.sector is not approved"
+  - "breadth.sector_daily.date is not approved"
+  - "scores.stage_snapshots.date is not approved"

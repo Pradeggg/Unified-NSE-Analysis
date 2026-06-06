@@ -1,0 +1,54 @@
+id: "fii_dii_regime_breadth_review_1842_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1842"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: last 3 months; response style: action watchlist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for last 3 months: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as action watchlist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  - "Synthesize market regime, flow, breadth, and index data in Indian context."
+  - "Derive risk-on or risk-off perspective."
+sql_templates:
+  -
+    template: "WITH latest_flows AS (SELECT trade_date, fii_net_today, dii_net_today, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'), latest_regime AS (SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'), latest_breadth AS (SELECT trade_date, advances, declines, ad_signal FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'), latest_index AS (SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE index_symbol = 'Nifty 50' AND trade_date >= CURRENT_DATE - INTERVAL '3 months') SELECT f.trade_date, f.fii_net_today, f.dii_net_today, f.flow_signal, r.regime, r.confidence, b.advances, b.declines, b.ad_signal, i.close, i.change_pct FROM latest_flows f JOIN latest_regime r ON f.trade_date = r.trade_date JOIN latest_breadth b ON f.trade_date = b.trade_date JOIN latest_index i ON f.trade_date = i.trade_date;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data coverage for all specified tables."
+  - "Verify time alignment across references."
+  - "Confirm signal coherence based on flow and breadth context."
+synthesis_guidance: "['Focus on identifying institutional flow trends.', 'Highlight market regime shifts and breadth divergences.', 'Frame analysis as an action watchlist for potential trading strategies.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:25"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

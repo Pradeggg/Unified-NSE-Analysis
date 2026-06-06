@@ -1,0 +1,63 @@
+id: "insider_bulk_deal_signal_review_1158_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1158"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: quarter to date; response style: narrative plus evidence."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for quarter to date: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as narrative plus evidence"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Review insider alerts and bulk/block deals"
+    - "Confirm technical signals"
+    - "Analyze position-sizing context"
+sql_templates:
+  -
+    name: "fetch_insider_alerts"
+    query: "SELECT symbol, alert_date, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_type='insider_buying' AND alert_date >= :start_date ORDER BY alert_date DESC"
+  -
+    name: "fetch_bulk_block_deals"
+    query: "SELECT symbol, deal_date, entity, qty, price, deal_type FROM signals.bulk_block_deals WHERE deal_date >= :start_date ORDER BY deal_date DESC"
+  -
+    name: "fetch_technical_signals"
+    query: "SELECT symbol, price_date, technical_score, rsi, trend_signal FROM scores.stage_snapshots WHERE price_date >= :start_date AND technical_score > 70 ORDER BY technical_score DESC"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure alerts and deals are within the current quarter"
+  - "Exclude symbols with low technical scores"
+  - "Verify all essential data columns are available before analysis"
+synthesis_guidance: "Combine insider and bulk deal data with technical confirmations to identify potential accumulation/distribution scenarios. Verify position-sizing context for insight generation."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

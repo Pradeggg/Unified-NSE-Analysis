@@ -1,0 +1,69 @@
+id: "report_link_data_validation_0004_v1"
+version: 1
+status: "validated"
+domain: "report_analysis"
+title: "Watchlist Creation Validation"
+description: "This skill card validates the creation of a stock watchlist for today's market conditions, ensuring report links are functional and data integrity is maintained."
+input_patterns:
+  - "review broken report links"
+  - "check missing stock data in reports"
+  - "validate today's report links and stock data"
+tags:
+  - "report_analysis"
+  - "link_validation"
+  - "data_integrity"
+  - "watchlist_creation"
+  - "daily_analysis"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+  columns:
+    -
+      - "run_id"
+      - "run_ts"
+      - "notes"
+    -
+      - "run_id"
+      - "symbol"
+      - "recommendation"
+      - "current_price"
+      - "volume"
+tool_plan_template:
+  python_tools:
+    watchlist_validator:
+      id: "validate_watchlist_python_tool_0001"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "report.enhanced_filtered_stocks"
+      outputs:
+        - "verification_results"
+      approved_tables:
+        - "report.enhanced_filtered_stocks"
+      code: "def run(context):\n    return 'Verification logic for watchlist generated today.'"
+sql_templates:
+  run_metadata: "SELECT run_id, run_ts, notes FROM report.enhanced_runs WHERE run_ts::date = CURRENT_DATE"
+  filtered_stocks_today: "SELECT run_id, symbol, recommendation, current_price, volume FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts::date = CURRENT_DATE)"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all data aligns with today's run_id"
+  - "Check current_price and volume for anomalies"
+  - "Verify all links in today's reports are accessible"
+synthesis_guidance: "Summarize findings in a concise table format."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

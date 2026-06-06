@@ -1,0 +1,61 @@
+id: "portfolio_incremental_add_trim_0619_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0619"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: latest EOD; response style: debug trace."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for latest EOD: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Review portfolio using stage snapshots to identify add/trim candidates."
+sql_templates:
+  -
+    template_name: "fetch_portfolio_details"
+    template: "SELECT holdings.symbol, holdings.qty, holdings.avg_cost, stage_snapshots.sector, stage_snapshots.stage, stage_snapshots.stage_score, stage_snapshots.price FROM portfolio.holdings AS holdings JOIN scores.stage_snapshots AS stage_snapshots ON holdings.symbol = stage_snapshots.symbol WHERE stage_snapshots.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+  -
+    id: "identify_candidates"
+    language: "python"
+    mode: "read_only"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    holdings = context['portfolio.holdings']\n    snapshots = context['scores.stage_snapshots']\n    latest_snapshots = snapshots[snapshots['snapshot_date'] == snapshots['snapshot_date'].max()]\n    add_candidates = []\n    trim_candidates = []\n    for holding in holdings:\n        snapshot = latest_snapshots[latest_snapshots['symbol'] == holding['symbol']].iloc[0]\n        if snapshot['stage_score'] > certain_threshold:  # Placeholder for a real threshold\n            add_candidates.append(holding['symbol'])\n        elif snapshot['stage_score'] < certain_threshold:  # Placeholder for a real threshold\n            trim_candidates.append(holding['symbol'])\n    return {'add_candidates': add_candidates, 'trim_candidates': trim_candidates}"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure symbols are correctly matched between holdings and snapshots."
+  - "Fetch only latest snapshot date data."
+synthesis_guidance: "Evaluate current holdings against stage scores to identify potential adds/trims."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "identify_candidates: inputs must be a list"
+  - "identify_candidates: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "identify_candidates: inputs must be a list"
+    - "identify_candidates: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

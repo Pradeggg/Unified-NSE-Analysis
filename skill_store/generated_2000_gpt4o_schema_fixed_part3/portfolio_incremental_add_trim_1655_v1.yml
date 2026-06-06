@@ -1,0 +1,62 @@
+id: "portfolio_incremental_add_trim_1655_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1655"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  steps:
+    - "Retrieve current portfolio holdings with latest stage snapshot data."
+    - "Filter for symbols with constructive buy signals and classify as add candidates."
+    - "Identify symbols with deteriorating signals or stages for trim actions."
+sql_templates:
+  -
+    name: "Retrieve Holdings with Latest Stages"
+    template: "SELECT holdings.symbol, holdings.qty, holdings.avg_cost, scores.stage, scores.trading_signal, scores.stage_score FROM portfolio.holdings AS holdings JOIN scores.stage_snapshots AS scores ON holdings.symbol = scores.symbol WHERE scores.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+  -
+    id: "risk_assessment_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "portfolio_state"
+      - "sector_exposure"
+    outputs:
+      - "risk_flags"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    # Evaluate risk factors based on portfolio state and sector exposure\n    return evaluate_risk(context['portfolio_state'], context['sector_exposure'])"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure latest snapshot_date is used for stage snapshots."
+  - "Validate add candidates based on trading_signal and stage_score thresholds."
+synthesis_guidance: "['Highlight risk profiles in debug trace format.', 'Use sector and market cap categories for detailed exposure analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:29"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.stage_snapshots is not approved"

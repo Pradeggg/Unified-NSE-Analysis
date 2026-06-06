@@ -1,0 +1,63 @@
+id: "sector_breadth_rotation_watchlist_1063_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1063"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: post results; response style: concise table."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for post results: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as concise table"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  tool: "sql"
+  tables:
+    - "breadth.sector_daily"
+    - "scores.stage_snapshots"
+  join_plan:
+    -
+      left_table: "breadth.sector_daily"
+      right_table: "scores.stage_snapshots"
+      condition: "breadth.sector_daily.sector = scores.stage_snapshots.sector"
+sql_templates:
+  -
+    title: "Sector Breadth Daily Refresh"
+    template: "SELECT sd.sector, COUNT(CASE WHEN ss.stage = 'STAGE_2' THEN 1 END) AS stage2_count, AVG(ss.stage_score) AS avg_stage_score, AVG(ss.relative_strength) AS avg_relative_strength FROM breadth.sector_daily sd JOIN scores.stage_snapshots ss ON sd.sector = ss.sector WHERE sd.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sd.sector ORDER BY stage2_count DESC LIMIT 10;"
+    bindings:
+
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:41"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

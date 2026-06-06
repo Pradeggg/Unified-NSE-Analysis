@@ -1,0 +1,73 @@
+id: "insider_bulk_deal_signal_review_1018_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1018"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: latest EOD; response style: concise table."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for latest EOD: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as concise table"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze insider alerts along with bulk deals; examine technical indicators for confirmation and rank symbols by accumulation signals."
+sql_templates:
+  -
+    description: "Select recent insider alerts and bulk deals."
+    template: "WITH recent_insider_alerts AS (SELECT id, symbol, alert_type, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date = CURDATE()), recent_bulk_deals AS (SELECT id, symbol, qty, price FROM signals.bulk_block_deals WHERE deal_date = CURDATE()) SELECT I.symbol, I.qty AS insider_qty, B.qty AS bulk_qty, B.price FROM recent_insider_alerts I JOIN recent_bulk_deals B ON I.symbol = B.symbol;"
+python_tools:
+  -
+    id: "rank_technical_indicators"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      symbols:
+        - "list of symbols"
+      technical_data:
+        - "stage_score"
+        - "rsi"
+        - "trend_signal"
+    outputs:
+      ranked_symbols:
+        - "list of symbols ranked by technical readiness for entry"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context): return sorted(context['symbols'], key=lambda x: (context['technical_data'][x]['stage_score'], context['technical_data'][x]['rsi']), reverse=True)"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure data freshness is no older than EOD."
+  - "Confirm signals and deals were executed on the current trade date."
+  - "Use only approved columns and tables."
+synthesis_guidance: "['Concisely present ranked symbols showing strong accumulation signals.', 'Deduce technical confirmations from provided data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:27"
+generation_model: "gpt-4o"
+validation_errors:
+  - "rank_technical_indicators: inputs must be a list"
+  - "rank_technical_indicators: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "rank_technical_indicators: inputs must be a list"
+    - "rank_technical_indicators: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

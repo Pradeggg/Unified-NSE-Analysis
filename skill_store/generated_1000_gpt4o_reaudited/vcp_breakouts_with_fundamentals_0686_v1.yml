@@ -1,0 +1,75 @@
+created_at: "2026-06-06T12:50:44"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: intraday context; response style: debug trace."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0686_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage2_vcp_picks"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Sample code to analyze VCP breakout strength\n    symbol_data = context['approved_tables']['scores.stage2_vcp_picks']\n    snapshot_data = context['approved_tables']['scores.stage_snapshots']\n    # Process to facilitate analysis\n    breakout_strength = ...  # Analysis logic here\n    fundamentals_robustness = ...  # Analysis logic here\n    return {'breakout_strength': breakout_strength, 'fundamentals_robustness': fundamentals_robustness}"
+    id: "vcp_breakout_analysis"
+    inputs:
+      - "symbol"
+      - "trade_date"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "breakout_strength"
+      - "fundamentals_robustness"
+sql_templates:
+  extraction:
+    description: "Select stocks with new highs and sufficient liquidity."
+    sql: "SELECT e.symbol, e.trade_date, e.high, e.volume FROM market.equity_eod e WHERE e.close > e.week52_high AND e.volume > 1000000;"
+  fundamental_check:
+    description: "Select stocks with strong fundamentals."
+    sql: "SELECT s.symbol, s.fundamental_score FROM scores.stage_snapshots s WHERE s.fundamental_score > 70;"
+  vcp_breakouts:
+    description: "Select strong VCP breakout candidates."
+    sql: "SELECT v.symbol, v.vcp_score, v.vcp_breakout_pct FROM scores.stage2_vcp_picks v WHERE v.vcp_score > 80;"
+status: "test_failed"
+synthesis_guidance: "['Use comprehensive filtering to focus on actionable insights.', 'Prioritize recent data to ensure relevance in the intraday context.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "intraday_context"
+  - "debug_trace"
+title: "VCP Breakouts With Fundamentals Variant 0686"
+tool_plan_template:
+  description: "Plan to identify quality breakout stocks with VCP and strong fundamentals."
+  steps:
+    - "Audit freshness and pull recent data for analysis."
+    - "Select stocks with high VCP scores from scores.stage2_vcp_picks."
+    - "Cross-reference with market.equity_eod for new highs and sufficient liquidity."
+    - "Compile evidence using scores.stage_snapshots for fundamental support."
+validation_rules:
+  - "Ensure all selected stocks meet minimum liquidity requirements."
+  - "Cross-validate breakout and fundamental scores against approved reference tables."
+version: 1
+validation_errors:
+  - "market.equity_eod.e is not approved"
+  - "scores.stage2_vcp_picks.v is not approved"
+  - "scores.stage_snapshots.s is not approved"

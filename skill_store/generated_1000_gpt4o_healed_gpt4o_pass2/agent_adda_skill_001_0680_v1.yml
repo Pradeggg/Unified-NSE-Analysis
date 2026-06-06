@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:50:43"
+created_by: "llm_generated"
+description: "Analyze report link issues and missing data for TradingView export, focusing on the pre-market stage."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_001_0680_v1"
+input_patterns:
+  - "report links not working in TradingView export"
+  - "missing data in report links"
+  - "debug TradingView pre market export issues"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Get latest report run details for analysis."
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '1 day' ORDER BY run_ts DESC;"
+  -
+    description: "Extract filtered stock metadata where scores might affect report link execution."
+    template: "SELECT run_id, symbol, score FROM report.enhanced_filtered_stocks WHERE score BETWEEN 95 AND 100 OR score < 10;"
+status: "validated"
+synthesis_guidance: "Highlight discrepancies in report links and stock scores, and propose verification steps."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "pre_market"
+  - "debug_trace"
+title: "Report Link Data Validation Debugger"
+tool_plan_template:
+  steps:
+    - "Query metadata to validate run timestamps and universe size;"
+    - "Check for filtered stocks with unusually high or low scores;"
+    - "Verify links in report output by matching with raw data exports."
+validation_rules:
+  - "Ensure valid timestamps in metadata results."
+  - "Scores must reflect accurate stock performance."
+  - "Match report links with expected data from runs."
+version: 1

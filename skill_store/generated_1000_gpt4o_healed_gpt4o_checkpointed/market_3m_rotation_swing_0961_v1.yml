@@ -1,0 +1,202 @@
+created_at: "2026-06-06T12:53:16"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: post results; response style: comparison matrix."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0961_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  - "SELECT index_symbol, SUM(change_pct) as total_change FROM market.index_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY index_symbol"
+  - "SELECT sector, COUNT(DISTINCT stage) as count_stages FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY sector"
+  - "SELECT symbol, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND vcp_score > 80"
+status: "test_failed"
+synthesis_guidance: "{'contextualize': 'Interpret index and sector data in context of broader market.', 'compare': 'Utilize comparison matrix to highlight stage changes and sector leadership.', 'highlight': 'Emphasize high VCP score candidates and associated risks.'}"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "post_results"
+  - "comparison_matrix"
+title: "3M Market Rotation Swing Assessment Variant 0961"
+tool_plan_template:
+  id: "tool_plan_market_rotation"
+  steps:
+    -
+      description: "Gather index and sector performance metrics over the last three months."
+      inputs:
+        - "trade_date"
+        - "index_symbol"
+        - "change_pct"
+      outputs:
+        - "index_returns"
+        - "leading_sectors"
+      sql_template: "SELECT index_symbol, SUM(change_pct) as total_change FROM market.index_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY index_symbol ORDER BY total_change DESC;"
+      tool: "sql-query"
+    -
+      description: "Identify stage changes and leading sectors."
+      inputs:
+        - "snapshot_date"
+        - "sector"
+        - "stage"
+      outputs:
+        - "stage_distribution_change"
+      sql_template: "SELECT sector, COUNT(DISTINCT stage) as count_stages FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY sector ORDER BY count_stages DESC;"
+      tool: "sql-query"
+    -
+      description: "Determine primary swing candidates."
+      inputs:
+        - "snapshot_date"
+        - "symbol"
+        - "vcp_score"
+      outputs:
+        - "primary_candidates"
+      sql_template: "SELECT symbol, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND vcp_score > 80 ORDER BY vcp_score DESC;"
+      tool: "sql-query"
+validation_errors:
+  - "description is required"
+  - "domain is required"
+  - "evidence_required is required"
+  - "id is required"
+  - "input_patterns is required"
+  - "output_contract is required"
+  - "tags is required"
+  - "title is required"
+  - "validation_rules is required"
+  - "version is required"
+  - "version must be a positive integer"
+validation_rules:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+version: 1
+card:
+  created_at: "2026-06-06T12:53:16"
+  created_by: "llm_generated"
+  description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: post results; response style: comparison matrix."
+  domain: "market_analysis"
+  evidence_required:
+    tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "market_3m_rotation_swing_0961_v1"
+  input_patterns:
+    - "last 3 months market analysis"
+    - "find swing candidates from recent sector rotation"
+    - "market regime and stage 2 leadership over 3 months"
+    - "quick scan for post results: last 3 months market analysis"
+    - "market regime and stage 2 leadership over 3 months as comparison matrix"
+  output_contract:
+    - "as_of_date"
+    - "index_returns"
+    - "stage_distribution_change"
+    - "leading_sectors"
+    - "primary_candidates"
+    - "risks"
+  python_tools:
+
+  sql_templates:
+    - "SELECT index_symbol, SUM(change_pct) as total_change FROM market.index_eod WHERE trade_date >= '2023-07-01' GROUP BY index_symbol"
+    - "SELECT sector, COUNT(DISTINCT stage) as count_stages FROM scores.stage_snapshots WHERE snapshot_date >= '2023-07-01' GROUP BY sector"
+    - "SELECT symbol, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= '2023-07-01' AND vcp_score > 80"
+  status: "generated"
+  synthesis_guidance:
+    compare: "Utilize comparison matrix to highlight stage changes and sector leadership."
+    contextualize: "Interpret index and sector data in context of broader market."
+    highlight: "Emphasize high VCP score candidates and associated risks."
+  tags:
+    - "market_regime"
+    - "sector_rotation"
+    - "stage_analysis"
+    - "swing_trading"
+    - "quick_scan"
+    - "post_results"
+    - "comparison_matrix"
+  title: "3M Market Rotation Swing Assessment Variant 0961"
+  tool_plan_template:
+    id: "tool_plan_market_rotation"
+    steps:
+      -
+        description: "Gather index and sector performance metrics over the last three months."
+        inputs:
+          - "trade_date"
+          - "index_symbol"
+          - "change_pct"
+        outputs:
+          - "index_returns"
+          - "leading_sectors"
+        sql_template: "SELECT index_symbol, SUM(change_pct) as total_change FROM market.index_eod WHERE trade_date >= '2023-07-01' GROUP BY index_symbol ORDER BY total_change DESC;"
+        tool: "sql-query"
+      -
+        description: "Identify stage changes and leading sectors."
+        inputs:
+          - "snapshot_date"
+          - "sector"
+          - "stage"
+        outputs:
+          - "stage_distribution_change"
+        sql_template: "SELECT sector, COUNT(DISTINCT stage) as count_stages FROM scores.stage_snapshots WHERE snapshot_date >= '2023-07-01' GROUP BY sector ORDER BY count_stages DESC;"
+        tool: "sql-query"
+      -
+        description: "Determine primary swing candidates."
+        inputs:
+          - "snapshot_date"
+          - "symbol"
+          - "vcp_score"
+        outputs:
+          - "primary_candidates"
+        sql_template: "SELECT symbol, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= '2023-07-01' AND vcp_score > 80 ORDER BY vcp_score DESC;"
+        tool: "sql-query"
+  validation_errors:
+
+  validation_rules:
+    - "as_of_date"
+    - "index_returns"
+    - "stage_distribution_change"
+    - "leading_sectors"
+    - "primary_candidates"
+    - "risks"
+  version: 1
+review:
+  attempts: 3
+  findings:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"

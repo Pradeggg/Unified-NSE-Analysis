@@ -1,0 +1,66 @@
+id: "report_link_data_validation_0060_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0060"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: quarter to date; response style: concise table."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for quarter to date: review report links not working"
+  - "validate generated report links and missing data as concise table"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Query data from approved tables to identify discrepancies in report metadata and filtered stock data. Use constraints based on the provided schema. Ensure focus on generating a concise table output."
+sql_templates:
+  -
+    description: "Identify missing or broken report links"
+    template: "SELECT er.run_id, er.run_ts, er.universe_size, COUNT(es.symbol) AS total_stocks FROM report.enhanced_runs er LEFT JOIN report.enhanced_filtered_stocks es ON er.run_id = es.run_id WHERE er.run_ts >= CURRENT_DATE - INTERVAL '3 month' GROUP BY er.run_id, er.run_ts, er.universe_size LIMIT 50;"
+python_tools:
+  -
+    id: "tool_data_check"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      run_id: "text"
+      total_stocks: "integer"
+    outputs:
+      discrepancies_found: "boolean"
+      details: "text"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    run_id = context['run_id']\n    expected_stocks = context['total_stocks']\n    # Logic to verify data integrity based on expected totals...\n    # Assume function checks data for discrepancies\n    discrepancies_found = False  # Placeholder\n    details = 'No discrepancies found'  # Placeholder\n    return {'discrepancies_found': discrepancies_found, 'details': details}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "rules"
+synthesis_guidance: "Compile findings into a concise table format, highlighting broken or missing links with suggested remediations."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:08"
+generation_model: "gpt-4o"
+validation_errors:
+  - "tool_data_check: inputs must be a list"
+  - "tool_data_check: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "tool_data_check: inputs must be a list"
+    - "tool_data_check: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

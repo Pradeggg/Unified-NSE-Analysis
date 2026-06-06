@@ -1,0 +1,1 @@
+def run(context): return {'symbol_performance': 'mock_data'}

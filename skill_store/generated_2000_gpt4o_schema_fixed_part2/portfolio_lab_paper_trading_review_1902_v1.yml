@@ -1,0 +1,81 @@
+id: "portfolio_lab_paper_trading_review_1902_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1902"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: today; response style: comparison matrix."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for today: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as comparison matrix"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "today"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  context: "For a comprehensive review of paper trading strategies, using current market and strategy signals, prepare a comparison matrix highlighting entries, exits, stops, and targets as per deep institutional standards."
+  steps:
+    - "Extract current paper trading holdings using data from 'portfolio.holdings'."
+    - "Analyze signal strategy details from 'signals.signal_log' focused on entries, exits, and targets."
+    - "Combine strategy analysis with current market data from 'market.equity_eod' to evaluate performance and potential strategies."
+    - "Synthesize findings into a structured comparison matrix for institutional review."
+sql_templates:
+  holdings_analysis:
+    template: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings WHERE symbol IN (SELECT symbol FROM signals.signal_log) AND qty > 0;"
+    description: "Fetches active holdings from the portfolio."
+  signal_review:
+    template: "SELECT symbol, signal, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log);"
+    description: "Retrieves latest signals for current strategy focus."
+  market_context:
+    template: "SELECT symbol, close FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+    description: "Captures latest market prices for evaluation."
+python_tools:
+  -
+    id: "strategy_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "strategy_state"
+      - "market_context"
+    outputs:
+      - "comparison_matrix"
+    approved_tables:
+      - "portfolio.holdings"
+      - "signals.signal_log"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Pseudocode for processing strategy analysis\n    results = context['strategy_state']\n    market_prices = context['market_context']\n    comparison_matrix = []\n    for result in results:\n        symbol = result['symbol']\n        close_price = market_prices.get(symbol, {}).get('close', None)\n        if close_price is not None:\n            decision = evaluate_strategy(result, close_price)\n            comparison_matrix.append({'symbol': symbol, 'decision': decision})\n    return comparison_matrix"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  -
+    description: "Ensure symbols in 'portfolio.holdings', 'signals.signal_log', and 'market.equity_eod' match."
+    validation: "Use SQL joins based on symbols to validate data alignment."
+synthesis_guidance: "['Organize results to compare current strategy state with market conditions.', 'Highlight any discrepancies or notable strategy outcomes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:23"
+generation_model: "gpt-4o"
+validation_errors:
+  - "strategy_analysis_tool: execution failed: KeyError: 'strategy_state'"
+review:
+  status: "needs_heal"
+  findings:
+    - "strategy_analysis_tool: execution failed: KeyError: 'strategy_state'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

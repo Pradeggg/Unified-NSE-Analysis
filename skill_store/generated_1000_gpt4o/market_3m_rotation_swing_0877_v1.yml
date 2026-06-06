@@ -1,0 +1,68 @@
+id: "market_3m_rotation_swing_0877_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0877"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Assess the current market regime by analyzing the changes in sector leadership and market stages over the last 3 months. Use available evidence and research-only framing."
+sql_templates:
+  -
+    description: "Fetch index performance over the last 3 months"
+    template: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= DATEADD(MONTH, -3, CURRENT_DATE) AND index_symbol IN ('NIFTY', 'SENSEX') ORDER BY trade_date DESC;"
+  -
+    description: "Retrieve Stage 2 swing candidates"
+    template: "SELECT snapshot_date, symbol, company_name, sector, price, relative_strength FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATEADD(MONTH, -3, CURRENT_DATE) AND stage='2' ORDER BY relative_strength DESC;"
+python_tools:
+  -
+    id: "calculate_sector_leadership"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "Sector performance data"
+      - "Market regime indicators"
+    outputs:
+      - "leading_sectors"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Extract and analyze data to calculate leading sectors\n    # This is a placeholder for actual computation logic\n    return {'leading_sectors': ['Finance', 'Technology']}"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure date calculations are correct."
+  - "Validate that only Stage 2 symbols are considered from scores.stage2_vcp_picks."
+  - "Index symbols should be limited to major Indian indices."
+synthesis_guidance: "Construct a narrative around the evolving market conditions with an emphasis on sector rotation and the emergence of new leadership in swing trading setups."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:52:27"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.dateadd is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage2_vcp_picks.dateadd is not approved"
+  - "scores.stage2_vcp_picks.month is not approved"
+  - "scores.stage2_vcp_picks.stage is not approved"

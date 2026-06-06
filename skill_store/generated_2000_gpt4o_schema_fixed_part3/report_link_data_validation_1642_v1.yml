@@ -1,0 +1,65 @@
+id: "report_link_data_validation_1642_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1642"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for last 3 months: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+
+sql_templates:
+  -
+    template: "SELECT e.run_id, e.run_ts, e.analysis_date, e.universe_size, e.stocks_analyzed, e.stocks_filtered, COUNT(s.symbol) AS filtered_stock_count\nFROM report.enhanced_runs e\nLEFT JOIN report.enhanced_filtered_stocks s ON e.run_id = s.run_id\nWHERE e.run_ts >= CURRENT_DATE - INTERVAL '3 months'\nGROUP BY e.run_id, e.run_ts, e.analysis_date, e.universe_size, e.stocks_analyzed, e.stocks_filtered\nORDER BY e.run_ts DESC\nLIMIT 100;"
+    description: "Fetches metadata and filtered stock counts for enhanced reports from the last 3 months."
+python_tools:
+  -
+    id: "validate_stock_data_integrity"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_data"
+      - "stock_data"
+    outputs:
+      - "integrity_report"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    run_data, stock_data = context['run_data'], context['stock_data']\n    # perform data integrity check\n    integrity_report = {}\n    for run in run_data:\n        if run['stocks_filtered'] != len([s for s in stock_data if s['run_id'] == run['run_id']]):\n            integrity_report[run['run_id']] = 'Mismatch in stock filtered count'\n    return integrity_report"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all required data columns are present."
+  - "Validate run metadata against analysis dates."
+synthesis_guidance: "['Provide a detailed validation trace with each step.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:21"
+generation_model: "gpt-4o"
+validation_errors:
+  - "validate_stock_data_integrity: execution failed: KeyError: 'run_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "validate_stock_data_integrity: execution failed: KeyError: 'run_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

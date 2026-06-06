@@ -1,0 +1,53 @@
+id: "report_link_data_validation_0606_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0606"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: today; response style: debug trace."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for today: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "today"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "N/A"
+sql_templates:
+  findings: "SELECT er.run_id, er.run_ts, er.universe_size, er.stocks_analyzed, er.notes FROM report.enhanced_runs er WHERE er.run_ts >= CURRENT_DATE AND NOT EXISTS (SELECT 1 FROM report.enhanced_filtered_stocks efs WHERE er.run_id = efs.run_id) LIMIT 10;"
+  broken_links: "SELECT er.run_id, er.run_ts, efs.symbol FROM report.enhanced_runs er LEFT JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id WHERE er.run_ts >= CURRENT_DATE AND efs.symbol IS NULL LIMIT 10;"
+  missing_data: "SELECT er.run_id, efs.symbol, efs.current_price, efs.volume FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id WHERE er.run_ts >= CURRENT_DATE AND (efs.current_price IS NULL OR efs.volume IS NULL) LIMIT 10;"
+  remediation: "N/A"
+  verification: "N/A"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure the SQL queries return relevant columns as described in the task."
+  - "Verify use of latest-date filtering with CURRENT_DATE."
+  - "Ensure joins use validated conditions from approved_schema._join_rules."
+synthesis_guidance: "{'rules': ['Refrain from modifying data or writing to the database.', 'Focus on Indian market evidence in a research-only mindset.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:26:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

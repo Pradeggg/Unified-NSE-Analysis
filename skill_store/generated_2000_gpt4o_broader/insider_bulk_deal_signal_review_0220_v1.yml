@@ -1,0 +1,61 @@
+id: "insider_bulk_deal_signal_review_0220_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0220"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: latest EOD; response style: ranked candidates."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for latest EOD: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as ranked candidates"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Utilize bulk deal and insider alert trending with technical evidence to derive a ranked list of likely candidates."
+sql_templates:
+  insider_deals: "SELECT symbol, entity, SUM(qty) AS total_qty, SUM(value_cr) AS total_value FROM signals.insider_alerts WHERE alert_date = CURRENT_DATE GROUP BY symbol, entity;"
+  bulk_deals: "SELECT symbol, entity, SUM(qty) AS deal_qty, AVG(price) AS avg_price FROM signals.bulk_block_deals WHERE deal_date = CURRENT_DATE GROUP BY symbol, entity;"
+python_tools:
+  -
+    id: "technical_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol_list"
+    outputs:
+      - "technical_confirmations"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context): pass"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure symbols have both insider and bulk deal activity."
+  - "Cross-verify price movements with technical scores."
+synthesis_guidance: "Rank candidates where both insiders and bulk deal data converge positively, with strong technical confirmation signals."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:51"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.bulk_block_deals.avg_price is not approved"
+  - "signals.bulk_block_deals.deal_qty is not approved"
+  - "signals.insider_alerts.total_qty is not approved"
+  - "signals.insider_alerts.total_value is not approved"

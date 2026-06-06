@@ -1,0 +1,59 @@
+id: "signal_outcome_feedback_review_1173_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1173"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: pre market; response style: narrative plus evidence."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for pre market: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as narrative plus evidence"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  status: "generated"
+  plan: "Review signals that hit targets or stops using data from the signals.signal_log. Compare outcomes with scores from scores.stage_snapshots. Use equity EOD data to validate market trends during those signals."
+sql_templates:
+  review_signals:
+    description: "Retrieve signal outcomes and assess performance against targets and stops."
+    status: "generated"
+    sql: "SELECT symbol, date_issued, signal, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_resolved IS NOT NULL AND (hit_target = 1 OR hit_stop = 1);"
+  compare_stage_scores:
+    description: "Fetch stage and technical scores for symbols and dates matching reviewed signals."
+    status: "generated"
+    sql: "SELECT ss.symbol, ss.snapshot_date, ss.stage_score, ss.technical_score FROM scores.stage_snapshots ss JOIN signals.signal_log sl ON ss.symbol = sl.symbol AND ss.snapshot_date = sl.date_resolved WHERE sl.date_resolved IS NOT NULL AND (sl.hit_target = 1 OR sl.hit_stop = 1);"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all evaluated signals have corresponding stage scores."
+  - "Cross-reference market trends with signal outcomes."
+synthesis_guidance: "Use the evidence to extract patterns in winning and failing signals, considering stage and technical scores, and derive actionable improvements for future skill selection."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

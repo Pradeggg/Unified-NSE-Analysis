@@ -1,0 +1,64 @@
+id: "data_freshness_readiness_audit_1253_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1253"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: ranked candidates."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for quarter to date: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as ranked candidates"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    step: "Gather latest dates from each required table to assess freshness."
+    method: "SQL"
+    details: "Use the MAX function on the latest_date_column for each table."
+  -
+    step: "Evaluate missing data or sources based on predetermined freshness thresholds."
+    method: "SQL"
+    details: "Compare the retrieved latest dates to the current date minus threshold intervals."
+sql_templates:
+  -
+    template_id: "latest_date_check"
+    template: "SELECT MAX(trade_date) AS latest_trade_date FROM ${table_name};"
+    explanation: "Retrieves the latest trade date for assessing data freshness."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all required evidence tables have their latest dates evaluated."
+  - "Confirm if data freshness meets pre-defined thresholds."
+synthesis_guidance: "['Rank evidence sources based on recency and readiness.', 'Identify and flag gaps in data integrity and loader performance.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:16"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

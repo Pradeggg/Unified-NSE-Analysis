@@ -1,0 +1,63 @@
+id: "agent_adda_skill_card_0001_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Agent Adda Report Validation"
+description: "Validate report links and data for Agent Adda in an Indian market context, focusing on position sizing and intraday details."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock HTML files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for intraday context: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Analyze the evidence provided in tables to identify broken links and missing data using a read-only SQL approach."
+sql_templates:
+  - "SELECT run_id, run_ts, universe_size FROM report.enhanced_runs WHERE analysis_date = CURRENT_DATE;"
+  - "SELECT run_id, symbol, recommendation FROM report.enhanced_filtered_stocks WHERE recommendation = 'BUY' AND day_change_pct > 1.0;"
+python_tools:
+  -
+    id: "data_analysis_tool_001"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "analysis_results"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Analyze context to determine data issues\n    analysis_results = {}\n    # Placeholder for analysis logic\n    return analysis_results"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure SQL queries are read-only."
+  - "Utilize the approved schema tables only."
+  - "Do not invent tables or columns."
+synthesis_guidance: "Concentrate on identifying issues in reporting links and data gaps before proposing solutions."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:46:05"
+generation_model: "gpt-4o"
+validation_errors:
+  - "data_analysis_tool_001: missing output analysis_results"
+review:
+  status: "needs_heal"
+  findings:
+    - "data_analysis_tool_001: missing output analysis_results"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

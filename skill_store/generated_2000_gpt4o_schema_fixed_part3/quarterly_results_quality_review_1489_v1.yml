@@ -1,0 +1,51 @@
+id: "quarterly_results_quality_review_1489_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1489"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: source-trail validation; timeframe: intraday context; response style: portfolio-aware output."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "source-trail validation for intraday context: latest quarterly results analysis"
+  - "which companies had strong quarterly results as portfolio-aware output"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "{retrieve evidence, perform validation, rank results}"
+sql_templates:
+  -
+    description: "Retrieve latest quarterly results with stage context."
+    query: "WITH recent_results AS (SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.revenue, qr.expenses, qr.operating_profit, qr.pat, qr.period_end, qr.opm_pct, qr.source FROM scores.quarterly_results qr WHERE qr.period_type = 'quarter' ORDER BY qr.symbol, qr.period_end DESC NULLS LAST, qr.fetched_at DESC) SELECT rr.symbol, rr.revenue, rr.pat, ss.stage, ss.trading_signal FROM recent_results rr JOIN scores.stage_snapshots ss ON rr.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY rr.pat DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Verify distinct symbols in results."
+  - "Ensure trading_signal is a buy signal."
+synthesis_guidance: "['Interpret results in a portfolio-aware context.', 'Highlight significant margin movements.', 'Provide strategic recommendations based on rankings.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:39"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

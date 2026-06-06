@@ -1,0 +1,54 @@
+id: "data_freshness_readiness_audit_1757_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1757"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for quarter to date: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Create a QA checklist by correlating sector-relative data freshness with available market technical narratives. Assess sources using report timestamps."
+sql_templates:
+  -
+    description: "Check latest data dates for market and equity EOD tables."
+    sql: "SELECT MAX(trade_date) AS latest_market_date FROM market.index_eod;\nSELECT MAX(trade_date) AS latest_equity_date FROM market.equity_eod;"
+  -
+    description: "Verify latest snapshot date for stage snapshots."
+    sql: "SELECT MAX(snapshot_date) AS latest_stage_date FROM scores.stage_snapshots;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure each evidence source is at least as recent as the quarter-to-date threshold."
+  - "Check for missing historical periods required for analysis."
+synthesis_guidance: "['Identify sectors lagging in data freshness using the QA checklist.', 'Highlight any missing historical data impacting report generation.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.latest_stage_date is not approved"

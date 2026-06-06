@@ -1,0 +1,58 @@
+id: "report_link_data_validation_1740_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "TradingView Export Data Validation"
+description: "Validates report links and data for TradingView export over the last 20 sessions."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "TradingView export for last 20 sessions: review report links not working"
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "TradingView_export"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    steps:
+      -
+        number: 1
+        title: "Validate Enhanced Report Run Metadata"
+        description: "Check if the enhanced report run metadata aligns with expected data over the last 20 sessions."
+      -
+        number: 2
+        title: "Check Filtered Stock Data"
+        description: "Ensure all filtered stock rows contain populated data and link back to the report."
+sql_templates:
+  -
+    name: "validate_metadata"
+    sql: "SELECT * FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '20 days';"
+  -
+    name: "validate_filtered_data"
+    sql: "WITH recent_runs AS (SELECT run_id FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '20 days') SELECT * FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM recent_runs);"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "All linked stocks should have corresponding entry within the report runs."
+  - "Run IDs must match between enhanced_runs and enhanced_filtered_stocks tables."
+synthesis_guidance: "['Summarize broken links and missing data issues.', 'Identify any discrepancies in report data validation.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

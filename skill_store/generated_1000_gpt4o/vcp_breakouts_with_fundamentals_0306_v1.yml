@@ -1,0 +1,77 @@
+id: "vcp_breakouts_with_fundamentals_0306_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0306"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: today; response style: exceptions and gaps first."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "today"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  python_tools:
+    -
+      id: "FilterEvidence"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        evidence_tables:
+          - "scores.stage2_vcp_picks"
+      outputs:
+        candidates:
+
+      approved_tables:
+        - "market.equity_eod"
+        - "scores.stage_snapshots"
+        - "scores.stage2_vcp_picks"
+      code: "def run(context):\n    # Filter VCP stocks\n    vcp_stocks = context['scores.stage2_vcp_picks']\n    candidates = [stock for stock in vcp_stocks if stock['vcp_score'] > 80 and stock['enhanced_fund_score'] > 70]\n    return {'candidates': candidates}"
+sql_templates:
+  validate_highs: "SELECT symbol, high FROM market.equity_eod WHERE trade_date = CURRENT_DATE AND high >= week52_high;"
+python_tools:
+
+output_contract:
+  -
+    type: "filters"
+    description: "Filters applied to evidence data to narrow down candidates."
+  -
+    type: "candidates"
+    description: "Resulting candidates meeting all criteria."
+  -
+    type: "tradingview_symbols"
+    description: "Symbols formatted for TradingView use."
+  -
+    type: "evidence"
+    description: "Raw evidence data before filtering."
+  -
+    type: "risks"
+    description: "Identified risks or uncertainties in the candidate selection."
+validation_rules:
+  - "Ensure outputs adhere to trading criteria."
+  - "Validate evidence with correct table constraints."
+  - "Check SQL and Python tool integrity."
+synthesis_guidance: "{'strategy': 'Synthesize evidence showing strong momentum and fundamental metrics first.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:44:21"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

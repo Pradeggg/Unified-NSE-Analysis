@@ -1,0 +1,63 @@
+id: "company_360_research_report_1602_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Reliance Industries Limited: Comprehensive Research Report"
+description: "A comprehensive analysis of Reliance Industries Ltd. covering financials, fundamentals, and technical factors."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "deep institutional review for today: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as debug trace"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "deep_institutional_review"
+  - "today"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template: "Execute SQL templates to gather financial metrics, technical indicators, and synthesized narratives for Reliance Industries Ltd."
+sql_templates:
+  -
+    description: "Fetch latest stage snapshot, technical scores, and narrative for Reliance."
+    template: "SELECT company_name, sector, market_cap_cat, price, change_1d_pct, stage, stage_score, technical_score, trading_signal, narrative FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+  -
+    description: "Fetch latest annual financials for Reliance."
+    template: "SELECT revenue, expenses, operating_profit, pat, eps FROM scores.annual_results WHERE symbol = 'RELIANCE' AND period_end = (SELECT MAX(period_end) FROM scores.annual_results WHERE symbol = 'RELIANCE')"
+  -
+    description: "Fetch latest EOD technicals for Reliance."
+    template: "SELECT open, high, low, close, change_pct, volume FROM market.equity_eod WHERE symbol = 'RELIANCE' AND trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure symbol consistency across all data fetches."
+  - "Align all data to latest available reporting periods."
+synthesis_guidance: "Merge financial data, technical indicators, and narrative insights to provide a holistic view of Reliance Industries Ltd. Emphasize institutional-level analysis and current market context."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

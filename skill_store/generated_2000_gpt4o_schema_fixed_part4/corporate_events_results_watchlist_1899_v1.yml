@@ -1,0 +1,62 @@
+id: "corporate_events_results_watchlist_1899_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1899"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as action watchlist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    evidence_queries:
+      -
+        title: "Upcoming Corporate Events"
+        description: "Fetch details of upcoming corporate events from signals.corporate_events."
+        sql_template: "SELECT id, symbol, event_type, event_date, purpose_raw, detail, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY event_date ASC LIMIT 50;"
+      -
+        title: "Latest Results Analysis"
+        description: "Get the latest results analysis along with source trails."
+        sql_template: "SELECT DISTINCT ON (symbol) symbol, company_name, period_end, verdict, score, source_trail FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC LIMIT 50;"
+sql_templates:
+  -
+    title: "Event-Driven Watchlist"
+    description: "Join corporate events with current market stage and signal context."
+    template: "WITH latest_stage AS (SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT ce.symbol, ce.event_type, ce.event_date, ss.stage, ss.trading_signal FROM signals.corporate_events ce JOIN latest_stage ss ON ce.symbol = ss.symbol WHERE ce.event_date >= CURRENT_DATE ORDER BY ce.event_date ASC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure the output contains all necessary information for creating a watchlist of corporate events and results."
+  - "Verify that the event dates are in the future for upcoming events."
+synthesis_guidance: "['Combine corporate events and results analysis to form a comprehensive watchlist.', 'Highlight symbols with positive trading signals and upcoming results.', 'Incorporate source-trail validation to support research accuracy.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

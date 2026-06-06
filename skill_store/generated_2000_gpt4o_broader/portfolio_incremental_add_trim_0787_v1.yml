@@ -1,0 +1,50 @@
+id: "portfolio_incremental_add_trim_0787_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0787"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: intraday context; response style: QA checklist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for intraday context: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Evaluate holdings by sector against current market data to form add/trim recommendations."
+sql_templates:
+  -
+    description: "Fetch sector performance for intraday context."
+    template: "SELECT sector, AVG(change_1d_pct) AS avg_change_1d FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE GROUP BY sector;"
+  -
+    description: "Identify holdings and their performance."
+    template: "SELECT h.symbol, h.qty, h.avg_cost, s.change_1d_pct, s.stage_score FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all sectors are reviewed for add/trim actions."
+  - "Verify intraday sector changes impact decision rationale."
+  - "Confirm QA checklist is comprehensive."
+synthesis_guidance: "Combine performance measures with sector analysis to generate actionable add/trim recommendations."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.avg_change_1d is not approved"

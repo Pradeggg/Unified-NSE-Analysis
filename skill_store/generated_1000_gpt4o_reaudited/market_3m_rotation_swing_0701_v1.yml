@@ -1,0 +1,74 @@
+created_at: "2026-06-06T12:50:51"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: today; response style: QA checklist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0701_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Fetches index returns for the last 3 months."
+    template: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date BETWEEN DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) AND CURRENT_DATE;"
+  -
+    description: "Identifies changes in stage distribution."
+    template: "SELECT stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date BETWEEN DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) AND CURRENT_DATE GROUP BY stage;"
+  -
+    description: "Fetches leading sectors based on performance."
+    template: "SELECT sector, AVG(change_1m_pct) AS avg_monthly_change FROM scores.stage_snapshots WHERE snapshot_date BETWEEN DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) AND CURRENT_DATE GROUP BY sector ORDER BY avg_monthly_change DESC;"
+  -
+    description: "Finds primary candidates for swing trading."
+    template: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE ORDER BY vcp_score DESC LIMIT 5;"
+status: "test_failed"
+synthesis_guidance: "['Summarize index trends over the last 3 months.', 'Highlight any stage changes indicating market regime shifts.', 'Identify which sectors have shown leadership in performance.', 'List top candidates for swing trades based on quantitative scores.', 'Assess potential market risks based on recent performance data.']"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "today"
+  - "QA_checklist"
+title: "3M Market Rotation Swing Assessment Variant 0701"
+tool_plan_template:
+  inputs:
+    - "current_date"
+    - "sector_analysis_period"
+  outputs:
+    - "as_of_date"
+    - "index_returns"
+    - "stage_distribution_change"
+    - "leading_sectors"
+    - "primary_candidates"
+    - "risks"
+validation_rules:
+  - "Check if index_returns includes symbols for major indices."
+  - "Ensure stage_distribution_change covers all Weinstein stages."
+  - "Verify that leading_sectors include sector names from equity data."
+  - "Confirm primary_candidates have valid VCP scores."
+version: 1
+validation_errors:
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage_snapshots.avg_monthly_change is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"

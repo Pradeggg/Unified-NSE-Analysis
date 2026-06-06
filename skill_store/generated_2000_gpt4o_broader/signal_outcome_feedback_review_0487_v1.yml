@@ -1,0 +1,50 @@
+id: "signal_outcome_feedback_review_0487_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0487"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: intraday context; response style: portfolio-aware output."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for intraday context: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as portfolio-aware output"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze performance and generate insights by comparing sector-relative data over intraday periods."
+sql_templates:
+  performance_summary:
+    query: "SELECT sector, AVG(return_pct) AS avg_return, SUM(CASE WHEN hit_target = TRUE THEN 1 ELSE 0 END) AS hits, SUM(CASE WHEN hit_stop = TRUE THEN 1 ELSE 0 END) AS stops FROM signals.signal_log WHERE date_resolved BETWEEN :start_date AND :end_date GROUP BY sector;"
+    description: "Aggregates performance data by sector to find average returns and counts of targets and stops hit."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure date range covers only intraday context."
+  - "Sector data must be consistent across tables."
+synthesis_guidance: "Emphasize sector-relative insights and portfolio-awareness to augment skill reliability and outcome prediction."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:47"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.avg_return is not approved"
+  - "signals.signal_log.hits is not approved"
+  - "signals.signal_log.stops is not approved"

@@ -1,0 +1,61 @@
+id: "portfolio_lab_paper_trading_review_1720_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1720"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: TradingView export; timeframe: latest EOD; response style: QA checklist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "TradingView export for latest EOD: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as QA checklist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  strategy_state: "Analyze the current strategy's effectiveness based on signal outcomes and entry/exit criteria."
+  open_trades: "List open trades with details from the paper trading portfolio."
+  entry_exit_rules: "Detail the entry and exit rules and how they align with the strategy goals."
+  exposure: "Evaluate portfolio exposure to various sectors or market caps."
+  exceptions: "Identify and explain any anomalies or exceptions in the trading strategy outcomes."
+sql_templates:
+  -
+    template_name: "fetch_open_trades"
+    sql: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+  -
+    template_name: "fetch_signal_outcomes"
+    sql: "SELECT date_issued, symbol, signal, stop_loss, target_1, target_2, price_at_resolution, return_pct FROM signals.signal_log WHERE date_resolved IS NOT NULL;"
+  -
+    template_name: "fetch_sector_exposure"
+    sql: "SELECT sector, COUNT(*) as num_trades, SUM(return_pct) as total_return FROM signals.signal_log GROUP BY sector;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "schema_approved"
+  - "status"
+synthesis_guidance: "Integrate signal outcomes and sector exposure to provide a comprehensive portfolio lab analysis. Ensure findings are presented in a QA checklist format."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:22"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.num_trades is not approved"
+  - "signals.signal_log.total_return is not approved"

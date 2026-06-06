@@ -1,0 +1,60 @@
+id: "fii_dii_regime_breadth_review_1394_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1394"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as exceptions and gaps first"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    status: "generated"
+    tools:
+      -
+        sql_template: "SELECT fh.trade_date, fh.fii_net_5d, fh.dii_net_5d, rh.regime, bh.ad_signal, mhe.trading_signal\nFROM signals.fii_dii_flows fh\nJOIN signals.regime_history rh ON fh.trade_date = rh.trade_date\nJOIN breadth.market_daily bh ON fh.trade_date = bh.trade_date\nJOIN market.index_eod mhe ON fh.trade_date = mhe.trade_date AND mhe.index_symbol = 'Nifty 50'\nWHERE fh.trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+sql_templates:
+  -
+    description: "Fetch latest FII/DII flows, market regime, breadth, and Nifty 50 index trading signal."
+    template: "SELECT fh.trade_date, fh.fii_net_5d, fh.dii_net_5d, rh.regime, bh.ad_signal, mhe.trading_signal\nFROM signals.fii_dii_flows fh\nJOIN signals.regime_history rh ON fh.trade_date = rh.trade_date\nJOIN breadth.market_daily bh ON fh.trade_date = bh.trade_date\nJOIN market.index_eod mhe ON fh.trade_date = mhe.trade_date AND mhe.index_symbol = 'Nifty 50'\nWHERE fh.trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure regime values align with approved regime values."
+  - "Verify flow signals reflect approved flow context."
+  - "Cross-check breadth signals against market expectations."
+  - "Confirm index signals with approved trading signals."
+  - "Flag any risks based on regime shifts or significant breadth divergences."
+synthesis_guidance: "Prioritize any detected exceptions or gaps in the market context. Highlight significant shifts in FII/DII flows and their implications on the market regime. Provide an intuitive synthesis of breadth indicators in conjunction with index signals to support watchlist updates or risk assessments."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

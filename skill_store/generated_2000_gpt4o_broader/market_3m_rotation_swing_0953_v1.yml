@@ -1,0 +1,67 @@
+id: "market_3m_rotation_swing_0953_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0953"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  - "1. Fetch market index performance for the last 3 months."
+  - "2. Identify sector rotation trends and stage 2 leadership."
+  - "3. Analyze swing trading candidates."
+sql_templates:
+  -
+    description: "Fetch index performance for the last 3 months."
+    query: "SELECT index_symbol, MAX(close) AS recent_close, AVG(change_pct) AS change_pct_avg FROM market.index_eod WHERE trade_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 3 MONTH) GROUP BY index_symbol;"
+  -
+    description: "Identify leading sectors based on stage changes."
+    query: "SELECT sector, COUNT(DISTINCT symbol) AS leadership_count FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 3 MONTH) GROUP BY sector ORDER BY leadership_count DESC;"
+  -
+    description: "Fetch primary swing trading candidates from VCP picks."
+    query: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 3 MONTH) ORDER BY vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure data includes the most recent quarter to date."
+  - "Cross-reference index and sector data for consistency."
+  - "Verify the top VCP candidates are current and ranked."
+synthesis_guidance: "['Compare index performance in relation to sector leadership trends.', 'Synthesize swing trading opportunities based on VCP score and stage alignment.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.change_pct_avg is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "market.index_eod.recent_close is not approved"
+  - "scores.stage2_vcp_picks.date_sub is not approved"
+  - "scores.stage2_vcp_picks.month is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.leadership_count is not approved"
+  - "scores.stage_snapshots.month is not approved"

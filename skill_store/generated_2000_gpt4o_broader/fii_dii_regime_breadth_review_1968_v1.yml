@@ -1,0 +1,99 @@
+id: "fii_dii_regime_breadth_review_1968_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1968"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: post results; response style: comparison matrix."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for post results: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as comparison matrix"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "post_results"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  python_tools:
+
+  sql_templates:
+    -
+      description: "Retrieve recent FII and DII flow trends."
+      query: "SELECT trade_date, fii_net_today, dii_net_today, flow_signal, fii_trend, dii_trend FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL '7 days';"
+      inputs:
+
+      outputs:
+        - "trade_date"
+        - "fii_net_today"
+        - "dii_net_today"
+        - "flow_signal"
+        - "fii_trend"
+        - "dii_trend"
+      table: "signals.fii_dii_flows"
+    -
+      description: "Get current market regime and confidence."
+      query: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date = CURRENT_DATE;"
+      inputs:
+
+      outputs:
+        - "trade_date"
+        - "regime"
+        - "confidence"
+      table: "signals.regime_history"
+    -
+      description: "Retrieve market breadth and sentiment data."
+      query: "SELECT trade_date, adv_volume, dec_volume, market_sentiment FROM breadth.market_daily WHERE trade_date = CURRENT_DATE;"
+      inputs:
+
+      outputs:
+        - "trade_date"
+        - "adv_volume"
+        - "dec_volume"
+        - "market_sentiment"
+      table: "breadth.market_daily"
+    -
+      description: "Get index EOD data for confirmation."
+      query: "SELECT trade_date, index_symbol, close, change_pct, rsi, trend_signal FROM market.index_eod WHERE trade_date = CURRENT_DATE AND index_symbol = 'NIFTY50';"
+      inputs:
+
+      outputs:
+        - "trade_date"
+        - "index_symbol"
+        - "close"
+        - "change_pct"
+        - "rsi"
+        - "trend_signal"
+      table: "market.index_eod"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "status"
+synthesis_guidance: "{'evidence_gaps': []}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:50"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

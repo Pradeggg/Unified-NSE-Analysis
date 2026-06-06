@@ -1,0 +1,70 @@
+id: "insider_bulk_deal_signal_review_1942_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1942"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for last 3 months: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as comparison matrix"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review recent insider alerts and bulk/block deals in context with stock technicals to identify potential accumulation scenarios."
+sql_templates:
+  -
+    template_name: "LatestInsiderAlerts"
+    sql: "SELECT * FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY alert_date DESC LIMIT 50;"
+  -
+    template_name: "LatestBulkDeals"
+    sql: "SELECT * FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY deal_date DESC LIMIT 50;"
+python_tools:
+  -
+    id: "technical_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "price_history"
+    outputs:
+      - "trend_signal"
+      - "rsi"
+    approved_tables:
+      - "market.equity_eod"
+    code: "def run(context):\n    # Process the price history for the given symbol\n    # Return trend_signal and RSI\n    pass"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Combine insider alert data with bulk deals and align with technical indicators to create a comprehensive analysis matrix."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:53"
+generation_model: "gpt-4o"
+validation_errors:
+  - "technical_analysis_tool: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "technical_analysis_tool: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

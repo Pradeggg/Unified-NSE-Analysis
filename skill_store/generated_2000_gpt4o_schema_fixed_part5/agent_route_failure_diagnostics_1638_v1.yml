@@ -1,0 +1,53 @@
+id: "agent_route_failure_diagnostics_1638_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1638"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as debug trace"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Examine the diagnostics of Agent Adda failures focusing on position-sizing and symbol resolution for the last 20 sessions using SQL analyses and possibly Python-based traces for insights."
+sql_templates:
+  -
+    description: "Fetch the recent enhanced report runs for route diagnostic checks."
+    template: "WITH recent_runs AS (SELECT run_id, run_ts FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '20 days') SELECT er.run_id, er.run_ts, ef.symbol, ef.score, ef.recommendation FROM recent_runs er JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all SQL templates are read-only."
+  - "Verify the time window for analysis is exactly 20 sessions."
+synthesis_guidance: "['Highlight any missing tools or symbols that may cause route failures.', 'Provide a debug trace for symbol resolution and route diagnostics.', 'Identify potential tool gaps and suggest improvements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

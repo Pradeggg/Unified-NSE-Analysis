@@ -1,0 +1,59 @@
+id: "quarterly_results_quality_review_1769_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1769"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: source-trail validation; timeframe: post results; response style: QA checklist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "source-trail validation for post results: latest quarterly results analysis"
+  - "which companies had strong quarterly results as QA checklist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "source-trail_validation"
+  - "post_results"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Fetch companies with strong quarterly results and margin trends."
+    template: "SELECT a.symbol, a.revenue, b.filing_date, b.growth_yoy_revenue_pct, b.growth_qoq_revenue_pct, b.opm_delta_pp, b.pat FROM scores.quarterly_results a JOIN scores.results_analysis b ON a.symbol = b.symbol WHERE b.growth_yoy_revenue_pct > 0 AND b.opm_delta_pp > 0 ORDER BY b.growth_qoq_revenue_pct DESC;"
+python_tools:
+  -
+    id: "calculate_risk_analysis_9601"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      symbol_data: null
+    outputs:
+      risk_assessment: null
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+    code: "def run(context):\n    symbol_data = context['symbol_data']\n    # Hypothetical logic to analyze risk based on symbol data\n    risk_assessment = []\n    for symbol, data in symbol_data.items():\n        risk_details = {'symbol': symbol, 'risk_score': 0}  # Placeholder logic\n        if data['growth_qoq_revenue_pct'] < 0:\n            risk_details['risk_score'] += 1\n        risk_assessment.append(risk_details)\n    return {'risk_assessment': risk_assessment}"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure data timelines are post-results."
+  - "Cross-verify source-trail for data authenticity."
+synthesis_guidance: "Focus on providing a comprehensive checklist that evaluates quarterly performance using stored evidence."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:44"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.pat is not approved"

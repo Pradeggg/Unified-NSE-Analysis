@@ -1,0 +1,55 @@
+id: "corporate_events_results_watchlist_0569_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0569"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for post results: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as research-only summary"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Select recent corporate events based on post-results timeframe."
+    sql: "SELECT id, symbol, event_type, event_date, purpose_raw, detail, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '7 days';"
+  -
+    description: "Select financial performance and analysis post-results."
+    sql: "SELECT symbol, period_end, company_name, growth_yoy_revenue_pct, growth_qoq_revenue_pct, verdict FROM scores.results_analysis WHERE period_end >= CURRENT_DATE - INTERVAL '30 days' ORDER BY filing_date DESC;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure symbol matches across datasets."
+  - "Source trail evidence must be traceable."
+synthesis_guidance: "Combine corporate events data with results analysis to identify key stocks to watch. Focus on source-trail validation to ensure data integrity."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:58:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

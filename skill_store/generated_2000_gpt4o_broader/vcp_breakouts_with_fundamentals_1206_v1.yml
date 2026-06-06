@@ -1,0 +1,53 @@
+id: "vcp_breakouts_with_fundamentals_1206_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1206"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: today; response style: ranked candidates."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "today"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    template: "SELECT symbol, company_name, sector, market_cap_cat, price, change_1d_pct, change_1w_pct, rsi, relative_strength, trading_signal, fundamental_score, earnings_quality, sales_growth, financial_strength FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE AND relative_strength > 70 AND fundamental_score IS NOT NULL ORDER BY fundamental_score DESC LIMIT 10;"
+    description: "Selects top stocks based on fundamentals and technicals, filtering for strong relative strength and ordering by fundamental strength."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure symbols align with TradingView formatting."
+  - "Ranked output must reflect combination of technical and fundamental scores."
+synthesis_guidance: "['Combine evidence from SQL extracts to rank stocks by breakout potential and fundamental quality.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:29"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

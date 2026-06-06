@@ -1,0 +1,51 @@
+created_at: "2026-06-06T12:46:06"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: intraday context; response style: exceptions and gaps first."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0382_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  - "WITH vcp_candidates AS (SELECT ss.symbol, ss.company_name, ss.sector, ss.enhanced_fund_score, ss.institutional_backing, sv.vcp_score, e.close AS last_close FROM scores.stage_snapshots ss JOIN scores.stage2_vcp_picks sv ON ss.symbol = sv.symbol JOIN market.equity_eod e ON ss.symbol = e.symbol WHERE e.trade_date = CURRENT_DATE AND sv.trading_signal = 'Buy' AND ss.enhanced_fund_score > 70 AND sv.vcp_score > 80), new_high_candidates AS (SELECT symbol, max(high) AS latest_high FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '52 week' GROUP BY symbol HAVING max(high) = ANY (SELECT high FROM market.equity_eod WHERE trade_date = CURRENT_DATE)), breakout_candidates AS (SELECT symbol FROM scores.stage_snapshots WHERE stage_score > 80 AND change_1d_pct > 5) SELECT DISTINCT vc.symbol, vc.company_name, vc.sector FROM vcp_candidates vc UNION SELECT nh.symbol FROM new_high_candidates nh UNION SELECT bc.symbol FROM breakout_candidates bc;"
+status: "validated"
+synthesis_guidance: "['Focus on deep institutional analysis.', 'Include exceptions and gaps in the findings.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "exceptions_and_gaps_first"
+title: "VCP Breakouts With Fundamentals Variant 0382"
+tool_plan_template:
+
+validation_rules:
+  - "Ensure symbols are unique across all candidate lists."
+  - "Verify that selected symbols have a trading signal of Buy."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

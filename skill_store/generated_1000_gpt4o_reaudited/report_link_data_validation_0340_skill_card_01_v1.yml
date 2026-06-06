@@ -1,0 +1,49 @@
+created_at: "2026-06-06T12:45:45"
+created_by: "llm_generated"
+description: "Skill for validating enhanced report run metadata and filtered stock rows. Focus: TradingView export issues related to report links and missing data over the last 20 sessions, emphasizing exceptions and gaps first."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0340_skill_card_01_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  - "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= current_date - interval '20 days'"
+  - "SELECT run_id, symbol, recommendation, current_price FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= current_date - interval '20 days') AND (current_price IS NULL OR recommendation IS NULL)"
+status: "validated"
+synthesis_guidance: "Prioritize identification of broken links and missing data, offering remediation steps and suggesting verification processes for maintaining data integrity."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+title: "Enhanced Report Data Validation Skill"
+tool_plan_template: "To validate data, we will first assess the run metadata and stock entries for potential errors and gaps, focusing on exceptions in report links and missing data for the last 20 sessions. Utilize evidence tables to verify the consistency and accuracy of generated export links."
+validation_rules:
+  - "Check if all TradingView export report links are accessible."
+  - "Verify that all filtered stocks have complete and non-null data points."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,65 @@
+id: "sector_breadth_rotation_watchlist_1623_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1623"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: debug trace."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for last 5 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as debug trace"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "last_5_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    template_name: "sector_ranks"
+    template: "SELECT sector, AVG(change_5d) AS avg_change_5d, AVG(breadth_signal) AS avg_breadth_signal FROM breadth.sector_daily WHERE snapshot_date >= CURRENT_DATE - INTERVAL '5 days' GROUP BY sector ORDER BY avg_change_5d DESC, avg_breadth_signal DESC LIMIT 10;"
+  -
+    template_name: "improving_sectors"
+    template: "SELECT sector FROM (SELECT sector, AVG(stage2_pct) AS avg_stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.ma_pct_above) GROUP BY sector) AS subquery WHERE avg_stage2_pct > 0.5;"
+  -
+    template_name: "candidate_symbols"
+    template: "SELECT symbol, stage, relative_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY relative_strength DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure the SQL queries are using appropriate filters and conditions."
+  - "Verify that only approved tables and columns are used."
+  - "Ensure that the result sets are limited to reasonable sizes."
+synthesis_guidance: "['Combine sector ranks, improving sectors, and candidate symbols to form a coherent watchlist narrative.', 'Trace debug information to ensure transparency in execution.', 'Suggest TradingView symbols based on candidate_symbols results.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:09"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.sector_daily.avg_breadth_signal is not approved"
+  - "breadth.sector_daily.avg_change_5d is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "breadth.sector_daily.avg_breadth_signal is not approved"
+    - "breadth.sector_daily.avg_change_5d is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

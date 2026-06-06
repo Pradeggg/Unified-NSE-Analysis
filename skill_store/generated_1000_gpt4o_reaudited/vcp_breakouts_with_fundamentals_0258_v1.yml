@@ -1,0 +1,70 @@
+created_at: "2026-06-06T12:43:58"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: quarter to date; response style: ranked candidates."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0258_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select high VCP score stocks with strong fundamentals."
+    template: "SELECT symbol, company_name, vcp_score, price, live_price, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE vcp_score > 70 ORDER BY enhanced_fund_score DESC;"
+  -
+    description: "Get current day's price and volume for all stocks."
+    template: "SELECT symbol, trade_date, close, high, low, volume, week52_high FROM market.equity_eod WHERE trade_date = CURRENT_DATE;"
+  -
+    description: "Fetch current fundamental scores for analysis."
+    template: "SELECT symbol, fundamental_score, earnings_quality, sales_growth FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+status: "validated"
+synthesis_guidance: "['Combine evidence from all tables to determine top-ranked candidates.', 'Present in a format suitable for TradingView.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "ranked_candidates"
+title: "VCP Breakouts With Fundamentals Variant 0258"
+tool_plan_template:
+  id: "vcp_breakouts_with_fundamentals_0258_tool_plan"
+  steps:
+    -
+      name: "Fetch VCP Breakouts"
+      sql_template: "SELECT symbol, company_name, vcp_score, price, live_price, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE vcp_score > 70 ORDER BY enhanced_fund_score DESC;"
+    -
+      name: "Fetch Price Data"
+      sql_template: "SELECT symbol, trade_date, close, high, low, volume, week52_high FROM market.equity_eod WHERE trade_date = CURRENT_DATE;"
+    -
+      name: "Fetch Fundamentals"
+      sql_template: "SELECT symbol, fundamental_score, earnings_quality, sales_growth FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+validation_rules:
+  - "Ensure SQL templates are read-only."
+  - "Verify symbols are from the Indian market."
+  - "Confirm outputs adhere to ranking based on enhanced_fund_score."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,1 @@
+def run(context): return [{'symbol': x['symbol'], 'ranking': 'High', 'strategy_recommendation': 'Monitor closely'} for x in context if x['change_pct'] > 5 and x['stage'] == 'STAGE_2']

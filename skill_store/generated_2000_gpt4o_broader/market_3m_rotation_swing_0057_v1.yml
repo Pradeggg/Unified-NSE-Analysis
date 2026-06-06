@@ -1,0 +1,66 @@
+id: "market_3m_rotation_swing_0057_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0057"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: concise table."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze and report on sector-relative performance for identifying swing trading opportunities and sector leadership."
+sql_templates:
+  -
+    description: "Determine the leading sectors based on relative strength over the last three months."
+    query: "SELECT sector, AVG(relative_strength) AS avg_relative_strength FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_relative_strength DESC;"
+  -
+    description: "Identify primary swing candidates in Stage 2 with high VCP scores."
+    query: "SELECT symbol, company_name, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months' AND vcp_score > 80 ORDER BY vcp_score DESC;"
+python_tools:
+  -
+    id: "sector_analysis_3m"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "relative_strength_data"
+    outputs:
+      - "leader_sector_summary"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze top performing sectors\n    data = context['relative_strength_data']\n    leader_sector_summary = data.groupby('sector').agg({'relative_strength': 'mean'}).sort_values(by='relative_strength', ascending=False).head(5)\n    return leader_sector_summary"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+synthesis_guidance: "{'concise_table_structures': 'Output in tabular form comparing sector performance.', 'evidence_integration': 'Use SQL results to build coherent market analysis.', 'risk_assessment': 'Highlight potential sectors with higher risk factors.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.avg_relative_strength is not approved"

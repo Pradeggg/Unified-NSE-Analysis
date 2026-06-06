@@ -1,0 +1,79 @@
+id: "report_link_data_validation_1250_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1250"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: last 3 months; response style: ranked candidates."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for last 3 months: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "last_3_months"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  steps:
+    - "Fetch the latest run from report.enhanced_runs using the run_ts column filtered for the last 3 months."
+    - "Join with report.enhanced_filtered_stocks on run_id to retrieve stocks related to the latest runs."
+    - "Check for missing data or broken links within the retrieved data set."
+    - "Rank findings based on severity and impact, focusing on TradingView export links."
+    - "Provide a list of ranked candidates showing broken links and missing data."
+sql_templates:
+  latest_runs: "SELECT run_id, run_ts, stocks_analyzed FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months' ORDER BY run_ts DESC LIMIT 10;"
+  join_by_run_id: "SELECT efs.symbol, ers.run_ts, ers.stocks_analyzed, efs.score FROM report.enhanced_filtered_stocks efs JOIN report.enhanced_runs ers ON ers.run_id = efs.run_id WHERE ers.run_ts >= CURRENT_DATE - INTERVAL '3 months' ORDER BY efs.rank ASC LIMIT 20;"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      symbols:
+
+      run_ids:
+
+    outputs:
+      broken_links:
+
+      missing_data:
+
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "# Note: Placeholder for logic to identify and rank broken links or data issues.\n# This read-only function processes the SQL results to identify validation errors pre-runtime."
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all relevant data joins and retrievals conform to _join_rules."
+  - "Follow _global_rules for using timestamps and date syntax."
+  - "Adhere to PostgreSQL syntax for creating parameterized queries."
+synthesis_guidance: "['Rank candidates based on findings severity and data impact.', 'Suggest remediation steps for each finding.', 'Detail verification methods to ensure resolution.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:06"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run: inputs must be a list"
+  - "run: must define run(context)"
+  - "run: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "run: inputs must be a list"
+    - "run: must define run(context)"
+    - "run: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

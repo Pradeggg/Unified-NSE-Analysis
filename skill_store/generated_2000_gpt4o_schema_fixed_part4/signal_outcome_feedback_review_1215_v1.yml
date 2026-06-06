@@ -1,0 +1,94 @@
+id: "signal_outcome_feedback_review_1215_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1215"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: latest EOD; response style: ranked candidates."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for latest EOD: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as ranked candidates"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    -
+      table: "signals.signal_log"
+      columns:
+        - "symbol"
+        - "date_issued"
+        - "signal"
+        - "hit_target"
+        - "hit_stop"
+        - "return_pct"
+    -
+      table: "scores.stage_snapshots"
+      columns:
+        - "snapshot_date"
+        - "symbol"
+        - "technical_score"
+        - "trading_signal"
+    -
+      table: "market.equity_eod"
+      columns:
+        - "trade_date"
+        - "symbol"
+        - "close"
+        - "change_pct"
+  join_rules:
+    -
+      left_table: "signals.signal_log"
+      left_column: "symbol"
+      right_table: "market.equity_eod"
+      right_column: "symbol"
+    -
+      left_table: "signals.signal_log"
+      left_column: "symbol"
+      right_table: "scores.stage_snapshots"
+      right_column: "symbol"
+tool_plan_template:
+  -
+    python_tools:
+
+    plans:
+
+sql_templates:
+  -
+    template: "WITH latest_signals AS (\n    SELECT symbol, date_issued, signal, hit_target, hit_stop, return_pct\n    FROM signals.signal_log\n    WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log)\n),\nlatest_stages AS (\n    SELECT symbol, technical_score, trading_signal\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n)\nSELECT ls.symbol, ls.signal, ls.hit_target, ls.hit_stop, ls.return_pct, st.technical_score, st.trading_signal\nFROM latest_signals ls\nJOIN latest_stages st ON ls.symbol = st.symbol\nORDER BY ls.return_pct DESC\nLIMIT 10"
+    description: "Retrieve latest 10 signals ranked by return percentage."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all referenced columns exist in their respective tables."
+  - "Validate all joins conform to schema join rules."
+synthesis_guidance: "['Rank candidates by effectiveness to provide tactical insights.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:54"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table {'table': 'market.equity_eod', 'columns': ['trade_date', 'symbol', 'close', 'change_pct']}"
+  - "unknown table {'table': 'scores.stage_snapshots', 'columns': ['snapshot_date', 'symbol', 'technical_score', 'trading_signal']}"
+  - "unknown table {'table': 'signals.signal_log', 'columns': ['symbol', 'date_issued', 'signal', 'hit_target', 'hit_stop', 'return_pct']}"
+review:
+  status: "needs_heal"
+  findings:
+    - "unknown table {'table': 'market.equity_eod', 'columns': ['trade_date', 'symbol', 'close', 'change_pct']}"
+    - "unknown table {'table': 'scores.stage_snapshots', 'columns': ['snapshot_date', 'symbol', 'technical_score', 'trading_signal']}"
+    - "unknown table {'table': 'signals.signal_log', 'columns': ['symbol', 'date_issued', 'signal', 'hit_target', 'hit_stop', 'return_pct']}"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

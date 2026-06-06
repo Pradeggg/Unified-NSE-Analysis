@@ -1,0 +1,53 @@
+id: "portfolio_lab_paper_trading_review_0558_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0558"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: position-sizing context; timeframe: quarter to date; response style: research-only summary."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "position-sizing context for quarter to date: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as research-only summary"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Generate a research-only summary for paper trading performance with a focus on entries, exits, and position-sizing. Ensure real holdings are not mixed."
+sql_templates:
+  -
+    name: "entry_exit_analysis"
+    template: "SELECT symbol, date_issued, signal, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE signal='BUY' AND date_issued >= :quarter_start_date ORDER BY date_issued DESC;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure summary does not mix real holdings and paper trades."
+  - "Maintain research-only tone and avoid prescriptive language."
+synthesis_guidance: "Focus the output on summarizing the effectiveness of paper trading strategies for the quarter, highlighting successful entries and exits."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:58:29"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

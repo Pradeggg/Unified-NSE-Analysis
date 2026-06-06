@@ -1,0 +1,80 @@
+id: "sector_breadth_rotation_watchlist_0573_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0573"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for pre market: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as research-only summary"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  language: "python"
+  mode: "read_only"
+  inputs:
+    approved_tables:
+      - "breadth.sector_daily"
+      - "breadth.ma_pct_above"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+  outputs:
+    sector_ranks: "List of sector rankings by breadth"
+    improving_sectors: "List of sectors showing improvement"
+    candidate_symbols: "Symbols to consider adding to TradingView"
+    tradingview_symbols: "Formatted symbols for TradingView"
+    evidence: "Research summary of findings"
+sql_templates:
+  sector_ranking: "SELECT sector, avg(pct_above_50dma) AS avg_pct_above FROM breadth.sector_daily WHERE snapshot_date = CURRENT_DATE GROUP BY sector ORDER BY avg_pct_above DESC"
+  stage_2_participation: "SELECT sector, avg(stage2_pct) AS avg_stage2 FROM breadth.ma_pct_above WHERE snapshot_date = CURRENT_DATE GROUP BY sector ORDER BY avg_stage2 DESC"
+python_tools:
+  -
+    required_function: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      approved_tables:
+        - "breadth.sector_daily"
+        - "breadth.ma_pct_above"
+        - "scores.stage_snapshots"
+    outputs:
+      sector_ranks: "Call SQL template sector_ranking"
+      improving_sectors: "Analyze change_5d for positive trends"
+      candidate_symbols: "Focus on symbols with top stage and RS scores"
+    code: "def run(context):\n    sector_ranks = context['sector_ranking']\n    improving_sectors = []  # Identify from breadth.sector_daily\n    candidate_symbols = []  # Prioritize from scores.stage_snapshots\n    # Populate results based on logic\n    return sector_ranks, improving_sectors, candidate_symbols"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+synthesis_guidance: "{'focus': 'Balance breadth and stage analysis to identify promising sectors.', 'response_style': 'Research summary format for pre-market review.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:58:39"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.avg_stage2 is not approved"
+  - "breadth.ma_pct_above.sector is not approved"
+  - "breadth.sector_daily.avg_pct_above is not approved"

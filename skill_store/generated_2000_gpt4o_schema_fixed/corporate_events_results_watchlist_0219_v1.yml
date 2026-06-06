@@ -1,0 +1,68 @@
+id: "corporate_events_results_watchlist_0219_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0219"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: latest EOD; response style: ranked candidates."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for latest EOD: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as ranked candidates"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  analysis:
+    -
+      step: "query_upcoming_events"
+      description: "Retrieve upcoming corporate events for relevant stocks."
+      sql:
+        template: "SELECT id, symbol, event_type, event_date, detail, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY event_date LIMIT 10;"
+      evidence: "Fetch upcoming events data to populate the watchlist."
+    -
+      step: "analyze_recent_results"
+      description: "Analyze recent quarterly results based on latest financial data."
+      sql:
+        template: "WITH recent_results AS (SELECT DISTINCT ON (symbol) symbol, period_end, verdict, score FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST) SELECT symbol, verdict, score, source_trail FROM recent_results LIMIT 10;"
+      evidence: "Collect and review recent results for stock performance."
+    -
+      step: "filter_relevant_symbols"
+      description: "Filter symbols for those meeting event and results criteria for watchlist inclusion."
+      sql:
+        template: "SELECT ce.symbol, ce.event_type, ce.event_date, ce.source, ra.verdict, ra.score FROM signals.corporate_events AS ce JOIN scores.results_analysis AS ra ON ce.symbol = ra.symbol WHERE ce.event_date >= CURRENT_DATE AND ra.verdict = 'beat' ORDER BY ce.event_date, ra.score DESC LIMIT 10;"
+      evidence: "Filter and rank symbols based on event type and result verdict."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure queries adhere to use of approved_schema and _global_rules."
+  - "Use PostgreSQL syntax and latest date referencing."
+synthesis_guidance: "['Synthesize evidence into a coherent watchlist, emphasizing source-trail and event-driven actions.', 'Rank symbols based on results analysis and event significance.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

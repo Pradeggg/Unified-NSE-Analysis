@@ -1,0 +1,61 @@
+id: "insider_bulk_deal_signal_review_1704_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1704"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: today; response style: QA checklist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for today: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as QA checklist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "today"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze today's insider and bulk/block deals. Confirm technical score for accumulation signals and compile into a QA checklist format."
+sql_templates:
+  -
+    name: "Get_Insider_Alerts"
+    template: "SELECT symbol, entity, qty, value_cr FROM signals.insider_alerts WHERE alert_date = CURRENT_DATE;"
+    description: "Retrieve today's insider alerts."
+  -
+    name: "Get_Bulk_Block_Deals"
+    template: "SELECT symbol, entity, qty, price FROM signals.bulk_block_deals WHERE deal_date = CURRENT_DATE;"
+    description: "Retrieve today's bulk/block deals."
+  -
+    name: "Get_Technical_Confirmation"
+    template: "WITH latest_stage AS (SELECT symbol, stage, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT s.symbol, s.stage, s.technical_score FROM signals.insider_alerts i JOIN latest_stage s ON i.symbol = s.symbol WHERE i.alert_date = CURRENT_DATE;"
+    description: "Join insider alerts with latest technical scores."
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "deal_summary"
+  - "technical_confirmation"
+synthesis_guidance: "Compile insights from evidence into a watchlist. Address technical confirmation, insider context, and summarize deal activity. Rank symbols based on accumulation strength."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

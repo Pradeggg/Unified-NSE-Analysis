@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:51:23"
+created_by: "llm_generated"
+description: "This skill card focuses on validating enhanced report data by checking report links, missing stock data, and providing a QA checklist for the Indian market."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0768_variant_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for post results: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "check_broken_links"
+    query: "SELECT run_id, run_ts FROM report.enhanced_runs WHERE stocks_analyzed = 0 OR stocks_filtered = 0;"
+  -
+    name: "identify_missing_data"
+    query: "SELECT run_id, symbol, score FROM report.enhanced_filtered_stocks WHERE tech_score IS NULL OR fund_score IS NULL;"
+status: "validated"
+synthesis_guidance: "Aggregate findings from SQL queries and verify remediation steps with detailed reporting."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "post_results"
+  - "QA_checklist"
+title: "Enhanced Report Data Validation with SQL and Python"
+tool_plan_template: "Analyze report links and stock data for discrepancies and provide a comprehensive QA checklist."
+validation_rules:
+  - "Ensure no zero or null values in stocks_analyzed, stocks_filtered."
+  - "Confirm non-null tech_score and fund_score for stocks."
+version: 1

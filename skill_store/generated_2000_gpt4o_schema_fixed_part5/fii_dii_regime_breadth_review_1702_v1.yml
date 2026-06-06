@@ -1,0 +1,58 @@
+id: "fii_dii_regime_breadth_review_1702_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1702"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: today; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for today: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "today"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Fetch FII/DII flow and regime context for today."
+    query: "SELECT f.trade_date, f.fii_net_today, f.dii_net_today, f.flow_signal, r.regime, r.confidence FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date WHERE f.trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+  -
+    description: "Get market breadth details for today."
+    query: "SELECT b.trade_date, b.advances, b.declines, b.market_sentiment FROM breadth.market_daily b WHERE b.trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+  -
+    description: "Retrieve index evidence and confirmation."
+    query: "SELECT i.trade_date, i.index_symbol, i.close, i.change_pct, i.trend_signal FROM market.index_eod i WHERE i.trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "{'rules': [\"Ensure that trade_date in outputs matches today's date.\", 'Verify that indices and flow signals align with a bullish or bearish market regime.']}"
+synthesis_guidance: "Compose a QA checklist-style response focusing on today's FII-DII flow, market regime, and breadth context. Provide clear indications of market risk-on or risk-off status."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

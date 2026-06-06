@@ -1,0 +1,63 @@
+id: "corporate_events_results_watchlist_1619_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1619"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: latest EOD; response style: debug trace."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for latest EOD: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as debug trace"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    steps:
+      -
+        action: "Fetch upcoming corporate events for stocks with specified event types"
+        sql_template: "SELECT id, symbol, event_type, event_date, detail, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY event_date LIMIT 50"
+      -
+        action: "Join with results analysis for latest financial performance insights"
+        sql_template: "SELECT r.symbol, r.company_name, r.growth_yoy_revenue_pct, r.verdict FROM scores.results_analysis r JOIN (SELECT DISTINCT ON (symbol) symbol, event_date FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY symbol, event_date DESC) e ON r.symbol = e.symbol WHERE r.verdict IN ('beat', 'inline') LIMIT 50"
+      -
+        action: "Join with stage snapshots for technical context"
+        sql_template: "SELECT s.symbol, s.stage, s.trading_signal FROM scores.stage_snapshots s JOIN (SELECT DISTINCT ON (symbol) symbol FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY symbol, event_date DESC) e ON s.symbol = e.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 50"
+sql_templates:
+  - "SELECT id, symbol, event_type, event_date, detail, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY event_date LIMIT 50"
+  - "SELECT r.symbol, r.company_name, r.growth_yoy_revenue_pct, r.verdict FROM scores.results_analysis r JOIN (SELECT DISTINCT ON (symbol) symbol, event_date FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY symbol, event_date DESC) e ON r.symbol = e.symbol WHERE r.verdict IN ('beat', 'inline') LIMIT 50"
+  - "SELECT s.symbol, s.stage, s.trading_signal FROM scores.stage_snapshots s JOIN (SELECT DISTINCT ON (symbol) symbol FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY symbol, event_date DESC) e ON s.symbol = e.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 50"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all referenced tables and columns are correct and part of approved schema."
+  - "Ensure no write operations are performed; only selects are allowed."
+  - "Adhere to the latest date and stage label guidelines as per global rules."
+synthesis_guidance: "['Synthesize results to highlight upcoming events with strong buy or hold signals.', 'Provide a debug trace explaining the source trail validation for transparency.', 'Emphasize results with positive verdicts, while flagging those with neutral or negative outcomes for further review.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

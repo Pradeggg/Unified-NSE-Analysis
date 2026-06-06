@@ -1,0 +1,57 @@
+id: "portfolio_lab_paper_trading_review_0166_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0166"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: post results; response style: narrative plus evidence."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for post results: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "post_results"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  strategy_state: "Analysis of signal context using the latest stage snapshot and signal log entries."
+  open_trades: "Retrieve currently open trades from the signal log where date_resolved is NULL."
+  entry_exit_rules: "Review strategy entries, exits, stops and targets based on the latest signal log details."
+  exposure: "Calculate exposure using quantity from portfolio holdings and latest market price."
+  exceptions: "Highlight any discrepancies between signal issued and resolved states."
+sql_templates:
+  latest_signal_log: "SELECT * FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log);"
+  stage_snapshot: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "ensure_latest_signal_log"
+  - "ensure_up_to_date_stage"
+synthesis_guidance: "{'narrative': 'Summarize results with a focus on strategy integrity and signal consistency without interfering with actual portfolio.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

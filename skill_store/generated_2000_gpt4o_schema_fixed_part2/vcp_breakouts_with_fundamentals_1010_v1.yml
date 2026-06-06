@@ -1,0 +1,57 @@
+id: "vcp_breakouts_with_fundamentals_1010_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1010"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: today; response style: concise table."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  tool: "VCP fundamentals screener"
+  purpose: "Identify stocks with VCP breakout potential and strong fundamentals"
+sql_templates:
+  -
+    name: "latest_vcp_breakout_candidates"
+    template: "WITH latest_eod AS (SELECT symbol, close, volume, turnover_cr FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND series = 'EQ'), latest_stage2 AS (SELECT symbol, can_slim_score, minervini_score, fundamental_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY')) SELECT le.symbol, le.close, le.volume, le.turnover_cr, ls.can_slim_score, ls.minervini_score, ls.fundamental_score FROM latest_eod le JOIN latest_stage2 ls ON le.symbol = ls.symbol WHERE ls.fundamental_score > 80 ORDER BY ls.can_slim_score DESC LIMIT 10;"
+  -
+    name: "vcp_tradingview_export"
+    template: "SELECT symbol, price, enhanced_fund_score, vcp_score, vcp_breakout_pct FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC, symbol ASC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure output candidates have non-null symbols and scores above thresholds."
+  - "Verify no more than 50 VCP candidates are exported for TradingView."
+synthesis_guidance: "['Highlight top candidates with clear VCP characteristics and strong fundamental scores.', 'Provide a concise and exportable format suitable for TradingView.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:16"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

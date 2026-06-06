@@ -1,0 +1,78 @@
+id: "company_360_research_report_1644_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1644"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: watchlist creation; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "watchlist creation for last 3 months: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as debug trace"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    step: "Overview and Fundamentals"
+    action: "Gather latest stage and fundamental scores."
+  -
+    step: "Financial Analysis"
+    action: "Analyze latest quarterly and annual financial results."
+  -
+    step: "Technical Context"
+    action: "Fetch recent stock price and trading signal."
+  -
+    step: "Narrative Evidence"
+    action: "Collect latest narrative and risk analysis."
+sql_templates:
+  overview_and_fundamentals:
+    query: "SELECT snapshot_date, symbol, company_name, sector, market_cap_cat, price, stage, stage_score, technical_score, narrative FROM scores.stage_snapshots WHERE symbol = '{{symbol}}' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    description: "Fetch the latest overview and fundamental scores for a given symbol."
+  financial_analysis:
+    query: "WITH latest_qtr AS (SELECT DISTINCT ON (symbol) * FROM scores.quarterly_results WHERE symbol = '{{symbol}}' AND period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC) SELECT period_label, revenue, pat, eps FROM latest_qtr;"
+    description: "Retrieve the latest quarterly results for financial analysis."
+  technical_context:
+    query: "SELECT trade_date, close, change_1d_pct, trading_signal FROM market.equity_eod WHERE symbol = '{{symbol}}' AND trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+    description: "Get the latest market and technical context."
+  narrative_evidence:
+    query: "SELECT key_strengths, key_risks, verdict FROM scores.results_analysis WHERE symbol = '{{symbol}}' AND period_end = (SELECT MAX(period_end) FROM scores.results_analysis WHERE symbol = '{{symbol}}');"
+    description: "Extract narrative evidence and risk assessment."
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all sections are covered by running each SQL template."
+  - "Verify that each extracted piece of evidence aligns with the approved coverage guidelines."
+synthesis_guidance: "['Integrate the SQL-based evidence into a coherent research card.', 'Provide insights and analysis for key trends and risk factors.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:33"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

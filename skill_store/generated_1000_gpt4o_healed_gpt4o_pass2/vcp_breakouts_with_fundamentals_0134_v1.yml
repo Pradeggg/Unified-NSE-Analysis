@@ -1,0 +1,96 @@
+created_at: "2026-06-06T12:42:13"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: narrative plus evidence."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0134_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    if not isinstance(context, list):\n        return []\n    return [\n        {\n            'symbol': row['symbol'],\n            'company_name': row['company_name']\n        } for row in context if row['vcp_score'] > 80 and row['enhanced_fund_score'] > 70\n    ]"
+    id: "run_candidate_filter"
+    inputs:
+      context:
+        -
+          columns:
+            - "symbol"
+            - "company_name"
+            - "price"
+            - "vcp_score"
+            - "enhanced_fund_score"
+          table: "scores.stage2_vcp_picks"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      -
+        company_name: "string"
+        symbol: "string"
+review:
+  attempts: 3
+  findings:
+    - "run_candidate_filter: inputs must be a list"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    template: "SELECT symbol, company_name, price, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE vcp_score > 80 AND enhanced_fund_score > 70"
+    template_name: "fetch_vcp_candidates"
+status: "test_failed"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "narrative_plus_evidence"
+title: "VCP Breakouts With Fundamentals Variant 0134"
+tool_plan_template:
+  approved_tables:
+    - "scores.stage2_vcp_picks"
+  code: "def run(context):\n    if not isinstance(context, list):\n        return []\n    return [\n        {\n            'symbol': row['symbol'],\n            'company_name': row['company_name']\n        } for row in context if row['vcp_score'] > 80 and row['enhanced_fund_score'] > 70\n    ]"
+  inputs:
+    context:
+      columns:
+        - "symbol"
+        - "company_name"
+        - "price"
+        - "vcp_score"
+        - "enhanced_fund_score"
+      condition:
+        enhanced_fund_score: "> 70"
+        vcp_score: "> 80"
+      table: "scores.stage2_vcp_picks"
+  language: "python"
+  mode: "read_only"
+  outputs:
+    - "symbol"
+    - "company_name"
+  required_function: "run(context)"
+validation_errors:
+  - "run_candidate_filter: inputs must be a list"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+version: 1

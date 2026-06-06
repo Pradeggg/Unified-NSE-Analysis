@@ -1,0 +1,50 @@
+created_at: "2026-06-06T12:53:30"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: weekly review; response style: comparison matrix."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0991_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+  holdings_exposure: "SELECT h.symbol, h.qty, h.avg_cost, s.sector, s.market_cap_cat, s.price, s.stage, s.stage_score FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+status: "validated"
+synthesis_guidance: "Summarize the portfolio state and identify candidates for incremental add or trim, presented in a comparison matrix."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "weekly_review"
+  - "comparison_matrix"
+title: "Portfolio Incremental Add Trim Review Variant 0991"
+tool_plan_template: "Plan a quick scan to review portfolio holdings, exposure, stages, signals, and potential incremental add/trim actions, arranged in a comparison matrix."
+validation_rules:
+  - "Output must include a summary of the current portfolio state including sector exposure."
+  - "Identify add candidates based on stage and technical scores."
+  - "Identify trim candidates based on risk signals."
+  - "Ensure that exposure is balanced and aligned with strategic goals."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

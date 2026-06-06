@@ -1,0 +1,55 @@
+id: "vcp_breakouts_with_fundamentals_0730_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0730"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  - "Apply date filters for the last 5 sessions."
+  - "Identify stocks creating new highs or exhibiting VCP patterns."
+  - "Filter for stocks with strong fundamentals using enhanced_fund_score."
+sql_templates:
+  -
+    name: "Filter_VCP_Breakouts"
+    template: "WITH latest_vcp AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)) SELECT symbol, company_name, enhanced_fund_score FROM latest_vcp WHERE vcp_score > 75 AND enhanced_fund_score > 80 ORDER BY vcp_score DESC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure list includes valid NSE symbols."
+  - "Verify enhanced_fund_score vs threshold."
+synthesis_guidance: "['Focus on presenting top breakout candidates.', 'Explain the rationale using score metrics.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

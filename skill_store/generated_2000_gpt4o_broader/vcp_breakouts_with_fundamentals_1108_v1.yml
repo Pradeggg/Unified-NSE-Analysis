@@ -1,0 +1,52 @@
+id: "vcp_breakouts_with_fundamentals_1108_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1108"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: today; response style: narrative plus evidence."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "today"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  description: "Fetch VCP breakout stocks with strong fundamentals"
+  template: "WITH recent_vcp AS (SELECT symbol, company_name, price, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE vcp_score > 0.7 AND enhanced_fund_score > 0.8 AND snapshot_date = CURRENT_DATE), recent_eod AS (SELECT symbol, high, low, close FROM market.equity_eod WHERE trade_date = CURRENT_DATE AND symbol IN (SELECT symbol FROM recent_vcp)) SELECT recent_vcp.symbol, recent_vcp.company_name, recent_vcp.price, recent_vcp.vcp_score, recent_vcp.enhanced_fund_score, recent_eod.high, recent_eod.low, recent_eod.close FROM recent_vcp JOIN recent_eod ON recent_vcp.symbol = recent_eod.symbol;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure symbols have strong fundamental scores."
+  - "Validate price change aligns with VCP breakout patterns."
+synthesis_guidance: "['Narrative should tie together technical patterns with fundamental strength.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:19"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,78 @@
+id: "corporate_events_results_watchlist_0443_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0443"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for last 3 months: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  python_tool_policy:
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    required_fields:
+      - "id"
+      - "language"
+      - "mode"
+      - "inputs"
+      - "outputs"
+      - "approved_tables"
+      - "code"
+sql_templates:
+  -
+    description: "Select recent corporate events for the last 3 months from signals.corporate_events."
+    query: "SELECT id, symbol, event_type, event_date, purpose_raw, detail, source FROM signals.corporate_events WHERE event_date > CURRENT_DATE - INTERVAL '3 months' ORDER BY event_date DESC LIMIT 50;"
+  -
+    description: "Select the latest results analysis for each symbol if available."
+    query: "SELECT DISTINCT ON (symbol) symbol, period_end, period_label, verdict FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC;"
+  -
+    description: "Get the latest stage snapshot for all symbols involved in events."
+    query: "SELECT s.symbol, s.stage, s.trading_signal FROM scores.stage_snapshots s JOIN signals.corporate_events e ON s.symbol = e.symbol WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND e.event_date > CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure SQL queries are within the approved schema."
+  - "Validate read-only nature of evidence extraction."
+  - "Check correct filtering by date according to global rules."
+synthesis_guidance: "['Integrate event-driven insights with stage and trading signals.', 'Focus on recent events for a portfolio-aware narrative.', 'Ensure output provides actionable insights with regard to upcoming corporate actions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:44"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.corporate_events.corporate is not approved"
+  - "signals.corporate_events.events is not approved"
+  - "signals.corporate_events.for is not approved"
+  - "signals.corporate_events.last is not approved"
+  - "signals.corporate_events.months is not approved"
+  - "signals.corporate_events.recent is not approved"
+  - "signals.corporate_events.the is not approved"

@@ -1,0 +1,64 @@
+id: "signal_outcome_feedback_review_0669_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0669"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: post results; response style: debug trace."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for post results: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as debug trace"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "post_results"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Retrieve past signals and their outcomes to evaluate hit targets and stops."
+    query: "SELECT id, date_issued, symbol, signal, hit_target, hit_stop, price_at_issue, price_at_resolution, return_pct FROM signals.signal_log WHERE date_resolved IS NOT NULL"
+  -
+    description: "Aggregate success and failure patterns based on sectors."
+    query: "SELECT sector, COUNT(*) AS total_signals, SUM(CASE WHEN hit_target THEN 1 ELSE 0 END) AS successful_signals, SUM(CASE WHEN hit_stop THEN 1 ELSE 0 END) AS failed_signals FROM signals.signal_log GROUP BY sector"
+python_tools:
+  -
+    id: "aggregate_outcome_trends"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signals"
+    outputs:
+      - "trends"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context):\n    successful = [s for s in context['signals'] if s['hit_target']]\n    failed = [s for s in context['signals'] if s['hit_stop']]\n    trends = {\n        'total': len(context['signals']),\n        'successful': len(successful),\n        'failed': len(failed)\n    }\n    return trends"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all outcomes have either hit_target or hit_stop populated."
+  - "Verify signals are analyzed post-resolution only."
+synthesis_guidance: "Use historical signal outcomes to identify trends, optimize strategies, and improve future signal effectiveness in the Indian stock market context."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:26"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.failed_signals is not approved"
+  - "signals.signal_log.successful_signals is not approved"
+  - "signals.signal_log.total_signals is not approved"

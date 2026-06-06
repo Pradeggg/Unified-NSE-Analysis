@@ -1,0 +1,54 @@
+id: "sector_breadth_rotation_watchlist_1539_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1539"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: research-only summary."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for last 20 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as research-only summary"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  description: "A research-only screening task to create a sector-relative watchlist for the Indian market using sector breadth, stage analysis, and momentum indicators."
+sql_templates:
+  -
+    query: "WITH recent_sector AS (SELECT sector, pct_above_50dma, change_5d, breadth_signal FROM breadth.sector_daily WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '20 days')) SELECT sector, AVG(pct_above_50dma) AS avg_pct_above_50dma, AVG(change_5d) AS avg_change_5d FROM recent_sector WHERE breadth_signal = 'positive' GROUP BY sector ORDER BY avg_pct_above_50dma DESC;"
+    description: "Fetches recent sector performance metrics where breadth signal is positive for the last 20 sessions."
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  -
+    rule: "Ensure sector breadth and stage analysis logic aligns with approved schema definitions."
+synthesis_guidance: "{'description': 'When synthesizing data, summarize sector trends and identify stock symbols for potential addition to TradingView watchlists.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:11"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

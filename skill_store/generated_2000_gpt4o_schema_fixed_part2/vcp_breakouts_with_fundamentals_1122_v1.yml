@@ -1,0 +1,83 @@
+id: "vcp_breakouts_with_fundamentals_1122_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1122"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters:
+    - "Use series = 'EQ' for equity series filter."
+    - "Use trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) for latest equity data."
+    - "Use snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) for latest scores."
+    - "Use snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) for latest VCP picks."
+  joins:
+    - "market.equity_eod.symbol = scores.stage_snapshots.symbol"
+    - "market.equity_eod.symbol = scores.stage2_vcp_picks.symbol"
+sql_templates:
+  - "WITH latest_data AS ("
+  - "   SELECT eod.symbol, eod.close, eod.volume, eod.trade_date, snaps.stage, snaps.fundamental_score"
+  - "   FROM market.equity_eod eod"
+  - "   JOIN scores.stage_snapshots snaps ON eod.symbol = snaps.symbol"
+  - "   WHERE eod.series = 'EQ'"
+  - "   AND eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+  - "   AND snaps.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+  - "   AND snaps.stage = 'STAGE_2'"
+  - "   AND snaps.trading_signal IN ('BUY', 'STRONG_BUY')"
+  - "   LIMIT 50"
+  - ")"
+  - "SELECT * FROM latest_data"
+python_tools:
+  -
+    id: "calculate_rolling_averages"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      data: "DataFrame of latest stock prices and volumes."
+    outputs:
+      averages: "Rolling averages for specified period."
+    approved_tables:
+      - "market.equity_eod"
+    code: "def run(context):\n    data = context['data']\n    data['rolling_avg'] = data['close'].rolling(window=5).mean()\n    return data[['symbol', 'rolling_avg']]"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "ensure_non_empty_output"
+  - "check_fundamental_scores"
+synthesis_guidance: "{'focus_on_correlation': 'Highlight correlation between VCP pattern detection and strong fundamentals.', 'narrative_structure': 'Provide a step-by-step analysis of selected stocks along with necessary evidence.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:24"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_rolling_averages: inputs must be a list"
+  - "calculate_rolling_averages: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_rolling_averages: inputs must be a list"
+    - "calculate_rolling_averages: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:50:29"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 3 months; response style: debug trace."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0646_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Fetch stocks with VCP patterns, breakouts, and strong fundamentals in the last 3 months."
+    query: "WITH vcp_candidates AS (SELECT symbol, company_name, price_date, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE vcp_score > 70 AND enhanced_fund_score > 80 AND price_date > CURRENT_DATE - INTERVAL '3 months'), breakout_stocks AS (SELECT symbol, max(high) as recent_high FROM market.equity_eod WHERE date > CURRENT_DATE - INTERVAL '3 months' GROUP BY symbol HAVING max(high) >= week52_high) SELECT vcp.symbol, vcp.company_name FROM vcp_candidates vcp JOIN breakout_stocks bs ON vcp.symbol = bs.symbol"
+    template_id: "fetch_breakouts"
+status: "validated"
+synthesis_guidance: "Synthesize findings into actionable insights for trading strategies and highlight gaps."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_3_months"
+  - "debug_trace"
+title: "VCP Breakouts With Fundamentals Variant 0646"
+tool_plan_template: "Identify stocks with recent breakouts or new highs combining VCP patterns and strong fundamentals over the past 3 months."
+validation_rules:
+  - "SQL queries must be read-only."
+  - "Ensure data freshness from the last 3 months."
+version: 1

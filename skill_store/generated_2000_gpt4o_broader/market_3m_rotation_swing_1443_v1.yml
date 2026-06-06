@@ -1,0 +1,59 @@
+id: "market_3m_rotation_swing_1443_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1443"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Execute SQL queries to gather EOD market data for indices and equities, stage snapshots, and VCP picks. Analyze trends, sector leadership, and identify swing candidates."
+sql_templates:
+  -
+    template_id: "index_returns_3m"
+    description: "Fetch index returns for the last 3 months"
+    sql: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' AND index_symbol IN ('NIFTY', 'SENSEX');"
+  -
+    template_id: "stage_distribution_3m"
+    description: "Analyze stage distribution changes over 3 months"
+    sql: "SELECT snapshot_date, stage, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY snapshot_date, stage;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all outputs align with the approved schema."
+  - "Use read-only SQL to protect data integrity."
+  - "Python tools must adhere to security constraints."
+synthesis_guidance: "['Integrate SQL query results into a cohesive market analysis.', 'Identify trends in sector rotation and recommend potential swing trades.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:16"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

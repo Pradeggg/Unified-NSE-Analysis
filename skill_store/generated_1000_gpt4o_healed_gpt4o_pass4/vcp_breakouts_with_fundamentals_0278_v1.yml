@@ -1,0 +1,129 @@
+card:
+  created_at: "2026-06-06T12:44:09"
+  created_by: "llm_generated"
+  description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: pre market; response style: ranked candidates."
+  domain: "screening"
+  evidence_required:
+    tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "vcp_breakouts_with_fundamentals_0278_v1"
+  input_patterns:
+    - "stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "VCP breakout stocks for TradingView"
+    - "quality breakouts with strong fundamentals"
+    - "position-sizing context for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "quality breakouts with strong fundamentals as ranked candidates"
+  output_contract:
+    - "filters"
+    - "candidates"
+    - "tradingview_symbols"
+    - "evidence"
+    - "risks"
+  python_tools:
+    -
+      approved_tables:
+
+      code: "def run(context):\n    if 'ranked_candidates' not in context:\n        return {'error': 'ranked_candidates key missing'}\n    ranked_candidates = context['ranked_candidates']\n    position_sizes = {}\n    total_weight = 100\n    num_candidates = len(ranked_candidates)\n    if num_candidates == 0:\n        return {'error': 'No ranked candidates available'}\n    for candidate in ranked_candidates:\n        position_sizes[candidate['symbol']] = total_weight / num_candidates\n    return {'position_sizes': position_sizes}"
+      id: "calculate_position_sizing"
+      inputs:
+        - "ranked_candidates"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "position_sizes"
+  review:
+    attempts: 3
+    findings:
+
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "healed"
+  sql_templates:
+    -
+      name: "BreakoutStocks"
+      template: "WITH RankedPicks AS (SELECT symbol, company_name, sector, enhanced_fund_score, rsi, relative_strength, vcp_score FROM scores.stage2_vcp_picks WHERE enhanced_fund_score > 70 AND vcp_score > 0.8 ORDER BY vcp_score DESC, enhanced_fund_score DESC LIMIT 10) SELECT * FROM RankedPicks;"
+  status: "generated"
+  synthesis_guidance:
+    - "Focus on ranking based on VCP and fundamental scores."
+    - "Contextualize within Indian market pre-market conditions."
+  tags:
+    - "vcp"
+    - "breakout"
+    - "new_high"
+    - "fundamentals"
+    - "tradingview"
+    - "position-sizing_context"
+    - "pre_market"
+    - "ranked_candidates"
+  title: "VCP Breakouts With Fundamentals Variant 0278"
+  tool_plan_template: "Identify stocks showing breakout patterns and evaluate their fundamentals for Indian market pre-market screening."
+  validation_rules:
+    - "Validate enhanced fund score threshold compliance."
+    - "Check VCP score rankings."
+  version: 1
+created_at: "2026-06-06T12:44:09"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: pre market; response style: ranked candidates."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0278_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+
+    code: "def run(context):\n    ranked_candidates = context['ranked_candidates']\n    # Calculation logic for position sizing\n    position_sizes = {}\n    total_weight = 100\n    for candidate in ranked_candidates:\n        position_sizes[candidate['symbol']] = total_weight / len(ranked_candidates)\n    return {'position_sizes': position_sizes}"
+    id: "calculate_position_sizing"
+    inputs:
+      - "ranked_candidates"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "position_sizes"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_position_sizing: execution failed: KeyError: 'ranked_candidates'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    name: "BreakoutStocks"
+    template: "WITH RankedPicks AS (SELECT symbol, company_name, sector, enhanced_fund_score, rsi, relative_strength, vcp_score FROM scores.stage2_vcp_picks WHERE enhanced_fund_score > 70 AND vcp_score > 0.8 ORDER BY vcp_score DESC, enhanced_fund_score DESC LIMIT 10) SELECT * FROM RankedPicks;"
+status: "test_failed"
+synthesis_guidance: "['Focus on ranking based on VCP and fundamental scores.', 'Contextualize within Indian market pre-market conditions.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "pre_market"
+  - "ranked_candidates"
+title: "VCP Breakouts With Fundamentals Variant 0278"
+tool_plan_template: "Identify stocks showing breakout patterns and evaluate their fundamentals for Indian market pre-market screening."
+validation_errors:
+  - "calculate_position_sizing: execution failed: KeyError: 'ranked_candidates'"
+validation_rules:
+  - "Validate enhanced fund score threshold compliance."
+  - "Check VCP score rankings."
+version: 1

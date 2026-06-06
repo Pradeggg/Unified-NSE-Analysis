@@ -1,0 +1,67 @@
+id: "company_360_research_report_0664_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0664"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: watchlist creation; timeframe: post results; response style: debug trace."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "watchlist creation for post results: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as debug trace"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "watchlist_creation"
+  - "post_results"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "latest_stage_snapshot"
+    sql: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol = $1 LIMIT 1;"
+  -
+    name: "latest_quarterly_result"
+    sql: "SELECT DISTINCT ON (symbol) * FROM scores.quarterly_results WHERE period_type = 'quarter' AND symbol = $1 ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC LIMIT 1;"
+  -
+    name: "latest_annual_result"
+    sql: "SELECT DISTINCT ON (symbol) * FROM scores.annual_results WHERE period_type = 'annual' AND symbol = $1 ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC LIMIT 1;"
+  -
+    name: "latest_eod_data"
+    sql: "SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND symbol = $1 AND series = 'EQ' LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure symbol matches NSE standards."
+  - "Validate date formats for report consistency."
+synthesis_guidance: "{'guidelines': ['Summarize key financial trends from quarterly and annual results.', 'Highlight technical indicators using the latest EOD data.', 'Identify any valuation gaps in context of the sector.', 'Formulate a clear thesis and outline potential risks.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:30"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

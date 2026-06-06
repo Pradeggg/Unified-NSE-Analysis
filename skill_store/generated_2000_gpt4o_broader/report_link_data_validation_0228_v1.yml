@@ -1,0 +1,50 @@
+id: "report_link_data_validation_0228_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0228"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: last 5 sessions; response style: ranked candidates."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  source: "Use data from the last 5 sessions"
+  focus: "Position-sizing context and data validation"
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE analysis_date >= CURRENT_DATE - INTERVAL '5' DAY;"
+  -
+    template: "SELECT run_id, symbol, rank, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = ? ORDER BY rank;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all report links are functional."
+  - "Confirm stock data is present in generated reports."
+  - "Verify data timelines match the last 5 sessions."
+synthesis_guidance: "['Rank candidates based on data completeness and link integrity.', 'Consider impact of position-sizing in findings.', 'Provide actionable remediation steps for any validation failures.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:56"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.day is not approved"

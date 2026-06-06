@@ -1,0 +1,65 @@
+id: "agent_route_failure_diagnostics_1470_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1470"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for post results: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as portfolio-aware output"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze route failures using SQL and optional Python evidence tools."
+sql_templates:
+  -
+    description: "Select latest enhanced report runs with their stock analysis details."
+    query: "WITH latest_runs AS (SELECT * FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)) SELECT r.run_id, r.stocks_analyzed, r.stocks_filtered, s.symbol, s.score, s.recommendation FROM latest_runs r JOIN report.enhanced_filtered_stocks s ON r.run_id = s.run_id ORDER BY r.run_ts DESC LIMIT 100;"
+python_tools:
+  -
+    id: "complex_symbol_resolution_check"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      symbols: "List of symbols to verify resolution paths."
+    outputs:
+      unresolved_symbols: "List of symbols without a resolution path."
+    approved_tables:
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    resolved_symbols = set(context.tables['report.enhanced_filtered_stocks']['symbol'])\n    unresolved = [s for s in context.inputs['symbols'] if s not in resolved_symbols]\n    return {'unresolved_symbols': unresolved}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure output pertains to route diagnostics."
+  - "Validate symbol resolution logic against enhanced stock data."
+synthesis_guidance: "Frame results in the context of portfolio-aware analysis post TradingView export."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:30"
+generation_model: "gpt-4o"
+validation_errors:
+  - "complex_symbol_resolution_check: inputs must be a list"
+  - "complex_symbol_resolution_check: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "complex_symbol_resolution_check: inputs must be a list"
+    - "complex_symbol_resolution_check: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

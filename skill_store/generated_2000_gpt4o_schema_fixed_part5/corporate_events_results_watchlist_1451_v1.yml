@@ -1,0 +1,60 @@
+id: "corporate_events_results_watchlist_1451_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1451"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for quarter to date: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    event_calendar: "List of corporate events based on the user's query."
+    symbol_watchlist: "Selected symbols that are on the watchlist for the current quarter."
+    result_context: "Contextual details about the selected symbols, including recent performance and analysis."
+    action_bucket: "Proposed actions based on event analysis and results."
+    source_trail: "Evidence and sources trail for all inputs and outputs."
+sql_templates:
+  upcoming_events: "SELECT DISTINCT ON (ce.symbol) ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, ce.detail, ce.source FROM signals.corporate_events ce WHERE ce.event_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY ce.symbol, ce.event_date DESC;"
+  recent_results: "SELECT DISTINCT ON (ra.symbol) ra.symbol, ra.company_name, ra.industry, ra.verdict FROM scores.results_analysis ra WHERE ra.period_end >= CURRENT_DATE - INTERVAL '3 months' ORDER BY ra.symbol, ra.period_end DESC;"
+  current_stage: "SELECT ss.symbol, ss.stage, ss.trading_signal FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "{'distinct_symbols': 'Ensure all symbols in the output contract are distinct.', 'valid_dates': 'Verify that event dates and period ends fall within the declared quarter to date timeframe.'}"
+synthesis_guidance: "{'focus': 'Provide a quick and clear summary of actionable corporate events and results-focused watchlists.', 'structure': 'Organize outputs to emphasize portfolio awareness and evidence trails.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:13"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.ra is not approved"
+  - "signals.corporate_events.ce is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "scores.results_analysis.ra is not approved"
+    - "signals.corporate_events.ce is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

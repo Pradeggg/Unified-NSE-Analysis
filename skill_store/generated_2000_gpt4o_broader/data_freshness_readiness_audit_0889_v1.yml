@@ -1,0 +1,70 @@
+id: "data_freshness_readiness_audit_0889_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0889"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for intraday context: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as action watchlist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Use the provided SQL templates for initial evidence gathering. Utilize Python tooling for read-only, complex logic where SQL alone is insufficient."
+sql_templates:
+  -
+    name: "Check Index EOD Freshness"
+    query: "SELECT MAX(trade_date) AS last_trade_date FROM market.index_eod"
+  -
+    name: "Check Equity EOD Freshness"
+    query: "SELECT MAX(trade_date) AS last_trade_date FROM market.equity_eod"
+  -
+    name: "Check Last Enhanced Report Run"
+    query: "SELECT MAX(run_ts) AS last_run_time FROM report.enhanced_runs"
+python_tools:
+  -
+    id: "calculate_data_freshness_window"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "last_trade_date"
+      - "current_date"
+    outputs:
+      - "days_difference"
+    approved_tables:
+
+    code: "from datetime import datetime\n\ndef run(context):\n    last_trade_date = datetime.strptime(context['last_trade_date'], '%Y-%m-%d')\n    current_date = datetime.strptime(context['current_date'], '%Y-%m-%d')\n    days_difference = (current_date - last_trade_date).days\n    return {'days_difference': days_difference}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all critical data sources have been updated within the expected timeframe."
+  - "Identify and flag data sources that block the workflow due to outdated information or missing entries."
+synthesis_guidance: "Aggregate collected data and identify key areas where freshness lags. Recommend actions to address stale data and ensure data readiness for all relevant workflows."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:09"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.last_trade_date is not approved"
+  - "market.index_eod.last_trade_date is not approved"
+  - "report.enhanced_runs.last_run_time is not approved"

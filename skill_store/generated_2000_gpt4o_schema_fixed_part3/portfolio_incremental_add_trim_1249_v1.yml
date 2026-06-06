@@ -1,0 +1,65 @@
+id: "portfolio_incremental_add_trim_1249_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1249"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: last 3 months; response style: ranked candidates."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for last 3 months: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Review portfolio holdings for incremental add/trim actions using stage and score data."
+sql_templates:
+  -
+    description: "Fetch the latest stage snapshots for portfolio symbols."
+    sql: "WITH latest_stage AS (SELECT symbol, company_name, sector, trading_signal, investment_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY')) SELECT h.symbol, h.qty, s.company_name, s.sector, s.trading_signal, s.investment_score FROM portfolio.holdings h JOIN latest_stage s ON h.symbol = s.symbol ORDER BY s.investment_score DESC LIMIT 10;"
+python_tools:
+  -
+    id: "incremental_add_trim_validation"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "portfolio_holdings"
+      - "stage_snapshot_data"
+    outputs:
+      - "validated_candidates"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    # Perform source-trail validation\n    holdings = context['portfolio_holdings']\n    stage_data = context['stage_snapshot_data']\n    validated_candidates = []\n    for holding in holdings:\n        symbol_data = next((item for item in stage_data if item['symbol'] == holding['symbol']), None)\n        if symbol_data and symbol_data['trading_signal'] in ['BUY', 'STRONG_BUY']:\n            validated_candidates.append({\n                'symbol': holding['symbol'],\n                'investment_score': symbol_data['investment_score']\n            })\n    return sorted(validated_candidates, key=lambda x: x['investment_score'], reverse=True)"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Focus on providing ranked candidates for add/trim decisions using the latest three-month performance and stage data."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:46"
+generation_model: "gpt-4o"
+validation_errors:
+  - "incremental_add_trim_validation: execution failed: KeyError: 'portfolio_holdings'"
+review:
+  status: "needs_heal"
+  findings:
+    - "incremental_add_trim_validation: execution failed: KeyError: 'portfolio_holdings'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

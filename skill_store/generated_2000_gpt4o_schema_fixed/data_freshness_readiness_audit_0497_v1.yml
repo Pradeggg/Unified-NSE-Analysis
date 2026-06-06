@@ -1,0 +1,67 @@
+id: "data_freshness_readiness_audit_0497_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0497"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for weekly review: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as portfolio-aware output"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  - "Step 1: Assess the latest data available for equity and index end-of-day data."
+  - "Step 2: Perform sector-relative comparison using the latest scores and signals."
+  - "Step 3: Extract breadth and market sentiment data for market context."
+  - "Step 4: Identify any evidence gaps impacting data readiness or freshness."
+  - "Step 5: Compile loader actions based on findings from Steps 1-4."
+sql_templates:
+  -
+    description: "Retrieve latest EOD data for indices"
+    sql: "SELECT * FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+  -
+    description: "Retrieve latest EOD data for equities with Stage 2 context"
+    sql: "WITH latest_snapshot AS (SELECT MAX(snapshot_date) AS latest_date FROM scores.stage_snapshots) SELECT ee.symbol, ee.close, ss.stage, ss.trading_signal FROM market.equity_eod ee JOIN scores.stage_snapshots ss ON ee.symbol = ss.symbol WHERE ee.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND ss.snapshot_date = (SELECT latest_date FROM latest_snapshot) AND ss.stage = 'STAGE_2';"
+  -
+    description: "Latest market sentiment"
+    sql: "SELECT market_sentiment, generated_at FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "rule_1"
+  - "rule_2"
+  - "rule_3"
+synthesis_guidance: "{'narrative': 'Provide a clear, concise summary emphasizing the relative freshness of data across multiple sectors with sector-relative insights. Highlight any deficiencies or gaps that require remediation.', 'format': 'Structured report with sections on freshness matrix, missing sources impact, and actionable loader tasks.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:33"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

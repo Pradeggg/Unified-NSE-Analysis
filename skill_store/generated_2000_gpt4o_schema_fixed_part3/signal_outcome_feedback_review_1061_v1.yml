@@ -1,0 +1,53 @@
+id: "signal_outcome_feedback_review_1061_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1061"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: quick scan; timeframe: post results; response style: concise table."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for post results: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as concise table"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "post_results"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  template: "Review signal outcomes; analyze based on targets, stops, and outcomes."
+sql_templates:
+  -
+    name: "SignalOutcomesReview"
+    template: "SELECT symbol, date_issued, signal, price_at_issue, target_1, target_2, stop_loss, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_resolved IS NOT NULL;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure data accuracy with descriptive patterns for each signal category."
+  - "Check that all resolved signals have outcomes logged."
+synthesis_guidance: "{'steps': ['Analyze the effectiveness of past signals.', 'Identify patterns of successful and unsuccessful signals.', 'Propose improvements based on outcomes.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:39"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

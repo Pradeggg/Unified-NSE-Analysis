@@ -1,0 +1,84 @@
+created_at: "2026-06-06T12:46:34"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, and liquid swing candidates focusing on risk-first review over the past 3 months with a portfolio-aware output."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0445_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage leadership over 3 months"
+  - "risk-first review for the last 3 months"
+  - "portfolio-aware market regime and stage leadership analysis"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.index_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    # Read-only analysis to generate market insights\n    results = {}\n    # Add analysis logic within approved schema\n    return results"
+    id: "market_analysis_tool"
+    inputs:
+      - "index_data"
+      - "sector_snapshots"
+      - "vcp_picks"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "index_returns"
+      - "leading_sectors"
+      - "primary_candidates"
+sql_templates:
+  -
+    description: "Get index performance over the last 3 months."
+    query: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= '2023-06-01' AND trade_date <= '2023-09-01'"
+  -
+    description: "Extract sector leadership changes and stage distribution."
+    query: "SELECT snapshot_date, sector, stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date >= '2023-06-01' AND snapshot_date <= '2023-09-01' GROUP BY sector, stage, snapshot_date"
+  -
+    description: "Fetch top swing trading candidates from Stage 2 with high VCP scores."
+    query: "SELECT symbol, company_name, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= '2023-06-01' AND snapshot_date <= '2023-09-01' ORDER BY vcp_score DESC LIMIT 10"
+status: "test_failed"
+synthesis_guidance:
+  - "Align output with portfolio mindset, emphasizing risk management."
+  - "Contextualize findings within the framework of Indian market dynamics."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "last_3_months"
+  - "portfolio-aware_output"
+title: "3M Market Rotation Swing Assessment Variant 0445"
+tool_plan_template:
+  strategy: "Use SQL queries for gathering market insights and Python for complex data analysis."
+validation_errors:
+  - "market_analysis_tool: missing output index_returns"
+  - "market_analysis_tool: missing output leading_sectors"
+  - "market_analysis_tool: missing output primary_candidates"
+validation_rules:
+  - "Ensure all table references and columns strictly adhere to the approved schema."
+  - "Maintain a read-only approach in both SQL and Python logic."
+version: 1
+review:
+  attempts: 3
+  findings:
+    - "market_analysis_tool: missing output index_returns"
+    - "market_analysis_tool: missing output leading_sectors"
+    - "market_analysis_tool: missing output primary_candidates"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"

@@ -1,0 +1,85 @@
+id: "insider_bulk_deal_signal_review_0136_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0136"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: last 20 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for last 20 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as narrative plus evidence"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Fetch recent insider alerts for the last 20 sessions."
+    - "Retrieve bulk or block deal information for matching symbols."
+    - "Check latest stage and technical confirmation for these symbols."
+  outputs:
+    - "deal_summary"
+    - "insider_context"
+    - "technical_confirmation"
+    - "ranked_symbols"
+    - "risk_notes"
+sql_templates:
+  -
+    name: "Recent Insider Alerts"
+    query: "SELECT id, alert_date, symbol, alert_type, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '20 days' AND insider_score > 50;"
+  -
+    name: "Recent Bulk/Block Deals"
+    query: "SELECT id, deal_date, symbol, entity, qty, price FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '20 days';"
+  -
+    name: "Latest Stage and Technical"
+    query: "SELECT symbol, snapshot_date, stage, technical_score, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY');"
+python_tools:
+  -
+    id: "deal_analysis_validation"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "insider_alerts"
+      - "bulk_block_deals"
+      - "stage_snapshots"
+    outputs:
+      - "validation_report"
+    approved_tables:
+      - "signals.insider_alerts"
+      - "signals.bulk_block_deals"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Sample Python code for validation; modify as per actual logic\n    insider_alerts = context['insider_alerts']\n    bulk_deals = context['bulk_block_deals']\n    stage_data = context['stage_snapshots']\n    # Perform validations\n    # Return validation report\n    return {'validation_report': 'Report based on data checks'}"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure freshness of data by checking max(alert_date) and max(deal_date) against current date."
+  - "Verify insider_score thresholds for alert significance."
+  - "Confirm that latest technical scores align with a positive trading signal."
+synthesis_guidance: "{'notes': ['Narrative should provide market context and implications of insider and bulk deals.', 'Focus on accumulation signals and potential impact on stock performance.', 'Integrate technical confirmation to validate bullish outlook.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:21"
+generation_model: "gpt-4o"
+validation_errors:
+  - "deal_analysis_validation: execution failed: KeyError: 'insider_alerts'"
+review:
+  status: "needs_heal"
+  findings:
+    - "deal_analysis_validation: execution failed: KeyError: 'insider_alerts'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

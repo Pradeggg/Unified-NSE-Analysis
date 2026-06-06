@@ -1,0 +1,65 @@
+created_at: "2026-06-06T12:49:07"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: last 3 months; response style: research-only summary."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0545_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as research-only summary"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Retrieve index returns over the last 3 months."
+    query: "WITH index_return AS (SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)) SELECT index_symbol, AVG(change_pct) AS avg_return FROM index_return GROUP BY index_symbol;"
+  -
+    description: "Identify changes in stage distribution."
+    query: "SELECT symbol, sector, stage, AVG(stage_score) AS avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY symbol, sector, stage;"
+  -
+    description: "Find leading sectors by relative strength."
+    query: "SELECT sector, AVG(relative_strength) AS avg_relative_strength FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY sector ORDER BY avg_relative_strength DESC LIMIT 5;"
+  -
+    description: "Identify primary swing candidates."
+    query: "SELECT symbol, company_name, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND vcp_score > 80 ORDER BY vcp_score DESC LIMIT 10;"
+status: "test_failed"
+synthesis_guidance: "['Provide a summary that highlights major market movements and potential swing candidates without recommending action.']"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "last_3_months"
+  - "research-only_summary"
+title: "3M Market Rotation Swing Assessment Variant 0545"
+tool_plan_template: "Analyze market regime and identify sector leadership and swing candidates using available indicators over the last 3 months."
+validation_rules:
+  - "Ensure output is a research summary only."
+  - "Check SQL queries are read-only."
+version: 1
+validation_errors:
+  - "scores.stage2_vcp_picks.curdate is not approved"
+  - "scores.stage2_vcp_picks.date_sub is not approved"
+  - "scores.stage2_vcp_picks.month is not approved"
+  - "scores.stage_snapshots.avg_relative_strength is not approved"
+  - "scores.stage_snapshots.avg_stage_score is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"

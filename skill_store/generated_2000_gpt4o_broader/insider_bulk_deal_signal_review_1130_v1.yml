@@ -1,0 +1,70 @@
+id: "insider_bulk_deal_signal_review_1130_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1130"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: last 5 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for last 5 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as narrative plus evidence"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  context: "Utilize SQL templates to gather data from approved tables and perform analysis using Python if necessary."
+  steps:
+    - "Query insider alerts and bulk/block deals in the last 5 sessions."
+    - "Correlate with technical indicators to confirm accumulation/distribution."
+sql_templates:
+  insider_alerts: "SELECT id, alert_date, symbol, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '5 days';"
+  bulk_block_deals: "SELECT id, deal_date, symbol, entity, side, qty, price FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '5 days';"
+  stage_snapshots: "SELECT symbol, price, change_1d_pct, change_1w_pct, technical_score FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '5 days';"
+python_tools:
+  -
+    id: "tech_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "technical_score"
+      - "change_1d_pct"
+      - "change_1w_pct"
+    outputs:
+      - "accumulation_or_distribution"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze technical data to determine accumulation or distribution\n    data = context['scores.stage_snapshots']\n    results = []\n    for entry in data:\n        if entry['technical_score'] > 70 and entry['change_1w_pct'] > 0:\n            results.append({'symbol': entry['symbol'], 'status': 'Accumulation'})\n        else:\n            results.append({'symbol': entry['symbol'], 'status': 'Distribution'})\n    return results"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure no write operations are performed on the database."
+  - "Verify SQL queries only select data from the approved schema."
+synthesis_guidance: "Generate a narrative report based on the synthesis of insider buying, bulk deals, and technical analysis to create an accumulation or distribution watchlist. Present evidence as a narrative and support with clear data points."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:40"
+generation_model: "gpt-4o"
+validation_errors:
+  - "tech_analysis_tool: execution failed: KeyError: 'scores.stage_snapshots'"
+review:
+  status: "needs_heal"
+  findings:
+    - "tech_analysis_tool: execution failed: KeyError: 'scores.stage_snapshots'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

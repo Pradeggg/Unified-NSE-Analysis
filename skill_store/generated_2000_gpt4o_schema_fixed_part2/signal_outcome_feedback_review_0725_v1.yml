@@ -1,0 +1,79 @@
+id: "signal_outcome_feedback_review_0725_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0725"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for last 5 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as QA checklist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    -
+      title: "Extract latest trading signals and their outcomes"
+      tool: "SQL"
+      inputs:
+        -
+          table: "signals.signal_log"
+          filter: "date_issued >= CURRENT_DATE - INTERVAL '5 sessions'"
+      sql_templates:
+        - "SELECT * FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '5 sessions';"
+    -
+      title: "Assess performance against targets and stops"
+      tool: "SQL"
+      inputs:
+        -
+          table: "signals.signal_log"
+          filter: "hit_target OR hit_stop"
+      sql_templates:
+        - "SELECT symbol, date_issued, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '5 sessions' AND (hit_target OR hit_stop) ORDER BY date_issued DESC;"
+    -
+      title: "Identify patterns in success and failure"
+      tool: "SQL"
+      inputs:
+        -
+          table: "scores.stage_snapshots"
+          filter: "snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+      sql_templates:
+        - "SELECT symbol, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure only signals from the last 5 sessions are considered"
+  - "Verify hit_target and hit_stop are correctly identified"
+  - "Outcomes must reflect both positive and negative patterns"
+synthesis_guidance: "['Summarize key insights as QA checklist items', 'Focus on actionable improvements for future signal selections']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

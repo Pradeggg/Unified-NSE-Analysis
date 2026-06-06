@@ -1,0 +1,58 @@
+id: "vcp_breakouts_with_fundamentals_0514_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0514"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: latest EOD; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Use tables for screening and summaries."
+sql_templates:
+  -
+    name: "find_new_high_vcp_breakout"
+    template: "SELECT eod.symbol, eod.high, eod.volume, snaps.fundamental_score, vcp.vcp_score FROM market.equity_eod AS eod JOIN scores.stage_snapshots AS snaps ON eod.symbol = snaps.symbol JOIN scores.stage2_vcp_picks AS vcp ON eod.symbol = vcp.symbol WHERE eod.trade_date = 'latest' AND (eod.close = eod.week52_high OR vcp.vcp_score IS NOT NULL) AND snaps.fundamental_score > 70"
+    description: "Query to find new high, VCP, and breakout stocks with strong fundamentals."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure the SQL template returns valid symbols with required criteria."
+  - "Output must align with the research-only summary style."
+synthesis_guidance: "Focus on evidence-based insights using approved tables."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:48:42"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table eod.close"
+  - "unknown table eod.high"
+  - "unknown table eod.symbol"
+  - "unknown table eod.trade_date"
+  - "unknown table eod.volume"
+  - "unknown table eod.week52_high"
+  - "unknown table snaps.fundamental_score"
+  - "unknown table snaps.symbol"
+  - "unknown table vcp.symbol"
+  - "unknown table vcp.vcp_score"

@@ -1,0 +1,68 @@
+id: "signal_outcome_feedback_review_1593_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1593"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for weekly review: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as research-only summary"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "signal_outcome_review"
+    template: "WITH latest_stage AS (SELECT symbol, stage, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), tracked_signals AS (SELECT s.id, s.symbol, s.date_issued, s.date_resolved, s.hit_target, s.hit_stop, s.return_pct, ls.stage, ls.technical_score FROM signals.signal_log s JOIN latest_stage ls ON s.symbol = ls.symbol WHERE s.date_issued >= CURRENT_DATE - INTERVAL '7 days' AND (s.hit_target = TRUE OR s.hit_stop = TRUE)) SELECT * FROM tracked_signals LIMIT 100;"
+python_tools:
+  -
+    id: "calculate_winner_loser_patterns"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "tracked_signals"
+    outputs:
+      - "winner_patterns"
+      - "failure_patterns"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Extract insights from tracked signals\n    winners = [signal for signal in context['tracked_signals'] if signal['hit_target']]\n    losers = [signal for signal in context['tracked_signals'] if signal['hit_stop']]\n    winner_patterns = [w['symbol'] for w in winners]\n    failure_patterns = [l['symbol'] for l in losers]\n    return winner_patterns, failure_patterns"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_winner_loser_patterns: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_winner_loser_patterns: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

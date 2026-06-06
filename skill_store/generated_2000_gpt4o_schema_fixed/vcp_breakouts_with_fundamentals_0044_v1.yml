@@ -1,0 +1,57 @@
+id: "vcp_breakouts_with_fundamentals_0044_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0044"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: last 3 months; response style: concise table."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  python_tools:
+
+  evidence_gaps:
+
+sql_templates:
+  -
+    name: "fetch_vcp_breakouts"
+    template: "WITH latest_data AS (SELECT MAX(snapshot_date) AS max_snapshot_date FROM scores.stage2_vcp_picks)\nSELECT v.symbol, v.company_name, v.price, v.vcp_score, s.enhanced_fund_score, s.trading_signal\nFROM scores.stage2_vcp_picks v\nJOIN scores.stage_snapshots s ON v.symbol = s.symbol\nAND s.snapshot_date = v.snapshot_date\nWHERE v.snapshot_date = (SELECT max_snapshot_date FROM latest_data)\nAND s.enhanced_fund_score > 70\nAND v.vcp_score > 75\nAND s.trading_signal IN ('STRONG_BUY', 'BUY')\nORDER BY v.vcp_score DESC, v.rank ASC\nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure SQL adheres to read-only restrictions."
+  - "Verify symbols adhere to NSE standards."
+  - "Check adherence to timeframe constraints."
+synthesis_guidance: "['Summarize VCP breakout candidates with strong fundamentals.', 'Provide concise insights into potential high-performing stocks.', 'Focus on delivering a curated watchlist for TradingView.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:17:59"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

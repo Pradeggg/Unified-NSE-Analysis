@@ -1,0 +1,55 @@
+id: "insider_bulk_deal_signal_review_1214_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1214"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: latest EOD; response style: ranked candidates."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for latest EOD: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as ranked candidates"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  language: "SQL"
+  templates:
+    -
+      sql: "WITH InsiderDeals AS (SELECT symbol, COUNT(*) as deal_count, SUM(value_cr) as total_value FROM signals.insider_alerts WHERE alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts) GROUP BY symbol), BulkDeals AS (SELECT symbol, COUNT(*) as deal_count, SUM(price * qty) as total_value FROM signals.bulk_block_deals WHERE deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals) AND side = 'buy' GROUP BY symbol), TechnicalScores AS (SELECT symbol, stage_score, technical_score, rsi, supertrend_state FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), FinalSelection AS (SELECT id.symbol, id.total_value as insider_value, bd.total_value as bulk_value, ts.stage_score, ts.technical_score, ts.rsi, ts.supertrend_state FROM InsiderDeals id JOIN BulkDeals bd ON id.symbol = bd.symbol JOIN TechnicalScores ts ON id.symbol = ts.symbol) SELECT * FROM FinalSelection WHERE stage_score > 3 AND technical_score > 3 AND rsi < 70 ORDER BY ts.stage_score DESC, ts.technical_score DESC LIMIT 10"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure symbols have significant insider and bulk deal values."
+  - "Technical scores must confirm positive setups."
+  - "Only include the top ranked candidates by scores."
+synthesis_guidance: "['Aggregate evidence to form a concise watchlist.', 'Highlight noteworthy accumulation or distribution patterns.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

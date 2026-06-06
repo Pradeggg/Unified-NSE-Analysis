@@ -1,0 +1,59 @@
+id: "signal_outcome_feedback_review_1579_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1579"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for pre market: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as research-only summary"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  outcome_summary:
+    sql: "SELECT symbol, date_issued, signal, hit_target, hit_stop FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months';"
+  winner_patterns:
+    sql: "SELECT symbol, COUNT(*) AS success_count FROM signals.signal_log WHERE hit_target = TRUE GROUP BY symbol ORDER BY success_count DESC LIMIT 5;"
+  failure_patterns:
+    sql: "SELECT symbol, COUNT(*) AS failure_count FROM signals.signal_log WHERE hit_stop = TRUE GROUP BY symbol ORDER BY failure_count DESC LIMIT 5;"
+  route_improvements:
+    sql: "SELECT symbol, AVG(return_pct) AS avg_return FROM signals.signal_log WHERE date_resolved IS NOT NULL GROUP BY symbol ORDER BY avg_return DESC LIMIT 5;"
+  next_checks:
+    sql: "SELECT symbol, date_issued, target_1, target_2 FROM signals.signal_log WHERE hit_target IS FALSE AND hit_stop IS FALSE AND date_issued >= CURRENT_DATE - INTERVAL '1 month';"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.avg_return is not approved"
+  - "signals.signal_log.failure_count is not approved"
+  - "signals.signal_log.success_count is not approved"

@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:45:44"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: exceptions and gaps first."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0338_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 3
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+
+status: "validated"
+synthesis_guidance:
+  limitations: "Avoid inventing any schemas or columns outside approved references."
+  priority: "Highlight exceptions and gaps, focusing on stocks near new highs with strong fundamentals."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+title: "VCP Breakouts With Fundamentals Variant 0338"
+tool_plan_template:
+  approach: "Use stage snapshots to filter candidates. Prioritize stocks with new highs and high-enhanced fund scores."
+  objective: "Identify stocks at or near new highs or showing VCP or breakout patterns with strong fundamentals within the last 20 sessions."
+validation_errors:
+
+validation_rules:
+  - "ensure_status"
+  - "validate_evidence"
+  - "validate_sql"
+version: 1

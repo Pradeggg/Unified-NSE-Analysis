@@ -1,0 +1,71 @@
+id: "quarterly_results_quality_review_1727_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1727"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "sector-relative comparison for last 5 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as QA checklist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Given task domain {{domain}}, utilize evidence tables {{tables}} according to the Agent Adda guidance to generate a sector-relative comparison within the last 5 sessions."
+sql_templates:
+  -
+    description: "Fetch latest quarterly results for each symbol by revenue growth."
+    sql: "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.revenue, qr.opm_pct, ra.growth_qoq_revenue_pct, ra.growth_qoq_pat_pct, ra.verdict FROM scores.quarterly_results qr JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end WHERE qr.period_type = 'quarter' ORDER BY qr.symbol, qr.period_end DESC NULLS LAST, qr.fetched_at DESC LIMIT 50"
+  -
+    description: "Sector comparison involving latest trading signals and stage."
+    sql: "SELECT ss.symbol, ss.sector, ss.stage, ss.trading_signal FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 50"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol_data"
+      - "sector_analysis"
+    outputs:
+      - "sector_relative_insight"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze symbol data for sector-relative insights\n    insights = []\n    for data in context['symbol_data']:\n        if data['growth_qoq_revenue_pct'] > 0 and data['trading_signal'] == 'BUY':\n            insights.append(data['symbol'])\n    return {'sector_relative_insight': insights}"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Check each SQL result aligns with the expected data range and format."
+  - "Ensure symbols are consistent across evidence tables."
+synthesis_guidance: "['Construct QA checklist based on revenue growth and margin trends.', 'Provide sector-relative insights with focus on recent performance.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:20"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

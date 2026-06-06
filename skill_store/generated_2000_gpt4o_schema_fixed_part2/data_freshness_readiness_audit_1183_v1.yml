@@ -1,0 +1,62 @@
+id: "data_freshness_readiness_audit_1183_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1183"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: narrative plus evidence."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for intraday context: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as narrative plus evidence"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  freshness_matrix: "Assess data freshness for each source against expected refresh rates."
+  missing_sources: "Identify sources where data is missing or delayed."
+  blocking_gaps: "Evaluate any critical gaps that block workflow readiness."
+  loader_actions: "Recommend actions for data loaders to address identified issues."
+  verification_queries: "Generate queries to verify data status."
+sql_templates:
+  latest_eod_rows: "SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) LIMIT 100;"
+  latest_index_rows: "SELECT * FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) LIMIT 100;"
+  latest_stage_snapshots: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 100;"
+python_tools:
+  - "run_freshness_check"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure data is within valid date ranges."
+  - "Cross-verify latest dates against system clock."
+synthesis_guidance: "['Narrate readiness based on freshness and detection of issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:41:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

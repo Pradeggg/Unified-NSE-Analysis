@@ -1,0 +1,54 @@
+id: "corporate_events_results_watchlist_0499_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0499"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "For each symbol in the corporate events, match the latest stage and results analysis to provide a comprehensive watchlist with source trails for upcoming and past events."
+sql_templates:
+  -
+    name: "events_watchlist_query"
+    structure:
+      task: "Get upcoming or recent corporate events and related stage analysis"
+      query: "WITH latest_stage AS (SELECT symbol, stage, trading_signal, snapshot_date FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_results AS (SELECT DISTINCT ON (symbol) symbol, period_end, verdict, filing_url FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC) SELECT ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, ce.source, ls.stage, ls.trading_signal, lr.verdict, lr.filing_url FROM signals.corporate_events ce JOIN latest_stage ls ON ce.symbol = ls.symbol LEFT JOIN latest_results lr ON ce.symbol = lr.symbol WHERE ce.event_date >= CURRENT_DATE AND ce.event_date < CURRENT_DATE + INTERVAL '7 days' LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure the output is limited to the top 50 events."
+  - "Verify the inclusion of event type and source-trail details."
+  - "Ensure symbols in the watchlist have corresponding trading signals and verdicts."
+synthesis_guidance: "Consolidate upcoming corporate events with stage and result analysis, emphasizing portfolio actionability. Highlight event-driven opportunities and potential risks."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,52 @@
+id: "vcp_breakouts_with_fundamentals_0094_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0094"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: weekly review; response style: concise table."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze stocks from the Indian market using NSE EOD data for potential VCP patterns, breakouts, and strong fundamentals. Weekly analysis for watchlist creation."
+sql_templates:
+  -
+    template_name: "select_candidates"
+    template: "SELECT symbol, company_name, market_cap_cr, high, close, volume FROM market.equity_eod WHERE trade_date = CURRENT_DATE AND high = week52_high"
+  -
+    template_name: "select_fundamentals"
+    template: "SELECT symbol, enhanced_fund_score FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE AND enhanced_fund_score > 80"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure symbols in candidates have fundamental scores greater than 80."
+  - "Limit results to top 10 based on enhanced fund score."
+  - "Include risk assessment based on sector volatility."
+synthesis_guidance: "Combine VCP pattern identification with fundamental analysis. Prioritize stocks making new highs with strong fundamentals for weekly watchlist."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:41:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.company_name is not approved"

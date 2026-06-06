@@ -1,0 +1,83 @@
+id: "portfolio_incremental_add_trim_0829_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0829"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for last 5 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as action watchlist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  language: "python"
+  mode: "read_only"
+  inputs:
+    holdings: "SELECT * FROM portfolio.holdings"
+    stage_snapshots: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date > current_date - interval '5 days'"
+  outputs:
+    portfolio_state: "LIST"
+    sector_exposure: "LIST"
+    add_candidates: "LIST"
+    trim_candidates: "LIST"
+    risk_flags: "LIST"
+  approved_tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+  code:
+    function: "run(context)"
+    logic: "Analyze the stage, technical scores from the last 5 sessions, and compare them with current holdings to identify trim and add candidates."
+sql_templates:
+  fetch_holdings: "SELECT * FROM portfolio.holdings;"
+  fetch_snapshots_last_5_days: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date > current_date - interval '5 days';"
+python_tools:
+  -
+    id: "run_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      holdings: "SELECT * FROM portfolio.holdings"
+      stage_snapshots: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date > current_date - interval '5 days';"
+    outputs:
+      analysis_results: "The function identifies add/trim candidates based on trends and risk assessments."
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    holdings_df = context.inputs['holdings']\n    snapshots_df = context.inputs['stage_snapshots']\n    # Perform analysis\n    # Identify potential add and trim candidates\n    return {\n        'portfolio_state': [],\n        'sector_exposure': [],\n        'add_candidates': [],\n        'trim_candidates': [],\n        'risk_flags': []\n    }"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "status"
+  - "evidence_tables"
+  - "approved_tables"
+synthesis_guidance: "Use the last 5 days of stage and technical scores to identify opportunities to incrementally add or trim positions in the portfolio, focusing on specific sectors and risk factors."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:29"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_analysis_tool: inputs must be a list"
+  - "run_analysis_tool: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_analysis_tool: inputs must be a list"
+    - "run_analysis_tool: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

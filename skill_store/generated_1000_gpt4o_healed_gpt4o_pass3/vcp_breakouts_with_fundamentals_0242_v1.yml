@@ -1,0 +1,57 @@
+created_at: "2026-06-06T12:43:41"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 3 months; response style: ranked candidates."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0242_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Find high-quality breakout stocks with VCP pattern and strong fundamentals."
+    query: "WITH vcp_candidates AS (SELECT symbol, company_name, sector, price, change_1d_pct, change_1w_pct, enhanced_fund_score, institutional_backing FROM scores.stage2_vcp_picks WHERE vcp_score IS NOT NULL AND enhanced_fund_score > 70 ORDER BY enhanced_fund_score DESC) SELECT * FROM vcp_candidates;"
+status: "validated"
+synthesis_guidance: "Ensure data accuracy by cross-referencing multiple sources. Provide clear, ranked candidates with thorough context."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "ranked_candidates"
+title: "VCP Breakouts With Fundamentals Variant 0242"
+tool_plan_template:
+  filters:
+    - "VCP pattern detected"
+    - "Breakouts within the last 3 months"
+    - "Good fundamental scores"
+  ranking: "By enhanced_fund_score and institutional_backing"
+validation_rules:
+  - "Ensure SQL read-only queries."
+  - "Verify correct use of approved schema."
+version: 1

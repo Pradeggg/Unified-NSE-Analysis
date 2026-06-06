@@ -1,0 +1,73 @@
+id: "fii_dii_regime_breadth_review_1324_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1324"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for last 5 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as exceptions and gaps first"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  evidence_gathering:
+    fii_dii_data: "SELECT trade_date, fii_net_today, dii_net_today, fii_net_5d, dii_net_5d, flow_signal FROM signals.fii_dii_flows WHERE trade_date > DATE_SUB(CURDATE(), INTERVAL 5 DAY)"
+    regime_data: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date > DATE_SUB(CURDATE(), INTERVAL 5 DAY)"
+    breadth_data: "SELECT trade_date, advances, declines, ad_oscillator, trin, market_sentiment FROM breadth.market_daily WHERE trade_date > DATE_SUB(CURDATE(), INTERVAL 5 DAY)"
+    index_data: "SELECT trade_date, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date > DATE_SUB(CURDATE(), INTERVAL 5 DAY)"
+sql_templates:
+  -
+    name: "select_fii_dii_flows"
+    template: "SELECT trade_date, fii_net_today, dii_net_today, fii_net_5d, dii_net_5d, flow_signal FROM signals.fii_dii_flows WHERE trade_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 5 DAY) AND CURDATE()"
+  -
+    name: "select_regime_history"
+    template: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 5 DAY) AND CURDATE()"
+  -
+    name: "select_breadth_daily"
+    template: "SELECT trade_date, advances, declines, trin, market_sentiment FROM breadth.market_daily WHERE trade_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 5 DAY) AND CURDATE()"
+  -
+    name: "select_index_eod"
+    template: "SELECT trade_date, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 5 DAY) AND CURDATE()"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure that no write operations are performed."
+  - "Cross-verify data consistency across SQL queries."
+synthesis_guidance: "['Summarize regime and FII/DII flows for the last 5 days.', 'Identify breadth and market sentiment anomalies.', 'Highlight any risk-on or risk-off signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.curdate is not approved"
+  - "breadth.market_daily.date_sub is not approved"
+  - "breadth.market_daily.day is not approved"
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.day is not approved"
+  - "signals.fii_dii_flows.curdate is not approved"
+  - "signals.fii_dii_flows.date_sub is not approved"
+  - "signals.fii_dii_flows.day is not approved"
+  - "signals.regime_history.curdate is not approved"
+  - "signals.regime_history.date_sub is not approved"
+  - "signals.regime_history.day is not approved"

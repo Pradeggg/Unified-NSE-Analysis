@@ -1,0 +1,48 @@
+id: "report_link_data_validation_1796_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation for Agent Adda"
+description: "Skill to validate enhanced report run metadata, focusing on randomness audit and weekly review requirements."
+input_patterns:
+  - "validate enhanced report links and data"
+  - "check report link freshness weekly"
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "weekly_review"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+
+sql_templates:
+  -
+    template_id: "sql_template_001"
+    sql: "SELECT run_id, run_ts, universe_size, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '1 week';"
+  -
+    template_id: "sql_template_002"
+    sql: "SELECT ef.run_id, ef.symbol, ef.recommendation FROM report.enhanced_filtered_stocks ef JOIN report.enhanced_runs er ON ef.run_id = er.run_id WHERE er.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation_steps"
+  - "verification"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:59"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

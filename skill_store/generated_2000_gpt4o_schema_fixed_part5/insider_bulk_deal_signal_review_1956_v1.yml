@@ -1,0 +1,56 @@
+id: "insider_bulk_deal_signal_review_1956_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1956"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for quarter to date: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as comparison matrix"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Fetch latest insider alerts with technical scores"
+    template: "SELECT ia.symbol, ia.alert_date, ia.entity, ia.qty, ia.value_cr, ia.category, ss.stage, ss.technical_score FROM signals.insider_alerts ia JOIN scores.stage_snapshots ss ON ia.symbol = ss.symbol WHERE ia.alert_date >= CURRENT_DATE - INTERVAL '3 months' AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 50;"
+  -
+    description: "Fetch latest bulk/block deals with stage context"
+    template: "SELECT bbd.symbol, bbd.deal_date, bbd.entity, bbd.qty, bbd.price, bbd.side, ss.stage, ss.stage_score FROM signals.bulk_block_deals bbd JOIN scores.stage_snapshots ss ON bbd.symbol = ss.symbol WHERE bbd.deal_date >= CURRENT_DATE - INTERVAL '3 months' AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Check if insider alerts and bulk deals are from the last quarter."
+  - "Ensure stage information is from the latest snapshot."
+synthesis_guidance: "Review aggregated data to determine potential accumulation or distribution patterns. Present findings in a comparison matrix format."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:48"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

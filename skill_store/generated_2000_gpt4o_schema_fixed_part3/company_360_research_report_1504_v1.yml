@@ -1,0 +1,64 @@
+id: "company_360_research_report_1504_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Comprehensive Research Report for RELIANCE"
+description: "A detailed research-oriented future watchlist summary for RELIANCE, focusing on fundamentals, technicals, financial trends, and narrative insights."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "watchlist_creation"
+  - "today"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template: "{evidence}"
+sql_templates:
+  latest_stage:
+    query: "SELECT * FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 1;"
+  latest_quarterly_results:
+    query: "SELECT DISTINCT ON (symbol) * FROM scores.quarterly_results WHERE symbol = 'RELIANCE' AND period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC;"
+  latest_annual_results:
+    query: "SELECT DISTINCT ON (symbol) * FROM scores.annual_results WHERE symbol = 'RELIANCE' AND period_type = 'annual' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC;"
+  latest_balance_sheet:
+    query: "SELECT * FROM scores.balance_sheet WHERE symbol = 'RELIANCE' ORDER BY period_end DESC NULLS LAST LIMIT 1;"
+  latest_cash_flow:
+    query: "SELECT * FROM scores.cash_flow WHERE symbol = 'RELIANCE' ORDER BY period_end DESC NULLS LAST LIMIT 1;"
+  latest_results_analysis:
+    query: "SELECT DISTINCT ON (symbol) * FROM scores.results_analysis WHERE symbol = 'RELIANCE' ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC;"
+  latest_market_data:
+    query: "SELECT * FROM market.equity_eod WHERE symbol = 'RELIANCE' AND trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Verify all primary keys and date fields for latest data."
+  - "Ensure correct joins and data integrity."
+synthesis_guidance: "Generate a summary combining insights from financials, technicals, and narrative analysis of RELIANCE."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:50"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

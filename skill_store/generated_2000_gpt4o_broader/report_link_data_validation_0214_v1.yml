@@ -1,0 +1,56 @@
+id: "report_link_data_validation_0214_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Agent Adda Skill Card"
+description: "Validate enhanced report data for Indian market, focusing on watchlist creation based on the latest EOD reports."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for latest EOD: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Agent Adda will use inputs to validate report links, identify missing data, and construct a ranked watchlist for the latest EOD based on filtered stock data."
+sql_templates:
+  -
+    description: "Retrieve the latest enhanced run data for validation."
+    type: "Query"
+    template: "SELECT run_id, run_ts, analysis_date, stocks_analyzed, stocks_filtered FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 1;"
+  -
+    description: "Fetch filtered stocks for the latest run to construct watchlists."
+    type: "Query"
+    template: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = :run_id ORDER BY score DESC;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Check if report links are accessible and contain expected stock data."
+  - "Verify watchlist stocks are ordered by score for latest EOD."
+  - "Identify any missing data in report links."
+synthesis_guidance: "Synthesize findings to highlight critical validation results and offer remediation steps for report link failures or missing data."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:49"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:52:10"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 3 months; response style: action watchlist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0850_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    sql: "SELECT e.symbol, e.high, e.volume, e.trade_date FROM market.equity_eod e WHERE e.trade_date >= current_date - interval '3 months' AND e.high > e.prev_close * 1.05"
+    template_description: "Select stocks with high volume and breakout patterns."
+    template_name: "GetHighVolumeBreakouts"
+  -
+    sql: "SELECT s.symbol, s.company_name, s.enhanced_fund_score FROM scores.stage_snapshots s WHERE s.enhanced_fund_score > 80 AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+    template_description: "Select stocks with strong fundamentals."
+    template_name: "GetStrongFundamentals"
+status: "test_failed"
+synthesis_guidance: "Combine candidate lists from SQL with strong fundamental filters to generate a high-quality watchlist."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_3_months"
+  - "action_watchlist"
+title: "VCP Breakouts With Fundamentals Variant 0850"
+tool_plan_template: "Generate candidates by analyzing VCP breakouts and strong fundamentals within the last 3 months."
+validation_rules:
+  - "Ensure inclusion of VCP scores"
+  - "Check presence of breakout indicators"
+version: 1
+validation_errors:
+  - "market.equity_eod.e is not approved"

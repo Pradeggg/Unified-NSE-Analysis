@@ -1,0 +1,74 @@
+id: "data_freshness_readiness_audit_1351_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1351"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for quarter to date: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as exceptions and gaps first"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    query_steps:
+      -
+        table: "market.index_eod"
+        sql: "SELECT MAX(trade_date) as latest_trade_date FROM market.index_eod;"
+      -
+        table: "market.equity_eod"
+        sql: "SELECT MAX(trade_date) as latest_trade_date FROM market.equity_eod;"
+      -
+        table: "scores.stage_snapshots"
+        sql: "SELECT MAX(snapshot_date) as latest_snapshot_date FROM scores.stage_snapshots;"
+      -
+        table: "breadth.market_daily"
+        sql: "SELECT MAX(trade_date) as latest_trade_date FROM breadth.market_daily;"
+      -
+        table: "breadth.ma_pct_above"
+        sql: "SELECT MAX(snapshot_date) as latest_snapshot_date FROM breadth.ma_pct_above;"
+      -
+        table: "report.enhanced_runs"
+        sql: "SELECT MAX(run_ts) as latest_run_time FROM report.enhanced_runs;"
+sql_templates:
+  -
+    description: "Check for latest available dates across tables."
+    query: "WITH latest_dates AS ( SELECT 'index_eod' as source, MAX(trade_date) as date FROM market.index_eod UNION SELECT 'equity_eod' as source, MAX(trade_date) as date FROM market.equity_eod UNION SELECT 'stage_snapshots' as source, MAX(snapshot_date) as date FROM scores.stage_snapshots UNION SELECT 'market_daily' as source, MAX(trade_date) as date FROM breadth.market_daily UNION SELECT 'ma_pct_above' as source, MAX(snapshot_date) as date FROM breadth.ma_pct_above UNION SELECT 'enhanced_runs' as source, MAX(run_ts) as date FROM report.enhanced_runs ) SELECT * FROM latest_dates ORDER BY date DESC;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure 'latest_trade_date' or 'latest_snapshot_date' fall within the expected quarter-to-date interval."
+synthesis_guidance: "['Highlight any sources with trade dates older than expected.', 'Identify gaps in data freshness affecting specific workflows.', 'Formulate actions to ensure loader synchrony.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:40"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

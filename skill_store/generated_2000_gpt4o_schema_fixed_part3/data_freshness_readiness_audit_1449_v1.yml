@@ -1,0 +1,71 @@
+id: "data_freshness_readiness_audit_1449_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1449"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for last 3 months: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as portfolio-aware output"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  required_function: "run(context)"
+  language: "python"
+  mode: "read_only"
+  approved_tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+sql_templates:
+  -
+    template: "SELECT trade_date, index_symbol, close FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+    notes: "Fetch index EOD closes for the last 3 months."
+  -
+    template: "SELECT trade_date, symbol, close FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+    notes: "Fetch equity EOD closes for the last 3 months."
+  -
+    template: "SELECT snapshot_date, symbol, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    notes: "Fetch the latest stage snapshot data."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure no missing sources for the last 3 months in the freshness matrix."
+  - "Identify blocking gaps that affect data workflows."
+synthesis_guidance: "['Summarize data freshness in a matrix format.', 'Highlight any actions required to resolve data freshness issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:56"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

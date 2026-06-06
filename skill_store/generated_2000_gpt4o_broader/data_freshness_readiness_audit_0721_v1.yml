@@ -1,0 +1,87 @@
+id: "data_freshness_readiness_audit_0721_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0721"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for last 5 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    task: "Check data freshness for EOD indices"
+    table: "market.index_eod"
+    columns:
+      - "trade_date"
+      - "index_symbol"
+    checks:
+      - "Recent 5 trade_dates"
+      - "Index Symbols completeness"
+  -
+    task: "Check equity EOD freshness"
+    table: "market.equity_eod"
+    columns:
+      - "trade_date"
+      - "symbol"
+    checks:
+      - "Recent 5 trade_dates"
+      - "Equity Symbols completeness"
+  -
+    task: "Ensure breadth data freshness"
+    table: "breadth.market_daily"
+    columns:
+      - "trade_date"
+    checks:
+      - "Recent 5 trade_dates"
+sql_templates:
+  -
+    description: "Verify last 5 sessions' data freshness for indices"
+    query: "SELECT DISTINCT trade_date FROM market.index_eod ORDER BY trade_date DESC LIMIT 5"
+  -
+    description: "Verify last 5 sessions' data freshness for equities"
+    query: "SELECT DISTINCT trade_date FROM market.equity_eod ORDER BY trade_date DESC LIMIT 5"
+  -
+    description: "Verify last 5 sessions' breadth data freshness"
+    query: "SELECT DISTINCT trade_date FROM breadth.market_daily ORDER BY trade_date DESC LIMIT 5"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure trade date coverage for the last 5 sessions"
+  - "Identify missing data gaps for indices and equities"
+  - "Check against market technical narrative availability"
+synthesis_guidance: "['Integrate matrix and gaps into a unified readiness score', 'Prioritize loader actions based on freshness gaps', 'Develop verification queries to validate data completeness']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:07"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

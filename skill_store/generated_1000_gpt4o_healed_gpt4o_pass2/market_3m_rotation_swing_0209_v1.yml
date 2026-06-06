@@ -1,0 +1,134 @@
+card:
+  created_at: "2026-06-06T12:43:21"
+  created_by: "llm_generated"
+  description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: today; response style: ranked candidates."
+  domain: "market_analysis"
+  evidence_required:
+    tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "market_3m_rotation_swing_0209_v1"
+  input_patterns:
+    - "last 3 months market analysis"
+    - "find swing candidates from recent sector rotation"
+    - "market regime and stage 2 leadership over 3 months"
+    - "source-trail validation for today: last 3 months market analysis"
+    - "market regime and stage 2 leadership over 3 months as ranked candidates"
+  output_contract:
+    - "as_of_date"
+    - "index_returns"
+    - "stage_distribution_change"
+    - "leading_sectors"
+    - "primary_candidates"
+    - "risks"
+  python_tools:
+    -
+      define: "def run(context): pass"
+      description: "Read-only tool to analyze market trends."
+      name: "analyze_market_trends"
+      parameters:
+
+  sql_templates:
+    -
+      query: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= DATE('now', '-3 months')"
+    -
+      query: "SELECT symbol, sector, change_1m_pct, stage_score FROM scores.stage_snapshots WHERE snapshot_date >= DATE('now', '-3 months')"
+  status: "generated"
+  synthesis_guidance:
+    - "Integrate index trends with sector and stage analysis to produce a coherent overview."
+    - "Rank candidates based on performance metrics and stage strength."
+  tags:
+    - "market_regime"
+    - "sector_rotation"
+    - "stage_analysis"
+    - "swing_trading"
+    - "source-trail_validation"
+    - "today"
+    - "ranked_candidates"
+  title: "3M Market Rotation Swing Assessment Variant 0209"
+  tool_plan_template: "Assess market trends, sector shifts, and select potential swing candidates based on stage 2 leadership changes observed over the past 3 months."
+  validation_errors:
+
+  validation_rules:
+    - "Ensure all necessary fields are populated for primary_candidates."
+    - "Cross-verify market performance against input patterns."
+  version: 1
+created_at: "2026-06-06T12:43:21"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: today; response style: ranked candidates."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0209_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 3
+  findings:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    query: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= DATE('now', '-3 months')"
+  -
+    query: "SELECT symbol, sector, change_1m_pct, stage_score FROM scores.stage_snapshots WHERE snapshot_date >= DATE('now', '-3 months')"
+status: "test_failed"
+synthesis_guidance: "['Integrate index trends with sector and stage analysis to produce a coherent overview.', 'Rank candidates based on performance metrics and stage strength.']"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "today"
+  - "ranked_candidates"
+title: "3M Market Rotation Swing Assessment Variant 0209"
+tool_plan_template: "Assess market trends, sector shifts, and select potential swing candidates based on stage 2 leadership changes observed over the past 3 months."
+validation_errors:
+  - "description is required"
+  - "domain is required"
+  - "evidence_required is required"
+  - "id is required"
+  - "input_patterns is required"
+  - "output_contract is required"
+  - "tags is required"
+  - "title is required"
+  - "validation_rules is required"
+  - "version is required"
+  - "version must be a positive integer"
+validation_rules:
+  - "Ensure all necessary fields are populated for primary_candidates."
+  - "Cross-verify market performance against input patterns."
+version: 1

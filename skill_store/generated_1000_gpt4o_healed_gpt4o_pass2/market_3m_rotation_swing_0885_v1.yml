@@ -1,0 +1,64 @@
+created_at: "2026-06-06T12:52:27"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: intraday context; response style: action watchlist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0885_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 3
+  findings:
+    - "scores.stage_snapshots.leadership_count is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    description: "Last 3 months market change and trend signals for indexes."
+    name: "market_overview"
+    query: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date >= '2023-07-01'"
+  -
+    description: "Sectors with most Stage 2 leadership candidates over the last 3 months."
+    name: "sector_leadership"
+    query: "SELECT sector, COUNT(symbol) AS leadership_count FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= '2023-07-01' GROUP BY sector"
+  -
+    description: "High VCP score swing candidates from the last 3 months."
+    name: "swing_candidates"
+    query: "SELECT symbol, company_name, price, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= '2023-07-01' AND vcp_score > 50 ORDER BY vcp_score DESC"
+status: "test_failed"
+synthesis_guidance: "Combine the sector leadership with top swing candidates using stage and trend data to form a comprehensive action plan."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "intraday_context"
+  - "action_watchlist"
+title: "3M Market Rotation Swing Assessment Variant 0885"
+tool_plan_template: "Generate an intraday context summary with leading sectors and swing candidates from the indexes and stage data."
+validation_errors:
+  - "scores.stage_snapshots.leadership_count is not approved"
+validation_rules:
+  - "Ensure all symbols are valid and from the approved tables."
+  - "Verify that all dates are within the specified timeframe."
+version: 1

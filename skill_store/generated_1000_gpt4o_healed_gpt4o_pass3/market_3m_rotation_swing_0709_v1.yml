@@ -1,0 +1,141 @@
+created_at: "2026-06-06T12:50:58"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: today; response style: QA checklist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0709_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    code: "def run(context):\n    # Provide analytical insights based on approved data\n    pass"
+    name: "analyze_trends"
+review:
+  status: "needs_heal"
+  findings:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    description: "Get index returns over the last 3 months"
+    template: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 months')"
+  -
+    description: "Identify leading sectors by analyzing stage metrics"
+    template: "SELECT sector, COUNT(*) as count FROM scores.stage_snapshots WHERE stage = '2' AND snapshot_date >= (CURRENT_DATE - INTERVAL '3 months') GROUP BY sector ORDER BY count DESC"
+status: "test_failed"
+synthesis_guidance: "Provide insights on market trends and opportunities while highlighting any key risks or gaps."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "today"
+  - "QA_checklist"
+title: "3M Market Rotation Swing Assessment Variant 0709"
+tool_plan_template: "Assess market trends and sector rotations using specified tables and columns. Provide a QA checklist format."
+validation_errors:
+  - "description is required"
+  - "domain is required"
+  - "evidence_required is required"
+  - "id is required"
+  - "input_patterns is required"
+  - "output_contract is required"
+  - "tags is required"
+  - "title is required"
+  - "validation_rules is required"
+  - "version is required"
+  - "version must be a positive integer"
+validation_rules:
+  - "Ensure SQL templates are read-only and adhere to the approved schema."
+  - "Check the integrity of data and format consistency in QA checklist."
+version: 1
+card:
+  created_at: "2026-06-06T12:50:58"
+  created_by: "llm_generated"
+  description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: today; response style: QA checklist."
+  domain: "market_analysis"
+  evidence_required:
+    tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "market_3m_rotation_swing_0709_v1"
+  input_patterns:
+    - "last 3 months market analysis"
+    - "find swing candidates from recent sector rotation"
+    - "market regime and stage 2 leadership over 3 months"
+    - "source-trail validation for today: last 3 months market analysis"
+    - "market regime and stage 2 leadership over 3 months as QA checklist"
+  output_contract:
+    - "as_of_date"
+    - "index_returns"
+    - "stage_distribution_change"
+    - "leading_sectors"
+    - "primary_candidates"
+    - "risks"
+  python_tools:
+    -
+      code: "def run(context):\n    # Provide analytical insights based on approved data\n    pass"
+      name: "analyze_trends"
+  review:
+    attempts: 3
+    findings:
+
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "needs_heal"
+  sql_templates:
+    -
+      description: "Get index returns over the last 3 months"
+      template: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 months')"
+    -
+      description: "Identify leading sectors by analyzing stage metrics"
+      template: "SELECT sector, COUNT(*) as count FROM scores.stage_snapshots WHERE stage = '2' AND snapshot_date >= (CURRENT_DATE - INTERVAL '3 months') GROUP BY sector ORDER BY count DESC"
+  status: "generated"
+  synthesis_guidance: "Provide insights on market trends and opportunities while highlighting any key risks or gaps."
+  tags:
+    - "market_regime"
+    - "sector_rotation"
+    - "stage_analysis"
+    - "swing_trading"
+    - "source-trail_validation"
+    - "today"
+    - "QA_checklist"
+  title: "3M Market Rotation Swing Assessment Variant 0709"
+  tool_plan_template: "Assess market trends and sector rotations using specified tables and columns. Provide a QA checklist format."
+  validation_errors:
+
+  validation_rules:
+    - "Ensure SQL templates are read-only and adhere to the approved schema."
+    - "Check the integrity of data and format consistency in QA checklist."
+  version: 1

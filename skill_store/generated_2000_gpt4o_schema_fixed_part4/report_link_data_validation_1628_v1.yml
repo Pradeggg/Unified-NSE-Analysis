@@ -1,0 +1,52 @@
+id: "report_link_data_validation_1628_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1628"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: last 5 sessions; response style: debug trace."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Fetch run metadata and filtered stock details for the last five sessions."
+    template: "WITH recent_runs AS (\n    SELECT run_id, run_ts, analysis_date\n    FROM report.enhanced_runs\n    WHERE run_ts >= CURRENT_DATE - INTERVAL '5 days'\n),\nfiltered_details AS (\n    SELECT efs.run_id, efs.symbol, efs.recommendation\n    FROM report.enhanced_filtered_stocks efs\n    JOIN recent_runs rr ON efs.run_id = rr.run_id\n)\nSELECT rr.run_id, rr.run_ts, rr.analysis_date, fd.symbol, fd.recommendation\nFROM recent_runs rr\nJOIN filtered_details fd ON rr.run_id = fd.run_id;\n"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

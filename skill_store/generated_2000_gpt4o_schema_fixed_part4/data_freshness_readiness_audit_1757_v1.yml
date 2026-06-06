@@ -1,0 +1,121 @@
+id: "data_freshness_readiness_audit_1757_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1757"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for quarter to date: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    tools:
+      -
+        tool_type: "research"
+        action: "compare_data_freshness"
+        parameters:
+          workflow_stage: "quarter_to_date"
+          comparison_type: "sector-relative"
+    evidence_documentation: "Investigate data freshness against latest available date per approved schema for each evidence table."
+    evidence_sources:
+      -
+        table: "market.index_eod"
+        schema: "approved_schema"
+      -
+        table: "market.equity_eod"
+        schema: "approved_schema"
+      -
+        table: "scores.stage_snapshots"
+        schema: "approved_schema"
+      -
+        table: "breadth.market_daily"
+        schema: "approved_schema"
+      -
+        table: "breadth.ma_pct_above"
+        schema: "approved_schema"
+      -
+        table: "report.enhanced_runs"
+        schema: "approved_schema"
+sql_templates:
+  -
+    description: "Check latest data freshness for 'market.index_eod'"
+    sql: "SELECT MAX(trade_date) as latest_trade_date FROM market.index_eod"
+  -
+    description: "Check latest data freshness for 'market.equity_eod'"
+    sql: "SELECT MAX(trade_date) as latest_trade_date FROM market.equity_eod WHERE series = 'EQ'"
+  -
+    description: "Check latest data freshness for 'scores.stage_snapshots'"
+    sql: "SELECT MAX(snapshot_date) as latest_snapshot_date FROM scores.stage_snapshots"
+  -
+    description: "Check latest data freshness for 'breadth.market_daily'"
+    sql: "SELECT MAX(trade_date) as latest_trade_date FROM breadth.market_daily"
+python_tools:
+  -
+    id: "freshness_gap_analyzer"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      eod_dates:
+        - "latest_trade_date from sql_templates"
+      snapshot_dates:
+        - "latest_snapshot_date from sql_templates"
+    outputs:
+      freshness_matrix: "matrix of sector-relative freshness gaps"
+      missing_sources: "list of missing or stale sources"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "breadth.market_daily"
+    code: "def run(context):\n    eod_dates = context['inputs']['eod_dates']\n    snapshot_dates = context['inputs']['snapshot_dates']\n    # Assess gaps\n    freshness_matrix = {}\n    for date in eod_dates:\n        if date < 'current_date_minus_threshold':\n            freshness_matrix['eod'] = 'stale'\n    for date in snapshot_dates:\n        if date < 'current_date_minus_threshold':\n            freshness_matrix['snapshot'] = 'stale'\n    missing_sources = []\n    return {'freshness_matrix': freshness_matrix, 'missing_sources': missing_sources}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure queries return valid dates compared to current date."
+  - "Report missing data sources or incomplete data per approved tables."
+synthesis_guidance: "['Create a matrix to summarize data freshness across sectors.', 'Recommend actions for loader adjustments if stale data is identified.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:54"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.latest_trade_date is not approved"
+  - "freshness_gap_analyzer: inputs must be a list"
+  - "freshness_gap_analyzer: outputs must be a non-empty list"
+  - "market.equity_eod.latest_trade_date is not approved"
+  - "market.index_eod.latest_trade_date is not approved"
+  - "scores.stage_snapshots.latest_snapshot_date is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "breadth.market_daily.latest_trade_date is not approved"
+    - "freshness_gap_analyzer: inputs must be a list"
+    - "freshness_gap_analyzer: outputs must be a non-empty list"
+    - "market.equity_eod.latest_trade_date is not approved"
+    - "market.index_eod.latest_trade_date is not approved"
+    - "scores.stage_snapshots.latest_snapshot_date is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

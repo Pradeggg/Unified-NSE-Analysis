@@ -1,0 +1,78 @@
+created_at: "2026-06-06T12:53:21"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: intraday context; response style: comparison matrix."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0987_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for intraday context: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    if 'snapshot_data' not in context:\n        raise ValueError('snapshot_data not found in context')\n    snapshot_data = context['snapshot_data']\n    # Placeholder: Implement actual logic to calculate relative strength\n    relative_strength_scores = []\n    return relative_strength_scores"
+    id: "calculate_relative_strength"
+    inputs:
+      - "snapshot_data"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "relative_strength_scores"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_relative_strength: execution failed: NameError: name 'ValueError' is not defined"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    query: "WITH sector_performance AS (SELECT sector, AVG(change_1d_pct) AS avg_sector_change FROM scores.stage_snapshots WHERE snapshot_date = '{snapshot_date}' GROUP BY sector) SELECT p.symbol, p.qty, p.avg_cost, s.sector, s.change_1d_pct, sp.avg_sector_change FROM portfolio.holdings AS p JOIN scores.stage_snapshots AS s ON p.symbol = s.symbol JOIN sector_performance AS sp ON s.sector = sp.sector WHERE s.snapshot_date = '{snapshot_date}' AND s.sector = '{sector}'"
+    template_id: "sector_performance_comparison"
+status: "test_failed"
+synthesis_guidance:
+  - "Use relative strength and technical scores for decisions."
+  - "Consider sector performance for exposure adjustment."
+  - "Flag anomalies or high-risk stocks for further review."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "comparison_matrix"
+title: "Portfolio Incremental Add Trim Review Variant 0987"
+tool_plan_template:
+  inputs:
+    - "current_holdings"
+    - "sector_exposure"
+    - "stage_signals"
+  outputs:
+    - "add_candidates"
+    - "trim_candidates"
+    - "risk_flags"
+  tasks:
+    - "Compare current holdings with sector performance."
+    - "Identify best performing stocks for potential add and underperforming for potential trim."
+    - "Assess risk flags in portfolio."
+validation_errors:
+  - "calculate_relative_strength: execution failed: NameError: name 'ValueError' is not defined"
+validation_rules:
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+version: 1

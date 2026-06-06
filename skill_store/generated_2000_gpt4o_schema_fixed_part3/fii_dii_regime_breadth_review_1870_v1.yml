@@ -1,0 +1,56 @@
+id: "fii_dii_regime_breadth_review_1870_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1870"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for post results: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as action watchlist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    tool: "sql"
+    description: "Fetch the latest FII/DII flow trends, market regime, breadth, and index data to assess the current market context."
+    sql_templates:
+      -
+        template: "WITH latest_flows AS (\n    SELECT trade_date, fii_net_today, dii_net_today, fii_net_5d, dii_net_5d, flow_signal, fii_trend, dii_trend\n    FROM signals.fii_dii_flows\n    WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows)\n),\nlatest_regime AS (\n    SELECT trade_date, regime, confidence, days_in_regime\n    FROM signals.regime_history\n    WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history)\n),\nlatest_breadth AS (\n    SELECT trade_date, advances, declines, net_ad, market_sentiment\n    FROM breadth.market_daily\n    WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily)\n),\nlatest_index AS (\n    SELECT trade_date, index_symbol, close, change_pct, trend_signal\n    FROM market.index_eod\n    WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod)\n      AND index_symbol = 'Nifty 50'\n)\nSELECT l.trade_date, lf.fii_net_today, lf.dii_net_today, lf.flow_signal, lr.regime, lr.confidence, lb.advances,\n       lb.declines, lb.net_ad, lb.market_sentiment, li.close, li.change_pct, li.trend_signal\nFROM latest_flows lf\nJOIN latest_regime lr ON lf.trade_date = lr.trade_date\nJOIN latest_breadth lb ON lf.trade_date = lb.trade_date\nJOIN latest_index li ON lf.trade_date = li.trade_date;\n"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all components (flows, regime, breadth, index) have the same latest trade date."
+  - "Confirm index symbol is 'Nifty 50'."
+synthesis_guidance: "['Use the flow signal to infer FII/DII impact.', 'Correlate market sentiment with the regime label.', 'Cross-verify index trend with breadth metrics.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:41"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

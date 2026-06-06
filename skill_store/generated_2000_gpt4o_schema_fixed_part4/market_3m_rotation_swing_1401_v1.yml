@@ -1,0 +1,65 @@
+id: "market_3m_rotation_swing_1401_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1401"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    description: "Generate swing assessment by querying market data, stages, and VCPs."
+sql_templates:
+  -
+    description: "Determine market regime over the last 3 months."
+    template: "SELECT index_symbol, AVG(change_pct) AS avg_return FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol;"
+  -
+    description: "Identify leading sectors based on stage 2 presence."
+    template: "SELECT sector, COUNT(*) AS stage_2_count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector ORDER BY stage_2_count DESC;"
+  -
+    description: "Select primary swing candidates from VCP list."
+    template: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure 'as_of_date' aligns with current date."
+  - "Index returns should reflect average percentage changes."
+  - "Leading sectors must show stage 2 presence."
+  - "Primary candidates should be top VCP scores."
+synthesis_guidance: "{'outputs': 'Combine data insights to form a portfolio-aware assessment focusing on leading sectors and top swing candidates.', 'style': 'Portfolio-aware output with a clear summary of market trends and candidate selections.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:08"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_return is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "market.index_eod.avg_return is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

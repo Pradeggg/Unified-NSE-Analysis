@@ -1,0 +1,153 @@
+created_at: "2026-06-06T12:46:02"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: pre market; response style: exceptions and gaps first."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0371_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for pre market: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as exceptions and gaps first"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    high_stage = [h for h in context['holdings_data'] if h['stage_score'] > threshold]\n    add_candidates = [h for h in high_stage if h['trading_signal'] == 'buy']\n    trim_candidates = [h for h in high_stage if h['trading_signal'] == 'sell']\n    return {'add_candidates': add_candidates, 'trim_candidates': trim_candidates, 'risk_flags': []}"
+    id: "analyze_holdings"
+    inputs:
+      - "holdings_data"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "add_candidates"
+      - "trim_candidates"
+      - "risk_flags"
+review:
+  attempts: 3
+  findings:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    name: "fetch_holdings"
+    query: "SELECT h.symbol, h.qty, h.avg_cost, h.buy_date, s.sector, s.stage, s.stage_score, s.trading_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE ORDER BY s.stage_score DESC;"
+status: "test_failed"
+synthesis_guidance: "Focus on identifying exceptions in stage scores and trading signals for quick decisions."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+title: "Portfolio Incremental Add Trim Review Variant 0371"
+tool_plan_template: "{input_patterns}"
+validation_errors:
+  - "description is required"
+  - "domain is required"
+  - "evidence_required is required"
+  - "id is required"
+  - "input_patterns is required"
+  - "output_contract is required"
+  - "tags is required"
+  - "title is required"
+  - "validation_rules is required"
+  - "version is required"
+  - "version must be a positive integer"
+validation_rules:
+  - "Check market cap categories for any outliers."
+  - "Verify sector exposure aligns with strategic goals."
+  - "Identify signals with contradicting scores."
+version: 1
+card:
+  created_at: "2026-06-06T12:46:02"
+  created_by: "llm_generated"
+  description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: pre market; response style: exceptions and gaps first."
+  domain: "portfolio_review"
+  evidence_required:
+    tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+  generation_model: "gpt-4o"
+  id: "portfolio_incremental_add_trim_0371_v1"
+  input_patterns:
+    - "should we add incrementally or reduce exposure"
+    - "portfolio position sizing by sector and stock"
+    - "review holdings for add trim decisions"
+    - "quick scan for pre market: should we add incrementally or reduce exposure"
+    - "review holdings for add trim decisions as exceptions and gaps first"
+  output_contract:
+    - "portfolio_state"
+    - "sector_exposure"
+    - "add_candidates"
+    - "trim_candidates"
+    - "risk_flags"
+  python_tools:
+    -
+      approved_tables:
+        - "scores.stage_snapshots"
+        - "portfolio.holdings"
+      code: "def run(context):\n    holdings_data = context.get('holdings_data', [])\n    high_stage = [h for h in holdings_data if h.get('stage_score', 0) > 0]  # Assuming a threshold exists\n    add_candidates = [h for h in high_stage if h.get('trading_signal') == 'buy']\n    trim_candidates = [h for h in high_stage if h.get('trading_signal') == 'sell']\n    return {'add_candidates': add_candidates, 'trim_candidates': trim_candidates, 'risk_flags': []}"
+      id: "analyze_holdings"
+      inputs:
+        - "holdings_data"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "add_candidates"
+        - "trim_candidates"
+        - "risk_flags"
+  review:
+    attempts: 1
+    findings:
+      - "analyze_holdings: execution failed: KeyError: 'holdings_data'"
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "generated"
+  sql_templates:
+    -
+      name: "fetch_holdings"
+      query: "SELECT h.symbol, h.qty, h.avg_cost, h.buy_date, s.sector, s.stage, s.stage_score, s.trading_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE ORDER BY s.stage_score DESC;"
+  status: "generated"
+  synthesis_guidance: "Focus on identifying exceptions in stage scores and trading signals for quick decisions."
+  tags:
+    - "portfolio"
+    - "position_sizing"
+    - "sector_exposure"
+    - "add_trim"
+    - "quick_scan"
+    - "pre_market"
+    - "exceptions_and_gaps_first"
+  title: "Portfolio Incremental Add Trim Review Variant 0371"
+  tool_plan_template: "{input_patterns}"
+  validation_errors:
+    - "analyze_holdings: execution failed: KeyError: 'holdings_data'"
+  validation_rules:
+    - "Check market cap categories for any outliers."
+    - "Verify sector exposure aligns with strategic goals."
+    - "Identify signals with contradicting scores."
+  version: 1

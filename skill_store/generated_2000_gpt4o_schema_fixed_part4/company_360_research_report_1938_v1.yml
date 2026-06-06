@@ -1,0 +1,56 @@
+id: "company_360_research_report_1938_v1"
+version: 1
+status: "review_pending"
+domain: "fundamental_analysis"
+title: "Comprehensive Company Research"
+description: "Generates a detailed company research card for Indian market stocks with a focus on position-sizing context for the last 20 sessions."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "position-sizing context for last 20 sessions: /research RELIANCE comprehensive report"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "position-sizing_context"
+  - "last_20_sessions"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Generate a research report for a given company's stock by synthesizing financial, technical, and narrative evidence."
+sql_templates:
+  -
+    description: "Fetch the latest stage snapshots and EOD prices for the last 20 sessions"
+    template: "SELECT symbol, company_name, price, change_1d_pct, change_1w_pct, change_1m_pct, stage, stage_score, technical_score, analysis_json FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol = $1 LIMIT 20;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all financial figures are accurate and match the latest filings."
+  - "Confirm that narrative elements are consistent with the data provided."
+synthesis_guidance: "['Combine quantitative data with qualitative insights to provide a holistic view.', 'Integrate technical analyses with fundamental narratives to support investment theses.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:55"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

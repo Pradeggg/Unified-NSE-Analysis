@@ -1,0 +1,71 @@
+id: "data_freshness_readiness_audit_1841_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1841"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: last 3 months; response style: action watchlist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for last 3 months: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as action watchlist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "last_3_months"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    python_tools:
+
+    evidence_gaps:
+
+sql_templates:
+  -
+    name: "latest_data_check"
+    description: "Check if the data is up-to-date for the last 3 months."
+    template: "SELECT MAX(trade_date) as latest_index_date, MAX(snapshot_date) as latest_snapshot_date FROM market.index_eod, scores.stage_snapshots WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    name: "missing_data_check"
+    description: "Identify missing data in the data sources."
+    template: "WITH latest_dates AS (SELECT MAX(trade_date) as latest_equity_date FROM market.equity_eod) SELECT symbol FROM market.equity_eod, latest_dates WHERE trade_date < latest_equity_date;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Follows the rules for date checks and table joins as specified in the approved schema."
+  - "SQL queries are read-only and use only approved columns and tables."
+synthesis_guidance: "['Ensure output results conform to approved schema and capture all essential freshness metrics.', 'Provide a comprehensive snapshot of data freshness and consistency.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:42"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.latest_index_date is not approved"
+  - "market.index_eod.latest_snapshot_date is not approved"
+  - "market.index_eod.snapshot_date is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "market.index_eod.latest_index_date is not approved"
+    - "market.index_eod.latest_snapshot_date is not approved"
+    - "market.index_eod.snapshot_date is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

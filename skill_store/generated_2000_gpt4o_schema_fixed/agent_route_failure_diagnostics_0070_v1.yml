@@ -1,0 +1,66 @@
+id: "agent_route_failure_diagnostics_0070_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0070"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: post results; response style: concise table."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for post results: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as concise table"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "post_results"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Diagnose agent route failures by examining data consistency, tool validation, symbol resolution integrity, and reporting gaps."
+sql_templates:
+  -
+    sql: "SELECT er.run_id, er.run_ts, er.universe_size, er.stocks_filtered, ss.stage, ss.trading_signal\nFROM report.enhanced_runs er\nJOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id\nJOIN scores.stage_snapshots ss ON efs.symbol = ss.symbol\nWHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nAND efs.trading_value_cr > 1\nAND ss.stage = 'STAGE_2'"
+    description: "Identify route failures related to trading value and stage label."
+python_tools:
+  -
+    id: "agent_route_evidence_tool_0070"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+    outputs:
+      - "failure_summary"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Example read-only logic to process run_id\n    data = context.get_data('evidence')\n    # Analyze data and generate a failure summary\n    failure_summary = {}\n    # ... computation logic ...\n    return failure_summary"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure that SQL templates only read, never write."
+  - "Validate that the correct join rules are applied."
+  - "Ensure stage and signal labels are correctly semantically used."
+synthesis_guidance: "Synthesize findings into a concise table focusing on the failure mode, source trail, and suggested fixes."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:18"
+generation_model: "gpt-4o"
+validation_errors:
+  - "agent_route_evidence_tool_0070: execution failed: AttributeError: 'dict' object has no attribute 'get_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "agent_route_evidence_tool_0070: execution failed: AttributeError: 'dict' object has no attribute 'get_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

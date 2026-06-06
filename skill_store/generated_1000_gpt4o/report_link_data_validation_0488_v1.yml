@@ -1,0 +1,61 @@
+id: "report_link_data_validation_0488_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0488"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: intraday context; response style: portfolio-aware output."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for intraday context: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  inputs:
+    - "run_id"
+    - "analysis_date"
+  outputs:
+    - "findings"
+    - "broken_links"
+    - "missing_data"
+    - "remediation"
+    - "verification"
+sql_templates:
+  -
+    query: "SELECT run_id, run_ts, analysis_date, universe_size, market_composite_score FROM report.enhanced_runs WHERE analysis_date = ?"
+    description: "Fetch basic run metadata for a specified analysis date."
+  -
+    query: "SELECT symbol, score, recommendation, current_price FROM report.enhanced_filtered_stocks WHERE run_id = ?"
+    description: "Retrieve stock information filtered in a specific run."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "status"
+synthesis_guidance: "{'notes': 'Provide detailed information on data validation relevant to each report segment, with a focus on position-sizing and intraday contexts.', 'hints': 'Look for discrepancies between runs and filtered stocks, assess market composite metrics, and identify any interruptions in the data flow.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:48:29"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

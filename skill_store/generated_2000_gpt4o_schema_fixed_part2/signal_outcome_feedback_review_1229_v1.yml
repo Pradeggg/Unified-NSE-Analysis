@@ -1,0 +1,51 @@
+id: "signal_outcome_feedback_review_1229_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1229"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: last 5 sessions; response style: ranked candidates."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for last 5 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as ranked candidates"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze the outcome of trading signals over the last 5 sessions to identify patterns in hits and misses, focusing on stops and targets. Generate a ranked list of successful signals for future decisions."
+sql_templates:
+  -
+    template: "SELECT symbol, COUNT(hit_target) AS targets_met, COUNT(hit_stop) AS stops_hit\nFROM signals.signal_log\nWHERE date_issued >= (CURRENT_DATE - INTERVAL '5 days')\nGROUP BY symbol\nORDER BY targets_met DESC, stops_hit ASC\nLIMIT 10;"
+  -
+    template: "WITH latest_stage AS (\n  SELECT symbol, stage\n  FROM scores.stage_snapshots\n  WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n)\nSELECT sl.symbol, sl.setup_class, sl.signal, sl.return_pct, ls.stage\nFROM signals.signal_log AS sl\nJOIN latest_stage AS ls ON sl.symbol = ls.symbol\nWHERE sl.date_issued >= (CURRENT_DATE - INTERVAL '5 days')\nORDER BY sl.return_pct DESC\nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "['Highlight the most successful signals and the contexts they occurred in.', 'Identify any consistent patterns among failed signals to avoid future pitfalls.', 'Suggest improvements to current strategies and potential next checks or validations required.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:00"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.stops_hit is not approved"
+  - "signals.signal_log.targets_met is not approved"

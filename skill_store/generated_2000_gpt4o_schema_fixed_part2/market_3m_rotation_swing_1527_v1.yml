@@ -1,0 +1,82 @@
+id: "market_3m_rotation_swing_1527_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1527"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: research-only summary."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for last 5 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as research-only summary"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  as_of_date:
+    description: "Current date indicating analysis point."
+    generator: "CURRENT_DATE"
+  index_returns:
+    description: "Index returns over the last 3 months for key indexes."
+    sql_template: "SELECT index_symbol, (MAX(close) - MIN(open)) / MIN(open) * 100 AS return_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol"
+  stage_distribution_change:
+    description: "Change in distribution of stocks by stage."
+    sql_template: "WITH latest AS (SELECT snapshot_date, stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY stage) SELECT stage, count FROM latest"
+  leading_sectors:
+    description: "Identify sectors showing leadership."
+    sql_template: "SELECT sector, AVG(relative_strength) AS average_relative_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector ORDER BY average_relative_strength DESC LIMIT 5"
+  primary_candidates:
+    description: "Identify primary swing trade candidates."
+    python_tool:
+      id: "swing_candidate_selector"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "scores.stage2_vcp_picks"
+      outputs:
+        - "symbol"
+        - "company_name"
+        - "vcp_score"
+      approved_tables:
+        - "scores.stage2_vcp_picks"
+      code: "def run(context): ... # logic to evaluate swing candidates"
+  risks:
+    description: "Potential risks or warnings based on current market data."
+    sql_template: "SELECT 'High RSI' AS risk, symbol FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND rsi > 70 UNION SELECT 'Low Momentum' AS risk, symbol FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND momentum_50d < 0"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:03"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

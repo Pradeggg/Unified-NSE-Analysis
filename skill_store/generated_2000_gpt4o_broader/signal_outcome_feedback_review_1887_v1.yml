@@ -1,0 +1,52 @@
+id: "signal_outcome_feedback_review_1887_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1887"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for intraday context: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as action watchlist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Evaluate signal outcomes by reviewing hit targets and stops."
+sql_templates:
+  -
+    template: "SELECT symbol, sector, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '7 days' AND (hit_target = TRUE OR hit_stop = TRUE);"
+    description: "Fetch signals from the last week where targets or stops were hit."
+  -
+    template: "SELECT sector, COUNT(*) AS success_count FROM signals.signal_log WHERE hit_target = TRUE GROUP BY sector;"
+    description: "Count successful signals by sector."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:59"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.success_count is not approved"

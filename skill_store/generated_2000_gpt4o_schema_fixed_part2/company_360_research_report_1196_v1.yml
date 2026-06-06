@@ -1,0 +1,64 @@
+id: "company_360_research_report_1196_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1196 Card"
+description: "Build a comprehensive company research card focusing on overview, financials, and narrative evidence for the Indian market. Aimed at institutional investors with a freshness audit focus for weekly reviews."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "freshness audit for weekly review: /research RELIANCE comprehensive report"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "freshness_audit"
+  - "weekly_review"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    name: "Company Snapshot"
+    description: "Selects the latest snapshot for the given company."
+    sql_template: "SELECT symbol, company_name, sector, market_cap_cat, price, stage FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    name: "Financial Trends"
+    description: "Fetches the latest quarterly financials."
+    sql_template: "SELECT symbol, period_label, revenue, expenses, operating_profit, pat FROM scores.quarterly_results WHERE symbol = 'RELIANCE' AND period_type = 'quarter' ORDER BY period_end DESC LIMIT 1;"
+sql_templates:
+  -
+    description: "Get technical setup."
+    sql: "SELECT trend_signal, relative_strength, rsi FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    description: "Fetch valuation gaps."
+    sql: "SELECT pe_ratio, pb_ratio FROM scores.results_analysis WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all retrieved data is up-to-date."
+  - "Verify compliance with Agent Adda schema rules."
+synthesis_guidance: "['Focus on providing a cohesive narrative integrating financial and technical insights.', 'Ensure the report remains authoritative and trustworthy by adhering to approved data sources.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:41:46"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.pb_ratio is not approved"
+  - "scores.results_analysis.pe_ratio is not approved"

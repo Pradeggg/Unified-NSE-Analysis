@@ -1,0 +1,57 @@
+id: "signal_outcome_feedback_review_0543_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0543"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: research-only summary."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for last 3 months: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as research-only summary"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "${_sql:signal_outcome_review}"
+sql_templates:
+  signal_outcome_review:
+    description: "Review trading signal outcomes and categorize by hit target or stop."
+    parameters:
+      -
+        name: "start_date"
+        type: "date"
+        description: "Start date for the 3-month review period."
+      -
+        name: "symbol"
+        type: "text"
+        description: "Stock symbol to filter the review."
+    template: "SELECT \n  log.symbol, \n  log.signal, \n  log.price_at_issue, \n  log.target_1, \n  log.target_2, \n  log.stop_loss, \n  log.return_pct, \n  log.hit_target, \n  log.hit_stop, \n  log.date_resolved\nFROM \n  signals.signal_log log\nWHERE \n  log.date_issued >= :start_date\n  AND log.date_issued <= CURRENT_DATE\n  AND log.symbol = :symbol;\n"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure start_date is a valid past date within 3 months."
+  - "Symbol must exist within the approved schema."
+synthesis_guidance: "[\"Summarize outcomes as impacted by the signals' target and stop achievement.\", 'Identify patterns in successes and failures.', 'Suggest potential enhancements in routes based on signal performance.', 'Outline next steps for review and further analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:59"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.log is not approved"

@@ -1,0 +1,57 @@
+id: "report_link_data_validation_0844_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0844"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: last 3 months; response style: action watchlist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for last 3 months: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  python_tools:
+
+  sql_templates:
+    -
+      description: "Fetch all report runs with missing data or broken report links from the last 3 months."
+      template: "SELECT runs.run_id, runs.run_ts, stocks.symbol, stocks.recommendation\nFROM report.enhanced_runs runs\nJOIN report.enhanced_filtered_stocks stocks ON runs.run_id = stocks.run_id\nWHERE runs.run_ts > CURRENT_DATE - INTERVAL '3 months'\nAND (stocks.recommendation IS NULL OR stocks.score < 50)\nORDER BY runs.run_ts DESC;"
+      placeholders:
+
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure that the SQL returns results within the specified period."
+  - "Verify that the join between tables uses approved join rules."
+  - "Check that the SQL does not alter or write any data."
+synthesis_guidance: "['Compile a list of reports where data is incomplete or links are broken.', 'Emphasize creating action watchlists for better market decisions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:33"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

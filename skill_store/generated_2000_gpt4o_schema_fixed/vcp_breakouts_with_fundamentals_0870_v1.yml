@@ -1,0 +1,52 @@
+id: "vcp_breakouts_with_fundamentals_0870_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0870"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "screening::1.0"
+sql_templates:
+  -
+    description: "Select VCP breakout candidates with strong fundamentals."
+    template: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_vcp_picks AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)) SELECT v.symbol, v.company_name, v.sector, v.price, v.vcp_score, s.enhanced_fund_score FROM latest_vcp_picks v JOIN latest_snapshots s ON v.symbol = s.symbol WHERE v.trading_signal IN ('BUY', 'STRONG_BUY') AND v.vcp_score IS NOT NULL ORDER BY v.vcp_score DESC, s.enhanced_fund_score DESC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure VCP score is not null."
+  - "Limit output to top 50 by vcp_score and enhanced_fund_score."
+synthesis_guidance: "{'focus': 'Identify quality VCP breakouts with buy signals and strong fundamentals optimized for TradingView action watchlists.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:41"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

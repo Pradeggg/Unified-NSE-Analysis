@@ -1,0 +1,61 @@
+id: "portfolio_incremental_add_trim_0187_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0187"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: intraday context; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for intraday context: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  plan:
+    - "Analyze current holdings in portfolio.holdings."
+    - "Review scores.stage_snapshots for sector and technical signals."
+    - "Compare sector-relative performance for add/trim decisions."
+sql_templates:
+  -
+    description: "Retrieve top gaining sectors based on 1-day percentage change."
+    template: "SELECT sector, AVG(change_1d_pct) as avg_change FROM scores.stage_snapshots WHERE price_date = CURRENT_DATE GROUP BY sector ORDER BY avg_change DESC LIMIT 5;"
+  -
+    description: "Get details of portfolio holdings with their current market stage scores."
+    template: "SELECT p.symbol, p.qty, s.stage, s.stage_score, s.price, s.live_price FROM portfolio.holdings p INNER JOIN scores.stage_snapshots s ON p.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure portfolio holdings align with sector exposure recommendations."
+  - "Validate add/trim candidates with the latest stage and trend signals."
+synthesis_guidance: "['Integrate analytical results into a cohesive narrative.', 'Highlight sector-relative advantages or risks for each decision.', 'Frame recommendations based on intraday trends and signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:42:44"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.avg_change is not approved"
+  - "unknown table p.qty"
+  - "unknown table p.symbol"
+  - "unknown table s.live_price"
+  - "unknown table s.price"
+  - "unknown table s.snapshot_date"
+  - "unknown table s.stage"
+  - "unknown table s.stage_score"
+  - "unknown table s.symbol"

@@ -1,0 +1,47 @@
+created_at: "2026-06-06T12:43:57"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: post results; response style: ranked candidates."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0267_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for post results: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  holdings_analysis: "SELECT h.symbol, h.qty, s.sector, s.stage_score, s.relative_strength, s.trend_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.stage IN ('Accumulation', 'Neutral', 'Distribution');"
+status: "validated"
+synthesis_guidance: "Identify ranked add and trim candidates based on stage scores and relative strength within sectors."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "ranked_candidates"
+title: "Portfolio Incremental Add Trim Review Variant 0267"
+tool_plan_template: "Review current positions and analyze sector-relative rankings for add/trim decisions."
+validation_rules:
+  - "holdings_analysis_exists"
+version: 1

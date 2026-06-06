@@ -1,0 +1,52 @@
+id: "vcp_breakouts_with_fundamentals_0702_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0702"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: today; response style: QA checklist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "today"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Identify potential stocks by cross-referencing technical patterns with strong fundamentals. Focus on today's breakouts and VCP formations with deep institutional backing."
+sql_templates:
+  -
+    query: "WITH vcp_candidates AS (SELECT symbol, company_name, price, live_price, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE AND vcp_score > 80), fundamental_strength AS (SELECT symbol, enhanced_fund_score FROM scores.stage_snapshots WHERE enhanced_fund_score > 70 AND snapshot_date = CURRENT_DATE) SELECT vcp_candidates.symbol, vcp_candidates.company_name, vcp_candidates.price, vcp_candidates.live_price FROM vcp_candidates JOIN fundamental_strength ON vcp_candidates.symbol = fundamental_strength.symbol"
+    integration: "Identify VCP and breakout candidates with strong fundamentals."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure SQL queries do not perform any writes."
+  - "Cross-reference results with today's date."
+synthesis_guidance: "Prioritize stocks with the highest VCP scores and enhanced fundamental scores. Provide a QA checklist for decision making."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

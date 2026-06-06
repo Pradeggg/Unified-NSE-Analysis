@@ -1,0 +1,65 @@
+created_at: "2026-06-06T12:48:22"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: pre market; response style: portfolio-aware output."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0477_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 3
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    id: "sector_performance"
+    query: "SELECT trade_date, index_symbol, open, high, low, close FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    id: "stage_insights"
+    query: "SELECT snapshot_date, symbol, stage FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= CURRENT_DATE - INTERVAL '3 months';"
+status: "validated"
+synthesis_guidance:
+  - "Integrate sector performance with stage analysis for a holistic view."
+  - "Highlight anomalies and potential risks in market regime assessment."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "portfolio-aware_output"
+title: "3M Market Rotation Swing Assessment Variant 0477"
+tool_plan_template:
+  steps:
+    - "Identify top-performing sectors based on 3-month returns."
+    - "Analyze indices and equities for overall market regime insights."
+    - "Determine leadership sectors and their phase in the market cycle."
+    - "Extract swing trade candidates with high relative strength and favorable technical conditions."
+validation_errors:
+
+validation_rules:
+  - "Ensure all sectors have data coverage for the last 3 months."
+  - "Verify the accuracy of 3-month performance metrics across sectors and indices."
+version: 1

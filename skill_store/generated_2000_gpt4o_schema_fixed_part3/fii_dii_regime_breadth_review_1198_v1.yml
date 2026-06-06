@@ -1,0 +1,88 @@
+id: "fii_dii_regime_breadth_review_1198_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1198"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: weekly review; response style: narrative plus evidence."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as narrative plus evidence"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    name: "FetchLatestFiiDiiFlows"
+    type: "sql"
+    description: "Fetch the latest FII/DII flows from the signals table."
+    template: "SELECT trade_date, fii_net_today, dii_net_today, fii_trend, dii_trend FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+  -
+    name: "FetchLatestRegime"
+    type: "sql"
+    description: "Fetch the latest market regime information."
+    template: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history);"
+  -
+    name: "FetchLatestMarketBreadth"
+    type: "sql"
+    description: "Fetch the latest market breadth data."
+    template: "SELECT trade_date, advances, declines, market_sentiment FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+  -
+    name: "FetchLatestIndexEOD"
+    type: "sql"
+    description: "Fetch the latest index EOD data for Nifty 50."
+    template: "SELECT trade_date, close, change_pct, trend_signal FROM market.index_eod WHERE index_symbol = 'NIFTY 50' AND trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+sql_templates:
+  -
+    name: "JoinRegimeAndFlows"
+    template: "SELECT rf.trade_date, rf.regime, fl.fii_trend, fl.dii_trend FROM signals.regime_history rf JOIN signals.fii_dii_flows fl ON rf.trade_date = fl.trade_date WHERE rf.trade_date = (SELECT MAX(trade_date) FROM signals.regime_history);"
+python_tools:
+  -
+    id: "run_balance_check"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "flow_signal"
+      - "regime"
+      - "breadth_context"
+    outputs:
+      - "risk_flags"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+    code: "def run_balance_check(flow_signal, regime, breadth_context):\n    if flow_signal == 'BULLISH' and regime == 'BULL' and breadth_context['advances'] > breadth_context['declines']:\n        return {'risk_flags': 'Risk-On'}\n    else:\n        return {'risk_flags': 'Uncertain'}"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "flow_signal"
+  - "regime"
+synthesis_guidance: "['Narratively combine the data points from FII/DII flows, market regime, and breadth to provide insights on the current market context.', 'Identify if the market is in a risk-on or risk-off phase based on the gathered evidence.', 'Assess the current trend in FII/DII actions and regime stability along with confirming through market breadth indicators.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:56:30"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_balance_check: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_balance_check: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

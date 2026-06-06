@@ -1,0 +1,50 @@
+id: "report_link_data_validation_0732_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0732"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Use this variant to identify issues in enhanced report metadata and filtered stock data. Focus on broken links, missing data, and QA checklists within the last 20 sessions."
+sql_templates:
+  -
+    template: "SELECT er.run_id, er.run_ts, er.analysis_date, COUNT(DISTINCT efs.symbol) AS stock_count, er.notes FROM report.enhanced_runs er LEFT JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id WHERE er.run_ts >= (CURRENT_DATE - INTERVAL '20 days') GROUP BY er.run_id ORDER BY er.run_ts DESC;"
+    description: "Fetch metadata and number of unique stocks analyzed for the last 20 sessions, including notes for additional context."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Verify all run IDs have corresponding stock records within the last 20 sessions."
+  - "Check that all mandatory report links are functional and datasets are complete."
+synthesis_guidance: "['Summarize key findings focusing on broken links, incomplete datasets, and adherence to QA standards.', 'Compile a checklist for remedial actions based on verification outcomes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:11"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

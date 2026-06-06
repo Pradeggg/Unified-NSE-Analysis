@@ -1,0 +1,93 @@
+id: "market_3m_rotation_swing_1457_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1457"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  sql_templates:
+    -
+      name: "IndexPerformance"
+      description: "Select index performance for the last three months."
+      template: "SELECT index_symbol, SUM(change_pct) AS total_return FROM market.index_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY index_symbol;"
+    -
+      name: "SectorStageDistribution"
+      description: "Select the distribution of market stages per sector."
+      template: "SELECT sector, stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector, stage;"
+  output_contract:
+    - "as_of_date"
+    - "index_returns"
+    - "stage_distribution_change"
+    - "leading_sectors"
+    - "primary_candidates"
+    - "risks"
+  validation_rules:
+    -
+      output_key: "as_of_date"
+      rule: "must be a recent date within the last day"
+    -
+      output_key: "index_returns"
+      rule: "must summarize index performance over the last 3 months"
+  synthesis_guidance:
+    - "Analyze index performance using SQL template results."
+    - "Assess sector stage distributions to determine leading sectors."
+    - "Identify primary swing trade candidates from stage 2 VCP picks."
+sql_templates:
+
+python_tools:
+  -
+    id: "stage_change_calc"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      snapshot_data: "scores.stage_snapshots"
+    outputs:
+      stage_change_summary: "calculated summary of stage changes over the specified period"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Simplified logic for calculating stage distribution change over time\n    data = context['snapshot_data']\n    # Logic to calculate changes here\n    return {'stage_change_summary': 'example_summary'}"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:27"
+generation_model: "gpt-4o"
+validation_errors:
+  - "stage_change_calc: inputs must be a list"
+  - "stage_change_calc: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "stage_change_calc: inputs must be a list"
+    - "stage_change_calc: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

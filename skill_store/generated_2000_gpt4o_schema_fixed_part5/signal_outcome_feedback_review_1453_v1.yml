@@ -1,0 +1,60 @@
+id: "signal_outcome_feedback_review_1453_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1453"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for quarter to date: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as portfolio-aware output"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    steps:
+      - "Fetch signals resolved in the quarter using 'signals.signal_log'."
+      - "Join with 'scores.stage_snapshots' to assess stage and score context."
+      - "Analyze win/loss patterns based on 'hit_target' and 'hit_stop'."
+      - "Synthesize outcomes and lessons."
+sql_templates:
+  -
+    template: "SELECT id, date_issued, symbol, company, signal, hit_target, hit_stop FROM signals.signal_log WHERE date_resolved >= (SELECT date_trunc('quarter', CURRENT_DATE)) AND date_resolved < (SELECT date_trunc('quarter', CURRENT_DATE + interval '3 months'));"
+  -
+    template: "SELECT s.symbol, s.snapshot_date, s.stage, s.trading_signal FROM scores.stage_snapshots s WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "{'signals.signal_log': {'primary_key': ['date_issued', 'symbol'], 'latest_date_column': 'date_issued'}, 'scores.stage_snapshots': {'primary_key': ['snapshot_date', 'symbol'], 'latest_date_column': 'snapshot_date'}, 'market.equity_eod': {'primary_key': ['trade_date', 'symbol'], 'latest_date_column': 'trade_date'}}"
+synthesis_guidance: "{'emphasis_on_portfolio_impact': True, 'actionable_insights': True, 'trend_and_signal_analysis': True}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:11"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.date_trunc is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "signals.signal_log.date_trunc is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

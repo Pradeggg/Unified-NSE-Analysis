@@ -1,0 +1,61 @@
+id: "sector_breadth_rotation_watchlist_0783_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0783"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: QA checklist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for intraday context: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as QA checklist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  strategy: "Fetch latest sector data and rank by breadth and stage participation."
+  steps:
+    - "Use SQL to retrieve latest sector breadth data."
+    - "Use SQL to filter stage 2 stocks with strong signals."
+    - "Synergize sector and stock data to identify candidates for TradingView."
+sql_templates:
+  -
+    name: "fetch_sector_breadth"
+    sql: "SELECT sd.sector, sd.pct_above_50dma, sd.change_5d\nFROM breadth.sector_daily sd\nWHERE sd.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily);"
+  -
+    name: "fetch_stage_2_stocks"
+    sql: "SELECT ss.symbol, ss.price, ss.trading_signal\nFROM scores.stage_snapshots ss\nWHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nAND ss.stage = 'STAGE_2'\nAND ss.trading_signal IN ('BUY', 'STRONG_BUY');"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "rule_1"
+  - "rule_2"
+synthesis_guidance: "{'focus': 'Analyze sectors by breadth and stock stage progression.', 'context': 'Use data for daily update and trading insights.', 'approach': 'Provide a data-driven watchlist using approved data sources.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:55"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

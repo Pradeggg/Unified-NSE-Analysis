@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:53:15"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: post results; response style: comparison matrix."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0966_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    name: "fetch_vcp_breakouts"
+    query: "SELECT e.symbol, e.close, s.enhanced_fund_score, s.vcp_score FROM market.equity_eod e JOIN scores.stage2_vcp_picks s ON e.symbol = s.symbol WHERE e.trade_date = CURRENT_DATE AND s.vcp_score > 7 ORDER BY s.enhanced_fund_score DESC;"
+status: "validated"
+synthesis_guidance: "Use the highest scoring VCP stocks with strong fundamentals to create a comprehensive comparison matrix."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "post_results"
+  - "comparison_matrix"
+title: "VCP Breakouts With Fundamentals Variant 0966"
+tool_plan_template: "Extract stocks with high VCP scores and good fundamentals from the market data tables."
+validation_rules:
+  - "Ensure SQL templates are read-only and valid."
+  - "Ensure output contract has all required fields."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

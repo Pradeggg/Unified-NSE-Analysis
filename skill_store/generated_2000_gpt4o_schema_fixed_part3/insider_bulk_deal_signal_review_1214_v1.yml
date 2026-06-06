@@ -1,0 +1,53 @@
+id: "insider_bulk_deal_signal_review_1214_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1214"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: latest EOD; response style: ranked candidates."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for latest EOD: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as ranked candidates"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  type: "research"
+  details: "Identify stocks with insider alerts and bulk deals, and confirm with positive technical indicators for accumulation signals."
+sql_templates:
+  -
+    template: "WITH latest_stage AS (SELECT symbol, stage, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY')), insider_deals AS (SELECT symbol, SUM(value_cr) as total_value FROM signals.insider_alerts WHERE alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts) GROUP BY symbol), bulk_deals AS (SELECT symbol, SUM(price * qty) as total_deal_value FROM signals.bulk_block_deals WHERE deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals) GROUP BY symbol) SELECT l.symbol, id.total_value AS insider_value, bd.total_deal_value AS bulk_deal_value, l.technical_score FROM latest_stage l LEFT JOIN insider_deals id ON l.symbol = id.symbol LEFT JOIN bulk_deals bd ON l.symbol = bd.symbol ORDER BY l.technical_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "rule_type"
+  - "details"
+synthesis_guidance: "{'strategy': 'Rank stocks based on technical score highlights alongside insider and bulk deal confirmations.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:32"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

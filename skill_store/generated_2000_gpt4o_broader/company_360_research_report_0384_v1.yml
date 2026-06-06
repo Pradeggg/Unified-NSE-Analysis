@@ -1,0 +1,74 @@
+id: "company_360_research_report_0384_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0384"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: watchlist creation; timeframe: intraday context; response style: exceptions and gaps first."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "watchlist creation for intraday context: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as exceptions and gaps first"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "watchlist_creation"
+  - "intraday_context"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+    -
+      id: "fetch_intraday_price"
+      language: "python"
+      mode: "read_only"
+      inputs:
+
+      outputs:
+
+      approved_tables:
+        - "market.equity_eod"
+      code: "def run(context):\n    # Code to fetch intraday price from market.equity_eod"
+sql_templates:
+  company_overview:
+    template: "SELECT company_name, sector, market_cap_cat FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' ORDER BY snapshot_date DESC LIMIT 1;"
+    type: "SELECT"
+  financial_trends:
+    template: "SELECT period_label, revenue, pat, eps FROM scores.quarterly_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 4;"
+    type: "SELECT"
+  technical_setup:
+    template: "SELECT live_price, change_1d_pct, change_1w_pct, change_1m_pct, rsi, trend_signal FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' ORDER BY snapshot_date DESC LIMIT 1;"
+    type: "SELECT"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "status"
+synthesis_guidance: "Required sections should highlight any gaps or exceptions in the data, with a focus on providing insights for watchlist creation in an intraday context."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:37"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

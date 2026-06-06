@@ -1,0 +1,58 @@
+id: "insider_bulk_deal_signal_review_0794_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0794"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for weekly review: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as QA checklist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze insider alerts and bulk deal data with technical indicators to create a ranked watchlist."
+sql_templates:
+  -
+    description: "Select recent insider alerts with significant scores."
+    template: "SELECT symbol, entity, alert_date, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '7 DAY' AND insider_score > 75;"
+  -
+    description: "Retrieve bulk deals involving substantial quantities."
+    template: "SELECT symbol, entity, deal_date, qty, price FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '7 DAY' AND qty > 100000;"
+  -
+    description: "Fetch technical scores for the top performing stocks."
+    template: "SELECT symbol, stage_score, technical_score, trend_signal FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE AND stage_score > 80;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure data freshness within a week for alerts and deals."
+  - "Validate technical indicators align with positive growth signals."
+synthesis_guidance: "['Aggregate and interpret signals for watchlist accuracy.', 'Correlate insider and bulk deal data with technical indicators.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

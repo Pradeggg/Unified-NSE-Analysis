@@ -1,0 +1,76 @@
+id: "insider_bulk_deal_signal_review_1200_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1200"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: weekly review; response style: narrative plus evidence."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for weekly review: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as narrative plus evidence"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "weekly_review"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  strategy: "Review insider and bulk deals data for stocks with a positive technical setup."
+  evidence_gaps:
+    description: "If key insider metric details are missing, flag for manual review."
+sql_templates:
+  -
+    description: "Select latest insider alerts for analysis"
+    sql: "SELECT symbol, alert_date, entity, alert_type, insider_score FROM signals.insider_alerts WHERE alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts) AND insider_score > 0 ORDER BY insider_score DESC LIMIT 10;"
+  -
+    description: "Select latest bulk deals for analysis"
+    sql: "SELECT symbol, deal_date, entity, qty, price FROM signals.bulk_block_deals WHERE deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals) LIMIT 10;"
+  -
+    description: "Select symbols with a positive technical score"
+    sql: "SELECT symbol, trading_signal, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY technical_score DESC LIMIT 10;"
+python_tools:
+  -
+    id: "insider_deal_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "alerts"
+      - "deals"
+      - "technical_scores"
+    outputs:
+      - "analysis_summary"
+    approved_tables:
+      - "signals.insider_alerts"
+      - "signals.bulk_block_deals"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyzes the provided context of alerts, deals, and technical scores.\n    analysis_summary = []\n    for alert in context['alerts']:\n        relevant_deals = [deal for deal in context['deals'] if deal['symbol'] == alert['symbol']]\n        tech_status = next((score for score in context['technical_scores'] if score['symbol'] == alert['symbol']), None)\n        if relevant_deals and tech_status:\n            analysis_summary.append({\n                'symbol': alert['symbol'],\n                'insider_entity': alert['entity'],\n                'deal_qty': sum([deal['qty'] for deal in relevant_deals]),\n                'tech_signal': tech_status['trading_signal']\n            })\n    return {'analysis_summary': analysis_summary}\n"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'guidance': 'Combine alert details with technical confirmation to build a narrative watchlist.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:41:44"
+generation_model: "gpt-4o"
+validation_errors:
+  - "insider_deal_analysis: execution failed: KeyError: 'alerts'"
+review:
+  status: "needs_heal"
+  findings:
+    - "insider_deal_analysis: execution failed: KeyError: 'alerts'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

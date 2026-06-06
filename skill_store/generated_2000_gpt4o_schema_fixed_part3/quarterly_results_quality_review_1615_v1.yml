@@ -1,0 +1,60 @@
+id: "quarterly_results_quality_review_1615_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1615"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: risk-first review; timeframe: latest EOD; response style: debug trace."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "risk-first review for latest EOD: latest quarterly results analysis"
+  - "which companies had strong quarterly results as debug trace"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "risk-first_review"
+  - "latest_EOD"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "Step 1: Gather latest quarterly results with revenue and PAT details."
+  - "Step 2: Fetch narrative analysis including growth and margin comments."
+  - "Step 3: Evaluate stage and trading signals for technical context."
+  - "Step 4: Identify risks from narrative analysis."
+  - "Step 5: Synthesize data into the response format."
+sql_templates:
+  -
+    template_name: "latest_quarterly_results"
+    template: "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.period_label, qr.revenue, qr.pat, qr.opm_pct FROM scores.quarterly_results qr WHERE period_type = 'quarter' ORDER BY qr.symbol, qr.period_end DESC NULLS LAST, qr.fetched_at DESC LIMIT 50;"
+  -
+    template_name: "narrative_analysis"
+    template: "SELECT DISTINCT ON (ra.symbol) ra.symbol, ra.pl_commentary, ra.growth_yoy_revenue_pct, ra.growth_yoy_pat_pct, ra.opm_delta_pp FROM scores.results_analysis ra WHERE ra.verdict IN ('beat', 'inline', 'miss', 'mixed', 'unknown') ORDER BY ra.symbol, ra.period_end DESC NULLS LAST, ra.updated_at DESC LIMIT 50;"
+  -
+    template_name: "stage_and_technical_context"
+    template: "SELECT DISTINCT ON (ss.symbol) ss.symbol, ss.stage, ss.trading_signal, ss.technical_score FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY ss.symbol, ss.snapshot_date DESC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Validate SQL outputs are within expected limits."
+  - "Ensure all templates return complete data sets."
+  - "Confirm symbol consistency across SQL queries."
+synthesis_guidance: "['Combine results logically ensuring no data conflicts.', 'Emphasize risk factors identified during narrative analysis.', 'Rank companies based on growth and technical signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:00"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.quarterly_results.qr is not approved"
+  - "scores.results_analysis.ra is not approved"

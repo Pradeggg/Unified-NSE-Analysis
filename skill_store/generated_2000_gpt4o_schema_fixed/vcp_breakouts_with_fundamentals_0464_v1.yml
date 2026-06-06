@@ -1,0 +1,61 @@
+id: "vcp_breakouts_with_fundamentals_0464_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0464"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  plan: "Identify VCP breakout stocks with strong fundamentals by combining EOD price data, stage snapshots, and VCP picks using pre-approved joins and filters."
+  filters:
+    type: "constructive"
+    syntax: "SQL"
+    details:
+      latest_trades: "SELECT MAX(trade_date) FROM market.equity_eod"
+      latest_stage_snapshots: "SELECT MAX(snapshot_date) FROM scores.stage_snapshots"
+      latest_vcp: "SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks"
+sql_templates:
+  -
+    name: "Identify_top_VCP_breakouts"
+    type: "read-only"
+    template: "WITH latest_vcp AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC, rank ASC LIMIT 100) SELECT vcp.symbol, vcp.company_name, eod.close, vcp.vcp_score, ss.enhanced_fund_score FROM latest_vcp vcp JOIN market.equity_eod eod ON vcp.symbol = eod.symbol JOIN scores.stage_snapshots ss ON vcp.symbol = ss.symbol WHERE eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal IN ('BUY', 'STRONG_BUY') AND eod.series = 'EQ';"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "must_validate_by"
+  - "descriptions"
+synthesis_guidance: "Focus on generating a watchlist of breakout candidates using a balance of technical and fundamental metrics, suitable for the Indian market."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:51"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

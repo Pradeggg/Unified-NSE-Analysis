@@ -1,0 +1,70 @@
+id: "sector_breadth_rotation_watchlist_1959_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1959"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for quarter to date: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as comparison matrix"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    sector_ranks: "Use SQL to extract and rank sectors based on 'pct_above_50dma' and 'stage2_pct'. Focus on sectors with improving stage participation."
+    improving_sectors: "Identify sectors with positive 'change_5d' and growth in 'breadth_signal'."
+    candidate_symbols: "Select NSE symbols from 'scores.stage_snapshots' where 'stage' is 'STAGE_2' and 'trading_signal' is 'BUY' or 'STRONG_BUY'."
+    tradingview_symbols: "List symbols for TradingView import using top-ranked sectors."
+    evidence: "SQL queries and context used for analysis and validation."
+sql_templates:
+  -
+    query: "SELECT sector, AVG(pct_above_50dma) AS avg_pct, AVG(change_5d) AS avg_change, AVG(breadth_signal) AS avg_signal, COUNT(*) AS sector_count FROM breadth.sector_daily WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '3 months') GROUP BY sector ORDER BY avg_signal DESC, avg_change DESC LIMIT 10;"
+    description: "Rank sectors by average breadth and recent performance."
+  -
+    query: "SELECT symbol, sector, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY');"
+    description: "Identify strong candidates in Stage 2 with buy signals."
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sectors are ranked using approved metrics like 'pct_above_50dma'."
+  - "Verify symbol candidates are in 'STAGE_2' with 'BUY' or 'STRONG_BUY'."
+synthesis_guidance: "Combine SQL outputs to formulate a validated watchlist focused on improving sectors and specific stocks exhibiting strong stage participation and trading signals."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.sector_daily.avg_change is not approved"
+  - "breadth.sector_daily.avg_pct is not approved"
+  - "breadth.sector_daily.avg_signal is not approved"
+  - "breadth.sector_daily.sector_count is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "breadth.sector_daily.avg_change is not approved"
+    - "breadth.sector_daily.avg_pct is not approved"
+    - "breadth.sector_daily.avg_signal is not approved"
+    - "breadth.sector_daily.sector_count is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

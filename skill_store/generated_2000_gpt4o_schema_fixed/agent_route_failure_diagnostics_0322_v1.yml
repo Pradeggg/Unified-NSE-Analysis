@@ -1,0 +1,62 @@
+id: "agent_route_failure_diagnostics_0322_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0322"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for last 5 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as exceptions and gaps first"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  steps:
+    - "Validate input patterns against enhanced report data."
+    - "Identify missing tools from recent run diagnostics."
+    - "Review symbol resolution consistency using available stage snapshots."
+    - "Analyze exceptions and gaps in data processing for last 5 sessions."
+sql_templates:
+  -
+    template_id: "recent_enhanced_runs"
+    template: "SELECT * FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '5 days';"
+  -
+    template_id: "missing_tool_diagnostics"
+    template: "SELECT s.symbol, s.trading_signal FROM scores.stage_snapshots s WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY');"
+  -
+    template_id: "symbol_resolution_check"
+    template: "SELECT efs.symbol, efs.recommendation, ss.stage FROM report.enhanced_filtered_stocks efs JOIN scores.stage_snapshots ss ON efs.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    template_id: "exception_gap_detection"
+    template: "SELECT er.run_id, er.notes FROM report.enhanced_runs er WHERE er.run_ts >= NOW() - INTERVAL '5 days' AND er.notes LIKE '%exceptions%';"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all evidence is extracted from approved tables."
+  - "Confirm output contract aligns with expected diagnostics structure."
+synthesis_guidance: "['Aggregate diagnostics by merging findings from SQL templates.', 'Identify any evidence gaps impacting agent route diagnostics.', 'Draft regression test cases based on discovered issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.er is not approved"
+  - "report.enhanced_runs.now is not approved"

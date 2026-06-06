@@ -1,0 +1,65 @@
+id: "portfolio_incremental_add_trim_1137_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1137"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for last 20 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  purpose: "To analyze portfolio holdings for potential incremental add or trim decisions based on sector-relative performance over the last 20 sessions."
+sql_templates:
+  latest_stage_snapshot: "SELECT symbol, sector, trading_signal, stage, change_1w_pct FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY')"
+  portfolio_join: "SELECT ph.symbol, ph.qty, ph.avg_cost, s.stage, s.trading_signal FROM portfolio.holdings ph JOIN scores.stage_snapshots s ON ph.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+python_tools:
+  -
+    id: "sector_relative_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_data"
+    outputs:
+      - "sector_comparison_result"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze sector data here for relative performance comparisons\n    return sector_comparison_result"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+synthesis_guidance: "{'description': 'Create a narrative synthesis using the retrieved data to suggest potential adjustments to the portfolio based on sector-relative performance.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:33"
+generation_model: "gpt-4o"
+validation_errors:
+  - "sector_relative_analysis: execution failed: NameError: name 'sector_comparison_result' is not defined"
+review:
+  status: "needs_heal"
+  findings:
+    - "sector_relative_analysis: execution failed: NameError: name 'sector_comparison_result' is not defined"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,73 @@
+id: "sector_breadth_rotation_watchlist_0405_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0405"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: risk-first review; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "risk-first review for today: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as portfolio-aware output"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "risk-first_review"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Generate evidence using SQL templates and frame a watchlist output with portfolio-aware insights."
+sql_templates:
+  -
+    id: "sector_breadth_analysis"
+    type: "SELECT"
+    template: "SELECT sector, breadth_signal, divergence_alert FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily);"
+  -
+    id: "stage_2_symbols"
+    type: "SELECT"
+    template: "SELECT symbol, relative_strength FROM scores.stage_snapshots WHERE stage = 'STAGE_2' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY relative_strength DESC LIMIT 10;"
+python_tools:
+  -
+    id: "sort_and_format_results"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      sectors: "sector_ranks"
+      symbols: "candidate_symbols"
+    outputs:
+      sorted_sectors: "list"
+      formatted_symbols: "list"
+    approved_tables:
+
+    code: "def run(context):\n    sorted_sectors = sorted(context['sectors'], key=lambda x: x['breadth_signal'], reverse=True)\n    formatted_symbols = [f'NSE:{symbol}' for symbol in context['symbols']]\n    return {'sorted_sectors': sorted_sectors, 'formatted_symbols': formatted_symbols}"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure outputs follow the portfolio-aware and risk-first narrative context."
+synthesis_guidance: "Prioritize breadth and stage 2 sectors with constructive buy signals; provide TradingView-compatible output."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:54"
+generation_model: "gpt-4o"
+validation_errors:
+  - "sort_and_format_results: inputs must be a list"
+  - "sort_and_format_results: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "sort_and_format_results: inputs must be a list"
+    - "sort_and_format_results: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

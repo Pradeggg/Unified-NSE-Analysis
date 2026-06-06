@@ -1,0 +1,65 @@
+id: "market_3m_rotation_swing_1919_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1919"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  task: "Compile data for market regime, sector performance, and swing candidates."
+  inputs:
+    date_range: "last 3 months"
+  outputs:
+    - "as_of_date"
+    - "index_returns"
+    - "stage_distribution_change"
+    - "leading_sectors"
+    - "primary_candidates"
+    - "risks"
+sql_templates:
+  index_returns: "SELECT trade_date, index_symbol, AVG(change_pct) AS avg_return FROM market.index_eod WHERE trade_date BETWEEN :start_date AND :end_date GROUP BY index_symbol;"
+  stage_change: "SELECT snapshot_date, stage, COUNT(symbol) AS stage_count FROM scores.stage_snapshots WHERE snapshot_date BETWEEN :start_date AND :end_date GROUP BY snapshot_date, stage ORDER BY snapshot_date;"
+  leading_sectors: "SELECT sector, AVG(change_1m_pct) AS avg_monthly_change FROM scores.stage_snapshots WHERE snapshot_date BETWEEN :start_date AND :end_date GROUP BY sector ORDER BY avg_monthly_change DESC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+synthesis_guidance: "{'focus': 'Correlate index performance with sector strength and select high-potential candidates.', 'style': 'Present as a comparison matrix with source referencing for claims.', 'context': 'Use the Indian market context only.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:18"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_return is not approved"
+  - "scores.stage_snapshots.avg_monthly_change is not approved"
+  - "scores.stage_snapshots.stage_count is not approved"

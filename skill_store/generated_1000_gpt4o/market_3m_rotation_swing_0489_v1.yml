@@ -1,0 +1,68 @@
+id: "market_3m_rotation_swing_0489_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0489"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: intraday context; response style: portfolio-aware output."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  python_tools:
+    -
+      id: "calculate_sector_leadership"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "scores.stage_snapshots"
+      outputs:
+        - "leading_sectors"
+      approved_tables:
+        - "scores.stage_snapshots"
+      code: "def run(context):\n    df = context['scores.stage_snapshots']\n    recent = df[df['snapshot_date'] >= (df['snapshot_date'].max() - pd.DateOffset(months=3))]\n    leading_sectors = recent.groupby('sector')['stage_score'].mean().nlargest(3).index.tolist()\n    return {'leading_sectors': leading_sectors}"
+sql_templates:
+  -
+    description: "Calculate index returns over the last 3 months."
+    template: "WITH last_3_months AS (SELECT * FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months') SELECT index_symbol, (MAX(close) - MIN(close)) / MIN(close) AS index_return FROM last_3_months GROUP BY index_symbol;"
+  -
+    description: "Retrieve stage distribution change for the last 3 months."
+    template: "SELECT stage, COUNT(DISTINCT symbol) AS count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY stage;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure output aligns with portfolio-aware context."
+  - "Verify indices and sectors are correctly prioritized."
+synthesis_guidance: "['Combine index performance with sector analyses for strategic insights.', 'Highlight sectors with consistent performance across timeframes.', 'Identify emerging market trends from swing candidates.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:48:31"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

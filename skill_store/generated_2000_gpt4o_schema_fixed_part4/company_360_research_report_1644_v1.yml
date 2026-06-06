@@ -1,0 +1,114 @@
+id: "company_360_research_report_1644_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1644"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: watchlist creation; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "watchlist creation for last 3 months: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as debug trace"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    id: "360_research_plan"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      -
+        name: "symbol"
+        type: "text"
+      -
+        name: "start_date"
+        type: "date"
+    outputs:
+      -
+        name: "snapshot_data"
+        type: "json"
+      -
+        name: "financials"
+        type: "json"
+      -
+        name: "technical_data"
+        type: "json"
+      -
+        name: "narratives"
+        type: "json"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "scores.quarterly_results"
+      - "scores.annual_results"
+      - "scores.balance_sheet"
+      - "scores.cash_flow"
+      - "scores.results_analysis"
+      - "market.equity_eod"
+    code: "run(context)"
+sql_templates:
+  -
+    name: "latest_stage_snapshot"
+    query: "SELECT * FROM scores.stage_snapshots WHERE symbol = %s AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+  -
+    name: "latest_quarterly_results"
+    query: "SELECT * FROM scores.quarterly_results WHERE symbol = %s AND period_type = 'quarter' ORDER BY period_end DESC LIMIT 1"
+  -
+    name: "latest_annual_results"
+    query: "SELECT * FROM scores.annual_results WHERE symbol = %s ORDER BY period_end DESC LIMIT 1"
+  -
+    name: "latest_balance_sheet"
+    query: "SELECT * FROM scores.balance_sheet WHERE symbol = %s ORDER BY period_end DESC LIMIT 1"
+  -
+    name: "latest_cash_flow"
+    query: "SELECT * FROM scores.cash_flow WHERE symbol = %s ORDER BY period_end DESC LIMIT 1"
+  -
+    name: "latest_technical_data"
+    query: "SELECT * FROM market.equity_eod WHERE symbol = %s AND trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all required evidence tables are provided."
+  - "Verify SQL queries do not perform writes or updates."
+  - "Check output contract aligns with expected data schema."
+synthesis_guidance: "['Emphasize latest financial performance and stage context.', 'Include narratives extracted from results analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.annual_results.s is not approved"
+  - "scores.balance_sheet.s is not approved"
+  - "scores.cash_flow.s is not approved"
+  - "scores.quarterly_results.s is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "scores.annual_results.s is not approved"
+    - "scores.balance_sheet.s is not approved"
+    - "scores.cash_flow.s is not approved"
+    - "scores.quarterly_results.s is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

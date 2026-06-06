@@ -1,0 +1,53 @@
+id: "report_link_data_validation_1992_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1992"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: weekly review; response style: comparison matrix."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for weekly review: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Inspect the available data using the SQL templates provided, then summarize and compare using a matrix format."
+sql_templates:
+  -
+    read_only: true
+    query: "\nSELECT e.run_id, e.run_ts, e.analysis_date, e.universe_size, e.stocks_analyzed, e.stocks_filtered, e.indices_analyzed, e.market_composite_score, e.market_sentiment\nFROM report.enhanced_runs e\nWHERE e.run_ts >= CURRENT_DATE - INTERVAL '1 week';\n"
+  -
+    read_only: true
+    query: "\nSELECT f.run_id, f.symbol, f.score, f.recommendation, f.current_price, f.weekly_signal, f.daily_signal, f.rsi, f.tech_score, f.fund_score\nFROM report.enhanced_filtered_stocks f, report.enhanced_runs e\nWHERE f.run_id = e.run_id AND e.run_ts >= CURRENT_DATE - INTERVAL '1 week';\n"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all report links are functional."
+  - "Verify presence of underlying data within stock HTML files."
+  - "Identify missing data patterns over the weekly timeframe."
+synthesis_guidance: "Use the comparison matrix to portray verification and remediation findings clearly."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:57"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_filtered_stocks.e is not approved"
+  - "report.enhanced_filtered_stocks.f is not approved"
+  - "report.enhanced_filtered_stocks.run_ts is not approved"
+  - "report.enhanced_runs.e is not approved"

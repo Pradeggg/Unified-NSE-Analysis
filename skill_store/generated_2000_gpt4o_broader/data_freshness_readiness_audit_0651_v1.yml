@@ -1,0 +1,63 @@
+id: "data_freshness_readiness_audit_0651_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0651"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for quarter to date: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as debug trace"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "N/A"
+sql_templates:
+  -
+    description: "Check freshness of equity EOD data."
+    query: "SELECT MAX(trade_date) AS last_equity_trade_date FROM market.equity_eod;"
+  -
+    description: "Check freshness of index EOD data."
+    query: "SELECT MAX(trade_date) AS last_index_trade_date FROM market.index_eod;"
+  -
+    description: "Check the most recent market daily breadth data."
+    query: "SELECT MAX(trade_date) AS last_breadth_date FROM breadth.market_daily;"
+  -
+    description: "Check the most recent market enhanced report run."
+    query: "SELECT MAX(run_ts) AS last_enhanced_run FROM report.enhanced_runs;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all data sources have fresh data within the current quarter."
+  - "Identify any missing or stale data that impacts narrative generation."
+synthesis_guidance: "['Prioritize ensuring that critical data feeds are updated at least EOD.', 'Assess if any loader actions are needed to resolve staleness.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:21"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.last_breadth_date is not approved"
+  - "market.equity_eod.last_equity_trade_date is not approved"
+  - "market.index_eod.last_index_trade_date is not approved"
+  - "report.enhanced_runs.last_enhanced_run is not approved"

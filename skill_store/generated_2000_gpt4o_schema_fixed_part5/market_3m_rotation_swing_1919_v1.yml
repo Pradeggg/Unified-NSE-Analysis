@@ -1,0 +1,89 @@
+id: "market_3m_rotation_swing_1919_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1919"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+  filters:
+    stage: "STAGE_2"
+    snapshot_date: "(SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+    trade_date: "(SELECT MAX(trade_date) FROM market.equity_eod)"
+tool_plan_template:
+  -
+    tools:
+      -
+        name: "SQL"
+        type: "read_only"
+sql_templates:
+  -
+    name: "Index Returns"
+    query: "{SELECT index_symbol, AVG(change_pct) AS avg_return FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol}"
+  -
+    name: "Stage Distribution Change"
+    query: "{SELECT sector, COUNT(*) AS count_stage2 FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector}"
+  -
+    name: "Leading Sectors"
+    query: "{SELECT sector, AVG(relative_strength) AS avg_strength FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) GROUP BY sector ORDER BY avg_strength DESC LIMIT 5}"
+  -
+    name: "Primary Candidates"
+    query: "{SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 10}"
+python_tools:
+  -
+    id: "comparison_matrix_builder"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "as_of_date"
+      - "index_returns"
+      - "stage_distribution_change"
+      - "leading_sectors"
+      - "primary_candidates"
+    outputs:
+      - "comparison_matrix"
+    approved_tables:
+      - "market.index_eod"
+      - "scores.stage2_vcp_picks"
+    code: "def run(context): pass"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure queries use approved, read-only syntax."
+  - "Ensure latest data references are aligned with global rules."
+  - "Result sets should be limited for performance and relevance."
+synthesis_guidance: "['Synthesized output should compare index returns, sector strength, and stage 2 opportunities.', 'Provide risk annotation based on market regime insights.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:18"
+generation_model: "gpt-4o"
+validation_errors:
+  - "comparison_matrix_builder: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "comparison_matrix_builder: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,52 @@
+id: "signal_outcome_feedback_review_0053_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0053"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: concise table."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for quarter to date: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as concise table"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review outcome feedback and analyze learning patterns from signals."
+sql_templates:
+  outcome_review:
+    query: "SELECT s.symbol, s.signal, s.date_issued, s.date_resolved, s.return_pct, s.hit_target, s.hit_stop, e.close, sp.snapshot_date, sp.stage, sp.stage_score, sp.technical_score, sp.rsi, sp.trading_signal FROM signals.signal_log s JOIN scores.stage_snapshots sp ON s.symbol = sp.symbol JOIN market.equity_eod e ON s.symbol = e.symbol WHERE s.date_resolved IS NOT NULL AND e.trade_date BETWEEN s.date_issued AND s.date_resolved AND e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND sp.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 100;"
+    description: "Retrieve resolved signals, their outcomes, and market context."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all symbols have valid EOD and snapshot data aligned with trade_date and snapshot_date."
+  - "Check return_pct mapped outcomes for consistency with hit_target and hit_stop values."
+synthesis_guidance: "Focus on concise summary of performance and actionable improvements."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,1 @@
+def run(context): return context['stage2_vcp_picks'].sort_values(by='vcp_score', ascending=False).head(5)

@@ -1,0 +1,79 @@
+id: "data_freshness_readiness_audit_0805_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0805"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: risk-first review; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "risk-first review for today: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as action watchlist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "risk-first_review"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  scope:
+    pending_queries:
+      - "How fresh is the data in each evidence source?"
+      - "Which sources have gaps in the timeframe of today?"
+  toolkit:
+    default:
+      - "SQL read-only templates for evidence tables."
+    python-read-only:
+
+sql_templates:
+  -
+    query_name: "Check Index EOD Freshness"
+    query: "SELECT MAX(trade_date) FROM market.index_eod WHERE trade_date = CURRENT_DATE;"
+  -
+    query_name: "Check Equity EOD Freshness"
+    query: "SELECT MAX(trade_date) FROM market.equity_eod WHERE trade_date = CURRENT_DATE;"
+  -
+    query_name: "Check Stage Snapshots Freshness"
+    query: "SELECT MAX(snapshot_date) FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+  -
+    query_name: "Check Market Daily Freshness"
+    query: "SELECT MAX(trade_date) FROM breadth.market_daily WHERE trade_date = CURRENT_DATE;"
+  -
+    query_name: "Check MA Pct Above Freshness"
+    query: "SELECT MAX(snapshot_date) FROM breadth.ma_pct_above WHERE snapshot_date = CURRENT_DATE;"
+  -
+    query_name: "Check Enhanced Runs Freshness"
+    query: "SELECT MAX(run_ts) FROM report.enhanced_runs WHERE analysis_date = CURRENT_DATE;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Data must be from today for each evidence source."
+  - "Identify any missing sources or gaps in data freshness."
+synthesis_guidance: "['Compile a freshness matrix highlighting current data readiness.', 'Include any missing data sources in an action watchlist.', 'Suggest any immediate loader actions required for data availability.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:59"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

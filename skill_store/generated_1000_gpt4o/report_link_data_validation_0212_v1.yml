@@ -1,0 +1,51 @@
+id: "report_link_data_validation_0212_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0212"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: latest EOD; response style: ranked candidates."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for latest EOD: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  - "Use the approved tables to validate the presence of required data for each run ID."
+  - "Rank candidates for broken links and missing data based on the latest EOD analysis."
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+    description: "Fetch the latest report run metadata."
+  -
+    template: "SELECT COUNT(*) as missing_data_count FROM report.enhanced_filtered_stocks WHERE run_id = ? AND current_price IS NULL;"
+    description: "Count missing data entries for the latest run."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Check that all expected columns are populated based on run_IDs."
+  - "Verify links and data integrity are maintained."
+synthesis_guidance: "['Provide ranked findings of data discrepancies and link breaks.', 'Highlight areas needing remediation for comprehensive reports.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:43:27"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_filtered_stocks.missing_data_count is not approved"

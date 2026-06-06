@@ -1,0 +1,84 @@
+id: "data_freshness_readiness_audit_1309_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1309"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: today; response style: exceptions and gaps first."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for today: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as exceptions and gaps first"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "today"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  steps:
+    -
+      name: "Check Latest EOD Equity Data"
+      sql_template: "SELECT MAX(trade_date) FROM market.equity_eod;"
+    -
+      name: "Check Latest EOD Index Data"
+      sql_template: "SELECT MAX(trade_date) FROM market.index_eod;"
+    -
+      name: "Check Latest Stage Snapshot"
+      sql_template: "SELECT MAX(snapshot_date) FROM scores.stage_snapshots;"
+    -
+      name: "Validate Market Daily Breadth"
+      sql_template: "SELECT MAX(trade_date) FROM breadth.market_daily;"
+sql_templates:
+  -
+    name: "Select Latest Equity EOD"
+    template: "SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+  -
+    name: "Select Latest Index EOD"
+    template: "SELECT * FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+python_tools:
+  -
+    id: "data_checker"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "freshness_report"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+    code: "def run(context):\n    max_eod_date = context['sql_executor'].exec('SELECT MAX(trade_date) FROM market.equity_eod;')['max']\n    return {'eod_max_date': max_eod_date}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all SELECT queries use the latest date filter."
+  - "Validate that all required tables have recent entries."
+synthesis_guidance: "['Prioritize identification of missing or outdated data.', 'Focus on exceptions and gaps in data freshness.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "call exec is not allowed"
+review:
+  status: "needs_heal"
+  findings:
+    - "call exec is not allowed"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

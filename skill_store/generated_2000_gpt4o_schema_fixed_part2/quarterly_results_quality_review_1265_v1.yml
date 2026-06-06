@@ -1,0 +1,50 @@
+id: "quarterly_results_quality_review_1265_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1265"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: risk-first review; timeframe: post results; response style: ranked candidates."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "risk-first review for post results: latest quarterly results analysis"
+  - "which companies had strong quarterly results as ranked candidates"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "risk-first_review"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Assess the quality of the latest quarterly results utilizing risk analysis with a focus on ranking companies based on their performance."
+sql_templates:
+  -
+    query: "WITH latest_results AS (SELECT DISTINCT ON (symbol) symbol, period_end, revenue, pat, opm_pct FROM scores.quarterly_results WHERE period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC), latest_analysis AS (SELECT DISTINCT ON (symbol) symbol, period_end, verdict, key_risks FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC) SELECT lr.symbol, lr.revenue, lr.pat, lr.opm_pct, la.verdict, la.key_risks FROM latest_results lr JOIN latest_analysis la ON lr.symbol = la.symbol AND lr.period_end = la.period_end LIMIT 10;"
+    description: "Fetch latest quarterly results and analysis, focusing on revenue, PAT, margin, verdict, and key risks."
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "rules"
+synthesis_guidance: "Combine data on revenue and PAT trends with qualitative analysis to identify top-performing companies while highlighting potential risks."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,75 @@
+id: "report_link_data_validation_1740_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1740"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  version: "1.0"
+  agents:
+    -
+      tool: "qa_agent"
+      inputs:
+        - "report_links"
+        - "stock_data"
+      outputs:
+        - "findings"
+        - "broken_links"
+        - "missing_data"
+        - "remediation"
+        - "verification"
+sql_templates:
+  -
+    name: "get_latest_reports"
+    description: "Retrieve latest enhanced report runs with their metadata."
+    query: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered, indices_analyzed, market_composite_score, market_sentiment, notes FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months' ORDER BY run_ts DESC LIMIT 20;"
+  -
+    name: "get_filtered_stocks"
+    description: "Fetch filtered stock data related to the latest reports."
+    query: "WITH latest_runs AS (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months' ORDER BY run_ts DESC LIMIT 20) SELECT efs.run_id, efs.rank, efs.symbol, efs.score, efs.recommendation, efs.current_price FROM report.enhanced_filtered_stocks efs JOIN latest_runs lr ON efs.run_id = lr.run_id;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  -
+    rule: "Check if all report links are functional."
+    severity: "high"
+  -
+    rule: "Verify if all stocks listed in the report have populated data fields."
+    severity: "medium"
+  -
+    rule: "Confirm data synchronization between reports and TradingView export."
+    severity: "low"
+synthesis_guidance: "Ensure thorough cross-verification with TradingView data export; focus on the correctness of the populated stock rows and metadata. Use QA checklist style for clarity."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

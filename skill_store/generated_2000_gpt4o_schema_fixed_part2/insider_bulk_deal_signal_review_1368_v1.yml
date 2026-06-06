@@ -1,0 +1,70 @@
+id: "insider_bulk_deal_signal_review_1368_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1368"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: post results; response style: exceptions and gaps first."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for post results: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as exceptions and gaps first"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "post_results"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "{generate_insider_deal_analysis}"
+sql_templates:
+  -
+    template_name: "FetchInsiderAlertsAndDeals"
+    template: "WITH latest_snapshot AS (\n    SELECT symbol, stage, trading_signal \n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n), \nlatest_eod AS (\n    SELECT symbol, close, volume\n    FROM market.equity_eod\n    WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND series = 'EQ'\n)\nSELECT ia.symbol, ia.alert_date, ia.entity, ia.category, bd.deal_date, bd.price, \n    ls.stage, ls.trading_signal, le.close, le.volume\nFROM signals.insider_alerts ia\nLEFT JOIN signals.bulk_block_deals bd ON ia.symbol = bd.symbol\nLEFT JOIN latest_snapshot ls ON ia.symbol = ls.symbol\nLEFT JOIN latest_eod le ON ia.symbol = le.symbol\nWHERE ia.alert_date > CURRENT_DATE - INTERVAL '3 months'\nAND ls.trading_signal IN ('BUY', 'STRONG_BUY')\nLIMIT 50;"
+python_tools:
+  -
+    id: "aggregate_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "insider_data"
+      - "bulk_deal_data"
+      - "technical_data"
+    outputs:
+      - "annotated_analysis"
+    approved_tables:
+      - "signals.insider_alerts"
+      - "signals.bulk_block_deals"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Perform aggregated analysis\n    # Check intersections between insider alerts and bulk deals\n    # Validate technical conditions\n    annotated_analysis = []\n    # Code block for aggregation logic\n    return annotated_analysis"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure symbols are canonical NSE symbols."
+  - "Output deal_summary must include fields for symbol, alert_date, deal_date, and price."
+  - "Technical confirmation must ensure trading signals are either 'BUY' or 'STRONG_BUY'."
+synthesis_guidance: "['Prioritize insider alerts with bulk deals within the past 3 months.', 'Focus on symbols with positive trading signals.', 'Consider volume and close price for additional context.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:40"
+generation_model: "gpt-4o"
+validation_errors:
+  - "aggregate_analysis: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "aggregate_analysis: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

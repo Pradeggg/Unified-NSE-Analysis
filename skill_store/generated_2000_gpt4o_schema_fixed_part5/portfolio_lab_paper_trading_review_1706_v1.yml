@@ -1,0 +1,64 @@
+id: "portfolio_lab_paper_trading_review_1706_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1706"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: today; response style: QA checklist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for today: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as QA checklist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "today"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+  primary_table_desc: null
+tool_plan_template:
+  -
+    strategy_state: "QA checklist output for strategy review."
+    open_trades: "SQL to identify open trades today."
+    entry_exit_rules: "Python tool for evaluating entry/exit rule adherence."
+    exposure: "SQL to calculate overall exposure per current position."
+    exceptions: "Capture any potential issues or deviations."
+sql_templates:
+  -
+    template_name: "fetch_open_trades"
+    description: "Fetch trades that are still open as of the latest date."
+    sql_code: "SELECT * FROM signals.signal_log WHERE date_resolved IS NULL AND date_issued = (SELECT MAX(date_issued) FROM signals.signal_log);"
+  -
+    template_name: "calculate_overall_exposure"
+    description: "Calculate the total exposure based on current holdings."
+    sql_code: "SELECT symbol, SUM(avg_cost * qty) AS total_exposure FROM portfolio.holdings INNER JOIN market.equity_eod ON portfolio.holdings.symbol = market.equity_eod.symbol WHERE market.equity_eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) GROUP BY symbol;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "{'all_open_trades_resolved': 'Ensure all trades marked as open have current status.', 'exposure_threshold': 'Check if total exposure exceeds predefined limits.'}"
+synthesis_guidance: "{'review_all_trades': 'Generate a list of trades to review based on the latest signals.', 'ensure_data_freshness': \"Validate data recency with today's date.\", 'qa_checklist': 'Use a checklist format to ensure all criteria are met.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:03"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

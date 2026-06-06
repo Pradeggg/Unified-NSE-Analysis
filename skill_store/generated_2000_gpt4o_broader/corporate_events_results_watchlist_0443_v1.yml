@@ -1,0 +1,61 @@
+id: "corporate_events_results_watchlist_0443_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0443"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for last 3 months: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Plan and generate a corporate events and results watchlist with trailing evidence and portfolio-aware framing."
+sql_templates:
+  -
+    purpose: "Fetch upcoming corporate events"
+    query: "SELECT id, symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date >= NOW() AND event_date <= DATE_ADD(NOW(), INTERVAL 1 MONTH)"
+  -
+    purpose: "Fetch recent results analysis"
+    query: "SELECT symbol, period_end, growth_yoy_revenue_pct, growth_qoq_revenue_pct, eps_yoy_pct, verdict FROM scores.results_analysis WHERE period_end >= DATE_SUB(NOW(), INTERVAL 3 MONTH)"
+  -
+    purpose: "Fetch recent stage snapshots"
+    query: "SELECT symbol, price, change_1m_pct, stage FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(NOW(), INTERVAL 3 MONTH)"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all required evidence tables are incorporated in the output."
+  - "Verify portfolio awareness by checking recent price movements and growth metrics."
+synthesis_guidance: "Combine event data with financial analysis to generate actionable insights for portfolio-focused decisions."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:23"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.date_sub is not approved"
+  - "scores.results_analysis.month is not approved"
+  - "scores.results_analysis.now is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"
+  - "scores.stage_snapshots.now is not approved"
+  - "signals.corporate_events.date_add is not approved"
+  - "signals.corporate_events.month is not approved"
+  - "signals.corporate_events.now is not approved"

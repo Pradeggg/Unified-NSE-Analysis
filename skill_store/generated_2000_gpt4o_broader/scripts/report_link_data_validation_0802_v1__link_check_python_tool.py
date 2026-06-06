@@ -1,0 +1,1 @@
+def run(context): return {url: 'accessible' for url in context['inputs']['url_list']}

@@ -1,0 +1,60 @@
+id: "corporate_events_results_watchlist_0709_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0709"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: today; response style: QA checklist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for today: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as QA checklist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "today"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  variant: "0709"
+  tasks:
+    -
+      name: "Identify events"
+      description: "Identify upcoming or recent corporate events from approved tables with evidence."
+    -
+      name: "Validate source trail"
+      description: "Cross-reference results and event data with source-trail evidence for today."
+    -
+      name: "Compile QA checklist"
+      description: "Generate a QA checklist for event-driven stocks of interest based on recent performance."
+sql_templates:
+  -
+    description: "Fetch upcoming corporate events and results-related watchlist actions."
+    query: "SELECT ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, ce.source FROM signals.corporate_events AS ce WHERE ce.event_date = CURRENT_DATE AND ce.event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM') ORDER BY ce.event_date LIMIT 10;"
+  -
+    description: "Fetch latest stage snapshots for symbols with events today."
+    query: "SELECT DISTINCT ON (ss.symbol) ss.symbol, ss.stage, ss.trading_signal FROM scores.stage_snapshots AS ss JOIN signals.corporate_events AS ce ON ce.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ce.event_date = CURRENT_DATE ORDER BY ss.symbol, ss.snapshot_date DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'guidelines': ['Focus on event-driven opportunities.', 'Highlight key corporate events relevant to the Indian market.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:35:54"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.corporate_events.ce is not approved"

@@ -1,0 +1,1 @@
+def run(context): return {symbol: compute_change(symbol) for symbol in context['symbol_list']}

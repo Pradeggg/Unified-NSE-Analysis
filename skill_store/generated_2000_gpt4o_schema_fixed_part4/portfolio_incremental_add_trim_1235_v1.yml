@@ -1,0 +1,57 @@
+id: "portfolio_incremental_add_trim_1235_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1235"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for last 20 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  -
+    steps:
+      - "Review latest stage snapshots and current holdings."
+      - "Identify buy candidates using 'BUY' or 'STRONG_BUY' signals."
+      - "Evaluate holdings with potential risk or negative trends."
+sql_templates:
+  latest_snapshots:
+    template: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  add_candidates:
+    template: "SELECT h.symbol, h.qty, h.avg_cost, ss.trading_signal FROM portfolio.holdings h JOIN scores.stage_snapshots ss ON h.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY ss.stage_score DESC LIMIT 10;"
+  trim_candidates:
+    template: "SELECT h.symbol, h.qty, h.avg_cost, ss.trading_signal FROM portfolio.holdings h JOIN scores.stage_snapshots ss ON h.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal = 'SELL' ORDER BY ss.stage_score ASC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "{'latest_snapshot_rule': 'Snapshot data must match the latest available snapshot date.', 'candidate_limit_rule': 'Candidate lists must be bounded with LIMIT 10.'}"
+synthesis_guidance: "{'focus_on_risk': 'Emphasize risk management over aggressive expansion.', 'rank_candidates': 'Rank candidates based on stage score.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:03"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

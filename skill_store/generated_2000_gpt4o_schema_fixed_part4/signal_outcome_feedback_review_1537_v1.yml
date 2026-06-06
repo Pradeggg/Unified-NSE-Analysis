@@ -1,0 +1,64 @@
+id: "signal_outcome_feedback_review_1537_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1537"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: research-only summary."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for last 20 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as research-only summary"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    sql_templates:
+      -
+        template_id: "recent_signal_outcomes"
+        template: "SELECT symbol, sector, signal, target_1, target_2, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= (CURRENT_DATE - INTERVAL '20 days') AND (hit_target = TRUE OR hit_stop = TRUE);"
+        description: "Retrieve recent signals that hit targets or stops within the last 20 sessions for outcome analysis."
+      -
+        template_id: "sector_performance"
+        template: "WITH sector_avg_return AS (SELECT sector, AVG(return_pct) as avg_return FROM signals.signal_log WHERE date_issued >= (CURRENT_DATE - INTERVAL '20 days') GROUP BY sector) SELECT sl.symbol, sl.sector, sl.return_pct, sar.avg_return FROM signals.signal_log sl INNER JOIN sector_avg_return sar ON sl.sector = sar.sector WHERE sl.date_issued >= (CURRENT_DATE - INTERVAL '20 days');"
+        description: "Compare signal performance against sector averages."
+      -
+        template_id: "latest_stock_stages"
+        template: "SELECT ss.symbol, ss.stage, ss.technical_score FROM scores.stage_snapshots ss WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+        description: "Get latest stage and technical score for symbols from the most recent snapshot date."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure the templates return results only for the relevant period (last 20 sessions)."
+  - "Verify joins use approved join rules only."
+synthesis_guidance: "['Present outcomes as a research-only summary.', 'Highlight sector-relative performance and improvement opportunities.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:58"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

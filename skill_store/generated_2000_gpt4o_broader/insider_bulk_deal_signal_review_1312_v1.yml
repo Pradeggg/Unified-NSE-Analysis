@@ -1,0 +1,59 @@
+id: "insider_bulk_deal_signal_review_1312_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1312"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: latest EOD; response style: exceptions and gaps first."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for latest EOD: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as exceptions and gaps first"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Identify relevant insider alerts and bulk/block deals from the latest EOD."
+    - "Evaluate technical confirmation factors such as RSI, trend signals, and other technical scores."
+    - "Compile results highlighting exceptions (unusual alerts or deals) and gaps (missing data or predictability issues)."
+sql_templates:
+  -
+    description: "Fetch latest insider alerts and bulk deals."
+    template: "SELECT id, alert_date, symbol, alert_type, entity, qty, value_cr FROM signals.insider_alerts WHERE alert_date = CURRENT_DATE UNION SELECT id, deal_date, symbol, security_name, entity, qty, price FROM signals.bulk_block_deals WHERE deal_date = CURRENT_DATE;"
+  -
+    description: "Fetch technical indicators for confirmation."
+    template: "SELECT symbol, technical_score, rsi, trend_signal, supertrend_state FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all output metrics are derived from latest EOD data."
+  - "Check for any inconsistencies or missing data in the evidence."
+synthesis_guidance: "['Highlight key insider buy signals and corroborate with bulk deals.', 'Prioritize signals with strong technical confirmation.', 'Note any potential gaps in data collection or unusual deal patterns.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

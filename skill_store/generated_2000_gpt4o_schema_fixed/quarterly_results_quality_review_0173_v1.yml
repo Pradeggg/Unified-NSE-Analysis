@@ -1,0 +1,68 @@
+id: "quarterly_results_quality_review_0173_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0173"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: daily refresh follow-up; timeframe: pre market; response style: narrative plus evidence."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "daily refresh follow-up for pre market: latest quarterly results analysis"
+  - "which companies had strong quarterly results as narrative plus evidence"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Check quarterly performance vs expectations."
+sql_templates:
+  -
+    description: "Retrieve latest quarterly results with narrative and margin analysis."
+    template: "WITH latest_results AS (SELECT DISTINCT ON (q.symbol) q.symbol, q.period_end, q.revenue, q.pat, q.opm_pct, ra.verdict, ra.pl_commentary FROM scores.quarterly_results q JOIN scores.results_analysis ra ON q.symbol = ra.symbol AND q.period_end = ra.period_end WHERE q.period_type = 'quarter' ORDER BY q.symbol, q.period_end DESC, q.fetched_at DESC) SELECT lr.symbol, lr.revenue, lr.pat, lr.opm_pct, lr.verdict, lr.pl_commentary FROM latest_results lr;"
+  -
+    description: "Get stage and technical analysis for the latest snapshot date."
+    template: "SELECT ss.symbol, ss.stage, ss.trading_signal, ss.technical_score FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+python_tools:
+  -
+    id: "calculate_growth_metrics"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "revenue"
+      - "pat"
+    outputs:
+      - "growth_metrics"
+    approved_tables:
+      - "scores.quarterly_results"
+    code: "\n    def run(context):\n        revenue_growth = (context['revenue'][-1] - context['revenue'][0]) / context['revenue'][0] * 100\n        pat_growth = (context['pat'][-1] - context['pat'][0]) / context['pat'][0] * 100\n        return {'growth_metrics': {'revenue_growth': revenue_growth, 'pat_growth': pat_growth}}\n        "
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure narrative coherence."
+  - "Verify data matches latest period."
+  - "Ensure verifiable source links."
+synthesis_guidance: "['Focus on revenue, PAT growth trends.', 'Highlight margin improvement or declines.', 'Interpret buy signals in technical context.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_growth_metrics: python syntax error: unexpected indent"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_growth_metrics: python syntax error: unexpected indent"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

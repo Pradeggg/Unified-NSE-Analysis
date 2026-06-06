@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:50:15"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: last 5 sessions; response style: debug trace."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0628_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    query: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '5 days';"
+    template_id: "validate_runs"
+    type: "SELECT"
+  -
+    query: "SELECT run_id, symbol, score FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '5 days');"
+    template_id: "fetch_filtered_stocks"
+    type: "SELECT"
+status: "validated"
+synthesis_guidance: "Navigate through the debug trace methodically; uncover missing data points and invalid links."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "debug_trace"
+title: "Enhanced Report Data Validation Variant 0628"
+tool_plan_template: "The skill will validate report metadata and links using data from enhanced_runs and enhanced_filtered_stocks tables. Produce findings in a debug trace style."
+validation_rules:
+  - "Ensure all run_id in enhanced_filtered_stocks have corresponding entries in enhanced_runs for the last 5 sessions."
+  - "Validate score existence and proper mapping for stocks within recent runs."
+  - "Cross-check report link functionality."
+version: 1

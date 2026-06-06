@@ -1,0 +1,68 @@
+id: "insider_bulk_deal_signal_review_0290_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0290"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for intraday context: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as ranked candidates"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review TradingView exported intraday data for any insider or bulk deal activity with a technical confirmation signal. Rate candidates based on insider score and technical indicators."
+sql_templates:
+  -
+    template_name: "fetch_bulk_deals_with_confirmation"
+    sql: "SELECT b.symbol, b.deal_date, b.side, b.qty, b.price, i.alert_date, i.insider_score, s.technical_score, s.trend_signal FROM signals.bulk_block_deals b JOIN signals.insider_alerts i ON b.symbol = i.symbol JOIN scores.stage_snapshots s ON b.symbol = s.symbol WHERE b.deal_date = CURRENT_DATE AND s.trend_signal = 'Bullish' ORDER BY b.deal_date DESC;"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "insider_alert_data"
+      - "bulk_block_deal_data"
+      - "technical_data"
+    outputs:
+      - "ranked_candidates"
+    approved_tables:
+      - "signals.insider_alerts"
+      - "signals.bulk_block_deals"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Placeholder for complex logic combining insider alerts and technicals to generate ranked candidates\n    pass"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "check_intraday_context"
+  - "validate_technical_confirmation"
+synthesis_guidance: "{'combine_signals': 'Integrate insider alerts and bulk deals with technical indicators to construct ranked stock candidates.', 'focus_on_accumulation': 'Prioritize signals indicating potential accumulation by institutions or insiders.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:40"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "run: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

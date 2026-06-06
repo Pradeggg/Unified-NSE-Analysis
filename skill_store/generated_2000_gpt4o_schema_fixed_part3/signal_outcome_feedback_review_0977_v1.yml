@@ -1,0 +1,56 @@
+id: "signal_outcome_feedback_review_0977_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback"
+description: "Evaluate the outcome of trading signals in the pre-market environment, with a focus on sector-relative comparison and learning from results."
+input_patterns:
+  - "Review prior signals hit target or stop"
+  - "Which recommendations worked and failed"
+  - "Sector-relative comparison for pre-market: review prior signals hit target or stop"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "sector-relative_comparison"
+  - "pre_market"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Join signals.signal_log and market.equity_eod on symbol for historical price analysis."
+    - "Join signals.signal_log and scores.stage_snapshots on symbol to compare against latest stage scores."
+    - "Extract successful and unsuccessful signal patterns based on hit_target and hit_stop."
+sql_templates:
+  sector_relative_analysis: "SELECT log.sector, COUNT(log.id) as signal_count, AVG(log.return_pct) as average_return FROM signals.signal_log log WHERE log.date_resolved IS NOT NULL GROUP BY log.sector ORDER BY average_return DESC LIMIT 10;"
+python_tools:
+  -
+    id: "python_tool_001"
+    language: "python"
+    mode: "read_only"
+    inputs: "signals, outcomes"
+    outputs: "patterns"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze signals and outcomes\n    return 'Pattern analysis completed'"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all used columns exist in the approved schema."
+  - "Check if outcome tracking includes both hit targets and stops."
+synthesis_guidance: "['Focus on the development of strategies that can adapt based on historical signal performance.', 'Utilize findings to better align signal issuance with market conditions and sector performance.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:56"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.average_return is not approved"
+  - "signals.signal_log.log is not approved"
+  - "signals.signal_log.signal_count is not approved"

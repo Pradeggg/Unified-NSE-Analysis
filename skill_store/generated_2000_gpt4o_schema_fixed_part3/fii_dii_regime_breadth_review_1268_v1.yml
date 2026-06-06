@@ -1,0 +1,58 @@
+id: "fii_dii_regime_breadth_review_1268_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1268"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: post results; response style: ranked candidates."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for post results: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as ranked candidates"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  inputs:
+    - "Combine daily FII/DII flows with market regime, breadth, and index confirmation evidence."
+  steps:
+    - "Retrieve latest FII/DII flow data, market regime, market breadth, and index evidence for contextual analysis."
+  outputs:
+    - "Ranked list of current market regime contexts highlighting risk-on or risk-off conditions, including rationale."
+sql_templates:
+  -
+    description: "Fetch latest FII/DII flows, regime, and breadth data for analysis."
+    sql: "WITH latest_data AS (SELECT max(trade_date) as latest_trade_date FROM signals.fii_dii_flows) SELECT f.trade_date, f.fii_net_today, f.dii_net_today, r.regime, b.ad_signal FROM signals.fii_dii_flows AS f JOIN signals.regime_history AS r ON f.trade_date = r.trade_date JOIN breadth.market_daily AS b ON f.trade_date = b.trade_date WHERE f.trade_date = (SELECT latest_trade_date FROM latest_data) LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "rule_type"
+  - "rules"
+synthesis_guidance: "{'notes': ['Translate SQL results into natural language market insights.', 'Prioritize candidate clarity and accessibility for analysts.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:51"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

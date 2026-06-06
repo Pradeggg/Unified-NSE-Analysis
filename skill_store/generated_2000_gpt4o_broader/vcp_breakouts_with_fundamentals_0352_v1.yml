@@ -1,0 +1,64 @@
+id: "vcp_breakouts_with_fundamentals_0352_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0352"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Review all quarter-to-date VCP breakout stocks with strong fundamentals and record exceptions and gaps."
+sql_templates:
+  -
+    description: "Find breakout stocks with strong fundamentals."
+    template: "SELECT e.symbol, e.close, e.volume, s.fundamental_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.close > e.week52_high AND s.fundamental_score > 80;"
+python_tools:
+  -
+    id: "filter_vcp_with_fundamentals"
+    language: "python"
+    mode: "read_only"
+    inputs: "SQL responses"
+    outputs: "Structured list of selected stocks"
+    approved_tables:
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    selected_stocks = []\n    for stock in context['results']:\n        if stock['vcp_score'] > threshold and stock['enhanced_fund_score'] > 80:\n            selected_stocks.append(stock)\n    return selected_stocks"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all selected symbols have VCP pattern."
+  - "Verify strong fundamentals based on scores."
+synthesis_guidance: "Focus on identifying potential VCP breakouts with robust fundamentals for the Indian market."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:13"
+generation_model: "gpt-4o"
+validation_errors:
+  - "filter_vcp_with_fundamentals: inputs must be a list"
+  - "filter_vcp_with_fundamentals: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "filter_vcp_with_fundamentals: inputs must be a list"
+    - "filter_vcp_with_fundamentals: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

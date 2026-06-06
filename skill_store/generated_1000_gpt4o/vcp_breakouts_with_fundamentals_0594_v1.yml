@@ -1,0 +1,59 @@
+id: "vcp_breakouts_with_fundamentals_0594_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0594"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters: "Identify stocks with strong fundamentals and liquidity by filtering through specific conditions."
+  candidates: "Determine potential candidates by cross-referencing trade data with stock scores."
+  tradingview_symbols: "Extract symbols that meet criteria for TradingView integration."
+  evidence: "Compile supporting evidence from approved tables."
+  risks: "Assess potential risks based on market trends and fundamental scores."
+sql_templates:
+  -
+    template: "SELECT symbol, high, close, volume, market_cap_cr FROM market.equity_eod WHERE trade_date = :trade_date AND high > week52_high;"
+  -
+    template: "WITH vcp_stocks AS (SELECT symbol, vcp_score FROM scores.stage2_vcp_picks WHERE vcp_breakout_pct > 5) SELECT v.symbol, e.high, e.close, e.volume FROM vcp_stocks v JOIN market.equity_eod e ON v.symbol = e.symbol WHERE e.trade_date = :trade_date;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure data integrity by validating symbol consistency across datasets."
+  - "Verify market cap categorization matches liquidity criteria."
+synthesis_guidance: "Focus on cross-referencing the potential breakouts with high fundamental scores and current market trends for better insights."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:49:57"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table e.close"
+  - "unknown table e.high"
+  - "unknown table e.symbol"
+  - "unknown table e.trade_date"
+  - "unknown table e.volume"
+  - "unknown table v.symbol"

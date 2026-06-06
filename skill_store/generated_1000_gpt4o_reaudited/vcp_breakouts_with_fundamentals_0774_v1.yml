@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:51:29"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: pre market; response style: QA checklist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0774_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  vcp_breakout_candidates: "WITH recent_vcp AS (SELECT symbol, company_name, price, trend_signal FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE AND trend_signal = 'Strong'), strong_fundamentals AS (SELECT symbol, market_cap_cat, enhanced_fund_score FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE AND enhanced_fund_score > 80) SELECT v.symbol, v.company_name, e.close FROM recent_vcp v JOIN market.equity_eod e ON v.symbol = e.symbol WHERE e.trade_date = CURRENT_DATE AND e.close >= e.week52_high * 0.90;"
+status: "validated"
+synthesis_guidance: "Focus on identifying stocks with strong VCP patterns and robust fundamentals to create a strong pre-market watchlist. Use the SQL output to filter potential candidates and ensure compliance with TradingView standards. Highlight any gaps in evidence such as missing fundamental indicators."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "pre_market"
+  - "QA_checklist"
+title: "VCP Breakouts With Fundamentals Variant 0774"
+tool_plan_template: "generate_vcp_breakout_candidates"
+validation_rules:
+  -
+    check: "SQL syntax"
+    constraint: "SQL must be a valid read-only SELECT/WITH statement."
+  -
+    check: "Schema compliance"
+    constraint: "Use only approved tables and columns."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

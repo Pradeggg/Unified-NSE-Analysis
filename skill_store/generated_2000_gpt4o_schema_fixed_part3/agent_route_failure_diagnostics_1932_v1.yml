@@ -1,0 +1,60 @@
+id: "agent_route_failure_diagnostics_1932_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1932"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as comparison matrix"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "Validate available tools against required diagnostics."
+  - "Use SQL templates for evidence extraction."
+  - "Compare extracted data to highlight potential routes and resolution issues."
+sql_templates:
+  -
+    name: "latest_enhanced_runs"
+    template: "SELECT run_id, run_ts, analysis_date, stocks_analyzed, stocks_filtered, notes FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) LIMIT 20;"
+  -
+    name: "filtered_stocks_by_run"
+    template: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = $1;"
+  -
+    name: "latest_stage_snapshots"
+    template: "SELECT symbol, snapshot_date, stage, stage_score, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure extracted sessions cover exactly the last 20."
+  - "Verify all relevant symbols have corresponding stages in latest snapshots."
+synthesis_guidance: "['Create a diagnostic summary in a comparison matrix.', 'Cross-reference extracted data to identify missing tools or symbols.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:21"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

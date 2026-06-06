@@ -1,0 +1,73 @@
+id: "portfolio_lab_paper_trading_review_0642_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0642"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for last 3 months: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as debug trace"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  function: "run(context)"
+  language: "python"
+  mode: "read_only"
+  inputs:
+    tables:
+      - "portfolio.holdings"
+      - "signals.signal_log"
+  outputs:
+    variables:
+      - "strategy_state"
+      - "open_trades"
+      - "entry_exit_rules"
+      - "exposure"
+      - "exceptions"
+  approved_tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+  code: "# Implement read-only logic to analyze the paper trading portfolio\n# and assemble strategy, trade details, and exposure metrics."
+sql_templates:
+  -
+    template: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings WHERE symbol IN (SELECT DISTINCT symbol FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months')"
+  -
+    template: "SELECT s.symbol, s.signal, s.entry_low, s.entry_high, s.stop_loss, s.target_1, s.target_2 FROM signals.signal_log s WHERE s.date_issued >= CURRENT_DATE - INTERVAL '3 months'"
+  -
+    template: "SELECT e.symbol, e.trade_date, e.close FROM market.equity_eod e WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure output covers strategy evaluations and open trades insights."
+  - "Verify exposure metrics are aligned with strategy entries and exits."
+  - "Check for any exceptions or anomalies in execution trace."
+synthesis_guidance: "Provide a debug trace style response detailing the institutional review of paper trading strategies within the last 3 months."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:11"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.s is not approved"

@@ -1,0 +1,81 @@
+id: "portfolio_incremental_add_trim_1697_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1698"
+description: "Review current holdings for add/trim decisions. Focus: sector-relative comparison; timeframe: weekly; response style: debug trace."
+input_patterns:
+  - "should we add incrementally or reduce exposure?"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for weekly review: should we add incrementally or reduce exposure?"
+  - "review holdings for add trim decisions as debug trace"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  -
+    inputs:
+      run_context:
+        type: "json"
+        description: "Context for running the review, including current holdings and recent stage snapshots."
+    outputs:
+      portfolio_state:
+        type: "json"
+        description: "The current state of the portfolio with evaluations."
+      sector_exposure:
+        type: "json"
+        description: "Sector exposure details based on current holdings."
+      add_candidates:
+        type: "json"
+        description: "Potential candidates for incremental adds."
+      trim_candidates:
+        type: "json"
+        description: "Potential candidates for trimming."
+      risk_flags:
+        type: "json"
+        description: "Flags or considerations identifying portfolio risks."
+    execution_plan:
+      -
+        type: "SQL"
+        template_use: "SELECT"
+        sql: "WITH latest_snapshot AS (\n  SELECT * \n  FROM scores.stage_snapshots \n  WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n)\nSELECT h.symbol, h.qty, h.avg_cost, s.sector, s.price, s.change_1w_pct, s.stage, s.trading_signal\nFROM portfolio.holdings h\nJOIN latest_snapshot s ON h.symbol = s.symbol;\n"
+        description: "Retrieve the latest portfolio holdings along with their stage and technical details."
+    required_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+sql_templates:
+  -
+    template_id: "latest_holdings_stage_analysis"
+    sql: "WITH latest_snapshot AS (\n  SELECT * \n  FROM scores.stage_snapshots \n  WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n)\nSELECT h.symbol, h.qty, h.avg_cost, s.sector, s.price, s.change_1w_pct, s.stage, s.trading_signal\nFROM portfolio.holdings h\nJOIN latest_snapshot s ON h.symbol = s.symbol;"
+    description: "SQL to identify the latest portfolio holdings with their respective stage and technical indicators."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure snapshot_date is filtered for the most recent."
+  - "Include only sectors and stocks present in the holdings."
+synthesis_guidance: "{'guidelines': ['Focus on providing a comparative view of sector exposures.', 'Identify potential add/trim positions based on stage and trading signals.', 'Highlight any risk flags related to overexposure or underperformance.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

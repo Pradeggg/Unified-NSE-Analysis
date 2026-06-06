@@ -1,0 +1,71 @@
+id: "sector_breadth_rotation_watchlist_1497_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1497"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for weekly review: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as portfolio-aware output"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Generate a watchlist focusing on sector breadth, stage participation, RS, and momentum, providing portfolio-aware outcomes."
+sql_templates:
+  -
+    template_name: "sector_leaderboard"
+    description: "Ranks sectors by performance metrics."
+    sql:
+      - "WITH latest_breadth AS ("
+      - "    SELECT sector, pct_above_50dma AS pct_50dma, change_5d AS change_5d, breadth_signal"
+      - "    FROM breadth.sector_daily"
+      - "    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)"
+      - "),"
+      - "stage_2_sectors AS ("
+      - "    SELECT sector, COUNT(*) as stage_2_count"
+      - "    FROM scores.stage_snapshots"
+      - "    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+      - "    AND stage = 'STAGE_2'"
+      - "    GROUP BY sector"
+      - ")"
+      - "SELECT lb.sector, lb.pct_50dma, lb.change_5d, lb.breadth_signal, COALESCE(s2.stage_2_count, 0) as stage_2_count"
+      - "FROM latest_breadth lb"
+      - "LEFT JOIN stage_2_sectors s2 ON lb.sector = s2.sector"
+      - "ORDER BY lb.change_5d DESC, s2.stage_2_count DESC"
+      - "LIMIT 10"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure the sector ranking is based on the latest data only."
+  - "Include only sectors with positive change and significant stage 2 representation."
+synthesis_guidance: "Focus on providing insights into sectors with improving breadth and potential trading candidates."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:40"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,51 @@
+id: "quarterly_results_quality_review_1251_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1251"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: quarter to date; response style: ranked candidates."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for quarter to date: latest quarterly results analysis"
+  - "which companies had strong quarterly results as ranked candidates"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "For each symbol with distinguishable beat or miss for the latest quarter, provide an assessment incorporating revenue and PAT growth, margin changes, and analyst narratives. Results should focus on quality aspects and rank by performance indicators."
+sql_templates:
+  -
+    purpose: "Fetch latest quarterly results and analysis"
+    template: "WITH latest_quarters AS ( SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.period_end, ra.verdict, qr.revenue, qr.operating_profit, qr.opm_pct, qr.pat FROM scores.quarterly_results qr JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end WHERE qr.period_type = 'quarter' ORDER BY qr.symbol, qr.period_end DESC, qr.fetched_at DESC ) SELECT * FROM latest_quarters;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  -
+    rule: "Ensure joined datasets align by symbol and period_end using approved join conditions."
+synthesis_guidance: "Focus on companies that outperformed or underperformed expectations, emphasizing revenue, PAT growth, and margin drivers."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:07"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,52 @@
+id: "quarterly_results_quality_review_0733_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0733"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: daily refresh follow-up; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "daily refresh follow-up for last 20 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as QA checklist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "daily_refresh_follow-up"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Assess quarterly results using relevant scores and trends from approved tables. Ensure results are framed for the Indian market and validated against expectations and benchmarks."
+sql_templates:
+  - "SELECT symbol, period_label, revenue, pat FROM scores.quarterly_results WHERE period_end >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)"
+  - "SELECT symbol, growth_yoy_revenue_pct, growth_yoy_pat_pct, opm_delta_pp FROM scores.results_analysis WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "The symbol must match between the quarterly results and results analysis."
+  - "Ensure the growth percentages align with expected industry benchmarks."
+  - "Check if the data covers the last 20 sessions for validity."
+synthesis_guidance: "Synthesize insights from the latest quarterly earnings, focusing on beat/miss analysis and trends in operating profit margins. Provide a ranked list of companies with an emphasis on identified risks and strengths."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:09"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.quarterly_results.curdate is not approved"
+  - "scores.quarterly_results.date_sub is not approved"
+  - "scores.quarterly_results.month is not approved"
+  - "scores.results_analysis.curdate is not approved"
+  - "scores.results_analysis.date_sub is not approved"
+  - "scores.results_analysis.month is not approved"

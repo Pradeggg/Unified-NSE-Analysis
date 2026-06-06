@@ -1,0 +1,69 @@
+id: "report_link_data_validation_1138_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report QA Skill Card"
+description: "Evaluates and diagnoses issues related to report links and stock data, focusing on position-sizing context for the last 20 sessions."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as narrative plus evidence"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Assess report integrity by evaluating run metadata, filtering stock data anomalies, and identifying linkage failures using specified tables."
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts, universe_size, stocks_analyzed, market_composite_score FROM report.enhanced_runs WHERE analysis_date >= CURRENT_DATE - INTERVAL '20 days';"
+    description: "Fetch metadata for the last 20 sessions."
+  -
+    template: "SELECT symbol, current_price, day_change_pct, volume FROM report.enhanced_filtered_stocks WHERE run_id = ? AND volume > 0;"
+    description: "Retrieve active stocks with trading data."
+python_tools:
+  -
+    id: "calculate_position_sizing"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      run_data: "list of dicts"
+      stock_data: "list of dicts"
+    outputs:
+      position_sizing: "dict"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    run_data = context['run_data']\n    stock_data = context['stock_data']\n    # Perform calculations...\n    return {'position_sizing': {}}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure data retrieval adheres strictly to the approved schema."
+  - "Maintain a read-only approach in both SQL and Python tools."
+synthesis_guidance: "Combine narrative analysis of findings with evidence from the data to provide a holistic overview of report quality and fidelity."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:39"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_position_sizing: inputs must be a list"
+  - "calculate_position_sizing: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_position_sizing: inputs must be a list"
+    - "calculate_position_sizing: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

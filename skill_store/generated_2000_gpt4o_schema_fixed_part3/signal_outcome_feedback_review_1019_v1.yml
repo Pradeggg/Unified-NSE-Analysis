@@ -1,0 +1,54 @@
+id: "signal_outcome_feedback_review_1019_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review"
+description: "Evaluates prior trading signals to assess target hits, stops, and outcomes with a focus on learning and improvement."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Identify signals that hit targets or stop loss within the 'signals.signal_log' table."
+    - "Integrate stage and technical context from 'scores.stage_snapshots'."
+    - "Retrieve relevant EOD price data from 'market.equity_eod' for performance assessment."
+sql_templates:
+  -
+    description: "Fetch latest signals with outcomes."
+    sql: "SELECT id, symbol, signal, date_issued, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_resolved IS NOT NULL AND (hit_target = true OR hit_stop = true)"
+  -
+    description: "Join with latest stage snapshots for context."
+    sql: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT sl.id, sl.symbol, sl.signal, sl.date_issued, ss.stage, ss.technical_score, ss.rsi FROM signals.signal_log sl JOIN latest_snapshots ss ON sl.symbol = ss.symbol WHERE sl.date_resolved IS NOT NULL AND (sl.hit_target = true OR sl.hit_stop = true)"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all retrieved signals have resolved outcomes."
+  - "Verify integration of technical scores and stages from snapshots."
+synthesis_guidance: "Focus on success and failure rates in signals and their alignment with stage and technical scores, summarizing insights for future improvements."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:53:59"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

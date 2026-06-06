@@ -1,0 +1,57 @@
+id: "signal_outcome_feedback_review_0473_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0473"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: pre market; response style: portfolio-aware output."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for pre market: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as portfolio-aware output"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Utilize a SELECT statement to review the signal outcomes (hits/failures) from signals.signal_log."
+  - "Join signals.signal_log with scores.stage_snapshots for the latest score context using approved schema join rules."
+  - "Join signals.signal_log with market.equity_eod to obtain detailed price history within the issued/resolved window."
+sql_templates:
+  -
+    description: "Fetch outcomes and prices for resolved signals."
+    sql: "SELECT \n  ssl.symbol, \n  ssl.signal, \n  ssl.hit_target, \n  ssl.hit_stop, \n  ssl.return_pct, \n  ss.stage, \n  ss.technical_score, \n  me.close \nFROM \n  signals.signal_log ssl \nJOIN \n  scores.stage_snapshots ss ON ssl.symbol = ss.symbol \nJOIN \n  market.equity_eod me ON ssl.symbol = me.symbol \nWHERE \n  ssl.date_resolved IS NOT NULL \n  AND me.trade_date BETWEEN ssl.date_issued AND ssl.date_resolved \n  AND ssl.date_issued >= CURRENT_DATE - INTERVAL '3 months' \nORDER BY \n  ssl.date_resolved DESC \nLIMIT 50;"
+python_tools:
+  - "tools"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure SQL result aligns with schema fields."
+  - "Check that the return forecasts the logical understanding of signal performances."
+synthesis_guidance: "['Derive summary insights of signal performance for the given period.', 'Identify patterns and lessons for skill store integration.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:06"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

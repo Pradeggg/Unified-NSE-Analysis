@@ -1,0 +1,53 @@
+id: "corporate_events_results_watchlist_1563_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1563"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for post results: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as research-only summary"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Identify upcoming or recent corporate events, focusing on results and related actions for a watchlist."
+    sql: "SELECT ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, sr.verdict, sr.score, st.stage, st.trading_signal FROM signals.corporate_events ce JOIN scores.results_analysis sr ON ce.symbol = sr.symbol JOIN scores.stage_snapshots st ON ce.symbol = st.symbol WHERE ce.event_date >= CURRENT_DATE - INTERVAL '1 WEEK' AND st.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND sr.verdict IN ('beat', 'miss') LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure symbols are unique in the final selection."
+  - "Confirm event_date is not older than one week from the current date."
+  - "Limit result sets to 50 entries for manageability."
+synthesis_guidance: "['Summarize findings in a research-only style, highlighting significant events such as misses or beats.', 'Ensure the watchlist is clearly defined with evidence supported by SQL query results.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

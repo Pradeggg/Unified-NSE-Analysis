@@ -1,0 +1,66 @@
+id: "portfolio_incremental_add_trim_1487_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1487"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: intraday context; response style: portfolio-aware output."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for intraday context: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  -
+    process: "Assess the portfolio using current holdings, sector exposure, and performance signals. Determine add or trim actions compared to benchmarks."
+    steps:
+      - "Query latest stage and signals for current portfolio holdings."
+      - "Identify stocks with strong technical and trading signals for potential addition."
+      - "Analyze sector exposure to identify overweight or underweight sectors."
+      - "Select trim candidates based on weak signals or overexposure."
+      - "Provide breakdown of portfolio state, sector exposure, add and trim candidates, and any risk flags."
+sql_templates:
+  -
+    name: "FetchLatestPortfolioStages"
+    description: "Retrieve latest stage snapshots for current portfolio holdings."
+    sql: "SELECT h.symbol, h.qty, h.avg_cost, s.sector, s.stage, s.trading_signal, s.technical_score FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    name: "IdentifyStrongAdditionCandidates"
+    description: "Identify strong buy candidates for potential incremental add."
+    sql: "SELECT symbol, company_name, sector, live_price, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY technical_score DESC LIMIT 10;"
+  -
+    name: "DetermineTrimCandidates"
+    description: "Select stocks for trimming based on weak sell signals."
+    sql: "SELECT h.symbol, h.qty, s.trading_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal = 'SELL';"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "{'sql_result_checks': ['Ensure no more than 20 add or trim candidates returned.', 'Sector exposure must align with latest portfolio holdings data.']}"
+synthesis_guidance: "Summarize findings with a focus on actionable insights for portfolio adjustments. Highlight key signals driving decisions."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:36"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

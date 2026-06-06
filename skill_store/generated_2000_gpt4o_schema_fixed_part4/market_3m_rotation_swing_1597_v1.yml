@@ -1,0 +1,69 @@
+id: "market_3m_rotation_swing_1597_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1597"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for weekly review: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as research-only summary"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  - "Compile latest market trend indicators and sector performance using evidence and SQL templates."
+  - "Conduct sector-relative comparisons using stage snapshots."
+  - "Identify leading sectors and swing candidates from Stage 2 stocks."
+sql_templates:
+  - "WITH latest_index AS ("
+  - "  SELECT trade_date, index_symbol, change_pct"
+  - "  FROM market.index_eod"
+  - "  WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'"
+  - "  AND trade_date = (SELECT MAX(trade_date) FROM market.index_eod)"
+  - "  ORDER BY trade_date DESC"
+  - "  LIMIT 10"
+  - "),"
+  - "stage_snapshot AS ("
+  - "  SELECT sector, stage, COUNT(*) AS sector_count"
+  - "  FROM scores.stage_snapshots"
+  - "  WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+  - "  GROUP BY sector, stage"
+  - "  ORDER BY sector_count DESC"
+  - ")"
+  - "SELECT * FROM latest_index, stage_snapshot;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure SQL returns recent data."
+  - "Verify that only data from approved tables is used."
+synthesis_guidance: "['Summarize recent index performance and sector distribution.', 'Highlight leading sectors based on Stage 2 distribution.', 'Suggest primary swing trade candidates considering liquidity and technical scores.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:52:05"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: action watchlist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0834_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    sql_code: "WITH recent_activity AS (SELECT symbol, max(trade_date) as last_activity FROM market.equity_eod WHERE trade_date > (SELECT max(trade_date) FROM market.equity_eod) - interval '20 days' GROUP BY symbol) SELECT e.symbol, e.trade_date, e.high, s.enhanced_fund_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date = (SELECT max(trade_date) FROM market.equity_eod) AND e.high >= e.week52_high AND s.enhanced_fund_score > 80;"
+    template_name: "fetch_breakout_stocks"
+status: "validated"
+synthesis_guidance: "Focus on identifying stocks showing strong breakout patterns with high fundamental scores."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "action_watchlist"
+title: "VCP Breakouts With Fundamentals Variant 0834"
+tool_plan_template: "Create a watchlist using available tables to find VCP, new-high, and breakout stocks with strong fundamentals."
+validation_rules:
+  - "Ensure no actions modify the database."
+  - "Strictly use SELECT queries."
+  - "Respect the approved schema and data availability."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

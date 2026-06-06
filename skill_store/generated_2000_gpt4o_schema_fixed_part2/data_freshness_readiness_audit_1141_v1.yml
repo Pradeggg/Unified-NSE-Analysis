@@ -1,0 +1,68 @@
+id: "data_freshness_readiness_audit_1141_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1141"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for last 3 months: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as narrative plus evidence"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  python_tools:
+
+  sql_templates:
+    -
+      query: "SELECT MAX(trade_date) AS last_trade_date FROM market.index_eod"
+      description: "Get the latest index trade date."
+    -
+      query: "SELECT MAX(trade_date) AS last_equity_date FROM market.equity_eod"
+      description: "Get the latest equity trade date."
+    -
+      query: "SELECT MAX(snapshot_date) AS last_stage_snapshot FROM scores.stage_snapshots"
+      description: "Get the latest stage snapshot date."
+    -
+      query: "SELECT MAX(trade_date) AS last_market_breadth_date FROM breadth.market_daily"
+      description: "Get the latest market breadth date."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all dates are within 3 months of current date."
+  - "Verify that there are no missing dates for continuous data."
+synthesis_guidance: "['Provide a narrative describing the data freshness over the last 3 months.', 'Include a matrix summarizing which sources are recent and which are not.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

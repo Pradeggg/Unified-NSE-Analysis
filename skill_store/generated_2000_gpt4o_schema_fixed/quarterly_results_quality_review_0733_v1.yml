@@ -1,0 +1,71 @@
+id: "quarterly_results_quality_review_0733_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0733"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: daily refresh follow-up; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "daily refresh follow-up for last 20 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as QA checklist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "daily_refresh_follow-up"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "Evaluate latest quarterly results using SQL queries to generate insights about revenue and PAT growth, margin movement, and potential risks."
+  - "Review filing freshness and narrative quality based on the latest data available from approved tables."
+sql_templates:
+  -
+    description: "Fetch the latest quarterly results for past 20 sessions"
+    query: "WITH latest_results AS ( SELECT DISTINCT ON (symbol) symbol, period_end, revenue, expenses, operating_profit, pat, period_label FROM scores.quarterly_results WHERE period_end >= CURRENT_DATE - INTERVAL '3 months' AND period_type = 'quarter' ORDER BY symbol, period_end DESC, fetched_at DESC ) SELECT * FROM latest_results LIMIT 100;"
+  -
+    description: "Analyze result beats or misses and margin trends"
+    query: "SELECT r.symbol, r.period_end, r.growth_yoy_revenue_pct, r.growth_qoq_pat_pct, r.opm_delta_pp, r.verdict FROM scores.results_analysis r JOIN (SELECT DISTINCT ON (symbol) symbol, period_end FROM scores.quarterly_results WHERE period_end >= CURRENT_DATE - INTERVAL '3 months' AND period_type = 'quarter' ORDER BY symbol, period_end DESC) q ON r.symbol = q.symbol AND r.period_end = q.period_end WHERE r.verdict IN ('beat', 'miss') ORDER BY r.symbol;"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+
+    outputs:
+
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+      - "scores.stage_snapshots"
+    code: "# This read-only tool assesses the latest financial results.\n# It synthesizes results from approved tables.\n# Ensure only read-only operations like data aggregation and trend analysis are performed here."
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "check"
+synthesis_guidance: "{'instructions': ['Structure the response in a QA checklist format focusing on key metrics and trends.', 'Highlight companies with significant revenue or PAT growth and noteworthy margin changes.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:11"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run: must define run(context)"
+  - "run: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "run: must define run(context)"
+    - "run: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

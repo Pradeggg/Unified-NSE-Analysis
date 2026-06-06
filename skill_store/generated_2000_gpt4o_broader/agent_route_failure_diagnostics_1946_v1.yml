@@ -1,0 +1,50 @@
+id: "agent_route_failure_diagnostics_1946_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1946"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for last 3 months: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as comparison matrix"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze the routes using available enhanced runs and filtered stocks information, identify discrepancies within the last 3 months, and compile the findings into a comparison matrix."
+sql_templates:
+  -
+    description: "Select recent runs within the last 3 months"
+    template: "SELECT run_id, run_ts, universe_size, market_composite_score, notes FROM report.enhanced_runs WHERE run_ts >= (CURRENT_DATE - INTERVAL '3 months');"
+  -
+    description: "Identify filtered stocks with missing tool information"
+    template: "SELECT fs.run_id, fs.symbol, fs.score, fs.recommendation FROM report.enhanced_filtered_stocks fs WHERE fs.recommendation IS NULL;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all runs analyzed are within the last 3 months."
+  - "Verify that any tool gaps identified are correctly linked to the corresponding filtered stocks."
+synthesis_guidance: "Provide a structured comparison to highlight the differences and similarities in route diagnostics. Ensure clarity on the potential improvements and the validation of agent routes."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_filtered_stocks.fs is not approved"

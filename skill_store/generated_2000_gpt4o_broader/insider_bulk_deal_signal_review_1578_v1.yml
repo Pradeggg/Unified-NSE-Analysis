@@ -1,0 +1,68 @@
+id: "insider_bulk_deal_signal_review_1578_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1578"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for pre market: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as research-only summary"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Use read-only SQL for data selection. Implement Python tools for complex computations."
+sql_templates:
+  - "SELECT symbol, alert_date, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_type = 'buy' AND alert_date >= CURRENT_DATE - INTERVAL '7 days';"
+  - "SELECT symbol, deal_date, entity, side, qty, price FROM signals.bulk_block_deals WHERE deal_type = 'bulk' AND deal_date >= CURRENT_DATE - INTERVAL '7 days';"
+  - "SELECT symbol, price, technical_score, trend_signal FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+  - "SELECT symbol, close, change_pct, volume FROM market.equity_eod WHERE trade_date = CURRENT_DATE;"
+python_tools:
+  -
+    id: "calculate_technical_confirmation"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "price"
+      - "technical_score"
+    outputs:
+      - "symbol"
+      - "technical_confirmation"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    confirmation = []\n    for symbol, price, score in context:\n        if score > 70:  # Assume 70 as a threshold for positive setup\n            confirmation.append((symbol, True))\n        else:\n            confirmation.append((symbol, False))\n    return confirmation"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure each symbol has recent alerts and deals."
+  - "Confirm positive technical scores and trend signals."
+synthesis_guidance: "['Aggregate insider and bulk deal data within the last 7 days.', 'Cross-reference technical confirmations with recent price movements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:08"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_technical_confirmation: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_technical_confirmation: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

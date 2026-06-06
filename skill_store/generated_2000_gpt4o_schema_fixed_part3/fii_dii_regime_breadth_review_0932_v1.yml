@@ -1,0 +1,53 @@
+id: "fii_dii_regime_breadth_review_0932_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0932"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as comparison matrix"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "{% for table in evidence_required.tables %} Use data from {{ table }} {% endfor %} to assess market conditions."
+sql_templates:
+  -
+    name: "Fetch_Recent_FII_DII_Flow_Regime_Breadth_Index"
+    description: "Fetch data for the last 20 sessions across FII/DII flows, market regime, market breadth, and index performance."
+    sql: "WITH latest_flows AS (SELECT * FROM signals.fii_dii_flows WHERE trade_date > CURRENT_DATE - INTERVAL '20 days'), latest_regime AS (SELECT * FROM signals.regime_history WHERE trade_date > CURRENT_DATE - INTERVAL '20 days'), latest_breadth AS (SELECT * FROM breadth.market_daily WHERE trade_date > CURRENT_DATE - INTERVAL '20 days'), latest_index AS (SELECT * FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '20 days') SELECT a.trade_date, a.fii_trend, a.dii_trend, b.regime, c.ad_signal, d.trend_signal FROM latest_flows a JOIN latest_regime b ON a.trade_date = b.trade_date JOIN latest_breadth c ON a.trade_date = c.trade_date JOIN latest_index d ON a.trade_date = d.trade_date WHERE d.index_symbol = 'Nifty 50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "trade_date_format_rule"
+  - "index_symbol_check"
+synthesis_guidance: "Aggregate findings into a comparative matrix focusing on current risk-on or risk-off signals. Highlight any significant inconsistencies between flows, breadth, regime, and index signals."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,60 @@
+id: "signal_outcome_feedback_review_0935_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0935"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for last 20 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as comparison matrix"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "{}"
+sql_templates:
+  -
+    name: "signal_outcome_analysis"
+    description: "Compare signal outcomes with their initial targets and stops to derive a performance matrix."
+    template: "WITH recent_signals AS (SELECT id, symbol, signal, date_issued, target_1, stop_loss, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= (CURRENT_DATE - INTERVAL '20 days')) SELECT rs.symbol, ss.trading_signal, rs.signal, rs.return_pct, rs.hit_target, rs.hit_stop FROM recent_signals rs JOIN scores.stage_snapshots ss ON rs.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 100"
+    output:
+      - "symbol"
+      - "trading_signal"
+      - "signal"
+      - "return_pct"
+      - "hit_target"
+      - "hit_stop"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all signals within the last 20 sessions are considered."
+  - "Confirm that each symbol\u2019s latest stage is used for contextual analysis."
+synthesis_guidance: "['Focus on identifying patterns in successful signals versus those that hit stop-loss.', 'Highlight key lessons that could prevent future failures.', 'Provide actionable improvement paths for next steps.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

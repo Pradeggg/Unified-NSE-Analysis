@@ -1,0 +1,59 @@
+created_at: "2026-06-06T12:46:26"
+created_by: "llm_generated"
+description: "Skill card for validating report links and watchlist creation."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_card_001_0424_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    sql: "SELECT run_id, run_ts, analysis_date, universe_size FROM report.enhanced_runs WHERE analysis_date >= CURRENT_DATE - INTERVAL '5 days';"
+    template_id: "retrieve_recent_runs"
+  -
+    sql: "SELECT symbol, recommendation, current_price FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE analysis_date >= CURRENT_DATE - INTERVAL '5 days');"
+    template_id: "find_filtered_stocks"
+status: "validated"
+synthesis_guidance:
+  - "When generating output, ensure it addresses all portfolio-related requirements based on provided evidence."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "last_5_sessions"
+  - "portfolio-aware_output"
+title: "Agent Adda Skill Card"
+tool_plan_template:
+  step_1: "Extract metadata for the last 5 sessions using the 'report.enhanced_runs' table."
+  step_2: "Identify missing data in stock HTML files using rows from 'report.enhanced_filtered_stocks'."
+  step_3: "Generate a portfolio-aware watchlist output."
+validation_errors:
+  - "report.enhanced_filtered_stocks.recent_runs is not approved"
+validation_rules:
+  - "Ensure extracted metadata covers all the required analysis periods."
+  - "Check that data is available for all stocks in the filtered list."
+version: 1

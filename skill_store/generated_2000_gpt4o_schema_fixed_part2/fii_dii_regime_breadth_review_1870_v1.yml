@@ -1,0 +1,58 @@
+id: "fii_dii_regime_breadth_review_1870_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1870"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for post results: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as action watchlist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Combine FII/DII flows, regime history, and breadth data to outline the current market risk context."
+sql_templates:
+  -
+    description: "Fetches latest FII/DII flows and regime to determine market trends."
+    template: "WITH latest_date AS (SELECT MAX(trade_date) AS trade_date FROM signals.fii_dii_flows) SELECT fii_net_today, dii_net_today, fii_trend, dii_trend, regime FROM signals.fii_dii_flows INNER JOIN signals.regime_history ON signals.fii_dii_flows.trade_date = signals.regime_history.trade_date WHERE signals.fii_dii_flows.trade_date = (SELECT trade_date FROM latest_date);"
+  -
+    description: "Checks market breadth indicators and sentiment."
+    template: "SELECT trade_date, advances, declines, ad_signal, market_sentiment FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+  -
+    description: "Confirms index action with recent trend."
+    template: "SELECT index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND index_symbol = 'Nifty 50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "schema_compliance"
+  - "status"
+synthesis_guidance: "Focus on summarizing the evidence in a manner suited for a TradingView export, aiming for an action-oriented watchlist."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:54"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,62 @@
+id: "sector_breadth_rotation_watchlist_1651_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1651"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for quarter to date: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as debug trace"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "1. Retrieve sector breadth data and calculate sector ranking based on pct_above_50dma and change_5d."
+  - "2. Identify sectors improving in Stage 2 participation from breadth.ma_pct_above."
+  - "3. Extract symbols from scores.stage_snapshots with high stage score and positive technical indicators."
+  - "4. Compile a TradingView watchlist from candidate_symbols."
+sql_templates:
+  -
+    title: "Sector Breadth Ranking"
+    template: "SELECT sector, AVG(pct_above_50dma) AS avg_pct_above_50dma, AVG(change_5d) AS avg_change_5d FROM breadth.sector_daily WHERE snapshot_date >= '2023-01-01' GROUP BY sector ORDER BY avg_pct_above_50dma DESC, avg_change_5d DESC;"
+  -
+    title: "Stage 2 Sector Participation"
+    template: "SELECT sector, AVG(stage2_pct) AS avg_stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date >= '2023-01-01' GROUP BY sector HAVING avg_stage2_pct > 0.5 ORDER BY avg_stage2_pct DESC;"
+  -
+    title: "Candidate Symbols Extraction"
+    template: "SELECT symbol, company_name FROM scores.stage_snapshots WHERE stage_score > 8 AND technical_score > 7 ORDER BY stage_score DESC, technical_score DESC;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure SQL queries are read-only and adhere to the approved schema."
+  - "Output lists should be sorted by relevance and filtered for significance."
+synthesis_guidance: "['Compile sector rankings and highlight significant improvements.', 'Create a shortlist of promising stocks with detailed technical indicators for potential investment.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:53"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.avg_stage2_pct is not approved"
+  - "breadth.ma_pct_above.sector is not approved"
+  - "breadth.sector_daily.avg_change_5d is not approved"
+  - "breadth.sector_daily.avg_pct_above_50dma is not approved"

@@ -1,0 +1,67 @@
+id: "data_freshness_readiness_audit_1435_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1435"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: risk-first review; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "risk-first review for last 20 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as portfolio-aware output"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "risk-first_review"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Conduct a data freshness audit focused on the last 20 sessions. Examine updates across evidence_required tables based on data freshness thresholds and identify any missing approved history. Output to be a risk-first review."
+sql_templates:
+  -
+    title: "Check Data Freshness - Market Index EOD"
+    template: "SELECT MAX(trade_date) as last_update FROM market.index_eod;"
+    description: "Retrieve the last update date for market index data."
+  -
+    title: "Check Data Freshness - Equity EOD"
+    template: "SELECT MAX(trade_date) as last_update FROM market.equity_eod;"
+    description: "Retrieve the last update date for equity EOD data."
+  -
+    title: "Check Data Freshness - Stage Snapshots"
+    template: "SELECT MAX(snapshot_date) as last_update FROM scores.stage_snapshots;"
+    description: "Retrieve the last update date for stage snapshots."
+  -
+    title: "Check Data Freshness - Market Daily"
+    template: "SELECT MAX(trade_date) as last_update FROM breadth.market_daily;"
+    description: "Retrieve the last update date for market breadth data."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all required tables have been queried for their last update date."
+  - "Confirm data freshness audit covers at least the last 20 sessions."
+synthesis_guidance: "Aggregate the results from the sql_templates to build the freshness_matrix. Identify missing_sources if any table lacks recent data. Determine any blocking_gaps that might impact workflows. Recommend loader_actions based on identified freshness issues."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:09"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.last_update is not approved"
+  - "market.equity_eod.last_update is not approved"
+  - "market.index_eod.last_update is not approved"
+  - "scores.stage_snapshots.last_update is not approved"

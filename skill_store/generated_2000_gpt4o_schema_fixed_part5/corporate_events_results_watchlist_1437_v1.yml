@@ -1,0 +1,66 @@
+id: "corporate_events_results_watchlist_1437_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1437"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for last 20 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    python_tools:
+      -
+        id: "result_analysis_tool_001"
+        language: "python"
+        mode: "read_only"
+        inputs:
+          - "event_data"
+          - "stage_data"
+        outputs:
+          - "sector_comparison"
+          - "portfolio_output"
+        approved_tables:
+          - "signals.corporate_events"
+          - "scores.stage_snapshots"
+        code: "def run(context):\n    # Placeholder for sector comparison logic\n    event_data = context['event_data']\n    stage_data = context['stage_data']\n    # Perform computation to create sector comparison\n    return {'sector_comparison': sector_comparison, 'portfolio_output': portfolio_output}"
+sql_templates:
+  -
+    description: "Pull recent corporate events with latest stage for sector-relative comparison."
+    template: "WITH latest_stage AS (\n    SELECT symbol, market_cap_cat, sector, stage, trading_signal,\n           ROW_NUMBER() OVER(PARTITION BY symbol ORDER BY snapshot_date DESC) AS rn\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n)\nSELECT ce.symbol, ce.event_type, ce.event_date, ss.stage, ss.sector, ss.market_cap_cat\nFROM signals.corporate_events ce\nJOIN latest_stage ss ON ce.symbol = ss.symbol\nWHERE ce.event_date >= CURRENT_DATE - INTERVAL '20 days'\n  AND ss.rn = 1\n  AND ss.stage = 'STAGE_2'\nLIMIT 100;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "{'rules': ['Ensure all symbols have stage data aligned to current max snapshot date.', 'Check event types are one of RESULTS, DIVIDEND, SPLIT, BONUS, AGM.']}"
+synthesis_guidance: "{'guidance': ['Focus on sector-relative movements over recent sessions.', 'Highlight any strong buy signals or significant corporate actions.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

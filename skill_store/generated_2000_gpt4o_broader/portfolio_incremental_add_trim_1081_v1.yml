@@ -1,0 +1,68 @@
+id: "portfolio_incremental_add_trim_1081_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1081"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: intraday context; response style: concise table."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for intraday context: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as concise table"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "intraday_context"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Analyze portfolio holdings and determine add/trim actions using stage and technical scores for quick intraday context."
+sql_templates:
+  -
+    template_name: "fetch_portfolio_holdings"
+    query: "SELECT symbol, qty, avg_cost FROM portfolio.holdings;"
+  -
+    template_name: "fetch_stage_snapshots"
+    query: "SELECT symbol, sector, stage_score, technical_score, change_1d_pct FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+python_tools:
+  -
+    id: "screen_candidates"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "holdings_data"
+      - "snapshots_data"
+    outputs:
+      - "add_candidates"
+      - "trim_candidates"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    # Context provides holdings_data and snapshots_data\n    add_candidates = []\n    trim_candidates = []\n    # Example processing logic\n    for holding in context['holdings_data']:\n        symbol = holding['symbol']\n        snapshot = next((item for item in context['snapshots_data'] if item['symbol'] == symbol), None)\n        if snapshot:\n            if snapshot['change_1d_pct'] > 2 and snapshot['stage_score'] > 80:\n                add_candidates.append(symbol)\n            elif snapshot['change_1d_pct'] < -2 and snapshot['stage_score'] < 40:\n                trim_candidates.append(symbol)\n    return {'add_candidates': add_candidates, 'trim_candidates': trim_candidates}"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure output includes at least one portfolio_state."
+  - "Verify add_candidates and trim_candidates are logical and supported by evidence."
+synthesis_guidance: "Concise analysis prioritizes intraday decisions based on recent changes and scores."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:14"
+generation_model: "gpt-4o"
+validation_errors:
+  - "screen_candidates: execution failed: KeyError: 'holdings_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "screen_candidates: execution failed: KeyError: 'holdings_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

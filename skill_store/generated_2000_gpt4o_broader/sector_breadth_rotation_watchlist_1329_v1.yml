@@ -1,0 +1,57 @@
+id: "sector_breadth_rotation_watchlist_1329_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1329"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for last 5 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as exceptions and gaps first"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  step1: "Identify sectors with increasing breadth over the last 5 sessions using 'breadth.sector_daily' and 'breadth.ma_pct_above'."
+  step2: "Analyze stage migration using 'scores.stage_snapshots' for sectors showing improvements."
+  step3: "Generate a list of candidate symbols based on price momentum and stage analysis."
+  step4: "Compile and rank sectors based on breadth, stage 2 participation, and RS."
+  step5: "Prepare TradingView symbols and highlight exceptions/gaps in findings."
+sql_templates:
+  sector_analysis: "WITH SectorBreadth AS (SELECT sector, AVG(pct_above_50dma) as avg_breadth FROM breadth.sector_daily WHERE snapshot_date >= current_date - interval '5 days' GROUP BY sector), StageParticipation AS (SELECT sector, AVG(stage2_pct) as avg_stage2 FROM breadth.ma_pct_above WHERE snapshot_date >= current_date - interval '5 days' GROUP BY sector) SELECT sb.sector, sb.avg_breadth, sp.avg_stage2 FROM SectorBreadth sb JOIN StageParticipation sp ON sb.sector = sp.sector"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sectors are correctly ranked by breadth and stage 2 participation."
+  - "Verify the source-trail for the last 5 sessions is adhered to."
+  - "Exceptions and gaps take precedence in reporting."
+synthesis_guidance: "['Focus on report generation that highlights sector improvements and potential investment opportunities.', 'Use data sources for robust sector analysis within Indian markets.', 'Identify gaps or missing evidence and suggest alternative data sources if necessary.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

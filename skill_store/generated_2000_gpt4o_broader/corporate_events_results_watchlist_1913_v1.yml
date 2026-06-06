@@ -1,0 +1,52 @@
+id: "corporate_events_results_watchlist_1913_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1913"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for latest EOD: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as comparison matrix"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+  evidence_gaps:
+
+tool_plan_template: "Analyze corporate events and results data to identify key stocks for the watchlist."
+sql_templates:
+  - "WITH recent_events AS (SELECT symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '1 DAY'), recent_results AS (SELECT symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct FROM scores.results_analysis WHERE created_at >= CURRENT_DATE - INTERVAL '1 DAY') SELECT re.symbol, ce.event_type, ce.event_date, ra.growth_yoy_revenue_pct FROM recent_events re JOIN recent_results ra ON re.symbol = ra.symbol;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure symbols are being tracked in the latest events."
+  - "Results analysis should be available for the tracked symbols."
+  - "Output must be structured in a comparison matrix style."
+synthesis_guidance: "['Focus on identifying symbols with significant changes in growth metrics.', 'Spotlight stocks associated with upcoming or recent notable events.', 'Use a matrix format to compare event types and result metrics side by side.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:15"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

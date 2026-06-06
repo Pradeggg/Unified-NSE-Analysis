@@ -1,0 +1,53 @@
+id: "signal_outcome_feedback_review_1439_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1439"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for last 20 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as portfolio-aware output"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Analyze the signal outcomes to determine patterns of success and failure. Consider sector and market regime aspects as well."
+sql_templates:
+  -
+    template_name: "signal_outcome_review"
+    template: "WITH latest_signals AS (\n    SELECT id, symbol, sector, company, signal, date_issued, date_resolved, hit_target, hit_stop\n    FROM signals.signal_log\n    WHERE date_issued >= (CURRENT_DATE - INTERVAL '3 months')\n    ORDER BY date_issued DESC\n    LIMIT 20\n)\nSELECT latest_signals.symbol, latest_signals.company, latest_signals.sector, \n       latest_signals.signal, latest_signals.hit_target, latest_signals.hit_stop, \n       scores.stage_snapshots.stage, scores.stage_snapshots.snapshot_date\nFROM latest_signals\nJOIN scores.stage_snapshots ON latest_signals.symbol = scores.stage_snapshots.symbol\nWHERE scores.stage_snapshots.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "{'columns': {'hit_target': {'data_type': 'boolean', 'description': 'Indicates if the target was hit.'}, 'hit_stop': {'data_type': 'boolean', 'description': 'Indicates if the stop was hit.'}}}"
+synthesis_guidance: "Frame outputs in terms of portfolio-level insights, focusing on patterns that could guide future investments."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,59 @@
+id: "portfolio_lab_paper_trading_review_1692_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1692"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: weekly review; response style: debug trace."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for weekly review: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as debug trace"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Fetch open trades and strategy entries by referencing signals.signal_log in conjunction with scores.stage_snapshots."
+  - "Review strategy exit conditions using entry, stop loss, target, and resolution fields from signals.signal_log."
+sql_templates:
+  review_open_trades:
+    template: "SELECT s.symbol, s.signal, s.entry_low, s.entry_high, s.stop_loss, s.target_1, s.target_2 FROM signals.signal_log s JOIN scores.stage_snapshots ss ON s.symbol = ss.symbol WHERE s.date_resolved IS NULL AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND (s.signal = 'BUY' OR s.signal = 'STRONG_BUY')"
+    description: "Fetch open trades and review entry and exit criteria for signals that have not yet resolved."
+  portfolio_exposure:
+    template: "SELECT h.symbol, h.qty, h.avg_cost, h.buy_date FROM portfolio.holdings h JOIN market.equity_eod e ON h.symbol = e.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+    description: "Analyze current portfolio exposure based on the latest equity end-of-day data."
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure only open trades are considered."
+  - "Confirm the alignment of snapshot dates with trade dates where applicable."
+  - "Validate resolved vs unresolved signal states accurately."
+synthesis_guidance: "['When generating a debug trace, provide step-by-step data extraction and filtering logic.', 'Focus on deviations between real portfolio results and paper trading strategy performance.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:55"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

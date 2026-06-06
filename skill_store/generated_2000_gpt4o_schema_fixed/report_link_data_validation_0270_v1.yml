@@ -1,0 +1,66 @@
+id: "report_link_data_validation_0270_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Validate TradingView Export Links"
+description: "This skill card validates enhanced report run metadata and stock data for TradingView export. It checks for broken links and missing data."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for post results: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Validate if all TradingView export links and stock data are functioning correctly post result publication."
+sql_templates:
+  -
+    template: "SELECT r.run_id, r.run_ts, r.analysis_date, r.stocks_analyzed, r.stocks_filtered FROM report.enhanced_runs r LEFT JOIN report.enhanced_filtered_stocks s ON r.run_id = s.run_id WHERE r.run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+  -
+    id: "validate_links"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      report_data: "List[Dict]"
+    outputs:
+      broken_links: "List[str]"
+      missing_data: "List[str]"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    report_data = context[\"report_data\"]\n    broken_links = []\n    missing_data = []\n    \n    for record in report_data:\n        if not record.get(\"link\"):\n            broken_links.append(record.get(\"run_id\"))\n        if not record.get(\"data\"):\n            missing_data.append(record.get(\"run_id\"))\n            \n    return {\"broken_links\": broken_links, \"missing_data\": missing_data}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure each report link is valid."
+  - "Detect if any stock data is missing."
+  - "Rank the missing and broken items for priority."
+synthesis_guidance: "['Analyze all the findings and suggest remediation steps.', 'Provide verification methods for ensuring link and data integrity.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:49"
+generation_model: "gpt-4o"
+validation_errors:
+  - "validate_links: inputs must be a list"
+  - "validate_links: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "validate_links: inputs must be a list"
+    - "validate_links: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

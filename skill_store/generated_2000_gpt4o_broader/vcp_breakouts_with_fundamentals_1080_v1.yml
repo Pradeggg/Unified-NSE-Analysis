@@ -1,0 +1,49 @@
+id: "vcp_breakouts_with_fundamentals_1080_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1080"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: pre market; response style: concise table."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "pre_market"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Identify strong fundamental stocks experiencing new highs, VCPs, or breakouts, suitable for TradingView."
+sql_templates:
+  -
+    purpose: "Select VCP breakout stocks with strong fundamentals"
+    template: "SELECT p.symbol, p.company_name, p.sector, p.price, p.live_price, p.enhanced_fund_score FROM scores.stage2_vcp_picks p WHERE p.vcp_score > 80 AND p.enhanced_fund_score > 75 AND p.trading_signal = 'Buy';"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure stocks have strong fundamental scores"
+  - "Verify TradingView export compatibility"
+  - "Filter by VCP and breakout indicators"
+synthesis_guidance: "Synthesize filtered stock data ensuring fundamental and technical strength for trading purposes."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:05"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.p is not approved"

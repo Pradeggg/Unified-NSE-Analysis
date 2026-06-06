@@ -1,0 +1,69 @@
+id: "vcp_breakouts_with_fundamentals_1346_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1346"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 3 months; response style: exceptions and gaps first."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters: "Ensure series = 'EQ' and use snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) for latest data."
+  candidates: "SELECT s.symbol, s.company_name, s.sector, s.price, s.enhanced_fund_score FROM scores.stage2_vcp_picks s WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND s.trading_signal IN ('BUY', 'STRONG_BUY') AND s.vcp_score IS NOT NULL ORDER BY s.enhanced_fund_score DESC LIMIT 100;"
+  tradingview_symbols: "SELECT e.symbol FROM market.equity_eod e, scores.stage2_vcp_picks s WHERE e.symbol = s.symbol AND e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND s.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 50;"
+sql_templates:
+  -
+    name: "VCP_Candidates"
+    description: "Fetch top VCP candidates by enhanced fundamental score"
+    sql: "SELECT s.symbol, s.company_name, s.price, s.enhanced_fund_score FROM scores.stage2_vcp_picks s WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND s.trading_signal IN ('BUY', 'STRONG_BUY') AND s.vcp_score IS NOT NULL ORDER BY s.enhanced_fund_score DESC LIMIT 100;"
+python_tools:
+  -
+    id: "run_vcp_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbols"
+      - "snapshot_date"
+    outputs:
+      - "vcp_candidates"
+    approved_tables:
+      - "scores.stage2_vcp_picks"
+    code: "def run(symbols, snapshot_date):\n    # Logic to analyze VCP candidates\n    pass"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure result sets are non-empty"
+  - "Validate symbols against NSE stock list"
+synthesis_guidance: "['Focus on top enhanced fundamental scores for candidates', 'Highlight gaps in data as exceptions and clear prompts']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:40"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_vcp_analysis: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_vcp_analysis: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

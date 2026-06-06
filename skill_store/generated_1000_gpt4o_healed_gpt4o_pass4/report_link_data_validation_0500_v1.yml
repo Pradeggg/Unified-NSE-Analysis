@@ -1,0 +1,59 @@
+created_at: "2026-06-06T12:48:36"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: weekly review; response style: portfolio-aware output."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0500_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for weekly review: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Retrieve report run metadata."
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE analysis_date = ?"
+  -
+    description: "Retrieve filtered stock data."
+    template: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = ?"
+status: "validated"
+synthesis_guidance: "Ensure connection of report metadata with filtered stock data for cohesive portfolio insights. Highlight any discrepancies or missing data points."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "weekly_review"
+  - "portfolio-aware_output"
+title: "Enhanced Report Data Validation Variant 0500"
+tool_plan_template:
+  tasks:
+    - "Check if report links are working."
+    - "Validate data presence in underlying HTML files."
+    - "Cross-verify report metadata against data for portfolio awareness."
+  type: "AgentAdda"
+validation_rules:
+  - "Status must be generated."
+  - "Use read-only SQL templates."
+  - "Python evidence tools allowed only for complex SQL tasks."
+version: 1

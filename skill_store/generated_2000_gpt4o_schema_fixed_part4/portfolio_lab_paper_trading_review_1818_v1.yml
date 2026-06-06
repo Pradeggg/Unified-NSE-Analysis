@@ -1,0 +1,56 @@
+id: "portfolio_lab_paper_trading_review_1818_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1818"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: position-sizing context; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "position-sizing context for latest EOD: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as action watchlist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Examine paper trading strategies by focusing on position-sizing context using the latest EOD data."
+sql_templates:
+  strategy_state: "SELECT s.symbol, s.company, s.signal, s.entry_low, s.entry_high, s.target_1, s.stop_loss, sn.stage FROM signals.signal_log s JOIN scores.stage_snapshots sn ON s.symbol = sn.symbol WHERE s.date_issued = (SELECT MAX(date_issued) FROM signals.signal_log) AND sn.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  open_trades: "SELECT symbol, qty, avg_cost FROM portfolio.holdings WHERE symbol IN (SELECT symbol FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log));"
+  entry_exit_rules: "SELECT symbol, entry_low, entry_high, stop_loss, target_1 FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log);"
+  exposure: "SELECT symbol, (qty * avg_cost) AS exposure FROM portfolio.holdings WHERE symbol IN (SELECT symbol FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log));"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all SQL queries are read-only and align with the approved schema and join rules."
+  - "Verify the use of latest-date filters as per _global_rules."
+synthesis_guidance: "['Analyze data from approved tables to isolate paper trading strategies.', 'Avoid combining with real portfolio data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:32"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

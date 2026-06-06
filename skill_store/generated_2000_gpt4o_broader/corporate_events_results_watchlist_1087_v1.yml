@@ -1,0 +1,61 @@
+id: "corporate_events_results_watchlist_1087_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1087"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: intraday context; response style: concise table."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for intraday context: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as concise table"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  description: "Analyze corporate events and results for Indian market watchlists."
+  steps:
+    - "Collect upcoming or recent corporate events from signals.corporate_events."
+    - "Analyze results and market impacts from scores.results_analysis."
+    - "Fetch latest market positions and technical signals from scores.stage_snapshots."
+    - "Create a sector-relative comparison using intraday context."
+sql_templates:
+  -
+    name: "fetch_corporate_events"
+    query: "SELECT symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY event_date ASC;"
+  -
+    name: "results_analysis"
+    query: "SELECT symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct, opm_delta_pp FROM scores.results_analysis WHERE period_end >= DATE_SUB(CURRENT_DATE, INTERVAL 7 DAY);"
+  -
+    name: "sector_comparison"
+    query: "SELECT symbol, sector, change_1d_pct, change_1w_pct FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all event dates are future-facing or very recent."
+  - "Verify growth metrics are used to identify significant changes."
+  - "Validate sector-relative comparisons are aligned with intraday context."
+synthesis_guidance: "{'summary': 'Combine recent corporate events with results data to generate a concise watchlist and action plan.', 'focus': 'Highlight sector-relative performance and provide intraday trading insights.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:15"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.date_sub is not approved"
+  - "scores.results_analysis.day is not approved"

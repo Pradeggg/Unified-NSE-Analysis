@@ -1,0 +1,55 @@
+id: "data_freshness_readiness_audit_1211_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1211"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: latest EOD; response style: ranked candidates."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for latest EOD: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as ranked candidates"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Use SQL templates to gather the latest EOD data freshness status."
+sql_templates:
+  -
+    template: "SELECT MAX(trade_date) AS last_trade_date FROM market.index_eod;"
+    description: "Check latest EOD date for index data."
+  -
+    template: "SELECT MAX(snapshot_date) AS last_snapshot_date FROM scores.stage_snapshots;"
+    description: "Check latest snapshot date for stage data."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure latest dates fall within acceptable freshness thresholds."
+  - "Highlight missing data sources in the hardware matrix."
+synthesis_guidance: "['Rank data sources based on their freshness status.', 'Recommend actions based on findings.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:41:50"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.last_trade_date is not approved"
+  - "scores.stage_snapshots.last_snapshot_date is not approved"

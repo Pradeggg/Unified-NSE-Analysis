@@ -1,0 +1,55 @@
+id: "insider_bulk_deal_signal_review_1200_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1200"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: weekly review; response style: narrative plus evidence."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for weekly review: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as narrative plus evidence"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "weekly_review"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Step 1: Extract the latest insider alerts and bulk deal information, including symbols, entities, quantities, and alert types, from 'signals.insider_alerts' and 'signals.bulk_block_deals'."
+  - "Step 2: Merge with 'scores.stage_snapshots' to obtain the latest technical and fundamental scores for the identified symbols."
+  - "Step 3: Compose a narrative summary of the findings, highlighting key symbols with high insider scores and positive technical indicators."
+sql_templates:
+  -
+    description: "Select insider alerts with scores and latest deal information."
+    sql: "SELECT a.symbol, a.entity, a.qty, a.value_cr, a.insider_score, b.deal_date, b.qty AS deal_qty, b.price, s.stage, s.technical_score FROM signals.insider_alerts a JOIN signals.bulk_block_deals b ON a.symbol = b.symbol JOIN scores.stage_snapshots s ON a.symbol = s.symbol WHERE a.alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts) AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all symbols are verified with the latest snapshot data."
+  - "Confirm all trades and alerts are within the latest available date range."
+synthesis_guidance: "['Summarize the technical conditions supporting insider actions.', 'Provide recommendations based on insider and bulk deal analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:32"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

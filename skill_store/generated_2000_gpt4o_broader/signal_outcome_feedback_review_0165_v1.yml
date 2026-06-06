@@ -1,0 +1,61 @@
+id: "signal_outcome_feedback_review_0165_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0165"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: post results; response style: narrative plus evidence."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for post results: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as narrative plus evidence"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "post_results"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  - "SELECT symbol, date_issued, signal, price_at_issue, target_1, target_2, stop_loss, date_resolved, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_resolved IS NOT NULL ORDER BY date_issued DESC"
+  - "SELECT symbol, price_date, close FROM market.equity_eod WHERE trade_date >= '{{date_start}}' AND trade_date <= '{{date_end}}'"
+python_tools:
+  -
+    id: "outcome_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signals_data"
+      - "market_data"
+    outputs:
+      - "summary"
+      - "patterns"
+    approved_tables:
+      - "signals.signal_log"
+      - "market.equity_eod"
+    code: "def run(context):\n    signals_data = context['signals_data']\n    market_data = context['market_data']\n    # Analyze outcomes\n    summary = {}\n    patterns = {}\n    # Logic for deriving summary and patterns here\n    return {'summary': summary, 'patterns': patterns}"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all required keys are present."
+  - "Status must be 'generated'. SQL templates should only use read-only operations."
+synthesis_guidance: "['Integrate signal outcomes with narrative insights.', 'Emphasize risk-first learning and improvements.', 'Utilize evidence to create actionable skill improvements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:58"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.price_date is not approved"

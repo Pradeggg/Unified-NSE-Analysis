@@ -1,0 +1,49 @@
+id: "report_link_data_validation_0354_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Improved Report Link Verification"
+description: "Identify and address broken report links and missing stock data for enhanced reports. Focus on watchlist creation for quarter to date using gaps and exceptions analysis."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for quarter to date: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Validate integrity of report data and link functionality."
+sql_templates:
+  -
+    description: "Identify broken links and missing data in enhanced reports."
+    query: "SELECT r.run_id, r.analysis_date, r.universe_size, s.symbol, s.score, s.recommendation FROM report.enhanced_runs r LEFT JOIN report.enhanced_filtered_stocks s ON r.run_id = s.run_id WHERE r.run_ts >= CURRENT_DATE - INTERVAL '3 months' AND (s.symbol IS NULL OR s.score IS NULL) ORDER BY r.run_id LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "sql"
+synthesis_guidance: "Focus on exceptions and gaps first to quickly identify and address quality issues in the report data. Emphasize readability and actionability in findings."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,53 @@
+id: "fii_dii_regime_breadth_review_0736_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0736"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "{qa_checklist}: {checklist}"
+sql_templates:
+  -
+    description: "Retrieve latest FII/DII flows, regime, market breadth, and index confirmation for the last 20 sessions."
+    template: "WITH latest_flows AS (SELECT * FROM signals.fii_dii_flows WHERE trade_date >= (CURRENT_DATE - INTERVAL '20 days')), latest_regime AS (SELECT * FROM signals.regime_history WHERE trade_date >= (CURRENT_DATE - INTERVAL '20 days')), market_breadth AS (SELECT * FROM breadth.market_daily WHERE trade_date >= (CURRENT_DATE - INTERVAL '20 days')), index_eod AS (SELECT * FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '20 days')) SELECT lf.trade_date, lf.fii_net_today, lf.dii_net_today, lr.regime, lr.confidence, mb.advances, mb.declines, ie.close FROM latest_flows lf JOIN latest_regime lr ON lf.trade_date = lr.trade_date JOIN market_breadth mb ON lf.trade_date = mb.trade_date JOIN index_eod ie ON lf.trade_date = ie.trade_date WHERE ie.index_symbol = 'Nifty 50' ORDER BY lf.trade_date DESC;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "{'risk_on_off_analysis': 'Assess the recent trend of FII/DII flows and market regime to determine if the market is in a risk-on or risk-off mode.', 'flow_breadth_relationship': 'Examine how well market breadth supports the flow trends of FII/DII.', 'regime_path': 'Map the current regime and its formation over the last 20 sessions.', 'on_the_ground_check': 'Investigate any discrepancies between institutional flows, regime, and market breadth.', 'index_footing': 'Use index closing levels and changes to validate regime insights.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:24"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

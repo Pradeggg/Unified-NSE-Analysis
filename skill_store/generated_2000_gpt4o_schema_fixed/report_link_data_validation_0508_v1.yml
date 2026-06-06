@@ -1,0 +1,67 @@
+id: "report_link_data_validation_0508_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0508"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: today; response style: research-only summary."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for today: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "today"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  validation_rules:
+    - "Ensure run_id consistency between tables."
+    - "Validate timestamps against the current market context."
+    - "Check for non-null values in critical columns."
+  sql_templates:
+    -
+      template: "WITH recent_runs AS (SELECT run_id FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)) SELECT efs.run_id, symbol, current_price, score FROM report.enhanced_filtered_stocks efs JOIN recent_runs rr ON efs.run_id = rr.run_id;"
+      notes: "Reports the latest run's stock details."
+    -
+      template: "SELECT run_id, run_ts, universe_size FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '30 days';"
+      notes: "Identifies recent report runs for data validation."
+  output_contract:
+    - "findings"
+    - "broken_links"
+    - "missing_data"
+    - "remediation"
+    - "verification"
+  synthesis_guidance: "Summarize the findings in context of the Indian market, focusing on any discrepancies or anomalies in report generation and linkage."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

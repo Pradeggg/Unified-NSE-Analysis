@@ -1,0 +1,86 @@
+id: "report_link_data_validation_0914_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0914"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for latest EOD: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  inputs:
+    type: "object"
+    required:
+      - "report_id"
+    properties:
+      report_id:
+        type: "string"
+        description: "The ID for the report to be validated."
+  outputs:
+    type: "object"
+    required:
+      - "findings"
+      - "broken_links"
+      - "missing_data"
+      - "remediation"
+      - "verification"
+    properties:
+      findings:
+        type: "string"
+        description: "Summary of the validation findings."
+      broken_links:
+        type: "array"
+        items:
+          type: "string"
+        description: "List of broken report links."
+      missing_data:
+        type: "array"
+        items:
+          type: "string"
+        description: "List of missing data indicators."
+      remediation:
+        type: "string"
+        description: "Suggestions for resolving identified issues."
+      verification:
+        type: "string"
+        description: "Steps to verify corrections."
+sql_templates:
+  -
+    template: "SELECT er.run_id, er.run_ts, er.universe_size, er.stocks_analyzed, er.stocks_filtered, ef.symbol, ef.score, ef.recommendation FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id WHERE er.run_id = @report_id ORDER BY ef.rank LIMIT 20;"
+    description: "Fetch report metadata and filtered stocks for validation purposes."
+    is_latest: true
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "rules"
+synthesis_guidance: "Assess and compare run metadata with filtered stocks to form a validation matrix. Identify discrepancies in report links and data presence."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,58 @@
+id: "portfolio_lab_paper_trading_review_0740_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0740"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: TradingView export; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "TradingView export for last 20 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as QA checklist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  strategy_state: "Review paper trading strategies with emphasis on entries, stops, and target adherence."
+  open_trades: "List all open trades from paper trading for the last 20 sessions."
+  entry_exit_rules: "Validate entry and exit rules for paper trading strategies."
+  exposure: "Analyze overall exposure and risk in the paper trading portfolio."
+  exceptions: "Document any anomalies or unexpected outcomes in paper trading."
+sql_templates:
+  open_trades: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings WHERE buy_date > (SELECT MAX(trade_date) - interval '20 day' FROM market.equity_eod);"
+  entry_exit_summary: "WITH recent_signals AS (SELECT symbol, date_issued, signal, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued > (SELECT MAX(trade_date) - interval '20 day' FROM market.equity_eod)) SELECT symbol, COUNT(signal) AS signal_count, AVG(entry_low) AS avg_entry_low, AVG(entry_high) AS avg_entry_high, AVG(stop_loss) AS avg_stop_loss FROM recent_signals GROUP BY symbol;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure SQL queries are read-only."
+  - "Verify timeframe is constrained to the last 20 sessions."
+  - "Check that the information solely pertains to the Indian market."
+synthesis_guidance: "Focus on the separation of real portfolio holdings from paper trades, highlighting insights from the last 20 sessions in a well-structured QA checklist."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:17"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

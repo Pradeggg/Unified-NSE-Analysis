@@ -1,0 +1,61 @@
+id: "portfolio_incremental_add_trim_1319_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1319"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: latest EOD; response style: exceptions and gaps first."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for latest EOD: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  tool_implementations:
+
+  tasks:
+    - "Compile current holdings from portfolio.holdings and latest scores from scores.stage_snapshots."
+    - "Filter data for the latest stage and trading signals appropriate for add/trim decisions."
+    - "Identify exceptions and gaps in signal consistency or missing information."
+sql_templates:
+  evidence_analysis:
+    -
+      template_name: "latest_stage_and_signals"
+      template: "WITH recent_stages AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT h.symbol, h.qty, h.avg_cost, s.stage, s.trading_signal FROM portfolio.holdings h JOIN recent_stages s ON h.symbol = s.symbol WHERE s.trading_signal IN ('BUY', 'STRONG_BUY') OR s.trading_signal IN ('SELL') LIMIT 100;"
+      description: "Fetch the latest stage and trading signals for current portfolio holdings to inform add/trim decisions."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+synthesis_guidance: "{'exceptions_focus': 'Analyze exceptions and signal mismatches first, notify gaps in data availability.', 'incremental_actions': 'Prioritize incremental decision paths to optimize portfolio adjustments.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

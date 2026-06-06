@@ -1,0 +1,71 @@
+id: "enhanced_report_validation_1001_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation 1001"
+description: "Deep institutional review focusing on report data validation pre-market, presented as a detailed yet concise table."
+input_patterns:
+  - "broken report links"
+  - "validate report data"
+  - "review for missing stock data in reports"
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "pre_market"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  name: "validation_tool"
+  input_parameters:
+    - "run_id"
+  output_parameters:
+    - "findings"
+    - "broken_links"
+    - "missing_data"
+    - "remediation"
+    - "verification"
+sql_templates:
+  -
+    name: "validate_report_links"
+    description: "Check for broken report links and missing data in enhanced runs."
+    template: "SELECT run_id, run_ts, stocks_analyzed FROM report.enhanced_runs WHERE stocks_filtered < stocks_analyzed"
+  -
+    name: "check_missing_stock_data"
+    description: "Identify missing stock data in filtered stock reports."
+    template: "SELECT run_id, symbol, recommendation FROM report.enhanced_filtered_stocks WHERE score IS NULL OR current_price IS NULL"
+python_tools:
+  -
+    id: "run_link_verification"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+    outputs:
+      - "broken_links"
+    approved_tables:
+      - "report.enhanced_runs"
+    code: "def run(context):\n    broken_links = []\n    # Implement logic to validate links\n    # For now, mock result\n    return broken_links"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure run_id is unique and corresponds between tables"
+  - "Verify stocks_analyzed is greater than zero"
+synthesis_guidance: "Compile findings into a concise table format with clear indications of missing or broken elements."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:41:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_link_verification: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_link_verification: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

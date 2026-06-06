@@ -1,0 +1,70 @@
+id: "sector_breadth_rotation_watchlist_1469_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1469"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for post results: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as portfolio-aware output"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze sector breadth and stage participation to identify improving sectors and potential stock candidates."
+sql_templates:
+  -
+    description: "Fetch latest sector breadth and Stage 2 participation."
+    template: "WITH latest_sector_data AS (\n  SELECT sector, pct_above_50dma, stage2_pct\n  FROM breadth.sector_daily\n  JOIN breadth.ma_pct_above ON breadth.sector_daily.snapshot_date = breadth.ma_pct_above.snapshot_date\n  WHERE breadth.sector_daily.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)\n)\nSELECT sector, pct_above_50dma, stage2_pct\nFROM latest_sector_data\nORDER BY stage2_pct DESC\nLIMIT 10;"
+python_tools:
+  -
+    id: "run_breadth_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      sector_data: "DataFrame with sector and breadth metrics."
+    outputs:
+      ranked_sectors: "List of sectors ranked by Stage 2 participation."
+    approved_tables:
+      - "breadth.sector_daily"
+      - "breadth.ma_pct_above"
+    code: "def run(context):\n    import pandas as pd\n    sector_data = context['sector_data']\n    ranked_sectors = sector_data.sort_values(by='stage2_pct', ascending=False)\n    return ranked_sectors.head(10)"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all sectors have breadth metrics."
+  - "Verify stage 2 participation is ranked."
+synthesis_guidance: "Focus on sectors showing increasing Stage 2 participation and rising breadth metrics. Highlight top sectors for consideration in trading platforms like TradingView."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:31"
+generation_model: "gpt-4o"
+validation_errors:
+  - "import pandas is not allowed"
+  - "run_breadth_analysis: inputs must be a list"
+  - "run_breadth_analysis: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "import pandas is not allowed"
+    - "run_breadth_analysis: inputs must be a list"
+    - "run_breadth_analysis: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

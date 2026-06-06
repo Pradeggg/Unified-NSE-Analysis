@@ -1,0 +1,59 @@
+id: "corporate_events_results_watchlist_0877_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0877"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for pre market: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as action watchlist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  -
+    template_name: "fetch_upcoming_events"
+    sql: "SELECT symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY event_date ASC"
+  -
+    template_name: "fetch_recent_results"
+    sql: "SELECT symbol, period_end, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct, verdict FROM scores.results_analysis WHERE period_end >= CURRENT_DATE - INTERVAL '1 month' AND source_trail IS NOT NULL"
+  -
+    template_name: "fetch_top_performers"
+    sql: "SELECT symbol, sector, change_1m_pct FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND change_1m_pct > 0 ORDER BY change_1m_pct DESC LIMIT 10"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "status"
+  - "schema_constraints"
+  - "evidence_sourcing"
+synthesis_guidance: "{'focus': 'Sector-relative comparison and pre-market action watchlist formulation', 'contextualization': 'Leverage source trail to substantiate findings'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

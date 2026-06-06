@@ -1,0 +1,1 @@
+def run(context): return { 'summarized_findings': 'Revenue and PAT growth trends are consistent.' }

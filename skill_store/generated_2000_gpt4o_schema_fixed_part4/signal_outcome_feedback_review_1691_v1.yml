@@ -1,0 +1,62 @@
+id: "signal_outcome_feedback_review_1691_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1691"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: quick scan; timeframe: weekly review; response style: debug trace."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for weekly review: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as debug trace"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    id: "signal_outcome_feedback_review_1691_tool_plan"
+    steps:
+      -
+        action: "Collect data from signals.signal_log for signals issued within the past week."
+        sql_template: "SELECT * FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '1 week';"
+      -
+        action: "Evaluate which signals hit their targets or stops."
+        sql_template: "SELECT symbol, signal, hit_target, hit_stop FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '1 week';"
+sql_templates:
+  - "SELECT symbol, signal, hit_target, hit_stop FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '1 week';"
+  - "SELECT trade_date, close FROM market.equity_eod WHERE symbol = :symbol AND trade_date BETWEEN :date_issued AND :date_resolved;"
+  - "SELECT snapshot_date, stage FROM scores.stage_snapshots WHERE symbol = :symbol AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure query results match expected patterns."
+  - "Check data consistency across evidence tables."
+  - "Verify date range adherence for weekly review."
+synthesis_guidance: "['Focus on extracting actionable insights from signal outcomes.', 'Link stage context to observed outcomes for pattern identification.', 'Seek improvement paths from debug traces.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:07"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

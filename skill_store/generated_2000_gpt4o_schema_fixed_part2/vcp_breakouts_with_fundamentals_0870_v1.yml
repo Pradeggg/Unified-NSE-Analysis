@@ -1,0 +1,52 @@
+id: "vcp_breakouts_with_fundamentals_0870_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0870"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Fetch VCP and breakout stocks with strong fundamentals as an action watchlist exported for TradingView."
+sql_templates:
+  -
+    description: "Select latest VCP picks with strong fundamentals."
+    query: "SELECT vcp.symbol, vcp.company_name, vcp.price, vcp.vcp_score, vcp.enhanced_fund_score, vcp.trading_signal FROM scores.stage2_vcp_picks AS vcp JOIN scores.stage_snapshots AS snap ON vcp.symbol = snap.symbol WHERE vcp.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND snap.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND snap.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY vcp.vcp_score DESC, vcp.rank ASC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure queries are read-only and use only approved tables and columns."
+  - "Do not use inferred or unavailable data."
+synthesis_guidance: "Compile filtered VCP and breakout candidates into an actionable list suitable for TradingView exports."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:40"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

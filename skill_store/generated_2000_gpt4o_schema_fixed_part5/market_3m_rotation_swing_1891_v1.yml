@@ -1,0 +1,60 @@
+id: "market_3m_rotation_swing_1891_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1891"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for weekly review: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    description: "semi_formal_language"
+sql_templates:
+  market_regime: "SELECT index_symbol, AVG(change_pct) AS avg_return FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol ORDER BY avg_return DESC;"
+  stage_distribution_change: "SELECT stage, COUNT(symbol) AS count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY stage;"
+  leading_sectors: "SELECT sector, AVG(technical_score) AS avg_technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY avg_technical_score DESC;"
+  primary_candidates: "SELECT symbol, company_name, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' ORDER BY stage_score DESC LIMIT 10;"
+  risks: "SELECT symbol, change_1w_pct FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND change_1w_pct < 0 ORDER BY change_1w_pct ASC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL results are bounded appropriately."
+  - "The date range must cover exactly the last 3 months."
+  - "All related sectors must be listed under 'leading_sectors'."
+synthesis_guidance: "['Interpret SQL results as an action watchlist with insights on regime, sectors, stages, and candidates.', 'Highlight any significant rotation or emerging trends in the sectors.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:08"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_return is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "market.index_eod.avg_return is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

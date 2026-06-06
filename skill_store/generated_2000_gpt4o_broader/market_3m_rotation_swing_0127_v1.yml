@@ -1,0 +1,56 @@
+id: "market_3m_rotation_swing_0127_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0127"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for last 5 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as narrative plus evidence"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Evaluate recent sector rotations over the last 3 months, focusing on sector-relative performance and leadership in stage 2 growth."
+sql_templates:
+  -
+    name: "sector_performance"
+    query: "WITH recent_performance AS (SELECT sector, AVG(change_pct) as avg_change FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '5 days' GROUP BY sector) SELECT * FROM recent_performance ORDER BY avg_change DESC;"
+  -
+    name: "top_stage2_canslim"
+    query: "SELECT company_name, sector, can_slim_score FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY can_slim_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all output data matches the required evidence tables' schemas."
+  - "Check for missing data and report as gaps if necessary."
+synthesis_guidance: "Use the extracted data to build a narrative on market stage transitions and potential swing trade opportunities, focusing on relative sector performance and leadership changes."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

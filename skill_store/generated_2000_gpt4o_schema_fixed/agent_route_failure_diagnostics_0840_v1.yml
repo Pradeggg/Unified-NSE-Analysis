@@ -1,0 +1,68 @@
+id: "agent_route_failure_diagnostics_0840_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0840"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as action watchlist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "Extract latest 'report.enhanced_runs' and match with 'report.enhanced_filtered_stocks'."
+  - "Identify route failures or missing tools using metadata and notes."
+  - "Check symbol resolution in 'scores.stage_snapshots' for irregular patterns."
+sql_templates:
+  - "WITH latest_runs AS (SELECT * FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)) SELECT er.run_id, es.symbol, es.recommendation FROM latest_runs er LEFT JOIN report.enhanced_filtered_stocks es ON er.run_id = es.run_id WHERE es.recommendation = 'CHECK';"
+python_tools:
+  -
+    id: "run_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "enhanced_runs_data"
+      - "filtered_stocks_data"
+      - "stage_snapshots_data"
+    outputs:
+      - "diagnostics_report"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze the inputs for anomalies\n    results = []\n    for run in context['enhanced_runs_data']:\n        if run['notes'].find('missing tool') != -1:\n            results.append({'issue': 'Missing tool', 'run_id': run['run_id']})\n    return results"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure run_id matching between enhanced_runs and enhanced_filtered_stocks."
+  - "Check for missing data in required fields."
+synthesis_guidance: "['Summarize diagnostics into actionable steps.', 'Highlight missing tools or symbols that caused failures.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:24"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_analysis: execution failed: KeyError: 'enhanced_runs_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_analysis: execution failed: KeyError: 'enhanced_runs_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

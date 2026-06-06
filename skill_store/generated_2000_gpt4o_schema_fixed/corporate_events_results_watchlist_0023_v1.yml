@@ -1,0 +1,54 @@
+id: "corporate_events_results_watchlist_0023_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0023"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: concise table."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for last 5 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as concise table"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh-follow-up"
+  - "last_5_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "Use the defined SQL template to fetch upcoming and recent corporate events from signals.corporate_events."
+  - "Join with scores.results_analysis or scores.stage_snapshots as per the query requirements to enrich with context."
+  - "Focus on the last 5 sessions for a concise tabular response."
+sql_templates:
+  -
+    alias: "revenue_event_watchlist"
+    template: "SELECT ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, sa.verdict, ss.trading_signal FROM signals.corporate_events ce LEFT JOIN scores.results_analysis sa ON ce.symbol = sa.symbol LEFT JOIN scores.stage_snapshots ss ON ce.symbol = ss.symbol WHERE ce.event_date >= CURRENT_DATE - INTERVAL '5 days' ORDER BY ce.event_date DESC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure the response includes symbols with recent or upcoming events within the last 5 sessions."
+  - "Each entry should provide the event type, date, purpose, verdict, and trading signal if available."
+synthesis_guidance: "['Prioritize upcoming events first, with results context as available.', 'Symbols without a recent verdict or trading signal should be mentioned separately.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:17:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

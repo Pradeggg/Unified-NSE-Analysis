@@ -1,0 +1,70 @@
+id: "data_freshness_readiness_audit_1981_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1981"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for intraday context: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as comparison matrix"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "[\"Fetch latest dates and verify freshness for defined tables.\", \"Identify missing or outdated sources and calculate lag time.\", \"Present information as a comparison matrix.\"]"
+sql_templates:
+  -
+    description: "Fetch freshest trade_date across tables to check if they meet freshness criteria."
+    query: "SELECT MAX(trade_date) AS latest_trade_date FROM market.index_eod; SELECT MAX(trade_date) AS latest_trade_date FROM market.equity_eod; SELECT MAX(snapshot_date) AS latest_snapshot_date FROM scores.stage_snapshots;"
+python_tools:
+  -
+    id: "analyze_freshness_gaps"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "latest_trade_dates"
+      - "thresholds"
+    outputs:
+      - "freshness_analysis"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Calculate freshness gaps\n    today = context['current_date']\n    gaps = {}\n    for table, latest_date in context['latest_trade_dates'].items():\n        if today - latest_date > context['thresholds'][table]:\n            gaps[table] = today - latest_date\n    return {'freshness_analysis': gaps}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all date fields in freshness_matrix are valid and have no future dates."
+  - "Cross-check missing_sources with evidence_required."
+synthesis_guidance: "['Aggregate and analyze latest data updates to form summary.', 'Use calculated freshness metrics for decisions on potential data-loading actions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:31"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analyze_freshness_gaps: execution failed: KeyError: 'current_date'"
+review:
+  status: "needs_heal"
+  findings:
+    - "analyze_freshness_gaps: execution failed: KeyError: 'current_date'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

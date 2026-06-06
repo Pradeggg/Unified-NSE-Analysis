@@ -1,0 +1,51 @@
+id: "signal_outcome_feedback_review_0305_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0305"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: today; response style: exceptions and gaps first."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for today: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as exceptions and gaps first"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "today"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Evaluate prior trading signals to extract performance insights, focusing on hits and misses against targets and stops, and document exceptions and gaps in patterns."
+sql_templates:
+  signal_performance:
+    query: "SELECT id, symbol, date_issued, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_resolved = CURRENT_DATE"
+    description: "Extract today's trading signal outcomes focusing on targets and stops."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "must_include"
+synthesis_guidance: "Focus on identifying any breakdowns in trading signal performance relative to expected targets and stops, and suggest enhancements where patterns emerge."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

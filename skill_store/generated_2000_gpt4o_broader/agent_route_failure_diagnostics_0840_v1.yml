@@ -1,0 +1,69 @@
+id: "agent_route_failure_diagnostics_0840_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0840"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as action watchlist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Validate route diagnostics and tool dependencies for TradingView export analysis."
+sql_templates:
+  -
+    id: "recent_session_analysis"
+    description: "Retrieve the last 20 successful analysis runs."
+    query: "SELECT run_id, run_ts FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 20;"
+  -
+    id: "missing_symbol_diagnostics"
+    description: "Identify symbols with persistent issues in the last 20 sessions."
+    query: "SELECT symbol, COUNT(*) as issue_count FROM report.enhanced_filtered_stocks WHERE recommendation IS NULL AND run_id IN (SELECT run_id FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 20) GROUP BY symbol ORDER BY issue_count DESC;"
+python_tools:
+  -
+    id: "symbol_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+    outputs:
+      - "analysis_report"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    symbol = context.get('symbol')\n    # Insert logic to analyze the symbol performance\n    # This is a placeholder to indicate where complex analysis might be\n    return {'analysis_report': 'placeholder analysis for ' + symbol}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Output contracts must be fulfilled"
+  - "Symbol diagnostics should indicate resolution issues"
+  - "Routes must be validated for completeness"
+synthesis_guidance: "Use gathered evidence to create actionable insights for route improvement."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:31"
+generation_model: "gpt-4o"
+validation_errors:
+  - "symbol_analysis_tool: execution failed: TypeError: can only concatenate str (not \"NoneType\") to str"
+review:
+  status: "needs_heal"
+  findings:
+    - "symbol_analysis_tool: execution failed: TypeError: can only concatenate str (not \"NoneType\") to str"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

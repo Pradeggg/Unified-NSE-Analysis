@@ -1,0 +1,59 @@
+id: "data_freshness_readiness_audit_0049_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0049"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: last 3 months; response style: concise table."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for last 3 months: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as concise table"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  - "Fetch necessary data using SQL SELECT/WITH statements from the specified tables."
+  - "Ensure that the data is filtered to only include the last 3 months using approved methods."
+  - "Use SQL to join data as per the _join_rules where necessary."
+sql_templates:
+  -
+    template: "SELECT symbol, MAX(trade_date) AS last_trade_date FROM market.equity_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY symbol"
+    description: "Fetch the last trade date for each symbol in the equity EOD table across the last 3 months."
+  -
+    template: "SELECT id, MAX(run_ts) AS last_run_ts FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '3 months' GROUP BY id"
+    description: "Identify the last run timestamp for each report ID over the past 3 months."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all necessary data is pulled for the past 3 months."
+  - "Use only approved schemas for data extraction and processing."
+synthesis_guidance: "['Summarize results in concise tables showcasing freshness status.', 'The output should guide actions for fixing data freshness issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.last_trade_date is not approved"
+  - "report.enhanced_runs.id is not approved"
+  - "report.enhanced_runs.last_run_ts is not approved"

@@ -1,0 +1,51 @@
+id: "sector_breadth_rotation_watchlist_1623_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1623"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: debug trace."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for last 5 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as debug trace"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "last_5_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "To create the watchlist, first identify sectors with improving breadth and stage 2 participation using time-series data from the last 5 sessions. Analyze price momentum and relative strength to select candidate stocks."
+sql_templates:
+  -
+    query: "SELECT sector, AVG(pct_above_50dma) as average_pct_above_50dma, AVG(change_5d) as average_change_5d FROM breadth.sector_daily WHERE snapshot_date > CURRENT_DATE - INTERVAL '5 days' GROUP BY sector ORDER BY average_change_5d DESC"
+    description: "Identify sectors with the most significant improvement in average breadth over the last 5 sessions."
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sectors are ranked by improvement metrics."
+  - "Provide a list of candidate symbols based on stage and price evaluations."
+  - "Ensure TradingView symbols are formatted correctly."
+synthesis_guidance: "Focus on sectors that show a clear improvement in breadth and have increasing stage 2 participation."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:29"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.sector_daily.average_change_5d is not approved"
+  - "breadth.sector_daily.average_pct_above_50dma is not approved"

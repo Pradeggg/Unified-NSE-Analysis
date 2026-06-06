@@ -1,0 +1,54 @@
+id: "insider_bulk_deal_signal_review_1298_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1298"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: weekly review; response style: ranked candidates."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for weekly review: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as ranked candidates"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  evidence_tools:
+    - "sql_templates"
+sql_templates:
+  deal_summary:
+    description: "Generate a summary of recent insider and bulk deals aligned with technical scores."
+    query: "WITH latest_stage AS (SELECT symbol, technical_score, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT iad.symbol, iad.alert_date, bb.deal_date, iad.entity AS insider_entity, bb.entity AS bulk_deal_entity, iad.insider_score, iad.value_cr, bb.qty, bb.price, s.technical_score FROM signals.insider_alerts iad JOIN signals.bulk_block_deals bb ON iad.symbol = bb.symbol JOIN latest_stage s ON iad.symbol = s.symbol WHERE iad.alert_date >= CURRENT_DATE - INTERVAL '1 week' AND s.stage = 'STAGE_2' ORDER BY s.technical_score DESC, iad.value_cr DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "key"
+  - "rules"
+synthesis_guidance: "{'deal_summary': {'notes': 'Summarize key insider and bulk deal events with applicable technical scores for a weekly review.'}}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:13"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

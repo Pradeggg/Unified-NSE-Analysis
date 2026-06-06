@@ -1,0 +1,55 @@
+id: "report_link_data_validation_1432_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Enhanced Report Data Validation"
+description: "Skill to validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Focuses on deep institutional review for the last 20 sessions."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    status: "generated"
+    sql_templates:
+      -
+        query: "SELECT er.run_id, er.run_ts, er.universe_size, er.stocks_analyzed, er.stocks_filtered, ers.symbol, ers.rank FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks ers ON er.run_id = ers.run_id WHERE er.run_ts >= CURRENT_DATE - INTERVAL '20 days' ORDER BY er.run_ts DESC LIMIT 100;"
+        description: "Fetch recent report runs and their filtered stock data for the last 20 sessions."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure compliance with approved_schema sources."
+  - "Check for missing or invalid metadata in the report runs."
+  - "Ensure filtered stocks are correctly captured for given run identifiers."
+synthesis_guidance: "Focus on providing portfolio-aware output by ensuring that the generated links and presence of data in reports are valid for institutional review. Ensure that the checks cover the last 20 sessions to give a comprehensive overview."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

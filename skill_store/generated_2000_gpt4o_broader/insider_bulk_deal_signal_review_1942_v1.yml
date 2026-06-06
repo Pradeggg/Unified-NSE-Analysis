@@ -1,0 +1,53 @@
+id: "insider_bulk_deal_signal_review_1942_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1942"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for last 3 months: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as comparison matrix"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  insider_bulk_deals:
+    description: "Retrieve relevant insider and bulk deal data within the last 3 months."
+    query: "WITH recent_insider_alerts AS (SELECT symbol, alert_date, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '3 months'), recent_bulk_deals AS (SELECT symbol, deal_date, qty, price, deal_type FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '3 months') SELECT ria.symbol, ria.alert_date, ria.entity, ria.qty, ria.value_cr, ria.insider_score, rbd.deal_date, rbd.qty AS deal_qty, rbd.price, rbd.deal_type FROM recent_insider_alerts ria JOIN recent_bulk_deals rbd ON ria.symbol = rbd.symbol"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "ensure_data_coherence"
+  - "check_timeframe"
+synthesis_guidance: "Compare insider and bulk deal activities with technical indicators to assess potential signals for institutional accumulation. Display results in a comparison matrix format."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

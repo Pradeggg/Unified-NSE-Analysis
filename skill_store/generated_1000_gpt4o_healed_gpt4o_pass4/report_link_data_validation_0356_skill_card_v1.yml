@@ -1,0 +1,65 @@
+created_at: "2026-06-06T12:45:55"
+created_by: "llm_generated"
+description: "This skill validates enhanced report run metadata and filtered stock rows, focusing on a freshness audit for reports within the quarter-to-date by highlighting exceptions and gaps upfront."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0356_skill_card_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for quarter to date: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    id: "validate_freshness"
+    code: "def run(context):\n    from datetime import datetime\n    current_quarter_start = datetime(datetime.now().year, ((datetime.now().month - 1) // 3) * 3 + 1, 1)\n    return {'is_fresh': context['run_ts'] >= current_quarter_start}"
+    inputs:
+      - "run_ts"
+    outputs:
+      - "is_fresh"
+    language: "python"
+    mode: "read_only"
+    approved_tables:
+      - "report.enhanced_runs"
+review:
+  status: "needs_heal"
+  findings:
+    - "validate_freshness: execution failed: ImportError: __import__ not found"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    description: "Retrieve report runs and check for recent data within quarter-to-date."
+    sql: "WITH recent_runs AS (SELECT run_id, run_ts FROM report.enhanced_runs WHERE run_ts >= DATE_TRUNC('quarter', CURRENT_DATE)), recent_stocks AS (SELECT run_id, symbol FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM recent_runs)) SELECT r.run_id, r.run_ts, COUNT(s.symbol) as stock_count FROM recent_runs r LEFT JOIN recent_stocks s ON r.run_id = s.run_id GROUP BY r.run_id, r.run_ts HAVING COUNT(s.symbol) = 0"
+status: "test_failed"
+synthesis_guidance: "Emphasize gaps in data or report generation. Propose specific remediations if gaps are found."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+title: "Enhanced Report Data Validation Skill - Q2D Freshness Audit"
+tool_plan_template: "Follow approved SQL and evidence framework for data validation. Use evidence_required.tables. Consider content freshness."
+validation_errors:
+  - "validate_freshness: execution failed: ImportError: __import__ not found"
+validation_rules:
+  - "Always verify data freshness for quarter-to-date."
+  - "Highlight missing data or broken report links as primary findings."
+  - "Ensure SQL remains within read-only constraints and follows the approved schema."
+version: 1
+findings:
+  - "validate_freshness: execution failed: ImportError: __import__ not found"

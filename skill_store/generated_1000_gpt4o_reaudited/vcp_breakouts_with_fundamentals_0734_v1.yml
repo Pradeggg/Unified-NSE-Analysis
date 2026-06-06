@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:51:06"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: QA checklist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0734_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select stocks with VCP breakout signals and strong fundamentals."
+    template: "WITH vcp_candidates AS (SELECT symbol, price, vcp_breakout_pct, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE vcp_breakout_pct > 0 AND enhanced_fund_score > 70) SELECT eod.symbol, eod.high, eod.volume, snapshots.company_name, snapshots.can_slim_score FROM market.equity_eod AS eod JOIN scores.stage_snapshots AS snapshots ON eod.symbol = snapshots.symbol WHERE eod.trade_date BETWEEN CURRENT_DATE - INTERVAL '20 day' AND CURRENT_DATE AND eod.symbol IN (SELECT symbol FROM vcp_candidates);"
+status: "validated"
+synthesis_guidance: "Focus on providing a QA checklist style output, ensuring results match input patterns for strong fundamental stocks showing VCP breakouts."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "QA_checklist"
+title: "VCP Breakouts With Fundamentals Variant 0734"
+tool_plan_template: "{evidence_tables} to identify VCP and strong fundamental stocks for watchlists."
+validation_rules:
+  - "status must be generated"
+  - "SQL templates must be read-only"
+  - "approved tables and columns only"
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

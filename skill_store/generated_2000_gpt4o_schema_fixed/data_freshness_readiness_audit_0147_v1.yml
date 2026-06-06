@@ -1,0 +1,77 @@
+id: "data_freshness_readiness_audit_0147_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0147"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for last 3 months: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as narrative plus evidence"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  Python:
+    status: "allowed"
+    function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    required_fields:
+      - "id"
+      - "language"
+      - "mode"
+      - "inputs"
+      - "outputs"
+      - "approved_tables"
+      - "code"
+sql_templates:
+  latest_market_data:
+    query: "SELECT trade_date, close FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+    description: "Retrieve the latest closing data for market indices."
+  equity_freshness_check:
+    query: "SELECT MAX(trade_date) as latest_trade_date FROM market.equity_eod;"
+    description: "Check the most recent trade date available in the equity EOD table."
+  sector_stage_context:
+    query: "SELECT sector, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector;"
+    description: "Get the count of stage snapshots per sector for the past 3 months."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Use the evidence to evaluate data freshness and provide recommendations for improving data readiness, focusing on sector-relative analysis over the past 3 months."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:23"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_trade_date is not approved"

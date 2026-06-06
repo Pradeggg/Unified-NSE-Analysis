@@ -1,0 +1,57 @@
+created_at: "2026-06-06T12:48:30"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: intraday context; response style: portfolio-aware output."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0490_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select stocks with VCP patterns, breakouts, and new highs that meet fundamental criteria."
+    sql: "WITH LatestData AS ( SELECT snapshot_date, symbol, company_name, sector, price, live_price, price_date, change_1d_pct, change_1w_pct, rsi, relative_strength, trading_signal, trend_signal, supertrend_state, investment_score, enhanced_fund_score, earnings_quality, sales_growth, financial_strength FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ), QualifiedCandidates AS ( SELECT eod.symbol, eod.close, eod.high, eod.volume, ss.enhanced_fund_score, ss.fundamental_score FROM LatestData ld JOIN market.equity_eod eod ON ld.symbol = eod.symbol JOIN scores.stage_snapshots ss ON ld.symbol = ss.symbol AND ss.price_date = ld.price_date WHERE eod.trade_date = (SELECT MAX(eod.trade_date) FROM market.equity_eod) AND ld.vcp_score > 80 AND ss.market_cap_cat = 'Large' AND ss.enhanced_fund_score > 75 AND ss.fundamental_score > 70 ) SELECT * FROM QualifiedCandidates;"
+    template_name: "Select VCP and Breakout Candidates"
+status: "validated"
+synthesis_guidance: "['Focus on large-cap candidates with high VCP and fundamental scores.', 'Export symbols to TradingView for further analysis.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "intraday_context"
+  - "portfolio-aware_output"
+title: "VCP Breakouts With Fundamentals Variant 0490"
+tool_plan_template:
+  - "Identify stocks with VCP patterns, breakouts and strong fundamentals."
+  - "Generate symbols for TradingView export."
+  - "Assess liquidity and market context for intraday suitability."
+validation_rules:
+  - "Ensure SQL only reads data."
+  - "Check result set includes TradingView compatible symbols."
+  - "Verify outputs match response style defined."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

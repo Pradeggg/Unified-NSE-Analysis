@@ -1,0 +1,63 @@
+id: "report_link_data_validation_0688_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0688"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: intraday context; response style: debug trace."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for intraday context: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Use read-only queries to validate report links and stock data integrity based on enhanced report metadata and filtered stocks."
+sql_templates:
+  - "SELECT run_id, run_ts, universe_size, notes FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '1 DAY'"
+  - "SELECT symbol, recommendation FROM report.enhanced_filtered_stocks WHERE score > 80"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+    outputs:
+      - "debug_trace"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "# Sample code to generate a debug trace\n\ndef run(context):\n    run_id = context['run_id']\n    debug_trace = []\n    # Additional code to analyze the report execution\n    return {'debug_trace': debug_trace}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure no null values in critical columns."
+  - "Cross-validate universe_size with stocks_filtered count."
+  - "Generate debug trace for each validation step."
+synthesis_guidance: "['Summarize findings in a debug trace format.', 'Fill evidence_gaps, if any exist, to address missing concepts.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:50:42"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: execution failed: KeyError: 'run_id'"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: execution failed: KeyError: 'run_id'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

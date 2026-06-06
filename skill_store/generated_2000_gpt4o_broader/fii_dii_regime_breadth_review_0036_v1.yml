@@ -1,0 +1,61 @@
+id: "fii_dii_regime_breadth_review_0036_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0036"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: last 20 sessions; response style: concise table."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as concise table"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Use SQL templates to gather evidence from required tables and offer synthesis based on recent data trends."
+sql_templates:
+  -
+    description: "Retrieve latest FII/DII flows aggregated over the last 20 sessions."
+    query: "SELECT trade_date, fii_net_5d, dii_net_5d, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= (SELECT MAX(trade_date) FROM signals.fii_dii_flows) - 20"
+  -
+    description: "Fetch the current market regime status."
+    query: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history)"
+  -
+    description: "Get market breadth indicators over the last 20 sessions."
+    query: "SELECT trade_date, adv_volume, dec_volume, ad_signal FROM breadth.market_daily WHERE trade_date >= (SELECT MAX(trade_date) FROM breadth.market_daily) - 20"
+  -
+    description: "Retrieve index end-of-day statistics for the last session."
+    query: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod)"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data freshness for the last 20 sessions."
+  - "Compare indices and breadth to signal risk-on or risk-off."
+synthesis_guidance: "['Summarize the regime using confidence and recent flows.', 'Frame breadth context with advances and declines.', 'Use index data to confirm market sentiment.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

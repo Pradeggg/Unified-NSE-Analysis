@@ -1,0 +1,77 @@
+id: "data_freshness_readiness_audit_0777_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0777"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: pre market; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for pre market: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Check if the latest data from approved tables is up-to-date relative to predefined thresholds."
+sql_templates:
+  -
+    name: "latest_eod_data"
+    description: "Check the latest available EOD data for equities and indices."
+    sql: "SELECT MAX(trade_date) FROM market.equity_eod UNION SELECT MAX(trade_date) FROM market.index_eod;"
+  -
+    name: "latest_stage_snapshot"
+    description: "Check the latest available stage snapshot data."
+    sql: "SELECT MAX(snapshot_date) FROM scores.stage_snapshots;"
+python_tools:
+  -
+    id: "validate_freshness_thresholds"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "max_trade_date_eq"
+      - "max_trade_date_idx"
+      - "max_snapshot_date"
+    outputs:
+      - "freshness_issues"
+      - "sector_summary"
+    approved_tables:
+      - "market.equity_eod"
+      - "market.index_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Evidence evaluation logic here\n    issues = []\n    if context['max_trade_date_eq'] < context['freshness_threshold']:\n        issues.append('Equity EOD data is stale.')\n    if context['max_trade_date_idx'] < context['freshness_threshold']:\n        issues.append('Index EOD data is stale.')\n    if context['max_snapshot_date'] < context['freshness_threshold']:\n        issues.append('Stage snapshot data is stale.')\n    return {\n        'freshness_issues': issues,\n        'sector_summary': 'Detailed sector-wise summary of freshness readiness.'\n    }"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure MAX(trade_date) is within the freshness thresholds for EOD data."
+  - "Ensure MAX(snapshot_date) is within the freshness thresholds for stage snapshots."
+synthesis_guidance: "['Summarize gaps and freshness issues by sector.', 'Provide specific actions to address any missing or stale data sources.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:41"
+generation_model: "gpt-4o"
+validation_errors:
+  - "validate_freshness_thresholds: execution failed: KeyError: 'max_trade_date_eq'"
+review:
+  status: "needs_heal"
+  findings:
+    - "validate_freshness_thresholds: execution failed: KeyError: 'max_trade_date_eq'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

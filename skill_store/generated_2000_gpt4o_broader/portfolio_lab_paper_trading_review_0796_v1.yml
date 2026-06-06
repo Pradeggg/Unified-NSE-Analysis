@@ -1,0 +1,55 @@
+id: "portfolio_lab_paper_trading_review_0796_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0796"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for weekly review: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as QA checklist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  task_sequence:
+    - "Identify and separate paper trading entries and exits."
+    - "Assess paper trading stop loss and target effectiveness."
+    - "Conduct freshness audit of paper trading signals and strategies."
+    - "Compile results into a QA checklist format."
+sql_templates:
+  separate_paper_trading: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings WHERE symbol IN (SELECT symbol FROM signals.signal_log WHERE date_resolved IS NOT NULL);"
+  strategy_audit: "SELECT id, symbol, signal, entry_low, entry_high, stop_loss, target_1, target_2, date_issued, date_resolved, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_issued >= NOW() - INTERVAL '7 days';"
+  examine_entry_exit: "SELECT id, symbol, entry_low, entry_high, stop_loss, target_1, target_2, price_at_resolution FROM signals.signal_log WHERE hit_target OR hit_stop;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all paper trading entries have corresponding resolutions."
+  - "Verify stop loss and target hits are accurately recorded."
+  - "Confirm freshness of audit by checking recent signal updates."
+synthesis_guidance: "['Focus on separating strategy insights from real holdings.', 'Emphasize clear entry, exit, and strategy rules in the QA checklist.', 'Consider weekly freshness as a critical success factor.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:04"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.now is not approved"

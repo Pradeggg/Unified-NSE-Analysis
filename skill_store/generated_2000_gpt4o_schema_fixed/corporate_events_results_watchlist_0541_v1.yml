@@ -1,0 +1,50 @@
+id: "corporate_events_results_watchlist_0541_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0541"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: last 3 months; response style: research-only summary."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for last 3 months: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as research-only summary"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "last_3_months"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Generate a concise summary of corporate events and results-related watchlist for the last 3 months."
+sql_templates:
+  corporate_events_query: "SELECT id, symbol, event_type, event_date, purpose_raw, detail, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '3 months' LIMIT 10;"
+  results_analysis_query: "WITH latest_results AS (SELECT DISTINCT ON (symbol) symbol, company_name, period_end, filing_date, verdict FROM scores.results_analysis ORDER BY symbol, period_end DESC, updated_at DESC) SELECT symbol, company_name, period_end, filing_date, verdict FROM latest_results WHERE period_end >= CURRENT_DATE - INTERVAL '3 months' AND verdict IN ('beat', 'miss') LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "symbol"
+  - "event_date"
+synthesis_guidance: "Provide a clear and concise summary while highlighting key events and results."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:55"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

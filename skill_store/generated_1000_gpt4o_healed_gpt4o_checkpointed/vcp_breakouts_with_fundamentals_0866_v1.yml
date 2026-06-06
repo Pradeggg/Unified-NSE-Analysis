@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:52:22"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: post results; response style: action watchlist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0866_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Identify stocks at new highs or displaying VCP breakout patterns with strong fundamentals."
+    template: "WITH latest_snapshots AS (SELECT symbol, sector, price, change_1d_pct, change_1w_pct, rsi, relative_strength, fundamental_score, enhanced_fund_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), vcps AS (SELECT symbol, vcp_score, vcp_breakout_pct FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND vcp_score > 0) SELECT e.symbol, e.high, e.volume, e.market_cap_cr, s.fundamental_score, s.enhanced_fund_score FROM market.equity_eod e JOIN latest_snapshots s ON e.symbol = s.symbol LEFT JOIN vcps v ON e.symbol = v.symbol WHERE (e.high = e.week52_high OR v.symbol IS NOT NULL) AND s.fundamental_score >= 75 AND e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+status: "validated"
+synthesis_guidance: "Develop an action watchlist focusing on stocks achieving new highs or exhibiting VCP breakouts, backed by strong fundamentals."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "post_results"
+  - "action_watchlist"
+title: "VCP Breakouts With Fundamentals Variant 0866"
+tool_plan_template: "Use the provided SQL templates to gather data for VCP and breakout stocks with updated fundamental analysis."
+validation_errors:
+
+validation_rules:
+  - "Ensure results contain only stocks with recent high or identified VCP status."
+  - "Include only stocks with a fundamental score of 75 or above."
+version: 1
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"

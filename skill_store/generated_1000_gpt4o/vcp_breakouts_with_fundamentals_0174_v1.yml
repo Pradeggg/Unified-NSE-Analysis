@@ -1,0 +1,56 @@
+id: "vcp_breakouts_with_fundamentals_0174_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0174"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: pre market; response style: narrative plus evidence."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "pre_market"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  sql_templates:
+    -
+      name: "new_highs_vcp_breakouts"
+      query: "WITH vcp_candidates AS (SELECT symbol, company_name, sector, price, vcp_score FROM scores.stage2_vcp_picks WHERE vcp_score > 70 ORDER BY vcp_score DESC) SELECT eod.symbol, eod.high, eod.volume, snapshot.market_cap_cat, snapshot.enhanced_fund_score FROM market.equity_eod eod JOIN scores.stage_snapshots snapshot ON eod.symbol = snapshot.symbol WHERE eod.trade_date = CURRENT_DATE AND (eod.high > eod.week52_high - 0.1 * eod.week52_high OR vcp_candidates.symbol = snapshot.symbol) AND snapshot.enhanced_fund_score > 80;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "status"
+  - "only_approved_columns"
+  - "use_evidence_tables_only"
+  - "read_only_sql"
+synthesis_guidance: "{'create_narrative_from_evidence': True}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:42:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

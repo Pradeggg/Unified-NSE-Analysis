@@ -1,0 +1,69 @@
+id: "agent_route_failure_diagnostics_0784_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0784"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: intraday context; response style: QA checklist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for intraday context: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as QA checklist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "intraday_context"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+  table_descriptions:
+    report.enhanced_runs: "Enhanced report run metadata generated."
+    report.enhanced_filtered_stocks: "Filtered stock rows for enhanced reports."
+    scores.stage_snapshots: "Point-in-time Weinstein stage and technical scores."
+tool_plan_template:
+  -
+    step: "Review route failure evidence"
+    details: "Identify patterns where agent strategy fails."
+    tables:
+      - "report.enhanced_runs"
+    columns_needed:
+      - "run_id"
+      - "stocks_analyzed"
+      - "stocks_filtered"
+      - "notes"
+  -
+    step: "Check for missing tools"
+    details: "Determine if tool validation errors occur."
+    tables:
+      - "report.enhanced_runs"
+    columns_needed:
+      - "run_id"
+      - "notes"
+sql_templates:
+  -
+    description: "Verify latest stage snapshots for symbols in enhanced stock list."
+    sql: "SELECT ef.symbol, ss.stage, ss.stage_score FROM report.enhanced_filtered_stocks ef JOIN scores.stage_snapshots ss ON ef.run_id = ss.run_id WHERE ef.run_id = (SELECT MAX(run_id) FROM report.enhanced_filtered_stocks) AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure report.join conditions match approved join rules."
+  - "Use global rules for latest date filtering in snapshot queries."
+synthesis_guidance: "['Prepare a QA checklist focusing on agent diagnostics.', 'Identify gaps in tools or data for route diagnostics.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:46"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.run_id is not approved"

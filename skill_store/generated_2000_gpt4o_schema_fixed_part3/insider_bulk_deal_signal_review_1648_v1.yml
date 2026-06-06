@@ -1,0 +1,73 @@
+id: "insider_bulk_deal_signal_review_1648_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1648"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for last 3 months: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as debug trace"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    role: "output"
+    contract: "deal_summary"
+    description: "Summarize major deal insights."
+  -
+    role: "output"
+    contract: "insider_context"
+    description: "Provide details about insider alerts."
+  -
+    role: "output"
+    contract: "technical_confirmation"
+    description: "Technical analysis confirming accumulation or distribution."
+  -
+    role: "output"
+    contract: "ranked_symbols"
+    description: "Ranked symbols based on the analysis."
+  -
+    role: "output"
+    contract: "risk_notes"
+    description: "Notes regarding potential risks."
+sql_templates:
+  -
+    template: "WITH latest_stages AS (SELECT symbol, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT a.symbol, a.alert_date, a.qty, a.value_cr, b.deal_date, b.side, b.qty AS deal_qty, c.stage, c.technical_score FROM signals.insider_alerts a JOIN signals.bulk_block_deals b ON a.symbol = b.symbol JOIN latest_stages c ON a.symbol = c.symbol WHERE a.alert_date >= CURRENT_DATE - INTERVAL '3 months' AND c.stage = 'STAGE_2' LIMIT 100;"
+    description: "Analyze insider alerts and bulk deals with technical confirmations for relevant symbols in the last 3 months."
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure data aligns with the latest stage snapshots."
+  - "Validate volume and price data against thresholds."
+  - "Confirm stage is 'STAGE_2' for relevant context."
+synthesis_guidance: "['Use debug trace style to explain the anomaly detection process.', 'Highlight important trends and patterns in the data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,77 @@
+id: "market_3m_rotation_swing_1471_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1471"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: pre market; response style: portfolio-aware output."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "pre_market"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  tools:
+    - "select"
+    - "analytical"
+  steps:
+    - "Extract market index performance over the last 3 months."
+    - "Identify leading sectors and changes in stage distribution."
+    - "Select primary swing candidates with strong stage 2 VCP profiles."
+sql_templates:
+  -
+    name: "extract_index_performance"
+    description: "Retrieve index returns and technical indicators"
+    template: "SELECT index_symbol, AVG(change_pct) AS avg_change_pct, AVG(rsi) AS avg_rsi FROM market.index_eod WHERE trade_date BETWEEN DATE_SUB(NOW(), INTERVAL 3 MONTH) AND NOW() GROUP BY index_symbol;"
+  -
+    name: "identify_leading_sectors"
+    description: "Identify leading sectors based on stage changes"
+    template: "SELECT sector, COUNT(*) AS changes FROM scores.stage_snapshots WHERE snapshot_date BETWEEN DATE_SUB(NOW(), INTERVAL 3 MONTH) AND NOW() AND stage = 2 GROUP BY sector ORDER BY changes DESC;"
+  -
+    name: "select_swing_candidates"
+    description: "Select swing candidates with top VCP scores"
+    template: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date BETWEEN DATE_SUB(NOW(), INTERVAL 3 MONTH) AND NOW() ORDER BY vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "index_performance"
+  - "leading_sectors"
+  - "swing_candidates"
+synthesis_guidance: "{'summarize': 'Summarize 3-month market conditions and sector changes.', 'highlight': 'Highlight primary swing candidates with their VCP scores.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:09:06"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_change_pct is not approved"
+  - "market.index_eod.avg_rsi is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "market.index_eod.now is not approved"
+  - "scores.stage2_vcp_picks.date_sub is not approved"
+  - "scores.stage2_vcp_picks.month is not approved"
+  - "scores.stage2_vcp_picks.now is not approved"
+  - "scores.stage_snapshots.changes is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"
+  - "scores.stage_snapshots.now is not approved"

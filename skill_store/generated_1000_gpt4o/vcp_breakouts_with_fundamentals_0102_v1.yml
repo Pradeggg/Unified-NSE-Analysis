@@ -1,0 +1,60 @@
+id: "vcp_breakouts_with_fundamentals_0102_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0102"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: today; response style: narrative plus evidence."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "today"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Extract stocks that meet VCP, new-high, or breakout criteria and have strong fundamentals using approved evidence tables."
+sql_templates:
+  -
+    name: "get_vcp_breakouts_with_fundamentals"
+    query: "SELECT s.symbol, s.company_name, s.sector, s.price, s.market_cap_cat, s.trading_signal, s.investment_score, s.enhanced_fund_score, s.narrative FROM scores.stage2_vcp_picks s WHERE s.trading_signal = 'BUY' AND s.enhanced_fund_score > 75 ORDER BY s.vcp_score DESC;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure the stocks meet VCP breakout and fundamental strength conditions."
+  - "Validate using only the approved schema."
+  - "Report evidence gaps if any key metric is missing."
+synthesis_guidance: "['Combine technical scores with narrative evidence for holistic insights.', 'Focus on liquid stocks with strong institutional backing.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:41:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.market_cap_cat is not approved"
+  - "scores.stage2_vcp_picks.s is not approved"
+  - "unknown table s.company_name"
+  - "unknown table s.enhanced_fund_score"
+  - "unknown table s.investment_score"
+  - "unknown table s.market_cap_cat"
+  - "unknown table s.narrative"
+  - "unknown table s.price"
+  - "unknown table s.sector"
+  - "unknown table s.symbol"
+  - "unknown table s.trading_signal"
+  - "unknown table s.vcp_score"

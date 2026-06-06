@@ -1,0 +1,65 @@
+created_at: "2026-06-06T12:52:58"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 3 months; response style: comparison matrix."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0942_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+
+status: "validated"
+synthesis_guidance: "{'considerations': ['Focus on the most recent 3 months data', 'Highlight comparison in matrix format', 'Emphasize evidence from institutional backing']}"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "comparison_matrix"
+title: "VCP Breakouts With Fundamentals Variant 0942"
+tool_plan_template:
+  python_tools:
+    -
+      approved_tables:
+        - "market.equity_eod"
+        - "scores.stage_snapshots"
+        - "scores.stage2_vcp_picks"
+      code: "def run(context):\n    # Filter stocks with VCP and strong fundamentals\n    eod = context['market.equity_eod']\n    snapshots = context['scores.stage_snapshots']\n    vcp_picks = context['scores.stage2_vcp_picks']\n\n    # Use logical conditions to select relevant stocks\n    filtered = eod[(eod['close'] == eod['week52_high']) & (eod['volume'] > 100000)]\n    fundamentals = snapshots[(snapshots['fundamental_score'] > 80) & (snapshots['institutional_backing'] > 70)]\n    vcp_stocks = vcp_picks[(vcp_picks['vcp_score'] > 75)]\n\n    combined = filtered.merge(fundamentals, on='symbol').merge(vcp_stocks, on='symbol')\n    return combined[['symbol', 'company_name', 'sector', 'close', 'fundamental_score', 'vcp_score', 'volume']].to_dict(orient='records')"
+      id: "vcp_fundamentals_filter"
+      inputs:
+        - "market.equity_eod"
+        - "scores.stage_snapshots"
+        - "scores.stage2_vcp_picks"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "evidence"
+validation_rules:
+  - "must_have"
+version: 1

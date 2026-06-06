@@ -1,0 +1,62 @@
+id: "corporate_events_results_watchlist_1003_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1003"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: today; response style: concise table."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for today: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as concise table"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  language: "python"
+  mode: "read_only"
+  inputs:
+    - "context"
+  outputs:
+    - "sql_query"
+  approved_tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+  code: "def run(context):\n    sql_query = \"\"\"\n    WITH latest_stage AS (\n        SELECT DISTINCT ON (symbol) symbol, stage, price, snapshot_date\n        FROM scores.stage_snapshots\n        WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n    ),\n    latest_results AS (\n        SELECT DISTINCT ON (symbol) symbol, verdict, filing_date\n        FROM scores.results_analysis\n        ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC\n    )\n    SELECT ce.symbol, ce.event_date, ce.event_type, ls.stage, lr.verdict\n    FROM signals.corporate_events ce\n    LEFT JOIN latest_stage ls ON ce.symbol = ls.symbol\n    LEFT JOIN latest_results lr ON ce.symbol = lr.symbol\n    WHERE ce.event_date = CURRENT_DATE\n    AND ce.event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM')\n    ORDER BY ce.event_date ASC\n    LIMIT 50;\n    \"\"\"\n    return sql_query"
+sql_templates:
+  -
+    id: "event_results_today"
+    template: "SELECT ce.symbol, ce.event_date, ce.event_type, ls.stage, lr.verdict\nFROM signals.corporate_events ce\nLEFT JOIN latest_stage ls ON ce.symbol = ls.symbol\nLEFT JOIN latest_results lr ON ce.symbol = lr.symbol\nWHERE ce.event_date = CURRENT_DATE\nAND ce.event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM')\nORDER BY ce.event_date ASC\nLIMIT 50;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all symbols have valid and active corporate events."
+  - "Verify all join operations follow approved schema join rules."
+synthesis_guidance: "['Compile results from SQL query into a concise table format.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:51:06"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.corporate_events.ce is not approved"
+  - "signals.corporate_events.lr is not approved"
+  - "signals.corporate_events.ls is not approved"
+  - "signals.corporate_events.stage is not approved"
+  - "signals.corporate_events.verdict is not approved"

@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:52:41"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: today; response style: comparison matrix."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0907_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for today: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select key metrics for current portfolio holdings."
+    needed_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    template: "SELECT a.symbol, a.company_name, a.sector, a.stage, a.stage_score, b.qty, b.avg_cost FROM scores.stage_snapshots AS a JOIN portfolio.holdings AS b ON a.symbol = b.symbol WHERE a.snapshot_date = CURRENT_DATE"
+status: "validated"
+synthesis_guidance: "Generate a comparison matrix for potential incremental additions or reductions based on sector exposure and scoring."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "today"
+  - "comparison_matrix"
+title: "Portfolio Incremental Add Trim Review Variant 0907"
+tool_plan_template: "Use SQL templates to select relevant columns for portfolio analysis, focusing on sector exposure and scoring metrics."
+validation_rules:
+  - "Ensure no new symbols are introduced without corresponding portfolio entries."
+  - "All sector-relative comparisons must align with the snapshot date of today."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

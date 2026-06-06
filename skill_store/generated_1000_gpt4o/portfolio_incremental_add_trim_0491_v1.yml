@@ -1,0 +1,58 @@
+id: "portfolio_incremental_add_trim_0491_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0491"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Review current portfolio holdings and signals to determine incremental add/trim opportunities."
+sql_templates:
+  -
+    name: "fetch_holdings_with_signals"
+    query: "SELECT h.symbol, h.qty, h.avg_cost, s.sector, s.market_cap_cat, s.price, s.change_1w_pct, s.stage_score, s.trend_signal, s.rsi FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure holdings data matches latest scores data by symbol."
+  - "Calculate potential add/trim candidates based on trend signals and RSI thresholds."
+  - "Ensure only read operations on the database."
+synthesis_guidance: "Analyze the fetched data to identify sectors with potential to adjust exposure. Highlight stocks with favorable signals (e.g., bullish trend signals, RSI thresholds). Consider risk flags where exposure might need trimming."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:48:31"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table h.avg_cost"
+  - "unknown table h.qty"
+  - "unknown table h.symbol"
+  - "unknown table s.change_1w_pct"
+  - "unknown table s.market_cap_cat"
+  - "unknown table s.price"
+  - "unknown table s.rsi"
+  - "unknown table s.sector"
+  - "unknown table s.snapshot_date"
+  - "unknown table s.stage_score"
+  - "unknown table s.symbol"
+  - "unknown table s.trend_signal"

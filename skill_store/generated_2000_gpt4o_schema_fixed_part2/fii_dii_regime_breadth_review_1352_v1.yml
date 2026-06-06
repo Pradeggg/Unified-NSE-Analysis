@@ -1,0 +1,82 @@
+id: "fii_dii_regime_breadth_review_1352_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review"
+description: "Analyze FII/DII trends, market regime, and breadth to assess market risk."
+input_patterns:
+  - "What is the current market regime with FII DII and breadth?"
+  - "Is the market risk on based on flows and breadth?"
+  - "Explain current market breadth and institutional flows."
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "quarter_to_date"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  steps:
+    - "Fetch FII/DII flow data and trends."
+    - "Analyze market regime and confidence."
+    - "Assess market breadth indicators."
+    - "Review index EOD data for confirmation."
+    - "Compile evidence and identify risk-on/off signals."
+sql_templates:
+  -
+    template_name: "fetch_fii_dii_trends"
+    description: "Fetch FII and DII trends for the latest quarter."
+    query: "SELECT trade_date, fii_net_today, dii_net_today, flow_signal, fii_trend, dii_trend FROM signals.fii_dii_flows WHERE trade_date > CURRENT_DATE - INTERVAL '3 months'"
+  -
+    template_name: "analyze_market_regime"
+    description: "Fetch market regime data for latest quarter."
+    query: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date > CURRENT_DATE - INTERVAL '3 months'"
+  -
+    template_name: "assess_breadth_indicators"
+    description: "Fetch market breadth indicators."
+    query: "SELECT trade_date, advances, declines, ad_signal, market_sentiment FROM breadth.market_daily WHERE trade_date > CURRENT_DATE - INTERVAL '3 months'"
+  -
+    template_name: "fetch_index_eod_data"
+    description: "Fetch EOD index data for confirmation."
+    query: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months' AND index_symbol = 'Nifty 50'"
+python_tools:
+  -
+    id: "anomaly_detection_001"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "flow_context"
+      - "breadth_context"
+    outputs:
+      - "anomaly_flags"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "breadth.market_daily"
+    code: "def run(context):\n    # Placeholder for anomaly detection logic.\n    pass"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure trade dates align across datasets."
+  - "Check for null values and handle exceptions."
+  - "Confirm index trends match broader market regime."
+synthesis_guidance: "['Prioritize discrepancies or gaps between datasets.', 'Highlight any anomalies in institutional flows or breadth.', 'Conclude with a risk assessment based on compiled evidence.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:31"
+generation_model: "gpt-4o"
+validation_errors:
+  - "anomaly_detection_001: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "anomaly_detection_001: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

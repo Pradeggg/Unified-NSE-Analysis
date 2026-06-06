@@ -1,0 +1,50 @@
+created_at: "2026-06-06T12:46:00"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: pre market; response style: exceptions and gaps first."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0375_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for pre market: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as exceptions and gaps first"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+  -
+    description: "Query to get current positioning and performance metrics for decision making."
+    sql: "SELECT h.symbol, h.qty, h.avg_cost, s.price, s.sector, s.stage, s.trend_signal, s.relative_strength FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = :latest_date;"
+status: "validated"
+synthesis_guidance: "Analyze the SQL query results to identify symbols that are potential candidates for addition or trimming based on risk and exposure."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+title: "Portfolio Incremental Add Trim Review Variant 0375"
+tool_plan_template: "Use SQL to query approved tables for data required to assess portfolio adjustments and identify risks."
+validation_rules:
+  - "Ensure data accuracy by checking the latest snapshot dates."
+  - "Validate correspondence between holdings and stage snapshots."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

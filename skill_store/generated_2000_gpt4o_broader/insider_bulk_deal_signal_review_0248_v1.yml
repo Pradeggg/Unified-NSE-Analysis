@@ -1,0 +1,65 @@
+id: "insider_bulk_deal_signal_review_0248_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0248"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: last 3 months; response style: ranked candidates."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for last 3 months: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as ranked candidates"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "last_3_months"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  description: "Generate ranked candidates based on insider alerts, bulk deals, and technical signals."
+  steps:
+    - "Collect recent insider buying alerts from 'signals.insider_alerts'."
+    - "Identify stocks with bulk deals from 'signals.bulk_block_deals'."
+    - "Combine these with technical scores from 'scores.stage_snapshots'."
+    - "Validate using EOD data in 'market.equity_eod' for selected symbols."
+sql_templates:
+  -
+    template_id: "fetch_recent_insider_alerts"
+    description: "Fetch recent insider alerts within the last 3 months."
+    sql: "SELECT symbol, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date >= NOW() - INTERVAL '3 months' AND alert_type = 'buy';"
+  -
+    template_id: "fetch_bulk_deals"
+    description: "Fetch recent bulk deals within the last 3 months."
+    sql: "SELECT symbol, entity, qty, price, deal_type FROM signals.bulk_block_deals WHERE deal_date >= NOW() - INTERVAL '3 months';"
+  -
+    template_id: "combine_technical_signals"
+    description: "Combine insider alerts and bulk deals with technical confirmation."
+    sql: "SELECT s.symbol, s.stage_score, s.technical_score, e.close FROM scores.stage_snapshots s JOIN market.equity_eod e ON s.symbol = e.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Confirm data integrity across tables."
+  - "Validate timeframe compliance."
+  - "Review technical score threshold."
+synthesis_guidance: "Focus on extracting actionable signals for investors. Validate potential accumulations using technical criteria and rank accordingly."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:04"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.bulk_block_deals.now is not approved"
+  - "signals.insider_alerts.now is not approved"

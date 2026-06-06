@@ -1,0 +1,59 @@
+id: "report_link_data_validation_1432_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1432"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  tools:
+    - "sql_templates"
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '20 days';"
+  -
+    template: "SELECT symbol, score, recommendation, current_price FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '20 days');"
+python_tools:
+  -
+    id: "python_tool_1"
+    language: "python"
+    mode: "read_only"
+    inputs: "context"
+    outputs: "findings"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Example placeholder for read-only Python logic\n    # Access data from 'context' using structured operations\n    return {}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "Validate existence of data for each session within the last 20 days."
+  - "Compile comprehensive findings and remediation steps."
+synthesis_guidance: "['Consider portfolio impact when analyzing missing data.', 'Provide detailed insights into broken links and missing data.', 'Include recommendations for remediation based on historical data patterns.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:08"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.now is not approved"

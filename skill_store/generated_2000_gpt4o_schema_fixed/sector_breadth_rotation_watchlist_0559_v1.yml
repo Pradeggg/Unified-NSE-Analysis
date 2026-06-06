@@ -1,0 +1,74 @@
+id: "sector_breadth_rotation_watchlist_0559_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0559"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: quarter to date; response style: research-only summary."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for quarter to date: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as research-only summary"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  language: "python"
+  mode: "read_only"
+  required_function: "run(context)"
+  inputs:
+
+  outputs:
+    - "sector_ranks"
+    - "improving_sectors"
+    - "candidate_symbols"
+    - "tradingview_symbols"
+    - "evidence"
+  approved_tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+  code: ""
+sql_templates:
+  -
+    description: "Get latest sector daily data and join with moving average data"
+    sql: "SELECT s.sector, s.change_5d, m.stage2_pct FROM breadth.sector_daily s JOIN breadth.ma_pct_above m ON s.snapshot_date = m.snapshot_date WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)"
+  -
+    description: "Filter for STAGE_2 stocks with positive trading signals"
+    sql: "SELECT ss.symbol, ss.price, ss.relative_strength FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.stage = 'STAGE_2' AND ss.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 50"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Status must be generated."
+  - "Only read-only SQL with SELECT/WITH templates."
+  - "Output Contract must include sector ranks and improving sectors."
+synthesis_guidance: "['Summarize sector breadth and improving sectors for model explanation.', 'Identify high-momentum sectors and promising candidate symbols.', 'Present as a research-only summary suitable for TradingView additions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:25:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

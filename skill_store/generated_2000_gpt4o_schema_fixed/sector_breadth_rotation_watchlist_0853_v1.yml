@@ -1,0 +1,60 @@
+id: "sector_breadth_rotation_watchlist_0853_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0853"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: action watchlist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for quarter to date: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as action watchlist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze sector rotation using breadth, stage migration, and momentum indicators to generate a daily actionable watchlist."
+sql_templates:
+  -
+    name: "fetch_sector_breadth"
+    sql: "SELECT sector, breadth_signal, change_5d FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) AND breadth_signal IS NOT NULL ORDER BY change_5d DESC LIMIT 10;"
+  -
+    name: "fetch_stage2_participation"
+    sql: "SELECT sector, COUNT(symbol) AS stage2_count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector ORDER BY stage2_count DESC;"
+  -
+    name: "fetch_candidate_symbols"
+    sql: "SELECT symbol, price, relative_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY relative_strength DESC, price DESC LIMIT 20;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Result must include the top sectors by breadth and stage 2 participation."
+  - "Output must be limited to actionable candidate symbols."
+  - "Ensure symbols are suitable for TradingView import."
+synthesis_guidance: "Focus on sectors with improving breadth and significant stage 2 participation for actionable insights."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

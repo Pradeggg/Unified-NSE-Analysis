@@ -1,0 +1,61 @@
+id: "signal_outcome_feedback_review_1383_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1383"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: exceptions and gaps first."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for intraday context: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as exceptions and gaps first"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "outcome_summary"
+    query: "SELECT symbol, date_issued, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_resolved = (SELECT MAX(date_resolved) FROM signals.signal_log)"
+  -
+    name: "winner_patterns"
+    query: "SELECT setup_class, COUNT(*) AS occurrences FROM signals.signal_log WHERE hit_target = TRUE GROUP BY setup_class ORDER BY occurrences DESC LIMIT 5"
+  -
+    name: "failure_patterns"
+    query: "SELECT setup_class, COUNT(*) AS occurrences FROM signals.signal_log WHERE hit_stop = TRUE GROUP BY setup_class ORDER BY occurrences DESC LIMIT 5"
+  -
+    name: "route_improvements"
+    query: "SELECT symbol, COUNT(*) AS count, AVG(return_pct) as avg_return FROM signals.signal_log WHERE hit_target = TRUE GROUP BY symbol ORDER BY avg_return DESC LIMIT 5"
+  -
+    name: "next_checks"
+    query: "SELECT symbol, trade_date, close FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'guidelines': ['Focus on summarizing exceptions and gaps in outcomes.', 'Discuss common patterns among winning and failing signals.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:18"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.avg_return is not approved"
+  - "signals.signal_log.occurrences is not approved"

@@ -1,0 +1,67 @@
+id: "company_360_research_report_1364_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0905"
+description: "Generate a comprehensive company research card with all relevant financial insights focusing on post-earnings results analysis."
+input_patterns:
+  - "/research TCS comprehensive report"
+  - "full research report with fundamentals and technical analysis for TCS"
+  - "institutional grade 360 research for TCS stock"
+  - "watchlist creation post-earnings: /research TCS comprehensive report"
+  - "institutional grade 360 research with exceptions and gaps for TCS"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical_analysis"
+  - "narrative"
+  - "watchlist_creation"
+  - "post_earnings"
+  - "exceptions_and_gaps"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "market.equity_eod"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  python_tools:
+
+  evidence_gaps:
+    - "Missing insights on certain qualitative metrics like management effectiveness and future guidance details."
+sql_templates:
+  company_snapshot: "SELECT symbol, company_name, sector, market_cap_cat, price, change_1m_pct, stage FROM scores.stage_snapshots WHERE symbol = $1 AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 1"
+  financial_trends: "WITH latest_quarter AS (SELECT DISTINCT ON (symbol) symbol, period_label, revenue, operating_profit, pat FROM scores.quarterly_results WHERE symbol = $1 AND period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC) SELECT * FROM latest_quarter"
+  technical_setup: "SELECT trade_date, open, high, low, close, volume, delivery_pct FROM market.equity_eod WHERE symbol = $1 AND trade_date >= (CURRENT_DATE - INTERVAL '3 months') ORDER BY trade_date DESC"
+  valuation_gaps: "SELECT symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct, key_risks FROM scores.results_analysis WHERE symbol = $1 AND period_end = (SELECT MAX(period_end) FROM scores.results_analysis WHERE symbol = $1) LIMIT 1"
+  thesis: "SELECT narrative, stance FROM scores.stage_snapshots WHERE symbol = $1 AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 1"
+  risks: "SELECT key_risks, pl_commentary FROM scores.results_analysis WHERE symbol = $1 AND period_end = (SELECT MAX(period_end) FROM scores.results_analysis WHERE symbol = $1) LIMIT 1"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+synthesis_guidance: "['Summarize findings succinctly and highlight any data or analysis gaps identified during research.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

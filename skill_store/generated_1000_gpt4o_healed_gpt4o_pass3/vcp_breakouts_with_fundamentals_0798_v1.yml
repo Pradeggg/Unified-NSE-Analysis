@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:51:40"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: weekly review; response style: QA checklist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0798_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    sql: "SELECT e.symbol, e.trade_date, e.high, e.close, s.enhanced_fund_score, v.vcp_breakout_pct\nFROM market.equity_eod e\nJOIN scores.stage_snapshots s ON e.symbol = s.symbol\nJOIN scores.stage2_vcp_picks v ON e.symbol = v.symbol\nWHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)\nAND e.high = e.week52_high\nAND v.vcp_score > 80\nAND s.enhanced_fund_score > 75"
+    template_name: "select_new_high_vcp_breakouts"
+status: "validated"
+synthesis_guidance: "Focus on combining high VCP scores with recent breakout to a 52-week high. Weigh strong fundamentals heavily in candidate selection."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "QA_checklist"
+title: "VCP Breakouts With Fundamentals Variant 0798"
+tool_plan_template: "{evidence}\n{parameters}\n{algorithm}\nResponse: {response}"
+validation_rules:
+  - "Ensure the stocks use the latest trade date."
+  - "Verify the enhanced fundamental score threshold is above 75."
+  - "Confirm VCP breakout percentage is significant."
+version: 1

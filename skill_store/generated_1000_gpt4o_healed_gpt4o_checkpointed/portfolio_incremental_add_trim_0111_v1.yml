@@ -1,0 +1,67 @@
+created_at: "2026-06-06T12:42:05"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: latest EOD; response style: narrative plus evidence."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0111_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for latest EOD: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    risk_flags = []\n    holding_details = context.get('holding_details', [])\n    latest_prices = context.get('latest_prices', [])\n    for holding in holding_details:\n        price_info = next((p for p in latest_prices if p['symbol'] == holding['symbol']), None)\n        if price_info and price_info['can_slim_score'] < 4 and price_info['minervini_score'] < 4:\n            risk_flags.append({'symbol': holding['symbol'], 'flag': 'high_risk'})\n    return risk_flags"
+    id: "risk_analysis_tool"
+    inputs:
+      - "latest_prices"
+      - "holding_details"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "risk_flags"
+review:
+  attempts: 3
+  findings:
+    - "risk_analysis_tool: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    name: "latest_prices"
+    query: "SELECT symbol, price AS live_price, stage, can_slim_score, minervini_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol IN (SELECT symbol FROM portfolio.holdings);"
+  -
+    name: "holding_details"
+    query: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+status: "test_failed"
+synthesis_guidance: "Utilize Indian market evidence and scores to narrate portfolio review and recommend add/trim actions."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "latest_EOD"
+  - "narrative_plus_evidence"
+title: "Portfolio Incremental Add Trim Review Variant 0111"
+tool_plan_template: "{ 'type': 'Portfolio Add Trim Review', 'focus': 'Indian market quick scan', 'timeframe': 'latest EOD' }"
+validation_errors:
+  - "risk_analysis_tool: run(context) must return a dict"
+validation_rules:
+  - "Ensure recommended actions based on latest technical and fundamental scores."
+  - "Consider sector exposure in recommending add/trim actions for holdings."
+version: 1

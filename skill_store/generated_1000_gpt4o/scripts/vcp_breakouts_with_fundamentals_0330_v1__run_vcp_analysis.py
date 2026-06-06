@@ -1,0 +1,1 @@
+{'required_function': 'run(context)', 'content': "def run(context):\n    vcp_candidates = context['vcp_candidates']\n    eod_data = context['eod_data']\n    # Filter candidates based on custom logic\n    filtered_candidates = [c for c in vcp_candidates if c['vcp_score'] > 75 and c['price'] > c['week52_high']]\n    return filtered_candidates"}

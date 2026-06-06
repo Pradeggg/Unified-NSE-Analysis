@@ -1,0 +1,45 @@
+id: "report_link_data_validation_1824_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation: Watchlist Creation"
+description: "Validates the latest five enhanced report runs focusing on watchlist creation by examining broken links and missing data in enhanced reports. It synthesizes an action watchlist for Indian market reports."
+input_patterns:
+  - "review report links not working for last 5 sessions"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation validation for last 5 sessions"
+tags:
+  - "report_qa"
+  - "links"
+  - "data_validation"
+  - "watchlist_creation"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Review the latest five sessions using a JOIN between enhanced report runs and filtered stocks, then filter for missing data or broken links and suggest remediation steps."
+sql_templates:
+  -
+    description: "Extract latest 5 sessions with missing or broken report data"
+    query: "WITH latest_runs AS (SELECT run_id, run_ts FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 5) SELECT erf.run_id, symbol, recommendation FROM report.enhanced_filtered_stocks erf JOIN latest_runs lr ON erf.run_id = lr.run_id WHERE erf.current_price IS NULL OR erf.symbol IS NULL;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure that the output findings correlate with the input patterns for last five sessions."
+synthesis_guidance: "['Consider grouping findings related to broken links separately from data absence.', 'Provide actionable remediation steps based on the findings of missing or broken data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

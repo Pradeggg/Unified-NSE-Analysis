@@ -1,0 +1,104 @@
+id: "portfolio_lab_paper_trading_review_1692_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1692"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: weekly review; response style: debug trace."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for weekly review: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as debug trace"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    intended_effect: "Deep institutional review of paper trading strategies"
+    expected_outcomes: "Identify strategy performance and improvement areas"
+    focus: "Separate paper trading from real holdings"
+    customization_level: "High; tailored for institutional insights"
+    validation_requirements: "Debug trace style output, ensuring accuracy in strategy analysis"
+sql_templates:
+  portfolio_analysis:
+    statement:
+      - "WITH latest_eod AS ("
+      - "    SELECT *"
+      - "    FROM market.equity_eod"
+      - "    WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+      - "),"
+      - "latest_snapshot AS ("
+      - "    SELECT *"
+      - "    FROM scores.stage_snapshots"
+      - "    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+      - ")"
+      - "SELECT p.symbol, p.qty, p.avg_cost, s.price, ss.stage, ss.technical_score"
+      - "FROM portfolio.holdings p"
+      - "JOIN latest_eod s ON p.symbol = s.symbol"
+      - "JOIN latest_snapshot ss ON p.symbol = ss.symbol"
+    notes: "Analyze current holdings with latest price and stage context."
+  signal_analysis:
+    statement:
+      - "SELECT symbol, action_bucket, hit_target, return_pct"
+      - "FROM signals.signal_log"
+      - "WHERE date_issued >= CURRENT_DATE - INTERVAL '1 week'"
+    notes: "Review signals issued in the last week."
+python_tools:
+  -
+    review_summary:
+      id: "review_summary_tool"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "strategy_state"
+        - "open_trades"
+      outputs:
+        - "summary"
+      approved_tables:
+        - "portfolio.holdings"
+        - "signals.signal_log"
+      code: "def run(context):\n    # Analyze and summarize the strategy state and open trades\n    # This is a placeholder for analysis code\n    summary = {'insights': 'Analysis not implemented'}\n    return summary"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure no inclusion of real holdings in paper trading analysis."
+  - "Verify SQL adheres to read-only SELECT restrictions."
+synthesis_guidance: "{'frame': 'Focus on deep institutional insights, separate paper trading from real portfolio.', 'method': 'Combine SQL outputs into a coherent narrative, highlighting key findings.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:56"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: language must be python"
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: code is required"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: language must be python"
+    - "<missing-id>: mode must be read_only"
+    - "<missing-id>: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,42 @@
+id: "report_link_data_validation_1684_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Validate Intraday Report Links and Missing Data"
+description: "Assess report data integrity by validating report links and checking for missing data within intraday timeframe."
+input_patterns:
+  - "validate report links for intraday"
+  - "check missing data in report"
+tags:
+  - "report_qa"
+  - "data_integrity"
+  - "intraday"
+  - "validation"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Use available tables to fetch and validate report data for intraday market expectations."
+sql_templates:
+  - "WITH latest_run AS (SELECT run_id, run_ts FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 1) SELECT efs.symbol, efs.current_price, efs.rank FROM report.enhanced_filtered_stocks efs JOIN latest_run lr ON efs.run_id = lr.run_id WHERE efs.score > 0;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all required keys are present in the response."
+  - "Maintain read-only status in SQL and Python."
+synthesis_guidance: "['Cross-reference findings to identify any discrepancies in report data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:07"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

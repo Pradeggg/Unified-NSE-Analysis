@@ -1,0 +1,64 @@
+id: "sector_breadth_rotation_watchlist_1189_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1189"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: intraday context; response style: narrative plus evidence."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for intraday context: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as narrative plus evidence"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze sector breadth using `breadth.sector_daily` and `% above DMA` from `breadth.ma_pct_above` to rank sectors. Check Stage 2 stocks in `scores.stage_snapshots` and current pricing in `market.equity_eod` for watchlist candidates."
+sql_templates:
+  sector_rankings: "SELECT sector, AVG(pct_above_50dma) AS avg_pct_above_50dma FROM breadth.sector_daily WHERE snapshot_date = CURRENT_DATE GROUP BY sector ORDER BY avg_pct_above_50dma DESC;"
+  stage2_participation: "SELECT sector, SUM(stage2_pct) AS total_stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date = CURRENT_DATE GROUP BY sector ORDER BY total_stage2_pct DESC;"
+python_tools:
+  -
+    id: "calculate_sector_improving"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_ranks"
+      - "stage2_participation"
+    outputs:
+      - "improving_sectors"
+    approved_tables:
+      - "breadth.sector_daily"
+      - "breadth.ma_pct_above"
+    code: "def run(context):\n    improving_sectors = []\n    # Implement logic to find improving sectors based on given data\n    return improving_sectors"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure `sector_ranks` lists sectors by descending avg % above 50DMA."
+  - "Identify `improving_sectors` from sectors showing positive 5-day change."
+  - "Verify candidate symbols are in Stage 2 with positive momentum."
+  - "Compile `tradingview_symbols` for TradingView integration."
+synthesis_guidance: "['Use percentile improvements in breadth for narrative emphasis.', 'Explain source of sector improvement using divergence alerts and RS.', 'Narrative should highlight key metrics and confidence level.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:16"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.sector is not approved"
+  - "breadth.ma_pct_above.total_stage2_pct is not approved"
+  - "breadth.sector_daily.avg_pct_above_50dma is not approved"

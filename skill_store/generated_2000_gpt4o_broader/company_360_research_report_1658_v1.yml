@@ -1,0 +1,78 @@
+id: "company_360_research_report_1658_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Agent Adda Skill Card for Reliance Research"
+description: "A comprehensive research card capturing Reliance's market positioning, financial metrics, technical indicators, and narrative insights."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "position-sizing context for quarter to date: /research RELIANCE comprehensive report"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "position-sizing_context"
+  - "quarter_to_date"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    required_fields:
+      - "id"
+      - "language"
+      - "mode"
+      - "inputs"
+      - "outputs"
+      - "approved_tables"
+      - "code"
+sql_templates:
+  -
+    template: "SELECT * FROM scores.quarterly_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 4"
+    description: "Retrieve the last 4 quarterly results for Reliance."
+  -
+    template: "SELECT * FROM scores.annual_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 3"
+    description: "Fetch the last 3 annual results for Reliance."
+  -
+    template: "SELECT * FROM market.equity_eod WHERE symbol = 'RELIANCE' AND trade_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND CURDATE()"
+    description: "Get quarter-to-date EOD data for Reliance."
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates, if any, must be read-only SELECT/WITH templates."
+  - "Use only approved tables and columns."
+synthesis_guidance: "['Combine financial trends, technical setup, and narrative insights to form a coherent research report.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:53"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.curdate is not approved"
+  - "market.equity_eod.date_sub is not approved"
+  - "market.equity_eod.month is not approved"

@@ -1,0 +1,49 @@
+id: "quarterly_results_quality_review_1797_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1797"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: sector-relative comparison; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "sector-relative comparison for weekly review: latest quarterly results analysis"
+  - "which companies had strong quarterly results as QA checklist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Assess quarterly performance using the approved evidence tables."
+sql_templates:
+  -
+    name: "latest_quarterly_results"
+    template: "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.revenue, qr.pat, rs.growth_yoy_revenue_pct, rs.growth_qoq_revenue_pct, rs.growth_yoy_pat_pct, rs.growth_qoq_pat_pct FROM scores.quarterly_results qr JOIN scores.results_analysis rs ON qr.symbol = rs.symbol AND qr.period_end = rs.period_end WHERE qr.period_type = 'quarter' ORDER BY qr.symbol, qr.period_end DESC NULLS LAST, qr.fetched_at DESC;"
+  -
+    name: "margin_movement"
+    template: "SELECT rs.symbol, rs.opm_delta_pp FROM scores.results_analysis rs WHERE rs.verdict = 'beat' ORDER BY rs.updated_at DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "rules"
+synthesis_guidance: "Generate a QA checklist focusing on top companies with strong quarterly results, highlighting key sectors and providing actionable insights."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:03"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.rs is not approved"

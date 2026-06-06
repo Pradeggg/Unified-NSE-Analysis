@@ -1,0 +1,62 @@
+id: "vcp_breakouts_with_fundamentals_1556_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1556"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: quarter to date; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters:
+    sql_templates:
+      -
+        query: "SELECT e.symbol, e.close, e.week52_high, s.enhanced_fund_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND e.close > e.week52_high*0.9 AND s.enhanced_fund_score > 80 LIMIT 100;"
+        purpose: "Identify stocks near their 52-week high with strong fundamental scores."
+  candidates:
+
+  tradingview_symbols:
+
+  evidence:
+
+  risks:
+
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'instructions': ['Review the list of candidates identified as potential VCP breakouts.', 'Provide a narrative summary that assesses the overall market environment and individual stock performance.', 'Include commentary on the liquidity and fundamental strength of highlighted stocks.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:25"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,58 @@
+id: "corporate_events_results_watchlist_1647_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1647"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for last 3 months: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as debug trace"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze corporate events and results to determine watchlist actions. Focus on recent and upcoming events over the last 3 months with sector-relative insights."
+sql_templates:
+  -
+    type: "SELECT"
+    query: "SELECT event_type, symbol, event_date, purpose_raw, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    type: "SELECT"
+    query: "SELECT symbol, company_name, industry, growth_yoy_revenue_pct, growth_qoq_revenue_pct FROM scores.results_analysis WHERE period_end >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    type: "SELECT"
+    query: "SELECT symbol, sector, market_cap_cat, change_1m_pct, relative_strength FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Must include events and results from the last 3 months."
+  - "Sector-relative insights must be provided."
+  - "All data must be traceable to source tables."
+synthesis_guidance: "Provide a comprehensive watchlist by analyzing corporate events and results, ensuring sector-relative comparison and debug traceability."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,61 @@
+id: "vcp_breakouts_with_fundamentals_0410_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0410"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "screening {{....}}"
+sql_templates:
+  -
+    description: "Select stocks creating new highs, VCPs, or breakouts with strong fundamentals."
+    template: "WITH target_stocks AS (SELECT s.symbol, s.price, s.enhanced_fund_score, s.market_cap_cat FROM scores.stage2_vcp_picks s WHERE s.vcp_score > 0.75 AND s.enhanced_fund_score > 60) SELECT e.symbol, e.close, e.volume, t.price, t.enhanced_fund_score FROM market.equity_eod e JOIN target_stocks t ON e.symbol = t.symbol WHERE e.trade_date = CURRENT_DATE AND e.close > (0.98 * e.week52_high)"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure stocks have VCP score > 0.75"
+  - "Stocks must have enhanced_fund_score > 60"
+synthesis_guidance: "Interpret results in a portfolio-aware manner; consider liquidity and market cap categories."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:46:18"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.market_cap_cat is not approved"
+  - "unknown table e.close"
+  - "unknown table e.symbol"
+  - "unknown table e.trade_date"
+  - "unknown table e.volume"
+  - "unknown table e.week52_high"
+  - "unknown table s.enhanced_fund_score"
+  - "unknown table s.market_cap_cat"
+  - "unknown table s.price"
+  - "unknown table s.symbol"
+  - "unknown table s.vcp_score"
+  - "unknown table t.enhanced_fund_score"
+  - "unknown table t.price"
+  - "unknown table t.symbol"

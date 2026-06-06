@@ -1,0 +1,68 @@
+id: "agent_route_failure_diagnostics_1512_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1512"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: latest EOD; response style: research-only summary."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for latest EOD: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as research-only summary"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "latest_EOD"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  title: "Failure Mode and Route Details"
+  description: "Inspect evidence to identify route failures and diagnostic details."
+  sql_templates:
+    -
+      title: "Latest Enhanced Report Runs"
+      description: "Fetch latest enhanced report runs for diagnostic purposes."
+      template: "SELECT run_id, run_ts, universe_size, stocks_analyzed, stocks_filtered, notes FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+      type: "SELECT"
+    -
+      title: "Filtered Stocks Analysis"
+      description: "Analyze filtered stocks for route diagnostics."
+      template: "SELECT rank, symbol, score, recommendation, current_price FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs));"
+      type: "SELECT"
+    -
+      title: "Stage Snapshots for Latest Day"
+      description: "Fetch latest stage snapshots for additional insights."
+      template: "SELECT symbol, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+      type: "SELECT"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure SQL queries use latest date retrieval techniques."
+  - "Validate that joins only use approved join_rules from schema."
+  - "Ensure research summary is constructed based on evidence available."
+synthesis_guidance: "{'rules': ['Summarize findings with a focus on research context.', 'Discuss potential tool gaps and resolution strategies.', 'Highlight any diagnostic patterns or common failures.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

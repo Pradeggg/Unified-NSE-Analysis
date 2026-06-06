@@ -1,0 +1,53 @@
+id: "report_link_data_validation_0550_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0550"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: last 3 months; response style: research-only summary."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for last 3 months: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "last_3_months"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Research and summary-based validation of enhanced report data."
+sql_templates:
+  -
+    description: "Fetch metadata of reports generated in the last 3 months."
+    template: "SELECT * FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    description: "Identify missing or broken links in filtered stock rows."
+    template: "SELECT r.run_id, r.notes, fs.symbol FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks fs ON r.run_id = fs.run_id WHERE r.run_ts >= CURRENT_DATE - INTERVAL '3 months' AND (fs.current_price IS NULL OR fs.volume IS NULL);"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all report links are functional and data is complete for the last 3 months."
+  - "Cross-verify stock data integrity and completeness."
+synthesis_guidance: "['Summarize findings highlighting key issues with data validation.', 'Provide a research-only perspective on missing or broken elements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:25:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

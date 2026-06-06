@@ -1,0 +1,55 @@
+id: "corporate_events_results_watchlist_1437_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1437"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for last 20 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "Get Latest Corporate Events"
+    template: "SELECT * FROM signals.corporate_events WHERE event_date >= (CURRENT_DATE - INTERVAL '20 days') AND event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM') ORDER BY event_date DESC LIMIT 50;"
+  -
+    name: "Join Corporate Events with Results Analysis"
+    template: "SELECT ce.symbol, ce.event_type, ce.event_date, ra.verdict, ra.growth_yoy_revenue_pct FROM signals.corporate_events AS ce JOIN scores.results_analysis AS ra ON ce.symbol = ra.symbol WHERE ce.event_date >= (CURRENT_DATE - INTERVAL '20 days') ORDER BY ce.event_date DESC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event dates are within the last 20 sessions."
+  - "Limit result sets to 50 to maintain performance."
+synthesis_guidance: "['Consider sector-relative analysis when forming the watchlist.', 'Be aware of portfolio context when suggesting actions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:14"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,51 @@
+id: "corporate_events_results_watchlist_1213_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1213"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: latest EOD; response style: ranked candidates."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for latest EOD: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as ranked candidates"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze corporate events and results to identify stocks for watchlist actions based on recent data."
+sql_templates:
+  -
+    query: "WITH latest_events AS (SELECT symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date > CURRENT_DATE - INTERVAL '7 days' ORDER BY event_date DESC) SELECT le.symbol, le.event_type, le.event_date, le.purpose_raw, sa.growth_yoy_revenue_pct, sa.eps_yoy_pct FROM latest_events le JOIN scores.results_analysis sa ON le.symbol = sa.symbol WHERE sa.filing_date > CURRENT_DATE - INTERVAL '7 days' ORDER BY sa.eps_yoy_pct DESC"
+    description: "Fetch recent corporate events and performance metrics for watchlist ranking."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure SQL only uses SELECT/WITH."
+  - "Verify status is generated."
+synthesis_guidance: "Prioritize events with a high impact on stock movements; focus on comprehensive result analysis."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

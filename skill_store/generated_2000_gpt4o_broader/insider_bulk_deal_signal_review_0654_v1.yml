@@ -1,0 +1,59 @@
+id: "insider_bulk_deal_signal_review_0654_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0654"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for quarter to date: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as debug trace"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  template: "<plan_description>"
+  explanation: "Identify stocks on the watchlist based on insider activity, bulk deals, and technical confirmations for the quarter-to-date period."
+sql_templates:
+  -
+    description: "Select insider alerts for the quarter to date."
+    template: "SELECT id, alert_date, symbol, alert_type, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date > CURRENT_DATE - INTERVAL '3 MONTHS';"
+  -
+    description: "Extract bulk and block deal information."
+    template: "SELECT id, deal_date, symbol, entity, side, qty, price, deal_type FROM signals.bulk_block_deals WHERE deal_date > CURRENT_DATE - INTERVAL '3 MONTHS';"
+  -
+    description: "Gather technical scores for potential confirmation."
+    template: "SELECT symbol, price_date, stage, stage_score, technical_score, rsi, trend_signal, trading_signal FROM scores.stage_snapshots WHERE price_date > CURRENT_DATE - INTERVAL '3 MONTHS';"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "ranking_validation"
+synthesis_guidance: "Combine and analyze data to create a ranked watchlist of stocks with insider activity, significant bulk deals, and positive technical trends."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

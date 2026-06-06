@@ -1,0 +1,1 @@
+def run(context): return context[context['technical_score'] > 70]

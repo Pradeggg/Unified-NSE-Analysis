@@ -1,0 +1,86 @@
+id: "quarterly_results_quality_review_1475_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1475"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: risk-first review; timeframe: pre market; response style: portfolio-aware output."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "risk-first review for pre market: latest quarterly results analysis"
+  - "which companies had strong quarterly results as portfolio-aware output"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "risk-first_review"
+  - "pre_market"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+  columns:
+    - "symbol"
+    - "period_end"
+    - "revenue"
+    - "expenses"
+    - "pat"
+    - "growth_yoy_revenue_pct"
+    - "growth_qoq_revenue_pct"
+    - "growth_yoy_pat_pct"
+    - "growth_qoq_pat_pct"
+    - "opm_delta_pp"
+    - "eps_yoy_pct"
+    - "fii_dii_context"
+    - "key_strengths"
+    - "key_risks"
+    - "stage_score"
+    - "technical_score"
+    - "fetched_at"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Fetch latest quarterly results data for analysis"
+    sql: "SELECT symbol, period_end, revenue, expenses, pat, opm_pct FROM scores.quarterly_results WHERE period_type='Q' AND period_end = (SELECT MAX(period_end) FROM scores.quarterly_results);"
+  -
+    description: "Analyze growth and qualitative data for the latest quarter"
+    sql: "SELECT symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct, fii_dii_context, key_strengths, key_risks FROM scores.results_analysis WHERE period_end = (SELECT MAX(period_end) FROM scores.results_analysis);"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "results_data"
+    outputs:
+      - "processed_results"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+    code: "def run(context):\n    # Analyze results and identify top performers\n    results = context['results_data']\n    return {'processed_results': 'Summary of top-performing companies based on latest quarterly data'}"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure data freshness by using the latest period_end."
+  - "Check that relevant growth metrics are present."
+synthesis_guidance: "['Focus on identifying high-risk companies in the pre-market context.', 'Consider portfolio implications when providing analysis.', 'Highlight significant beat or miss relative to expectations.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:09:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: execution failed: KeyError: 'results_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: execution failed: KeyError: 'results_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

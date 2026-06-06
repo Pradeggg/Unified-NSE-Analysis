@@ -1,0 +1,70 @@
+id: "signal_outcome_feedback_review_1803_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1803"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for today: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as action watchlist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Analyze signal outcomes using latest scores and market data."
+sql_templates:
+  -
+    description: "Fetch latest signal outcomes and associated scores."
+    template: "SELECT s.symbol, s.signal, s.date_issued, s.hit_target, s.hit_stop, ss.stage_score, ss.technical_score FROM signals.signal_log s JOIN scores.stage_snapshots ss ON s.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.date_resolved = CURRENT_DATE;"
+python_tools:
+  -
+    id: "signal_outcome_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signals"
+      - "stage_snapshots"
+    outputs:
+      - "patterns"
+      - "improvements"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+    code: "def run(context): return analyze_signals(context['signals'], context['stage_snapshots'])"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure data is only retrieved using SELECT statements."
+  - "SQL must use approved schema and join rules."
+  - "Python tools are only used for complex calculations not feasible with SQL."
+synthesis_guidance: "['Focus on summarizing signal efficacy.', 'Highlight patterns in successful signals.', 'Provide guidance for future improvements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signal_outcome_analysis: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "signal_outcome_analysis: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

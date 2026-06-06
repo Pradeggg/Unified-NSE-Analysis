@@ -1,0 +1,71 @@
+id: "data_freshness_readiness_audit_1841_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1841"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: last 3 months; response style: action watchlist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for last 3 months: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as action watchlist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "last_3_months"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Perform quick scan for data freshness across approved tables for the past 3 months. Output findings include freshness matrix, missing sources, blocking gaps, and loader actions."
+sql_templates:
+  -
+    table: "market.index_eod"
+    query: "SELECT trade_date, index_symbol, close, volume FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    table: "market.equity_eod"
+    query: "SELECT trade_date, symbol, close, volume FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    table: "scores.stage_snapshots"
+    query: "SELECT snapshot_date, symbol, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    table: "breadth.market_daily"
+    query: "SELECT trade_date, advances, declines, market_sentiment FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    table: "breadth.ma_pct_above"
+    query: "SELECT snapshot_date, pct_above_200dma FROM breadth.ma_pct_above WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    table: "report.enhanced_runs"
+    query: "SELECT run_ts, analysis_date, universe_size FROM report.enhanced_runs WHERE analysis_date >= CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "All queries must be read-only."
+  - "Use approved tables and columns only for SQL templates."
+  - "Any missing concepts should be listed in evidence_gaps."
+synthesis_guidance: "Compile data freshness information and construct action watchlist identifying any critical gaps."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:39"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,62 @@
+created_at: "2026-06-06T12:42:47"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: intraday context; response style: narrative plus evidence."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "skill_vcp_breakouts_with_fundamentals_0190_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage2_vcp_picks"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    symbols = context['scores.stage2_vcp_picks']\n    insights = []\n    for symbol in symbols:\n        if symbol['vcp_score'] > 75 and symbol['enhanced_fund_score'] > 70:\n            insights.append(symbol)\n    return {'insights': insights, 'metrics_summary': 'High-potential stocks based on VCP and fundamentals filtered.'}"
+    id: "evidence_analysis_vcp"
+    inputs:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "insights"
+      - "metrics_summary"
+sql_templates:
+  -
+    description: "Select stocks with a VCP pattern and breakout within the last week, with good fundamentals."
+    template: "SELECT p.symbol, p.company_name, p.sector, p.price, p.vcp_score, p.enhanced_fund_score, p.relative_strength FROM scores.stage2_vcp_picks p WHERE p.vcp_score > 75 AND p.enhanced_fund_score > 70 AND p.change_1w_pct > 5 ORDER BY p.vcp_score DESC;"
+status: "test_failed"
+synthesis_guidance: "Provide insights into the strength and potential of VCP and breakout stocks based on selected metrics."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "intraday_context"
+  - "narrative_plus_evidence"
+title: "VCP Breakouts With Fundamentals Variant 0190"
+tool_plan_template: "{inputs}: Required inputs to generate analysis are symbols and market context from approved evidence tables."
+validation_rules:
+  - "Status must be generated."
+  - "All SQL templates must be read-only and defined from approved schemas only."
+version: 1
+validation_errors:
+  - "scores.stage2_vcp_picks.p is not approved"

@@ -1,0 +1,67 @@
+id: "report_link_data_validation_0494_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0494"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for weekly review: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  steps:
+    - "Extract report run metadata and validate presence"
+    - "Identify missing data points within enhanced filtered stocks"
+    - "Construct weekly watchlist based on rankings and scores"
+    - "Generate portfolio-aware summary of findings"
+sql_templates:
+  report_run_metadata: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '7 days';"
+  identify_missing_data: "SELECT run_id, symbol, recommendation FROM report.enhanced_filtered_stocks WHERE current_price IS NULL OR volume IS NULL;"
+python_tools:
+  -
+    id: "validate_data_extraction"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "report.enhanced_filtered_stocks"
+    outputs:
+      - "missing_data_report"
+    approved_tables:
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Sample Python code to check for missing data in current_price and volume\n    missing_data = context['report.enhanced_filtered_stocks'].where(context['report.enhanced_filtered_stocks']['current_price'].isnull() | context['report.enhanced_filtered_stocks']['volume'].isnull())\n    return missing_data"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Data must be compared against approved time frames"
+  - "Tools should only access read-only data retrieval processes"
+  - "Generated reports must align with portfolio performance metrics"
+synthesis_guidance: "['Ensure alignment of extracted data with client portfolio requirements', 'Use market sentiment and composite scores when synthesizing final reports']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:50"
+generation_model: "gpt-4o"
+validation_errors:
+  - "validate_data_extraction: execution failed: KeyError: 'report.enhanced_filtered_stocks'"
+review:
+  status: "needs_heal"
+  findings:
+    - "validate_data_extraction: execution failed: KeyError: 'report.enhanced_filtered_stocks'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

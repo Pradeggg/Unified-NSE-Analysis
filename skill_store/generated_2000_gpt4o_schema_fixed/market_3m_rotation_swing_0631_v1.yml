@@ -1,0 +1,57 @@
+id: "market_3m_rotation_swing_0631_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0631"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Generate a report analyzing the latest market regime using the last 20 sessions of data. Focus on index and sector performance, stage 2 leadership, and potential swing candidates."
+sql_templates:
+  -
+    name: "index_returns"
+    query: "SELECT index_symbol, SUM(change_pct) AS total_return FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol ORDER BY total_return DESC;"
+  -
+    name: "stage_distribution_change"
+    query: "WITH latest_stage AS (SELECT sector, stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector, stage) SELECT sector, stage, count FROM latest_stage;"
+  -
+    name: "leading_sectors"
+    query: "SELECT sector, AVG(relative_strength) AS avg_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY avg_strength DESC LIMIT 5;"
+  -
+    name: "primary_candidates"
+    query: "SELECT symbol, company_name, trading_signal FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY vcp_score DESC, rank ASC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "['Provide clear and concise narratives summarizing key insights from each analysis piece.', 'Highlight major sector rotations and emerging market leaders.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:09"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.total_return is not approved"

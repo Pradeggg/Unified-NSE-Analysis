@@ -1,0 +1,52 @@
+id: "report_link_data_validation_1096_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation - Freshness Audit"
+description: "Skill card to audit enhanced report metadata for freshness and validate linked stock rows and data sources."
+input_patterns:
+  - "review report links not working"
+  - "validate generated report links and missing data"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  inputs:
+    pattern: "Validate using pattern: {pattern}, weekly review criteria"
+sql_templates:
+  -
+    description: "Fetch latest enhanced report data for audit."
+    template: "SELECT r.run_id, r.run_ts, r.universe_size, r.stocks_analyzed, f.symbol, f.current_price, f.recommendation FROM report.enhanced_runs AS r JOIN report.enhanced_filtered_stocks AS f ON r.run_id = f.run_id WHERE r.run_ts > CURRENT_DATE - INTERVAL '1 week';"
+    mode: "read_only"
+    bind:
+      params:
+        user_date: "CURRENT_DATE"
+        interval: "INTERVAL '1 week'"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure run_ts is within the past week."
+  - "Verify link integrity for each run_id."
+synthesis_guidance: "Focus on maintaining data accuracy and link functionality. Provide findings in a concise table format."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:55:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

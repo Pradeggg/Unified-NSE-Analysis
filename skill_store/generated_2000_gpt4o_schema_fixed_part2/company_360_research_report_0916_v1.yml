@@ -1,0 +1,67 @@
+id: "company_360_research_report_0916_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Card"
+description: "Generates a detailed research report for a specified company, including fresh analysis across financials and technical context, tailored for the latest EOD data."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock"
+  - "freshness audit for latest EOD: /research RELIANCE comprehensive report"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "freshness_audit"
+  - "latest_EOD"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template: "Generate SQL queries to fetch data for the latest company report."
+sql_templates:
+  -
+    template_name: "Fetch Latest EOD Price and Stage"
+    description: "Fetch latest EOD price, market cap, and stage details for a specific company symbol."
+    query: "SELECT ees.symbol, ees.trade_date, ees.close, ees.market_cap_cr, sss.stage FROM market.equity_eod ees JOIN scores.stage_snapshots sss ON ees.symbol = sss.symbol WHERE ees.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod WHERE symbol = :symbol) AND sss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots WHERE symbol = :symbol);"
+python_tools:
+  -
+    id: "run_company_research"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+    outputs:
+      - "latest_report"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    symbol = context['symbol']\n    # Fetch data based on approved SQL templates\n    latest_data = fetch_latest_data(symbol)\n    # Synthesize data\n    report = synthesize_report(latest_data)\n    return report"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "ensure"
+synthesis_guidance: "{'instructions': ['Combine all data points to generate a cohesive research narrative.', 'Ensure findings are presented in a comparative matrix format.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:21"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_company_research: execution failed: KeyError: 'symbol'"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_company_research: execution failed: KeyError: 'symbol'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

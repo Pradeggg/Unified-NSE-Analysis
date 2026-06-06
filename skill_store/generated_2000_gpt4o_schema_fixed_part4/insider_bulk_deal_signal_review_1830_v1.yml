@@ -1,0 +1,54 @@
+id: "insider_bulk_deal_signal_review_1830_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1830"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for last 5 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as action watchlist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Analyze the latest 5 sessions for insider alerts and bulk/block deals, adding technical confirmations via stage snapshots."
+sql_templates:
+  -
+    template_id: "latest_bulk_deals_with_signals"
+    template: "WITH latest_deals AS (SELECT symbol, entity, deal_date, qty, price FROM signals.bulk_block_deals WHERE deal_date > (CURRENT_DATE - INTERVAL '5 days')), latest_signals AS (SELECT symbol, alert_date, insider_score FROM signals.insider_alerts WHERE alert_date > (CURRENT_DATE - INTERVAL '5 days')) SELECT d.symbol, d.entity, d.qty, d.price, s.insider_score FROM latest_deals d JOIN latest_signals s ON d.symbol = s.symbol;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure data covers last 5 trading sessions."
+  - "Verify integrity of alert types and categories."
+synthesis_guidance: "Combine deal summaries with insider context and technical confirmations to generate a ranked action watchlist."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

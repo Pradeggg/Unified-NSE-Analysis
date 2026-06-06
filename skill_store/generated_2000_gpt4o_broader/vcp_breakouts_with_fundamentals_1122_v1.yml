@@ -1,0 +1,56 @@
+id: "vcp_breakouts_with_fundamentals_1122_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1122"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters: "Identify stocks with high VCP score and strong fundamentals from stage snapshots. Prioritize those making new highs."
+  candidates: "Compile a list of symbols from evidence tables passing the filters."
+  tradingview_symbols: "Format symbols for TradingView integration."
+  evidence: "Narrative backed by data from the evidence tables."
+  risks: "Include potential risks inferred from market trends and volatility."
+sql_templates:
+  -
+    template: "SELECT symbol, company_name, price, fundamental_score, enhanced_fund_score, vcp_score, trading_signal, trend_signal FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE AND vcp_score > 75 AND enhanced_fund_score > 80;"
+    description: "Fetch top VCP picks with strong fundamentals for current date."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+synthesis_guidance: "['Integrate data from market.equity_eod for price trend verification.', 'Use scores.stage_snapshots for snapshot-based verification of scores and signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:33"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.fundamental_score is not approved"

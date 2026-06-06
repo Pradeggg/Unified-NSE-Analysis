@@ -1,0 +1,55 @@
+id: "fii_dii_regime_breadth_review_1814_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1814"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for latest EOD: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as action watchlist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    sql_template_1:
+      description: "Get latest FII/DII, regime, breadth, and index data for analysis."
+      query: "WITH latest_trade_date AS (SELECT MAX(trade_date) AS trade_date FROM market.index_eod) SELECT ff.trade_date, ff.fii_net_today, ff.dii_net_today, ff.flow_signal, rh.regime, rh.confidence, md.advances, md.declines, md.ad_signal, ie.index_symbol, ie.close, ie.change_pct, ie.trend_signal FROM signals.fii_dii_flows ff JOIN signals.regime_history rh ON ff.trade_date = rh.trade_date JOIN breadth.market_daily md ON ff.trade_date = md.trade_date JOIN market.index_eod ie ON ff.trade_date = ie.trade_date WHERE ff.trade_date = (SELECT trade_date FROM latest_trade_date) AND ie.index_symbol = 'Nifty 50' LIMIT 1;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Analyze the context derived from the latest FII/DII flows, regime data, market breadth, and index performance. Create a synthesis that can inform a market watchlist, indicating potential risk-on or risk-off conditions."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:04"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

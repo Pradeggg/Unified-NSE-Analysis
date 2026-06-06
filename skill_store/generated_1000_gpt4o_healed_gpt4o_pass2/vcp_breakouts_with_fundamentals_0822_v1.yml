@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:51:58"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: action watchlist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0822_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    query: "WITH recent_prices AS (SELECT symbol, MAX(trade_date) AS last_trade_date FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '5 days' GROUP BY symbol) SELECT e.symbol, e.close, e.volume, s.fundamental_score FROM market.equity_eod AS e JOIN recent_prices AS rp ON e.symbol = rp.symbol AND e.trade_date = rp.last_trade_date JOIN scores.stage_snapshots AS s ON e.symbol = s.symbol WHERE e.close > e.week52_high * 0.9 AND s.fundamental_score IS NOT NULL AND e.volume > 50000 ORDER BY s.fundamental_score DESC;"
+  -
+    query: "SELECT v.symbol, v.company_name, v.vcp_score, v.enhanced_fund_score FROM scores.stage2_vcp_picks AS v WHERE v.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND v.vcp_score > 70;"
+status: "validated"
+synthesis_guidance: "['Focus on liquidity and strong fundamentals as primary filters.', 'Emphasize stocks making recent highs or significant breakout patterns.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "action_watchlist"
+title: "VCP Breakouts With Fundamentals Variant 0822"
+tool_plan_template:
+  approach: "Utilize SQL templates to gather necessary data, focusing on stocks with new highs, VCP breakouts, and strong fundamentals."
+validation_rules:
+  - "Ensure symbols are valid NSE traded entities."
+  - "Verify recent price data alignment with snapshot dates."
+version: 1

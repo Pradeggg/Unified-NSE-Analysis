@@ -1,0 +1,66 @@
+id: "portfolio_lab_paper_trading_review_1664_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Agent Adda Skill Card: Portfolio Lab Paper Trading Review"
+description: "Facilitates the review of paper trading strategies, distinctly separate from real holdings, focusing on entries, exits, stops, targets, and exposure."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for post results: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as debug trace"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "post_results"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Identify paper trading strategies based on signal logs."
+    - "Separate paper trades from real portfolio holdings."
+    - "Review strategy execution using entry, exit rules, and risk parameters."
+    - "Create watchlists post-results to analyze future opportunities."
+    - "Provide a debug trace of strategy performance over the specified timeframe."
+sql_templates:
+  -
+    id: "fetch_paper_trading_signals"
+    template: "SELECT symbol, signal, entry_low, entry_high, stop_loss, target_1, target_2, date_issued FROM signals.signal_log WHERE action_bucket = 'paper_trading'"
+  -
+    id: "fetch_portfolio_holdings"
+    template: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings"
+  -
+    id: "fetch_recent_market_data"
+    template: "SELECT symbol, close, trade_date FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure no paper trading signals are mixed with real portfolio holdings."
+  - "Verify entry and exit rules align with logged signals."
+  - "Validate exposure calculations against specified risk parameters."
+synthesis_guidance: "['Focus on interpreting paper trading results independently from actual holdings.', 'Enable detailed analysis of entry and exit strategies.', 'Maintain all reports and analyses in a debug trace format for auditing.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

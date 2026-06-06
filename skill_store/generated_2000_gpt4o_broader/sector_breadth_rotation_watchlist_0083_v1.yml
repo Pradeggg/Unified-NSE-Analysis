@@ -1,0 +1,59 @@
+id: "sector_breadth_rotation_watchlist_0083_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0083"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: concise table."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for intraday context: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as concise table"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  sql_templates:
+    -
+      template_name: "Get_Improving_Sectors"
+      query: "SELECT sector, COUNT(*) as count_above_50dma FROM breadth.sector_daily WHERE snapshot_date = CURRENT_DATE AND pct_above_50dma > 0.5 GROUP BY sector ORDER BY count_above_50dma DESC;"
+    -
+      template_name: "Get_Candidate_Symbols"
+      query: "SELECT symbol, company_name, sector FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE AND stage = 2 AND change_1d_pct > 0 ORDER BY change_1d_pct DESC;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "status"
+  - "sql_templates"
+  - "python_tool_policy"
+synthesis_guidance: "Generate concise tables ranking sectors by breadth and eligible stocks by stage 2 participation."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

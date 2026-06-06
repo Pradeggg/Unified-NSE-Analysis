@@ -1,0 +1,74 @@
+id: "company_360_research_report_1630_v1"
+version: 1
+status: "review_pending"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1630"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: TradingView export; timeframe: last 5 sessions; response style: debug trace."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "TradingView export for last 5 sessions: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as debug trace"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    sql_templates:
+      -
+        description: "Retrieve the latest price and stage data for a given symbol within the last 5 sessions."
+        template: "SELECT * FROM market.equity_eod WHERE symbol = 'RELIANCE' AND trade_date >= (CURRENT_DATE - INTERVAL '5 days') ORDER BY trade_date DESC;"
+    python_tools:
+      -
+        id: "calculate_trends"
+        language: "python"
+        mode: "read_only"
+        inputs:
+          - "symbol"
+          - "prices"
+        outputs:
+          - "trend_analysis"
+        approved_tables:
+          - "market.equity_eod"
+        code: "def run(context):\n    prices = context['prices']\n    symbol = context['symbol']\n    # Perform trend analysis\n    trend_analysis = analyze_trend(prices)\n    return {'trend_analysis': trend_analysis}"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "{'narrative_approach': \"Provide a debug-trace style narrative explaining each section's evidence sources and transformations applied.\", 'emphasize_context': 'Ensure the linkage between financial metrics, technical analysis, and business narrative.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

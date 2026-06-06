@@ -1,0 +1,63 @@
+id: "portfolio_incremental_add_trim_0997_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0997"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: weekly review; response style: comparison matrix."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Analyze sector-relative performance using a comparison matrix to guide add/trim decisions in the portfolio on a weekly basis."
+sql_templates:
+  -
+    template_name: "latest_portfolio_snapshot"
+    sql: "SELECT h.symbol, h.qty, h.avg_cost, s.sector, s.stage, s.stage_score, s.trading_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+  -
+    template_name: "add_candidates"
+    sql: "SELECT symbol FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY') AND sector IN (SELECT sector FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY AVG(stage_score) DESC LIMIT 3)"
+  -
+    template_name: "trim_candidates"
+    sql: "SELECT symbol FROM portfolio.holdings WHERE symbol NOT IN (SELECT symbol FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage IN ('STAGE_2', 'STAGE_3'))"
+python_tools:
+  - "required_function"
+  - "language"
+  - "mode"
+  - "blocked_capabilities"
+  - "required_fields"
+  - "approved_tables"
+  - "code"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "output_sections"
+synthesis_guidance: "Create recommendations for incremental add/trim based on sector-relative performance and signals, ensuring to highlight top candidates and sectors with significant risk or opportunity."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:51:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

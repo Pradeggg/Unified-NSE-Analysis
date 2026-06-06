@@ -1,0 +1,75 @@
+id: "report_link_data_validation_0774_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Agent Adda Report Link Data Validation"
+description: "A skill card to validate enhanced report links, stock data presence, and watchlist creation pre-market."
+input_patterns:
+  - "check report links not working"
+  - "ensure underlying stock html files have data"
+  - "QA validation of generated report links and missing data"
+  - "pre-market watchlist: validate report links"
+  - "QA checklist for generated report links and data validation"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "pre_market"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    step: "1"
+    action: "Gather report generation metadata and analyze pre-market watchlist"
+    sql_template:
+      -
+        query: "SELECT run_id, run_ts, universe_size, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '1 day';"
+  -
+    step: "2"
+    action: "Check for missing or broken links"
+    python_tools:
+      -
+        id: "verify_links"
+        language: "python"
+        mode: "read_only"
+        inputs:
+          links_field: "report.enhanced_runs.notes"
+        outputs:
+          broken_links: "list"
+        approved_tables:
+          - "report.enhanced_runs"
+        code: "def run(context):\n    links = extract_links(context['inputs']['links_field'])\n    return {'broken_links': check_broken_links(links)}"
+  -
+    step: "3"
+    action: "Validate filtered stock data"
+    sql_template:
+      -
+        query: "SELECT symbol, score, current_price FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '1 day') AND score > 0 ORDER BY score DESC LIMIT 10;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure report links are accessible and data is not missing."
+  - "Cross-verify stock data exists and has relevant scores."
+synthesis_guidance: "Provide a QA validation checklist focused on report metadata accuracy, stock data completeness, and link integrity for pre-market preparation."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

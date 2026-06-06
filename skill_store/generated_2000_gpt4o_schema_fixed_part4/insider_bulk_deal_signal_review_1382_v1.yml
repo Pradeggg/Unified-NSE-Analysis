@@ -1,0 +1,62 @@
+id: "insider_bulk_deal_signal_review_1382_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1382"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: intraday context; response style: exceptions and gaps first."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for intraday context: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as exceptions and gaps first"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    steps:
+      -
+        task: "Identify insider and bulk/block deal activity over the last three months."
+        sql_template: "WITH recent_activity AS (SELECT symbol, MAX(alert_date) AS latest_alert_date FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY symbol) SELECT a.symbol, a.alert_date, a.alert_type, a.qty, a.value_cr, a.insider_score FROM signals.insider_alerts a JOIN recent_activity r ON a.symbol = r.symbol AND a.alert_date = r.latest_alert_date WHERE a.alert_type = 'BUY' LIMIT 50;"
+      -
+        task: "Fetch stage and technical confirmations for shortlisted symbols from the latest data."
+        sql_template: "SELECT s.symbol, s.stage, s.technical_score, s.trading_signal FROM scores.stage_snapshots s WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.symbol IN (SELECT symbol FROM recent_activity) ORDER BY s.technical_score DESC LIMIT 50;"
+sql_templates:
+  -
+    description: "Retrieve recent insider alerts over the past 3 months."
+    template: "SELECT symbol, alert_date, alert_type, qty, value_cr FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    description: "Retrieve latest stage snapshots for given symbols."
+    template: "SELECT symbol, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol IN (%s);"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "{'global': ['Ensure the SQL queries are read-only.', 'Verify symbols exist across queried tables.', 'Limit result set sizes to prevent overload.'], 'field_level': {'symbol': ['Must match a canonical NSE symbol format.']}}"
+synthesis_guidance: "Generate alerts detailing notable insider and bulk deal activities with accompanying technical confirmations given an intraday context. Focus first on exceptions and data gaps to highlight irregular activities in the market."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,60 @@
+id: "market_3m_rotation_swing_1667_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment"
+description: "Analyzes 3-month market regime shifts, sector leadership, and recommends swing candidates."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "swing_trading"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    steps:
+      - "Query market.index_eod for 3-month index change."
+      - "Analyze sector leadership changes from scores.stage_snapshots."
+      - "Identify swing candidates using scores.stage2_vcp_picks."
+sql_templates:
+  index_returns:
+    template: "SELECT index_symbol, SUM(change_pct) as total_return FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol;"
+    description: "Calculate total return for each index over the last 3 months."
+  stage_distribution_change:
+    template: "SELECT sector, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector;"
+    description: "Count of stocks in Stage 2 per sector from the latest snapshot."
+  leading_sectors:
+    template: "SELECT sector, AVG(relative_strength) as avg_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY avg_strength DESC LIMIT 5;"
+    description: "Top 5 sectors by average relative strength from latest snapshot."
+  primary_candidates:
+    template: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 10;"
+    description: "Top 10 Stage 2 VCP swing candidates."
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+validation_rules:
+  - "{'check': ['Ensure all tables and columns are approved.', 'Check SQL templates are read-only SELECT queries.']}"
+synthesis_guidance: "{'steps': ['Summarize index returns over 3 months.', 'Highlight sector changes and leaders.', 'Identify and list top swing candidates.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:54"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.total_return is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "market.index_eod.total_return is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

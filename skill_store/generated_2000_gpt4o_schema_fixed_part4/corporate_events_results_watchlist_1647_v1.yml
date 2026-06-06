@@ -1,0 +1,63 @@
+id: "corporate_events_results_watchlist_1647_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1647"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for last 3 months: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as debug trace"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "To generate the watchlist, we will gather corporate events and results data from the last 3 months, perform sector-relative comparisons, and provide a debug trace of actions."
+sql_templates:
+  -
+    name: "get_recent_corporate_events"
+    query: "WITH latest_events AS (SELECT symbol, event_type, event_date, purpose_raw, detail, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '3 months') SELECT * FROM latest_events WHERE event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM') LIMIT 100;"
+    description: "Retrieve corporate events from the last 3 months for comparison."
+  -
+    name: "get_results_analysis"
+    query: "SELECT DISTINCT ON (symbol) symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct, verdict FROM scores.results_analysis WHERE period_end >= CURRENT_DATE - INTERVAL '3 months' ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC LIMIT 100;"
+    description: "Analyze recent results for growth and verdict classification."
+  -
+    name: "get_stage_snapshots"
+    query: "SELECT symbol, company_name, sector, stage, stage_score, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 100;"
+    description: "Fetch latest stage and technical scores for active monitoring."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all selected events are within the last 3 months."
+  - "Check for sector-relative comparison and inclusion of debug traces."
+  - "Validate that only 'BUY' or 'STRONG_BUY' signals are flagged."
+synthesis_guidance: "Integrate SQL result sets to form a comprehensive event-driven stock watchlist with debug traces for sector-relative comparison over the last 3 months."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:35"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

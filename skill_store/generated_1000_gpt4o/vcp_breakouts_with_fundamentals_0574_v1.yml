@@ -1,0 +1,62 @@
+id: "vcp_breakouts_with_fundamentals_0574_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0574"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "fetch_quality_breakouts"
+    query: "WITH enhanced_candidates AS (SELECT symbol, company_name, high, volume, market_cap_cr, fundamental_score FROM scores.stage_snapshots WHERE fundamental_score > 70), breakout_stocks AS (SELECT e.trade_date, e.symbol, e.high, e.volume FROM market.equity_eod e WHERE e.high >= e.week52_high) SELECT b.symbol, e.company_name, b.high, b.volume, e.market_cap_cr, e.fundamental_score FROM breakout_stocks b JOIN enhanced_candidates e ON b.symbol = e.symbol"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:49:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.company_name is not approved"
+  - "market.equity_eod.fundamental_score is not approved"
+  - "unknown table b.high"
+  - "unknown table b.symbol"
+  - "unknown table b.volume"
+  - "unknown table e.company_name"
+  - "unknown table e.fundamental_score"
+  - "unknown table e.high"
+  - "unknown table e.market_cap_cr"
+  - "unknown table e.symbol"
+  - "unknown table e.trade_date"
+  - "unknown table e.volume"
+  - "unknown table e.week52_high"

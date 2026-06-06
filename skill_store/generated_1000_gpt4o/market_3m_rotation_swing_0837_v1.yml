@@ -1,0 +1,60 @@
+id: "market_3m_rotation_swing_0837_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0837"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for last 20 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  task: "Analyze market regime and identify swing candidates within sector-relative framework."
+  steps:
+    - "Evaluate overall market regime over the last 3 months."
+    - "Identify leading sectors by relative strength over the last 20 sessions."
+    - "Select Stage 2 swing candidates from leading sectors."
+    - "Compile action watchlist with risks."
+sql_templates:
+  market_analysis:
+    template: "WITH sector_performance AS (SELECT sector, AVG(relative_strength) AS avg_relative_strength FROM scores.stage_snapshots WHERE snapshot_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 20 DAY) AND CURDATE() GROUP BY sector ORDER BY avg_relative_strength DESC LIMIT 5) SELECT m.symbol, m.close, s.stage FROM market.equity_eod m JOIN scores.stage_snapshots s ON m.symbol = s.symbol WHERE s.stage = 2 AND m.trade_date = CURDATE() AND s.sector IN (SELECT sector FROM sector_performance);"
+    purpose: "Identify top sectors and Stage 2 stock candidates on current date."
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "field_presence"
+  - "field_type"
+synthesis_guidance: "{'focus': 'Narrative synthesis should emphasize market regime insights and actionable swing trading opportunities, covering sector strengths and highlighting potential risks.', 'style': 'Concise and to the point, aiming for actionable intelligence.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:52:04"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table m.close"
+  - "unknown table m.symbol"
+  - "unknown table m.trade_date"
+  - "unknown table s.sector"
+  - "unknown table s.stage"
+  - "unknown table s.symbol"

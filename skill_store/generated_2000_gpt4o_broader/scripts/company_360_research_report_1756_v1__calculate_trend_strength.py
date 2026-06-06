@@ -1,0 +1,1 @@
+def run(context): return max(context['close']) / min(context['close']) - 1

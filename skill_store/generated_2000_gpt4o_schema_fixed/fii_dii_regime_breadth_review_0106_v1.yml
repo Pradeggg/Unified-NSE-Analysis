@@ -1,0 +1,79 @@
+id: "fii_dii_regime_breadth_review_0106_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0106"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: today; response style: narrative plus evidence."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for today: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as narrative plus evidence"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "today"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  regime: "{select_date_max: use 'trade_date = (SELECT MAX(trade_date) FROM signals.regime_history)'; join 'signals.regime_history' w/ 'signals.fii_dii_flows'; filter 'regime' for state}"
+  flow_context: "{select_date_max: use 'trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows)'; join 'signals.fii_dii_flows' w/ 'breadth.market_daily'; filter 'flow_signal'}"
+  breadth_context: "{select_date_max: use 'trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily)'; join 'breadth.market_daily' w/ 'market.index_eod'; summarize 'advances'/'declines'}"
+  index_confirmation: "{select_date_max: use 'trade_date = (SELECT MAX(trade_date) FROM market.index_eod)'; filter 'index_symbol'; summarize 'close', 'change_pct'}"
+  risk_flags: "{select_date_max combined w/ 'regime' views; introduce broader risk context}"
+sql_templates:
+  -
+    query_name: "LatestMarketRegime"
+    template: "WITH latest_regime_date AS (SELECT MAX(trade_date) AS trade_date FROM signals.regime_history) SELECT trade_date, regime FROM signals.regime_history WHERE trade_date = (SELECT trade_date FROM latest_regime_date);"
+  -
+    query_name: "FiiDiiFlowContext"
+    template: "WITH latest_flow_date AS (SELECT MAX(trade_date) AS trade_date FROM signals.fii_dii_flows) SELECT trade_date, flow_signal FROM signals.fii_dii_flows WHERE trade_date = (SELECT trade_date FROM latest_flow_date);"
+  -
+    query_name: "LatestBreadthContext"
+    template: "WITH latest_breadth_date AS (SELECT MAX(trade_date) AS trade_date FROM breadth.market_daily) SELECT trade_date, advances, declines FROM breadth.market_daily WHERE trade_date = (SELECT trade_date FROM latest_breadth_date);"
+  -
+    query_name: "IndexConfirmation"
+    template: "WITH latest_index_date AS (SELECT MAX(trade_date) AS trade_date FROM market.index_eod) SELECT trade_date, close, change_pct FROM market.index_eod WHERE trade_date = (SELECT trade_date FROM latest_index_date) AND index_symbol = 'NIFTY 50';"
+python_tools:
+  -
+    id: "calculateAverageTrend"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "flow_data"
+    outputs:
+      - "average_trend"
+    approved_tables:
+      - "signals.fii_dii_flows"
+    code: "def run(context): return {'average_trend': context['flow_data']['fii_net_5d'].mean()}"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure 'SELECT' queries are only from approved tables."
+  - "Check join conditions against _join_rules."
+  - "Verify column selections against column_details."
+synthesis_guidance: "[\"Narrative should integrate 'regime', 'flow_context', 'breadth_context', 'index_confirmation'.\", \"Provide context for any 'risk_flags' raised in synthesis.\", 'Draw on evidence_gaps if schema information is missing.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculateAverageTrend: execution failed: KeyError: 'flow_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculateAverageTrend: execution failed: KeyError: 'flow_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,52 @@
+id: "market_3m_rotation_swing_1863_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1863"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze market trends and generate a watchlist of swing candidates based on the last three months of data. Focus on sector leadership and identifying Stage 2 opportunities."
+sql_templates:
+  -
+    template: "WITH latest_index AS (SELECT index_symbol, MAX(trade_date) AS trade_date FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol), index_data AS (SELECT i.trade_date, i.index_symbol, i.change_pct FROM market.index_eod i JOIN latest_index li ON i.trade_date = li.trade_date AND i.index_symbol = li.index_symbol), latest_stage AS (SELECT symbol, MAX(snapshot_date) AS snapshot_date FROM scores.stage_snapshots WHERE stage = 'STAGE_2' GROUP BY symbol), stage_data AS (SELECT s.symbol, s.stage, s.trading_signal FROM scores.stage_snapshots s JOIN latest_stage ls ON s.snapshot_date = ls.snapshot_date AND s.symbol = ls.symbol WHERE s.trading_signal IN ('BUY', 'STRONG_BUY')) SELECT * FROM index_data, stage_data WHERE index_data.index_symbol = stage_data.symbol LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure outputs conform to the contract structure."
+  - "Verify data freshness within three months timeframe."
+synthesis_guidance: "['Synthesize insights into a coherent action watchlist.', 'Focus on highlighting emerging sectors and swing trade opportunities.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:03"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

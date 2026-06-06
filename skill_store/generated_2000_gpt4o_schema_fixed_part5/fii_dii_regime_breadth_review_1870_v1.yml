@@ -1,0 +1,64 @@
+id: "fii_dii_regime_breadth_review_1870_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1870"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for post results: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as action watchlist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    inputs:
+      tradingView_export:
+        description: "Boolean to determine if this is a request to prepare data for TradingView export."
+      action_watchlist:
+        description: "Boolean to determine if the output should be formatted as an action watchlist."
+    outputs:
+      regime: "Text describing the current market regime."
+      flow_context: "Text describing the FII/DII flow trends."
+      breadth_context: "Text summarizing market breadth."
+      index_confirmation: "Text confirming index movements."
+      risk_flags: "List of potential risk flags in the market."
+sql_templates:
+  template_1:
+    description: "Fetch latest market regime, FII/DII flows, breadth data, and index confirmation."
+    query: "WITH latest_trading_date AS (SELECT MAX(trade_date) AS trade_date FROM market.index_eod) SELECT rh.regime, rh.confidence, flows.fii_net_today, flows.dii_net_today, flows.flow_signal, md.advances, md.declines, md.ad_signal, idx.close, idx.change_pct, idx.trend_signal FROM signals.fii_dii_flows flows JOIN signals.regime_history rh ON flows.trade_date = rh.trade_date JOIN breadth.market_daily md ON flows.trade_date = md.trade_date JOIN market.index_eod idx ON flows.trade_date = idx.trade_date WHERE idx.trade_date = (SELECT trade_date FROM latest_trading_date) AND idx.index_symbol = 'Nifty 50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure regime output aligns with detected flow and breadth signals."
+  - "Flow context must accurately reflect net FII/DII status."
+synthesis_guidance: "['Synthesize all inputs to provide actionable insights in a format suitable for TradingView export and action watchlist.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:46"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

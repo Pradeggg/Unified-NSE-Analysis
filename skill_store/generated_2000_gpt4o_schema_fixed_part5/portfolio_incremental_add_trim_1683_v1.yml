@@ -1,0 +1,52 @@
+id: "portfolio_incremental_add_trim_1683_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1683"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: debug trace."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for intraday context: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh-follow-up"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  - "Fetch latest portfolio holdings and stage snapshots."
+  - "Identify add candidates based on current stage and trading signals."
+  - "Evaluate trim candidates considering recent price changes and risk flags."
+sql_templates:
+  latest_stages: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  add_candidates: "SELECT h.symbol, s.sector, s.trading_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.trading_signal IN ('BUY', 'STRONG_BUY') AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 10;"
+  trim_candidates: "SELECT h.symbol, s.sector, s.change_1w_pct FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.change_1w_pct < -5 AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Verify symbols in add_candidates and trim_candidates exist in initial portfolio holdings."
+synthesis_guidance: "['When interpreting results, prioritize BUY and STRONG_BUY signals for additions.', 'High negative weekly changes could indicate potential trim actions.', 'Align sector exposure with current market trends and signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:50"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

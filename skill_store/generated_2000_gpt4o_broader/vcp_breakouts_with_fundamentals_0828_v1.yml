@@ -1,0 +1,54 @@
+id: "vcp_breakouts_with_fundamentals_0828_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0828"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    template: "WITH recent_vcp AS (SELECT snapshot_date, symbol, company_name, sector, price, live_price, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 5 DAY) AND vcp_score > 70 AND enhanced_fund_score > 75) SELECT e.symbol, e.trade_date, e.close, s.company_name, s.sector, s.price, s.live_price, s.vcp_score, s.enhanced_fund_score FROM market.equity_eod e JOIN recent_vcp s ON e.symbol = s.symbol WHERE e.trade_date >= DATE_SUB(CURDATE(), INTERVAL 5 DAY);"
+    type: "SELECT"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates, if any, must be read-only SELECT/WITH templates."
+  - "Use evidence_required.tables exactly; do not use primary_tables or required_tables."
+synthesis_guidance: "Provide a list of stocks that have created new highs or breakout based on VCP patterns with strong fundamentals. Contextualize this within the last 5 trading sessions and align to the Indian market. Ensure a focus on actionability for traders using this as a watchlist."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

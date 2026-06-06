@@ -1,0 +1,64 @@
+id: "sector_breadth_rotation_watchlist_1231_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1231"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for last 20 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as ranked candidates"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    sector_analysis:
+      task: "Analyze and rank sectors by breadth and stage 2 participation."
+      tables:
+        - "breadth.sector_daily"
+        - "breadth.ma_pct_above"
+        - "scores.stage_snapshots"
+    candidate_selection:
+      task: "Select and rank candidate stocks for TradingView watchlist."
+      tables:
+        - "market.equity_eod"
+        - "scores.stage_snapshots"
+sql_templates:
+  sector_ranking: "SELECT d.sector, AVG(d.pct_above_50dma) AS avg_breadth, AVG(m.stage2_pct) AS stage2_participation FROM breadth.sector_daily AS d JOIN breadth.ma_pct_above AS m ON d.snapshot_date = m.snapshot_date WHERE d.snapshot_date > CURRENT_DATE - INTERVAL '20 days' GROUP BY d.sector ORDER BY avg_breadth DESC, stage2_participation DESC LIMIT 5;"
+  candidate_stock_selection: "WITH recent_stocks AS (SELECT s.symbol, s.relative_strength, e.close FROM scores.stage_snapshots AS s JOIN market.equity_eod AS e ON s.symbol = e.symbol WHERE s.stage = 'STAGE_2' AND e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND s.trading_signal IN ('BUY', 'STRONG_BUY')) SELECT symbol, close, relative_strength FROM recent_stocks ORDER BY relative_strength DESC, close DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all sectors and stocks must have valid data."
+  - "Ranked sectors must not exceed five entries."
+synthesis_guidance: "['Integrate sector ranks with candidate stock selection for final insights.', 'Focus on improving sectors and promising stocks for TradingView inclusion.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:03"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

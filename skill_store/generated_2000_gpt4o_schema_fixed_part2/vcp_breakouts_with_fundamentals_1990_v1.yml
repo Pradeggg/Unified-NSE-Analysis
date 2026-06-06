@@ -1,0 +1,52 @@
+id: "vcp_breakouts_with_fundamentals_1990_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1990"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Identify VCP breakout candidates with strong fundamentals using approved Indian market data."
+sql_templates:
+  -
+    template_name: "fetch_vcp_candidates"
+    template: "SELECT vcp.symbol, vcp.company_name, vcp.price, vcp.vcp_score, vcp.enhanced_fund_score, eod.high, eod.volume FROM scores.stage2_vcp_picks vcp JOIN market.equity_eod eod ON vcp.symbol = eod.symbol WHERE eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND vcp.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp.vcp_score DESC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure latest data filters are correctly applied using approved global rules."
+  - "Limit result set to sensible number for TradingView export."
+synthesis_guidance: "['Synthesize data into a comparison matrix for easy TradingView export.', 'Focus on top VCP scores and ensure candidates have strong fundamentals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:30"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

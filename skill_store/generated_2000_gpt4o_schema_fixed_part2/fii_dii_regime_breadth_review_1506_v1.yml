@@ -1,0 +1,87 @@
+id: "fii_dii_regime_breadth_review_1506_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1506"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: today; response style: research-only summary."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for today: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as research-only summary"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "today"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  inputs:
+
+  steps:
+    -
+      object_name: "today_regime_query"
+      description: "Get today's market regime."
+      tool_type: "sql"
+      output_key: "today_regime"
+    -
+      object_name: "today_flow_query"
+      description: "Get FII/DII flows for today."
+      tool_type: "sql"
+      output_key: "today_flow"
+    -
+      object_name: "today_breadth_query"
+      description: "Get market breadth for today."
+      tool_type: "sql"
+      output_key: "today_breadth"
+    -
+      object_name: "today_index_query"
+      description: "Get index confirmation for today."
+      tool_type: "sql"
+      output_key: "today_index"
+sql_templates:
+  today_regime_query:
+    template: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history);"
+    rules:
+
+    description: "Fetch the most recent market regime."
+  today_flow_query:
+    template: "SELECT trade_date, fii_net_today, dii_net_today, flow_signal FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+    rules:
+
+    description: "Fetch today's FII/DII net flows and signal."
+  today_breadth_query:
+    template: "SELECT trade_date, advances, declines, market_sentiment FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+    rules:
+
+    description: "Fetch today's market breadth context."
+  today_index_query:
+    template: "SELECT trade_date, index_symbol, close, change_pct WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND index_symbol = 'Nifty 50';"
+    rules:
+
+    description: "Fetch today's Nifty 50 index performance."
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'rules': ['Summarize the data by linking FII/DII flow trends with the broader regime and breadth.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:55"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.market is not approved"

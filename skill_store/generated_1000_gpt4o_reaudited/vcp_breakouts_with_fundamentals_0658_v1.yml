@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:50:28"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: quarter to date; response style: debug trace."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0658_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select breakout stocks with strong fundamentals and VCP scores."
+    select_template: "SELECT e.symbol, e.trade_date, e.high, e.volume, v.vcp_score, s.fundamental_score FROM market.equity_eod e JOIN scores.stage2_vcp_picks v ON e.symbol = v.symbol JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.high > e.week52_high * 0.95 AND v.vcp_score > 50 AND s.fundamental_score > 70 AND e.trade_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 90 DAY) AND CURDATE()"
+status: "validated"
+synthesis_guidance: "{'points': 'Focus on stocks making new highs with strong VCP patterns and fundamentals, suitable for quarter-to-date analysis.'}"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "debug_trace"
+title: "VCP Breakouts With Fundamentals Variant 0658"
+tool_plan_template:
+  evidence_gaps:
+
+  python_tools:
+
+validation_rules:
+  - "Ensure all selected stocks have a VCP score greater than 50."
+  - "Fundamental scores must exceed 70."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

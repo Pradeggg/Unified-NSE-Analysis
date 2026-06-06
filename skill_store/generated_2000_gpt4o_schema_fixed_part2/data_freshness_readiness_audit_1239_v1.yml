@@ -1,0 +1,68 @@
+id: "data_freshness_readiness_audit_1239_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1239"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for last 20 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as ranked candidates"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  purpose: "Audit the data freshness for each evidence source."
+  strategy: "Use approved schema to gather the latest data points and assess their currency against expected freshness thresholds."
+  steps:
+    - "1. Evaluate the latest EOD market data from 'market.equity_eod'."
+    - "2. Check the most recent index records from 'market.index_eod'."
+    - "3. Validate the current stage snapshots from 'scores.stage_snapshots'."
+    - "4. Review the latest market sentiment from 'breadth.market_daily'."
+    - "5. Analyze moving averages data from 'breadth.ma_pct_above'."
+    - "6. Inspect the run metadata for report timings from 'report.enhanced_runs'."
+sql_templates:
+  - "SELECT trade_date, index_symbol FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) LIMIT 10;"
+  - "SELECT trade_date, symbol FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND series = 'EQ' LIMIT 10;"
+  - "SELECT snapshot_date, symbol FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 10;"
+  - "SELECT trade_date FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily) LIMIT 10;"
+  - "SELECT snapshot_date FROM breadth.ma_pct_above WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.ma_pct_above) LIMIT 10;"
+  - "SELECT run_ts FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all data freshness thresholds are met according to standard operational guidelines."
+  - "List any sources with missing data or incomplete historical context."
+  - "Identify any gaps which might block accurate reporting or analysis."
+synthesis_guidance: "['Prioritize findings on freshness in descending order of last updated date.', 'Emphasize any high-risk areas impacting data availability.', 'Recommend actions to address any loader issues or data gaps for sustainability.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:13"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

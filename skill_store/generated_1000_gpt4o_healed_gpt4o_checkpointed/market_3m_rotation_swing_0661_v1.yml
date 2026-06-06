@@ -1,0 +1,60 @@
+created_at: "2026-06-06T12:50:33"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: post results; response style: debug trace."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0661_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Calculate index performance over the last 3 months."
+    sql: "SELECT index_symbol, AVG(change_pct) AS avg_change_pct FROM market.index_eod WHERE trade_date >= (SELECT MAX(trade_date) - INTERVAL 3 MONTH FROM market.index_eod) GROUP BY index_symbol"
+    template_name: "index_performance_last_3_months"
+  -
+    description: "Identify leading sectors in stage 2 over the last 3 months."
+    sql: "SELECT sector, COUNT(*) AS sector_count FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= (SELECT MAX(snapshot_date) - INTERVAL 3 MONTH FROM scores.stage_snapshots) GROUP BY sector ORDER BY sector_count DESC"
+    template_name: "sector_leadership_stage_2"
+status: "validated"
+synthesis_guidance: "Compile insights from SQL data for the last 3 months to inform short-term swing trading opportunities."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "post_results"
+  - "debug_trace"
+title: "3M Market Rotation Swing Assessment Variant 0661"
+tool_plan_template: "Analyze recent market rotation and identify stage 2 leadership using approved tables."
+validation_errors:
+
+validation_rules:
+  - "Ensure index returns are computed correctly."
+  - "Check for sector leadership quantities being meaningful."
+version: 1
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"

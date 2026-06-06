@@ -1,0 +1,67 @@
+id: "sector_breadth_rotation_watchlist_0447_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0447"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for last 3 months: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as portfolio-aware output"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  sector_ranks: "Use sector_daily and ma_pct_above to rank sectors by pct_above_50dma and change_5d."
+  improving_sectors: "Identify sectors with improving breadth_signal and divergence_alert from sector_daily."
+  candidate_symbols: "Select symbols from stage_snapshots with stage=2 and high relative_strength."
+  tradingview_symbols: "Filter candidate_symbols for high trading_signal."
+  evidence: "Review evidence from all tables focusing on 3-month trends."
+sql_templates:
+  -
+    title: "Sector Ranking"
+    description: "SQL to rank sectors by 50DMA participation."
+    template: "SELECT sector, AVG(pct_above_50dma) as avg_pct_above_50dma FROM breadth.sector_daily WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_pct_above_50dma DESC;"
+  -
+    title: "Identifying Improving Sectors"
+    description: "List sectors with improving breadth and divergence signals."
+    template: "SELECT sector FROM breadth.sector_daily WHERE breadth_signal = 'improving' AND divergence_alert = 'positive' AND snapshot_date > CURRENT_DATE - INTERVAL '3 months';"
+  -
+    title: "Stage 2 Candidate Symbols"
+    description: "Select symbols in Stage 2 with high relative strength."
+    template: "SELECT symbol, relative_strength FROM scores.stage_snapshots WHERE stage = 2 AND relative_strength > (SELECT AVG(relative_strength) FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months') AND snapshot_date > CURRENT_DATE - INTERVAL '3 months';"
+  -
+    title: "TradingView Symbols"
+    description: "Filter symbols for trading signals."
+    template: "SELECT symbol FROM scores.stage_snapshots WHERE symbol IN (SELECT symbol FROM scores.stage_snapshots WHERE stage = 2 AND relative_strength > (SELECT AVG(relative_strength) FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months')) AND trading_signal = 'strong_buy' AND snapshot_date > CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure breadth signal and divergence alerts improve consistently."
+  - "Validate that the candidate symbols are sector-aligned with improving sectors."
+synthesis_guidance: "Focus on sectors showing strong participation above key moving averages and align with Stage 2 stock participation. Prioritize symbols that align with improving sector trends."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:25"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.sector_daily.avg_pct_above_50dma is not approved"

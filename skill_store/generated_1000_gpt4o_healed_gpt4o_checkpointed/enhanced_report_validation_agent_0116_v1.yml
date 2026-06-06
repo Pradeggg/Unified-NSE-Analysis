@@ -1,0 +1,48 @@
+created_at: "2026-06-06T12:42:00"
+created_by: "llm_generated"
+description: "Agent Adda skill card focused on validating enhanced report data for the latest Indian market EOD analysis."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "enhanced_report_validation_agent_0116_v1"
+input_patterns:
+  - "check report links"
+  - "review stock data in reports"
+  - "ensure report data is fresh"
+  - "find missing report entries"
+output_contract:
+  - "findings"
+  - "verification_summary"
+  - "evidence_of_broken_links"
+  - "suggested_remediation"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Retrieve metadata for the latest report run."
+    template: "SELECT run_id, run_ts, analysis_date, stocks_analyzed FROM report.enhanced_runs WHERE analysis_date = (SELECT MAX(analysis_date) FROM report.enhanced_runs);"
+  -
+    description: "Fetch stock information for the latest report run."
+    template: "SELECT symbol, current_price, volume FROM report.enhanced_filtered_stocks WHERE run_id = (SELECT run_id FROM report.enhanced_runs ORDER BY analysis_date DESC LIMIT 1);"
+status: "validated"
+synthesis_guidance: "Compile findings into a narrative assessing the report's data validity focused on the latest market conditions."
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "Indian_market"
+title: "Enhanced Report Data Validation"
+tool_plan_template: "Validate enhanced report data integrity with focus on latest EOD analysis."
+validation_rules:
+  - "Ensure analysis_date is the latest available."
+  - "Verify all listed stocks have current prices."
+  - "Check for any discrepancies in volume data."
+version: 1

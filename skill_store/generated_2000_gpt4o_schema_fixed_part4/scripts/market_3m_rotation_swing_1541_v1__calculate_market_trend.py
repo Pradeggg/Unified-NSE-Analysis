@@ -1,0 +1,1 @@
+def run(index_returns): return {

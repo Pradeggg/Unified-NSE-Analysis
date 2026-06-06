@@ -1,0 +1,56 @@
+id: "sector_breadth_rotation_watchlist_1679_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1679"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: pre market; response style: debug trace."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for pre market: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as debug trace"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "pre_market"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Use latest sector and stock data to build a ranked watchlist based on sector breadth and Stage 2 participation."
+sql_templates:
+  -
+    template: "SELECT s.sector, s.breadth_signal, s.change_5d, m.stage2_pct FROM breadth.sector_daily s JOIN breadth.ma_pct_above m ON s.snapshot_date = m.snapshot_date WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) ORDER BY m.stage2_pct DESC LIMIT 5;"
+    description: "Rank sectors by Stage 2 participation from latest date."
+  -
+    template: "SELECT st.symbol, st.company_name, st.stage, st.relative_strength FROM scores.stage_snapshots st JOIN market.equity_eod e ON st.symbol = e.symbol AND st.snapshot_date = e.trade_date WHERE st.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND st.stage = 'STAGE_2' AND st.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 5;"
+    description: "Select stocks from sectors with improving breadth and Stage 2 designation."
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sectors are correctly ranked by Stage 2 participation."
+  - "Verify stock symbols have a Stage 2 classification and buy signal."
+synthesis_guidance: "['Highlight sectors with improving trends and strongest Stage 2 participation.', 'Focus on stocks within leading sectors meeting buy-signal criteria.', 'Provide traceable SQL evidence to support sector and stock selections.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:46"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,68 @@
+created_at: "2026-06-06T12:44:21"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: today; response style: exceptions and gaps first."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0308_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for today: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    outdated_reports = []\n    stocks_with_missing_data = []\n    # Example pseudo-code structure for validation\n    # for run in context.enhanced_runs:\n    #     if run.run_ts <= today:\n    #         outdated_reports.append(run.run_id)\n    # for stock in context.enhanced_filtered_stocks:\n    #     if stock.current_price is None:\n    #         stocks_with_missing_data.append(stock.symbol)\n    return outdated_reports, stocks_with_missing_data"
+    id: "report_data_validator"
+    inputs:
+      - "run_id"
+      - "symbol"
+      - "current_price"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "outdated_reports"
+      - "stocks_with_missing_data"
+sql_templates:
+  check_data_gaps: "SELECT symbol, current_price FROM report.enhanced_filtered_stocks WHERE current_price IS NULL;"
+  verify_runs: "SELECT run_id, run_ts FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE;"
+status: "test_failed"
+synthesis_guidance: "Provide a concise summary of identified issues with recommended remediation steps. Highlight data gaps prominently."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "today"
+  - "exceptions_and_gaps_first"
+title: "Enhanced Report Data Validation Variant 0308"
+tool_plan_template:
+  step_1: "Identify missing or broken report links by cross-referencing table `report.enhanced_runs`."
+  step_2: "Validate stock data per `report.enhanced_filtered_stocks` and report missing entries."
+validation_rules:
+  - "Validate all report links for accessibility."
+  - "Ensure all required data fields are populated."
+  - "Identify any untracked or additional gaps."
+version: 1
+validation_errors:
+  - "report_data_validator: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "report_data_validator: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

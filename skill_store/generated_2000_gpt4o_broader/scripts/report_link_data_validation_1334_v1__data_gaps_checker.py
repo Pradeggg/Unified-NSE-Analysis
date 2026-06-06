@@ -1,0 +1,1 @@
+def run(context): return {'identified_gaps': context['table_name'] == 'report.enhanced_filtered_stocks'}

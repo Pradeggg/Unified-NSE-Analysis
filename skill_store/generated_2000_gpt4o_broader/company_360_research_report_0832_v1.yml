@@ -1,0 +1,73 @@
+id: "company_360_research_report_0832_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0832"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: deep institutional review; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "deep institutional review for last 20 sessions: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as action watchlist"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "deep_institutional_review"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template: "Deep analysis with focus on institutional insights for last 20 sessions, extracting financial metrics and technical indicators."
+sql_templates:
+  -
+    description: "Get latest company snapshot."
+    template: "SELECT symbol, company_name, market_cap_cat, price, rsi, trend_signal, fundamental_score FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' ORDER BY snapshot_date DESC LIMIT 1;"
+    is_read_only: true
+  -
+    description: "Retrieve financial trends from quarterly results."
+    template: "SELECT period_end, revenue, pat, eps FROM scores.quarterly_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 5;"
+    is_read_only: true
+  -
+    description: "Extract key technical indicators for the last 20 sessions."
+    template: "SELECT trade_date, close, volume, rsi FROM market.equity_eod WHERE symbol = 'RELIANCE' ORDER BY trade_date DESC LIMIT 20;"
+    is_read_only: true
+python_tools:
+  -
+    id: "latest_insights_analysis_01"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "date_range"
+    outputs:
+      - "insights_summary"
+    approved_tables:
+      - "scores.results_analysis"
+    code: "def run(context):\n    # Mocked analysis tool - ensure read-only context\n    symbol = context['symbol']\n    date_range = context['date_range']\n    # Perform insights analysis\n    return {'insights_summary': 'Insights extracted based on parameters.'}"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure evidence is properly aligned with overview, financials, and technical context."
+  - "Validate the temporal correctness of financial data."
+synthesis_guidance: "{'style': 'Provide insights in a clear and actionable format suitable for institutional investors aiming for a long-term view.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:30"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.rsi is not approved"

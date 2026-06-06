@@ -1,0 +1,56 @@
+id: "portfolio_lab_paper_trading_review_1440_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1440"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: TradingView export; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "TradingView export for last 20 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review the paper trading strategies using the evidence from the last 20 trading sessions to generate insights."
+sql_templates:
+  -
+    sql: "SELECT symbol, avg_cost, qty FROM portfolio.holdings WHERE buy_date > CURRENT_DATE - INTERVAL '30 days'"
+    description: "Retrieve current holdings bought in the last 30 days."
+  -
+    sql: "SELECT symbol, date_issued, signal, setup_class, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued > CURRENT_DATE - INTERVAL '20 days'"
+    description: "Obtain trading signals issued in the last 20 days with stop-loss and target levels."
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure `avg_cost` and `qty` are consistent with expected trading volumes."
+  - "Verify that `signal_log` dates fall within the last 20-day range."
+synthesis_guidance: "['Combine stop-loss and target data with current portfolio performance for strategic insights.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:07"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,57 @@
+id: "fii_dii_regime_breadth_review_1982_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1982"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for intraday context: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as comparison matrix"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "{ \n    retail_context: <use_sql>, \n    institutional_flows: <use_sql>, \n    market_breadth: <use_sql>, \n    index_performance: <use_sql>\n}"
+sql_templates:
+  retail_context: "SELECT trade_date, regime, confidence, days_in_regime FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history);"
+  institutional_flows: "SELECT trade_date, fii_net_today, dii_net_today, flow_signal FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+  market_breadth: "SELECT trade_date, advances, declines, ad_signal FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+  index_performance: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND index_symbol = 'NIFTY 50';"
+python_tools:
+  - "run"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "check_for_nulls"
+  - "validate_date_format"
+  - "validate_numeric_bounds"
+  - "cross_reference_indices"
+synthesis_guidance: "Use the most recent data to provide a concise risk assessment based on FII/DII flows, market regimes, and breadth metrics. Compare indicators clearly in matrix format for easy interpretation."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

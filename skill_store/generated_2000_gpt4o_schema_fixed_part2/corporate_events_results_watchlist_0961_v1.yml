@@ -1,0 +1,52 @@
+id: "corporate_events_results_watchlist_0961_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0961"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: post results; response style: comparison matrix."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for post results: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as comparison matrix"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "post_results"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Generate a quick scan of corporate events and results with a focus on post-results actions."
+sql_templates:
+  -
+    id: "corporate_event_watchlist_1"
+    template: "SELECT e.symbol, e.event_type, e.event_date, e.purpose_raw, e.detail, r.verdict, r.growth_yoy_revenue_pct, s.stage, s.trading_signal \nFROM signals.corporate_events e \nJOIN scores.results_analysis r ON e.symbol = r.symbol \nJOIN scores.stage_snapshots s ON e.symbol = s.symbol \nWHERE e.event_date >= CURRENT_DATE - INTERVAL '3 months' \nAND r.period_end = (SELECT MAX(period_end) FROM scores.results_analysis WHERE symbol = e.symbol) \nAND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) \nORDER BY e.event_date DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure the join conditions strictly follow the approved schema."
+  - "Check if the event_date filter is correctly applied for the past 3 months."
+  - "Validate that the latest results and stage data are selected as per the global rules."
+synthesis_guidance: "['Focus on events types such as RESULTS, DIVIDEND, SPLIT, BONUS, and AGM.', 'Present findings in a format that highlights quick analyses and comparisons for post-results actions.', 'Ensure clarity in the source trail for auditability.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:47"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

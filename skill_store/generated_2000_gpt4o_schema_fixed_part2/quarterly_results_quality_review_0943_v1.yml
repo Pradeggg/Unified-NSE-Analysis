@@ -1,0 +1,65 @@
+id: "quarterly_results_quality_review_0943_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0943"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "daily refresh follow-up for last 3 months: latest quarterly results analysis"
+  - "which companies had strong quarterly results as comparison matrix"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Generate a comparison matrix based on latest quarterly results, focusing on revenue growth, PAT growth, margin movements, and filing freshness. Use results from the last 3 months."
+sql_templates:
+  -
+    description: "Select latest quarterly results with revenue and margin data"
+    template: "SELECT qr.symbol, qr.revenue, ra.growth_yoy_revenue_pct, ra.growth_qoq_revenue_pct, qr.opm_pct, ra.opm_delta_pp, ra.verdict FROM scores.quarterly_results AS qr INNER JOIN scores.results_analysis AS ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end WHERE qr.period_type = 'quarter' AND qr.period_end > CURRENT_DATE - INTERVAL '3 months' ORDER BY qr.symbol, qr.period_end DESC LIMIT 10"
+python_tools:
+  -
+    id: "evidence_interpreter"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "company analysis data"
+    outputs:
+      - "structured comparison matrix"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+      - "scores.stage_snapshots"
+    code: "def run(context): # interpret and transform data into comparison matrix"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure revenue growth data and margin data are included for each symbol."
+  - "Verify that the results are from the last 3 months."
+synthesis_guidance: "['Provide a comparison matrix focusing on growth metrics and margin movement.', 'Highlight any companies with significant beat or miss in quarterly results.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:28"
+generation_model: "gpt-4o"
+validation_errors:
+  - "evidence_interpreter: python syntax error: expected an indented block after function definition on line 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "evidence_interpreter: python syntax error: expected an indented block after function definition on line 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

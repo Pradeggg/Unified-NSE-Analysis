@@ -1,0 +1,72 @@
+created_at: "2026-06-06T12:52:11"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: last 3 months; response style: action watchlist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0841_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  index_analysis:
+    description: "Analyze average index returns over the last 3 months."
+    template: "SELECT index_symbol, AVG(change_pct) AS avg_return, MAX(trade_date) AS last_date FROM market.index_eod WHERE trade_date > DATEADD(month, -3, GETDATE()) GROUP BY index_symbol"
+  leading_sectors:
+    description: "Identify leading sectors and pick top candidates with uptrend."
+    template: "SELECT sector, symbol, company_name FROM scores.stage2_vcp_picks WHERE snapshot_date > DATEADD(month, -3, GETDATE()) AND trend_signal = 'Up' ORDER BY vcp_score DESC"
+  stage_distribution:
+    description: "Assess changes in stage distribution by sector."
+    template: "SELECT sector, stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date > DATEADD(month, -3, GETDATE()) GROUP BY sector, stage"
+status: "test_failed"
+synthesis_guidance: "['Summarize market regime shifts based on index analysis.', 'Highlight key sector rotations and stage movements.', 'List top Stage 2 VCP candidates with rationale.']"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "last_3_months"
+  - "action_watchlist"
+title: "3M Market Rotation Swing Assessment Variant 0841"
+tool_plan_template:
+  approach: "Utilize approved tables to generate a quick sector rotation assessment for the last 3 months, focusing on market regime changes and identifying Stage 2 leaders."
+  steps:
+    - "Analyze 'market.index_eod' for market regime trends."
+    - "Review 'scores.stage_snapshots' for changes in stage distributions."
+    - "Identify leading sectors and primary candidates from 'scores.stage2_vcp_picks'."
+    - "Compile risks based on latest 'stage_snapshots'."
+validation_rules:
+  - "Ensure 'index_returns' covers all major indices."
+  - "Check 'stage_distribution_change' reflects dynamics in top sectors."
+  - "Verify 'leading_sectors' aligns with trend and VCP scores."
+version: 1
+validation_errors:
+  - "market.index_eod.avg_return is not approved"
+  - "market.index_eod.dateadd is not approved"
+  - "market.index_eod.getdate is not approved"
+  - "market.index_eod.last_date is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage2_vcp_picks.dateadd is not approved"
+  - "scores.stage2_vcp_picks.getdate is not approved"
+  - "scores.stage2_vcp_picks.month is not approved"
+  - "scores.stage_snapshots.dateadd is not approved"
+  - "scores.stage_snapshots.getdate is not approved"
+  - "scores.stage_snapshots.month is not approved"

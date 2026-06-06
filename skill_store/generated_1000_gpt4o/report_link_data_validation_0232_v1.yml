@@ -1,0 +1,54 @@
+id: "report_link_data_validation_0232_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0232"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Conduct a deep institutional review of report data, focusing on the last 20 sessions. Validate report links for functionality and accuracy, assess stock data presence, and rank validation candidates."
+sql_templates:
+  -
+    query: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 20;"
+    description: "Retrieve the last 20 report runs' metadata."
+  -
+    query: "SELECT run_id, symbol, recommendation FROM report.enhanced_filtered_stocks WHERE recommendation IS NULL;"
+    description: "Identify stocks with missing recommendations."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Confirm each report link leads to the correct data."
+  - "Ensure all expected stock data is present."
+  - "Rank missing data issues by severity."
+synthesis_guidance: "Integrate findings into a cohesive report highlighting broken links and data gaps, with ranked remediation strategies."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:43:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

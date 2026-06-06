@@ -1,0 +1,62 @@
+id: "company_360_research_report_1336_v1"
+version: 1
+status: "review_pending"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1336"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: freshness audit; timeframe: last 20 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "freshness audit for last 20 sessions: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as exceptions and gaps first"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Perform a freshness audit for the last 20 sessions on [symbol] using approved evidence. Return exceptions and gaps."
+sql_templates:
+  -
+    purpose: "Get latest snapshot for the given company"
+    SQL: "SELECT * FROM scores.stage_snapshots WHERE symbol = $1 AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 1;"
+  -
+    purpose: "Get recent stock price changes for the last 20 sessions"
+    SQL: "SELECT * FROM market.equity_eod WHERE symbol = $1 AND series = 'EQ' ORDER BY trade_date DESC LIMIT 20;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all required evidence tables have data for the given symbol."
+  - "Verify that the SQL templates are aligned with the latest snapshot and price changes for the last 20 sessions."
+synthesis_guidance: "{'GOAL': \"Provide a 360-degree view of the company's current position based on the latest available data.\", 'EXCLUSION': 'Highlight any missing data points or unusual trends in financial and technical data.', 'EMPHASIS': 'Focus on freshness of data and identification of any gaps or discrepancies.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:31"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,66 @@
+id: "portfolio_lab_paper_trading_review_1272_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1272"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: pre market; response style: ranked candidates."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for pre market: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as ranked candidates"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    query: "SELECT h.symbol, h.qty, h.avg_cost, MAX(ss.snapshot_date) AS latest_snapshot_date\nFROM portfolio.holdings AS h\nJOIN scores.stage_snapshots AS ss ON h.symbol = ss.symbol\nGROUP BY h.symbol, h.qty, h.avg_cost\nORDER BY ss.snapshot_date DESC;"
+    description: "Retrieve latest stage snapshot for each holding."
+  -
+    query: "SELECT sl.symbol, sl.signal, sl.stop_loss, sl.target_1, sl.entry_low, sl.entry_high\nFROM signals.signal_log AS sl\nWHERE sl.date_issued >= date_trunc('month', CURRENT_DATE - INTERVAL '3 months')\nAND (sl.signal = 'BUY' OR sl.signal = 'STRONG_BUY')\nORDER BY sl.date_issued DESC;"
+    description: "Retrieve recent 'BUY' or 'STRONG_BUY' signals issued in the last 3 months."
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "strategy_state"
+    outputs:
+      - "ranked_candidates"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    strategy_state = context.get('strategy_state', [])\n    ranked_candidates = sorted(strategy_state, key=lambda x: x.get('investment_score', 0), reverse=True)\n    return ranked_candidates"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:33"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.date_trunc is not approved"
+  - "signals.signal_log.sl is not approved"

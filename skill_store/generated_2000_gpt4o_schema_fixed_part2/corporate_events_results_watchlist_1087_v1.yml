@@ -1,0 +1,49 @@
+id: "corporate_events_results_watchlist_1087_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1087"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: intraday context; response style: concise table."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for intraday context: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as concise table"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "{sql} {output_contract}"
+sql_templates:
+  - "WITH latest_stage AS (SELECT symbol, sector, price, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY')), corporate_events AS (SELECT ce.symbol, ce.event_type, ce.event_date FROM signals.corporate_events ce WHERE ce.event_date >= CURRENT_DATE) SELECT ce.symbol, ce.event_type, ce.event_date, ls.sector, ls.price, ls.trading_signal FROM corporate_events ce JOIN latest_stage ls ON ce.symbol = ls.symbol ORDER BY ce.event_date LIMIT 50"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Status must be generated."
+  - "Ensure each output contract component is filled from evidence tables."
+synthesis_guidance: "['Concisely present a table showing corporate events, symbols, event dates, sectors, prices, and trading signals.', 'Highlight stocks with events in upcoming days, relative sector comparison, and immediate actionable signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

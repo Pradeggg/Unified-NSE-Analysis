@@ -1,0 +1,85 @@
+id: "company_360_research_report_0580_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Reliance Company Research Summary"
+description: "Generated research-only summary for Reliance with an emphasis on fundamental analysis and technical chart context using pre-market data."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "TradingView_export"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  stages:
+    - "1. Retrieve recent snapshot of Reliance from scores.stage_snapshots for technical indicators (e.g., RSI, trend signal)."
+    - "2. Extract fundamental financial metrics from scores.annual_results and scores.quarterly_results including revenue, profit, and EPS."
+    - "3. Analyze balance sheet data from scores.balance_sheet to assess financial strength and leverage."
+    - "4. Review results analysis from scores.results_analysis to understand recent performance comments and key risks."
+    - "5. Incorporate market context using market.equity_eod for price trends and liquidity."
+sql_templates:
+  -
+    query: "SELECT * FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' ORDER BY snapshot_date DESC LIMIT 1;"
+  -
+    query: "WITH annual_data AS (SELECT * FROM scores.annual_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1) SELECT * FROM annual_data;"
+  -
+    query: "SELECT * FROM scores.balance_sheet WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1;"
+  -
+    query: "SELECT * FROM scores.results_analysis WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1;"
+  -
+    query: "SELECT * FROM market.equity_eod WHERE symbol = 'RELIANCE' ORDER BY trade_date DESC LIMIT 1;"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "processed_data"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "scores.quarterly_results"
+      - "scores.annual_results"
+      - "scores.balance_sheet"
+      - "scores.cash_flow"
+      - "scores.results_analysis"
+      - "market.equity_eod"
+    code: "# Python function to process and synthesize data\n def run(context):\n     # Process context data for insights\n     # Return structured summary insights\n     return processed_data"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all data is current and relevant to pre-market context."
+  - "Highlight any missing data in financial or technical sections."
+synthesis_guidance: "Focus on providing a coherent research-only summary suitable for institutional review. Avoid any forward-looking projections."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:58:38"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: python syntax error: unexpected indent"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: python syntax error: unexpected indent"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

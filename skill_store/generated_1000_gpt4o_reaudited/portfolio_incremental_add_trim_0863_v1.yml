@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:52:17"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: post results; response style: action watchlist."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0863_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for post results: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as action watchlist"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+  -
+    description: "Collect current stage snapshots for all symbols."
+    template: "SELECT symbol, company_name, sector, market_cap_cat, price, change_1d_pct, change_1w_pct, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+    template_id: "stage_snapshot_collection"
+  -
+    description: "Fetch current portfolio holdings."
+    template: "SELECT symbol, qty, avg_cost FROM portfolio.holdings;"
+    template_id: "current_holdings_summary"
+status: "validated"
+synthesis_guidance: "Synthesize the data to highlight portfolio adjustments focusing on sector exposure and recent performance trends."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "action_watchlist"
+title: "Portfolio Incremental Add Trim Review Variant 0863"
+tool_plan_template: "Analyze the portfolio using a SQL pipeline to gather the necessary insights for add/trim decisions."
+validation_rules:
+  -
+    id: "validate_stage_data_presence"
+    rule: "The agent must validate that stage snapshot data is available for all portfolio holdings."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

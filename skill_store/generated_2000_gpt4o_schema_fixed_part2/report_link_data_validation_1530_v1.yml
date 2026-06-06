@@ -1,0 +1,63 @@
+id: "report_link_data_validation_1530_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1530"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: last 5 sessions; response style: research-only summary."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  sql_templates:
+    -
+      template: "WITH latest_runs AS (SELECT run_id, run_ts FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '5 days') SELECT er.run_id, er.run_ts, ef.symbol, ef.current_price, ef.trading_value_cr FROM report.enhanced_filtered_stocks ef JOIN latest_runs er ON er.run_id = ef.run_id WHERE er.run_ts >= CURRENT_DATE - INTERVAL '5 days' AND ef.current_price IS NOT NULL;"
+      description: "Extracts the relevant runs and their associated stock symbols and prices for the last 5 days to validate report data."
+  output_contract:
+    - "findings"
+    - "broken_links"
+    - "missing_data"
+    - "remediation"
+    - "verification"
+  validation_rules:
+
+  synthesis_guidance:
+
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

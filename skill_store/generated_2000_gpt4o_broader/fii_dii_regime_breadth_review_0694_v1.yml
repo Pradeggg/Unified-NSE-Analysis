@@ -1,0 +1,82 @@
+id: "fii_dii_regime_breadth_review_0694_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0694"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: weekly review; response style: debug trace."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as debug trace"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    task: "Analyze FII/DII flows"
+    tool: "sql"
+    template_id: "sql_template_1"
+    description: "Capture FII/DII recent flow trends and signals."
+  -
+    task: "Determine market regime"
+    tool: "sql"
+    template_id: "sql_template_2"
+    description: "Identify current market regime and confidence."
+  -
+    task: "Assess market breadth"
+    tool: "sql"
+    template_id: "sql_template_3"
+    description: "Evaluate market breadth using advances/declines and TRIN."
+  -
+    task: "Confirm index signals"
+    tool: "sql"
+    template_id: "sql_template_4"
+    description: "Confirm index movements and technical signals."
+sql_templates:
+  -
+    template_id: "sql_template_1"
+    template: "SELECT trade_date, fii_net_5d, dii_net_5d, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL '7 days';"
+  -
+    template_id: "sql_template_2"
+    template: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date >= CURRENT_DATE - INTERVAL '7 days';"
+  -
+    template_id: "sql_template_3"
+    template: "SELECT trade_date, adv_volume, dec_volume, ad_signal FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '7 days';"
+  -
+    template_id: "sql_template_4"
+    template: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '7 days';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all SQL results are aggregated and interpreted correctly."
+  - "Cross-verify regime data with breadth indicators."
+  - "Risk flags should reflect a holistic view of the evidence."
+synthesis_guidance: "['Analyze trends from SQL templates to infer broader market risk-on or risk-off context.', 'Use debug trace style to show step-by-step reasoning.', 'Focus on how breadth and FII/DII flows support the overall market regime.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

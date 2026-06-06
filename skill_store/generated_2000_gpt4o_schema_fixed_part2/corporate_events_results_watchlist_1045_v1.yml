@@ -1,0 +1,52 @@
+id: "corporate_events_results_watchlist_1045_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1045"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: risk-first review; timeframe: last 3 months; response style: concise table."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "risk-first review for last 3 months: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as concise table"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "risk-first_review"
+  - "last_3_months"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Generate a concise table of corporate events and related results for risk assessment. Last 3 months focus only."
+sql_templates:
+  -
+    name: "corporate_events_upcoming"
+    template: "SELECT ce.symbol, ce.event_type, ce.event_date, sa.stage, sa.trading_signal FROM signals.corporate_events ce JOIN scores.stage_snapshots sa ON ce.symbol = sa.symbol WHERE ce.event_date >= CURRENT_DATE - INTERVAL '3 months' AND sa.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 100;"
+    description: "Fetches upcoming corporate events from the last 3 months with current stage and trading signals."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure latest snapshot data is used for stages and trading signals."
+  - "Limit results to the last 3 months for corporate events."
+synthesis_guidance: "['Organize data into a concise table format focusing on pertinent corporate events and results outcomes.', 'Emphasize risk evaluation based on the latest stage and trading signal data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:29"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

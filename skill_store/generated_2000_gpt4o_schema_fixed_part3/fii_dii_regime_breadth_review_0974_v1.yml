@@ -1,0 +1,76 @@
+id: "fii_dii_regime_breadth_review_0974_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0974"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: pre market; response style: comparison matrix."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for pre market: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as comparison matrix"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "pre_market"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  context: "Using latest data, combine FII and DII flows, market regime signals, breadth indicators, and index confirmation for a pre-market risk assessment."
+  ordered_task_list:
+    - "Identify latest trade date for synchronization across datasets."
+    - "Evaluate FII/DII net flows, trends, and flow signals."
+    - "Assess current market regime and its confidence."
+    - "Analyze market breadth indicators: advances, declines, TRIN."
+    - "Cross-verify with major index movements (e.g., Nifty 50)."
+    - "Produce a comparative matrix summarizing the above contexts."
+sql_templates:
+  -
+    id: "fii_dii_flow_summary"
+    description: "Summarize FII/DII flow trends and signals for the latest date."
+    query: "SELECT fii_net_today, dii_net_today, flow_signal, fii_trend, dii_trend FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+    evidence_table: "signals.fii_dii_flows"
+  -
+    id: "market_regime_context"
+    description: "Fetch current market regime and confidence."
+    query: "SELECT regime, confidence FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history);"
+    evidence_table: "signals.regime_history"
+  -
+    id: "breadth_indicator_summary"
+    description: "Examine market breadth indicators for risk context."
+    query: "SELECT advances, declines, net_ad, ad_signal, trin FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+    evidence_table: "breadth.market_daily"
+  -
+    id: "index_eod_verification"
+    description: "Validate market condition against index movements."
+    query: "SELECT index_symbol, close, rsi, momentum_50d, trend_signal FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND index_symbol = 'Nifty 50';"
+    evidence_table: "market.index_eod"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'rules': ['Highlight discrepancies in regime versus signal.', 'Provide watchlist recommendations from FII/DII logic.', 'Use a matrix format for summarizing inputs and outputs.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:50"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

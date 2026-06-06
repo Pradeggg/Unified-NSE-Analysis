@@ -1,0 +1,68 @@
+id: "portfolio_lab_paper_trading_review_1146_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1146"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for last 3 months: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  query_strategy: "Use a combination of updated SQL and optional Python tool for complex evaluations."
+  integration_modes:
+    - "narrative_plus_evidence"
+sql_templates:
+  -
+    description: "Fetch recent trading signals within the last 3 months."
+    sql: "SELECT symbol, date_issued, signal, setup_class, entry_low, entry_high, stop_loss, target_1, target_2, return_pct FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+  -
+    id: "analyze_signal_performance"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signals"
+    outputs:
+      - "performance_summary"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context):\n    signal_data = context['signals']\n    # Perform analysis on signal data\n    performance_summary = calculate_performance(signal_data)\n    return performance_summary\n\n# Dummy function for illustration\n def calculate_performance(data):\n    return {\"summary\": \"Calculated performance\"}"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure data freshness by checking last update timestamps."
+  - "Only use read-only operations in SQL and Python."
+synthesis_guidance: "Narrate insights derived from evidence. Link findings to market context and strategic implications."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:47"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analyze_signal_performance: python syntax error: unindent does not match any outer indentation level"
+review:
+  status: "needs_heal"
+  findings:
+    - "analyze_signal_performance: python syntax error: unindent does not match any outer indentation level"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

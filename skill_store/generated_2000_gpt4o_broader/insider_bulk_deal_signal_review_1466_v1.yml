@@ -1,0 +1,64 @@
+id: "insider_bulk_deal_signal_review_1466_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1466"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for post results: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as portfolio-aware output"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  evidence_collection: "Gather required data from approved evidence tables."
+  signal_identification: "Identify potential signals from insider alerts and bulk/block deals."
+  technical_confirmation: "Validate potential signals through technical confirmation."
+  portfolio_awareness: "Focus output to be portfolio-aware considering only specified symbols."
+sql_templates:
+  -
+    template_id: "recent_insider_alerts"
+    sql: "SELECT symbol, alert_type, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)"
+  -
+    template_id: "recent_bulk_deals"
+    sql: "SELECT symbol, side, qty, price, deal_type FROM signals.bulk_block_deals WHERE deal_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)"
+  -
+    template_id: "technical_summary"
+    sql: "SELECT symbol, rsi, trend_signal, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = CURDATE()"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all data sources are date-filtered to maintain relevance."
+  - "Validate technical confirmations align with positive setup criteria."
+synthesis_guidance: "Integrate collected data, offering precise and portfolio-aware insights into market opportunities while maintaining freshness and relevance."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:26"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.curdate is not approved"
+  - "signals.bulk_block_deals.curdate is not approved"
+  - "signals.bulk_block_deals.date_sub is not approved"
+  - "signals.bulk_block_deals.day is not approved"
+  - "signals.insider_alerts.curdate is not approved"
+  - "signals.insider_alerts.date_sub is not approved"
+  - "signals.insider_alerts.day is not approved"

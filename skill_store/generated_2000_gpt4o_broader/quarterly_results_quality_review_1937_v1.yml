@@ -1,0 +1,52 @@
+id: "quarterly_results_quality_review_1937_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1937"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "sector-relative comparison for last 20 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as comparison matrix"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Assess quarterly result performance over the past 20 sessions using authorized schemas, focusing on revenue, PAT growth, margin trends, and sector comparisons."
+sql_templates:
+  -
+    query: "SELECT qr.symbol, ra.company_name, ra.industry, ra.filing_date, ra.growth_yoy_revenue_pct, ra.growth_qoq_revenue_pct, ra.growth_yoy_pat_pct, ra.opm_delta_pp FROM scores.quarterly_results AS qr JOIN scores.results_analysis AS ra ON qr.symbol = ra.symbol WHERE qr.period_end = (SELECT MAX(period_end) FROM scores.quarterly_results WHERE period_end <= CURRENT_DATE - INTERVAL '20' DAY) AND ra.filing_date <= CURRENT_DATE AND qr.period_type = 'QTR';"
+    description: "Fetches latest quarterly results and related growth metrics for the last 20 sessions."
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Status must be generated."
+  - "All SQL templates must be read-only and use the provided schema."
+  - "Compare companies across sectors for the most recent period within the last 20 sessions."
+synthesis_guidance: "Present the results as a comparison matrix highlighting key growth metrics across companies and sectors."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

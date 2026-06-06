@@ -1,0 +1,58 @@
+id: "sector_breadth_rotation_watchlist_1245_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1245"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: risk-first review; timeframe: last 3 months; response style: ranked candidates."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "risk-first review for last 3 months: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as ranked candidates"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "risk-first_review"
+  - "last_3_months"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    template_name: "sector_breadth_summary"
+    read_only: true
+    template: "WITH sector_breadth AS (SELECT sector, AVG(pct_above_50dma) as avg_pct_above_50dma FROM breadth.sector_daily WHERE snapshot_date >= DATEADD(month, -3, CURRENT_DATE) GROUP BY sector) SELECT sector FROM sector_breadth ORDER BY avg_pct_above_50dma DESC"
+  -
+    template_name: "stage2_participation"
+    read_only: true
+    template: "SELECT sector, AVG(stage2_pct) as avg_stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date >= DATEADD(month, -3, CURRENT_DATE) GROUP BY sector ORDER BY avg_stage2_pct DESC"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates must be read-only SELECT/WITH templates."
+synthesis_guidance: "['Focus on sector breadth, stage migration, RS, and price momentum.', 'Rank sectors by breadth and participation in stage 2.', 'Use a risk-first approach to identify candidates.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:42"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.avg_stage2_pct is not approved"
+  - "breadth.ma_pct_above.dateadd is not approved"
+  - "breadth.ma_pct_above.month is not approved"
+  - "breadth.ma_pct_above.sector is not approved"

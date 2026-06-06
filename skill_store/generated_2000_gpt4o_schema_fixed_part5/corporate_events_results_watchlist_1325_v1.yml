@@ -1,0 +1,59 @@
+id: "corporate_events_results_watchlist_1325_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1325"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: risk-first review; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "risk-first review for last 5 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as exceptions and gaps first"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "risk-first_review"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "Create SQL templates to gather corporate events data and result analysis for the last 5 sessions."
+  - "Join this data to provide a comprehensive watchlist organized by risk-first criteria."
+sql_templates:
+  -
+    description: "Fetch upcoming or recent corporate events."
+    template: "SELECT id, symbol, event_type, event_date, detail FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '5 days' ORDER BY event_date DESC LIMIT 100;"
+  -
+    description: "Integrate with results analysis based on recent filings."
+    template: "WITH latest_analysis AS (SELECT DISTINCT ON (symbol) symbol, verdict, score FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC) SELECT ce.symbol, ce.event_type, ce.event_date, ra.verdict, ra.score FROM signals.corporate_events ce JOIN latest_analysis ra ON ce.symbol = ra.symbol WHERE ce.event_date >= CURRENT_DATE - INTERVAL '5 days' LIMIT 100;"
+  -
+    description: "Include current stage snapshots for technical analysis."
+    template: "SELECT ss.symbol, ss.stage, ss.trading_signal FROM scores.stage_snapshots ss WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event_date is within the last 5 sessions."
+  - "Verify that symbols have associated results analysis and stage snapshots."
+synthesis_guidance: "['Highlight gaps in data for specific events or symbols first.', 'Prioritize events with missing related analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:45"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

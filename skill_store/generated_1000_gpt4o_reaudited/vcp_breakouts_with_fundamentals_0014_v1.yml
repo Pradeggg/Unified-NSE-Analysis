@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:41:01"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: latest EOD; response style: concise table."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0014_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+
+status: "validated"
+synthesis_guidance: "['Synthesize a concise watchlist table for TradingView', 'Highlight top candidates based on enhanced fund score and VCP signals', 'Maintain focus on liquidity and strong fundamentals']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "concise_table"
+title: "VCP Breakouts With Fundamentals Variant 0014"
+tool_plan_template:
+  sql_templates:
+    - "WITH latest_data AS (SELECT symbol, close, week52_high, market_cap_cr FROM market.equity_eod WHERE trade_date = CURRENT_DATE()), vcp_candidates AS (SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE() AND vcp_score > 70), fundamentals_checks AS (SELECT symbol, market_cap_cat, enhanced_fund_score, earnings_quality FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE() AND enhanced_fund_score > 75) SELECT ld.symbol, ld.close, ld.week52_high, vcp.vcp_score, fs.enhanced_fund_score, fs.earnings_quality FROM latest_data ld JOIN vcp_candidates vcp ON ld.symbol = vcp.symbol JOIN fundamentals_checks fs ON ld.symbol = fs.symbol WHERE ld.close > (0.9 * ld.week52_high) AND fs.enhanced_fund_score > 75 AND fs.earnings_quality > 80;"
+validation_rules:
+  - "Ensure all returned candidates have enhanced fund scores > 75"
+  - "Verify that all stocks are creating new-highs or VCP breakouts"
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,59 @@
+id: "data_freshness_readiness_audit_1995_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Risk Review 2023"
+description: "Analyze data freshness for Agent Adda's evidence sources to determine readiness for various workflows. Focus on risk management and provide a comparison matrix."
+input_patterns:
+  - "data freshness review for risk analysis"
+  - "weekly data readiness audit"
+  - "data source risk review"
+  - "freshness comparison for weekly audit"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "risk_management"
+  - "weekly_review"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+
+sql_templates:
+  - "SELECT MAX(trade_date) AS latest_index_date FROM market.index_eod;"
+  - "SELECT MAX(trade_date) AS latest_equity_date FROM market.equity_eod;"
+  - "SELECT MAX(snapshot_date) AS latest_stage_date FROM scores.stage_snapshots;"
+  - "SELECT MAX(trade_date) AS latest_market_breadth_date FROM breadth.market_daily;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+validation_rules:
+  - "Ensure all dates are within acceptable freshness thresholds for current workflows."
+  - "Identify and report any missing data sources for key workflows."
+synthesis_guidance: "['Use the latest available date from each evidence table to assess data freshness.', 'Compare results against predefined freshness thresholds and highlight risks in workflow readiness.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:23"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.latest_market_breadth_date is not approved"
+  - "market.equity_eod.latest_equity_date is not approved"
+  - "market.index_eod.latest_index_date is not approved"
+  - "scores.stage_snapshots.latest_stage_date is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "breadth.market_daily.latest_market_breadth_date is not approved"
+    - "market.equity_eod.latest_equity_date is not approved"
+    - "market.index_eod.latest_index_date is not approved"
+    - "scores.stage_snapshots.latest_stage_date is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

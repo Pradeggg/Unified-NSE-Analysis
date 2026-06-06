@@ -1,0 +1,57 @@
+id: "agent_route_failure_diagnostics_1792_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1792"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for weekly review: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as QA checklist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Use available evidence to identify and document the nature of route failures and diagnostics necessary. Focus on extracting symbols that fail repeatedly and tools that are missing."
+sql_templates:
+  -
+    template: "SELECT run_id, analysis_date, stocks_analyzed, stocks_filtered, market_sentiment FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '7 days';"
+    description: "Fetch recent runs of the last week to assess market sentiment and stocks analyzed."
+  -
+    template: "SELECT symbol, recommendation, weekly_signal, daily_signal, current_price FROM report.enhanced_filtered_stocks WHERE recommendation IS NULL;"
+    description: "Identify symbols with missing recommendations as a potential failure point."
+  -
+    template: "SELECT symbol, stage, stage_score, rsi FROM scores.stage_snapshots WHERE stage_score < 20 AND change_1w_pct < -5 ORDER BY stage_score ASC;"
+    description: "Retrieve symbols with low stage scores and significant weekly drops for detailed diagnostics."
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure queried data covers all specified tables."
+  - "Check for missing symbols or tools flagged in inputs."
+synthesis_guidance: "Prioritize deep analysis into repeated failures and identify consistent problematic symbols or tool gaps; structure responses as diagnostic checklists."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

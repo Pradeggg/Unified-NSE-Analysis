@@ -1,0 +1,55 @@
+id: "insider_bulk_deal_signal_review_0108_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0108"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: today; response style: narrative plus evidence."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for today: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as narrative plus evidence"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "today"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Use provided schema and rules to review insider alerts and bulk deals, confirming technical setups with current stage data."
+sql_templates:
+  -
+    script: "SELECT ia.symbol, ia.alert_date, ia.entity, ia.qty, ia.value_cr, ia.category, sd.stage, sd.technical_score\nFROM signals.insider_alerts ia\nJOIN scores.stage_snapshots sd ON ia.symbol = sd.symbol\nWHERE ia.alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts)\nAND sd.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nAND sd.trading_signal IN ('BUY', 'STRONG_BUY')"
+    description: "Fetch latest insider alerts with positive trading signal."
+  -
+    script: "SELECT bd.symbol, bd.deal_date, bd.entity, bd.side, bd.qty, bd.price, sd.stage, sd.technical_score\nFROM signals.bulk_block_deals bd\nJOIN scores.stage_snapshots sd ON bd.symbol = sd.symbol\nWHERE bd.deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals)\nAND sd.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nAND sd.trading_signal IN ('BUY', 'STRONG_BUY')"
+    description: "Fetch latest bulk/block deals with positive stage data."
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure 'trading_signal' includes BUY or STRONG_BUY only."
+  - "Limit results to latest date for alerts and deals."
+synthesis_guidance: "Combine data from insider alerts and bulk deals to narrate a concise story on their significance in today's market context, focusing on accumulation potential and technical standings."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

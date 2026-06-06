@@ -1,0 +1,62 @@
+id: "data_freshness_readiness_audit_0651_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0651 - Quick Scan"
+description: "This skill card performs a quick scan to check the freshness of Agent Adda evidence sources, focusing on quarter-to-date metrics and responses presented in a debug trace format."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for quarter to date: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as debug trace"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Run fresh-checks for each evidence table with a PostgreSQL query for the latest data."
+sql_templates:
+  -
+    template_id: "check_index_latest_date"
+    description: "Check latest date for index data."
+    sql: "SELECT MAX(trade_date) AS latest_date FROM market.index_eod;"
+  -
+    template_id: "check_equity_latest_date"
+    description: "Check latest date for equity data."
+    sql: "SELECT MAX(trade_date) AS latest_date FROM market.equity_eod WHERE series = 'EQ';"
+  -
+    template_id: "check_stage_snapshots_latest_date"
+    description: "Check latest date for stage snapshot data."
+    sql: "SELECT MAX(snapshot_date) AS latest_snapshot_date FROM scores.stage_snapshots;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all queries execute without errors."
+  - "Match latest dates against expected thresholds."
+synthesis_guidance: "Provide a summary of the freshness state based on latest dates. Highlight any data sources that fall short of expected freshness levels."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_date is not approved"
+  - "market.index_eod.latest_date is not approved"
+  - "scores.stage_snapshots.latest_snapshot_date is not approved"

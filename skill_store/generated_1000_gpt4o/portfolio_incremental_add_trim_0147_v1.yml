@@ -1,0 +1,71 @@
+id: "portfolio_incremental_add_trim_0147_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0147"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for last 3 months: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  -
+    step: "Analyze current holdings"
+    description: "Examine current portfolio positions to identify potential add or trim candidates."
+  -
+    step: "Sector-relative performance analysis"
+    description: "Compare sector performance using the last 3 months' data to understand relative strength."
+  -
+    step: "Identify add/trim candidates"
+    description: "List out securities for potential incremental additions or reductions based on sector performance and portfolio allocation."
+sql_templates:
+  -
+    description: "Get sector performance for the last 3 months to assist in determining add/trim decisions."
+    template: "SELECT sector, AVG(change_1m_pct) as avg_change_1m, AVG(change_1w_pct) as avg_change_1w FROM scores.stage_snapshots WHERE snapshot_date >= DATEADD(month, -3, CURRENT_DATE) GROUP BY sector"
+  -
+    description: "Retrieve the current holdings for analysis."
+    template: "SELECT symbol, qty, avg_cost FROM portfolio.holdings"
+python_tools:
+  -
+    id: "sector_performance_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "snapshot_data"
+    outputs:
+      - "sector_relative_strength"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(snapshot_data): return snapshot_data.groupby('sector').mean()"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure evidence collection sticks to approved tables and columns."
+  - "Only generate insights within the specified timeframe of 3 months."
+synthesis_guidance: "['Consider both quantitative score metrics and qualitative sector narratives.', 'Integrate findings cohesively with portfolio strategies.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:42:20"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.avg_change_1m is not approved"
+  - "scores.stage_snapshots.avg_change_1w is not approved"
+  - "scores.stage_snapshots.dateadd is not approved"
+  - "scores.stage_snapshots.month is not approved"

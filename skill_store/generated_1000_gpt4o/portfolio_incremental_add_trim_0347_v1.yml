@@ -1,0 +1,59 @@
+id: "portfolio_incremental_add_trim_0347_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0347"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: exceptions and gaps first."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for last 3 months: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  input: "Review current holdings for add/trim decisions based on sector-relative performance over the last 3 months."
+  steps:
+    - "Compile change data for each holding over the last 3 months."
+    - "Perform sector relative comparison on change data."
+    - "Identify stocks with exceptional performance (positive or negative)."
+    - "Flag stocks in sectors with overexposure."
+  output: "Identify potential stocks for adding or trimming from the portfolio based on analysis."
+sql_templates:
+  -
+    name: "sector_relative_performance"
+    type: "SELECT"
+    template: "WITH monthly_changes AS (SELECT symbol, sector, AVG(change_1m_pct) AS avg_change FROM scores.stage_snapshots WHERE snapshot_date >= date('now', '-3 months') GROUP BY symbol, sector), sector_avg AS (SELECT sector, AVG(avg_change) AS sector_avg_change FROM monthly_changes GROUP BY sector) SELECT mc.symbol, mc.sector, mc.avg_change, sa.sector_avg_change FROM monthly_changes mc JOIN sector_avg sa ON mc.sector = sa.sector WHERE ABS(mc.avg_change - sa.sector_avg_change) > 0.05;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure SQL templates are read-only."
+  - "Validate that the output matches the specified output contract."
+  - "Check gaps in required evidence."
+synthesis_guidance: "Present results focusing on exceptions and missing evidence first. Highlight significant over or under-performance compared to sector averages."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:45:54"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table mc.avg_change"
+  - "unknown table mc.sector"
+  - "unknown table mc.symbol"
+  - "unknown table sa.sector"
+  - "unknown table sa.sector_avg_change"

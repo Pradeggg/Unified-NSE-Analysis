@@ -1,0 +1,51 @@
+created_at: "2026-06-06T12:51:16"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: quarter to date; response style: QA checklist."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0752_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for quarter to date: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  filtered_stocks_check: "SELECT run_id, symbol, recommendation, current_price FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 MONTH');"
+  run_metadata_validation: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 MONTH';"
+status: "validated"
+synthesis_guidance: "Focus on leveraging available data to perform a comprehensive QA checklist within the defined timeframe."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "QA_checklist"
+title: "Enhanced Report Data Validation Variant 0752"
+tool_plan_template: "Inspect and verify report metadata and stock data availability."
+validation_rules:
+  - "Ensure run metadata covers the quarter to date."
+  - "Verify all generated links have corresponding data."
+  - "Identify any missing data points in stock tables."
+  - "Provide a clear QA checklist for remediation steps."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

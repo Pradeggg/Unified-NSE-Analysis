@@ -1,0 +1,51 @@
+id: "agent_route_failure_diagnostics_1232_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1232"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as ranked candidates"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Perform diagnostics on the agent route failures using provided evidence tables focusing on deep institutional reviews."
+sql_templates:
+  -
+    description: "Query to fetch the latest 20 session data for diagnostic review."
+    sql: "WITH latest_runs AS (SELECT * FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 20) SELECT er.run_id, er.run_ts, er.notes FROM latest_runs AS er JOIN report.enhanced_filtered_stocks AS efs ON er.run_id = efs.run_id WHERE efs.symbol IS NULL OR efs.score IS NULL;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all JOIN conditions follow _join_rules"
+  - "Use latest snapshots where feasible, observing _global_rules for date syntax"
+synthesis_guidance: "['Rank diagnostics candidates based on completeness and clarity', 'Identify missing symbols and scores as primary indicators of route issues']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:55"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

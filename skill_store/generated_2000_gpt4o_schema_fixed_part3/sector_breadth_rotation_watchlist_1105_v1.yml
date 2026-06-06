@@ -1,0 +1,60 @@
+id: "sector_breadth_rotation_watchlist_1105_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1105"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: risk-first review; timeframe: today; response style: narrative plus evidence."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "risk-first review for today: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as narrative plus evidence"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "risk-first_review"
+  - "today"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  sector_ranks: "Generate sector ranks using SQL."
+  improving_sectors: "Identify sectors with positive breadth signals."
+  candidate_symbols: "Select top stocks from improving sectors in Stage 2."
+  tradingview_symbols: "Prepare symbols for TradingView."
+  evidence: "Compile supporting evidence for recommendations."
+sql_templates:
+  -
+    name: "sector_ranks"
+    template: "SELECT sector, SUM(breadth_signal) as total_signal FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) GROUP BY sector ORDER BY total_signal DESC;"
+  -
+    name: "improving_sectors"
+    template: "SELECT sector FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) AND divergence_alert IS NOT NULL ORDER BY change_5d DESC;"
+  -
+    name: "candidate_symbols"
+    template: "SELECT s.symbol, s.company_name, s.stage, s.price, s.relative_strength, s.trading_signal FROM scores.stage_snapshots s JOIN breadt.sector_daily b ON s.sector = b.sector WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND b.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) AND s.stage = 'STAGE_2' AND s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY s.relative_strength DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure latest-date filters are used as per _global_rules."
+  - "Keep result sets bounded with LIMIT."
+synthesis_guidance: "['Narrative should focus on sectors showing improvement and their market implications.', 'Provide contextual evidence for each recommended sector and symbol.', 'Consider risk-first implications in narrative synthesis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:55:14"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table breadt.sector_daily"

@@ -1,0 +1,62 @@
+created_at: "2026-06-06T12:43:41"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: ranked candidates."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0253_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Fetch index returns and trend signals for the last 3 months for index analysis."
+    template: "SELECT trade_date, index_symbol, change_pct, trend_signal FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 MONTHS');"
+  -
+    description: "Gather snapshot data for Stage 2 analysis."
+    template: "SELECT snapshot_date, symbol, stage, stage_score FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= (CURRENT_DATE - INTERVAL '3 MONTHS');"
+status: "validated"
+synthesis_guidance: "Integrate index trend data with sector leadership insights and Stage 2 VCP picks to identify top swing trading candidates."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "ranked_candidates"
+title: "3M Market Rotation Swing Assessment Variant 0253"
+tool_plan_template:
+  follow_up_step: "Identify swing trading opportunities with a focus on Stage 2 leadership."
+  initial_step: "Analyze the market regime and sector rotation over the last 3 months."
+  refresh_step: "Provide daily updates for quarter-to-date analysis, ranking potential candidates."
+validation_errors:
+
+validation_rules:
+  - "Ensure data spans the correct 3-month timeframe."
+  - "Verify stage score alignment with market stage analysis."
+  - "Confirm candidate ranking is based on composite scoring."
+version: 1

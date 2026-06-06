@@ -1,0 +1,51 @@
+id: "fii_dii_regime_breadth_review_0596_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0596"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as research-only summary"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "{\"tool\": \"run(context)\", \"language\": \"python\", \"mode\": \"read_only\", \"inputs\": {\"fii_dii_flows\": [], \"regime_history\": [], \"market_daily\": [], \"index_eod\": []}, \"outputs\": {}, \"approved_tables\": [\"signals.fii_dii_flows\", \"signals.regime_history\", \"breadth.market_daily\", \"market.index_eod\"], \"code\": \"# Implementation here\"}"
+sql_templates:
+  - "WITH latest_flows AS (SELECT trade_date, fii_net_today, dii_net_today, flow_signal FROM signals.fii_dii_flows ORDER BY trade_date DESC LIMIT 5), latest_regime AS (SELECT trade_date, regime, confidence FROM signals.regime_history ORDER BY trade_date DESC LIMIT 1), latest_breadth AS (SELECT trade_date, advances, declines, ad_signal, market_sentiment FROM breadth.market_daily ORDER BY trade_date DESC LIMIT 1), latest_index AS (SELECT trade_date, index_symbol, close, trend_signal FROM market.index_eod WHERE index_symbol = 'NIFTY 50' ORDER BY trade_date DESC LIMIT 1) SELECT * FROM latest_flows, latest_regime, latest_breadth, latest_index;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all required tables are queried."
+  - "Cross-validate date alignment between dataset rows."
+  - "Use freshest data available for weekly insights."
+synthesis_guidance: "[\"Synthesize insights into a cohesive narrative reflecting the market's risk-on or risk-off posture.\", 'Highlight significant trends and anomalies discovered.', 'Contextualize findings within the scope of Indian markets and the weekly review framework.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:58:46"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

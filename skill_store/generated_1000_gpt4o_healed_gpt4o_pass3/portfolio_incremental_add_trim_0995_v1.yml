@@ -1,0 +1,155 @@
+created_at: "2026-06-06T12:53:31"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: weekly review; response style: comparison matrix."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0995_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context): return [{'symbol': row['symbol'], 'risk_metric': row['technical_score'] * row['change_1w_pct']} for row in context if isinstance(context, list) and row['technical_score'] > 0]"
+    id: "calculate_risk_flags"
+    inputs:
+      context: "List of row dictionaries from scores.stage_snapshots"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      risk_flags: "List of high-risk symbols and their risk metrics"
+review:
+  status: "needs_heal"
+  findings:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    name: "fetch_portfolio_state"
+    query: "SELECT h.symbol, h.qty, h.avg_cost, s.sector, s.stage, s.technical_score, s.trend_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE;"
+  -
+    name: "sector_exposure_analysis"
+    query: "WITH sector_totals AS (SELECT s.sector, SUM(h.qty * s.live_price) AS total_value FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE GROUP BY s.sector) SELECT sector, total_value FROM sector_totals ORDER BY total_value DESC;"
+status: "test_failed"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "weekly_review"
+  - "comparison_matrix"
+title: "Portfolio Incremental Add Trim Review Variant 0995"
+tool_plan_template: "Highlight potential actions based on risk-first approach; comparison matrix style."
+validation_errors:
+  - "description is required"
+  - "domain is required"
+  - "evidence_required is required"
+  - "id is required"
+  - "input_patterns is required"
+  - "output_contract is required"
+  - "tags is required"
+  - "title is required"
+  - "validation_rules is required"
+  - "version is required"
+  - "version must be a positive integer"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+version: 1
+card:
+  created_at: "2026-06-06T12:53:31"
+  created_by: "llm_generated"
+  description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: weekly review; response style: comparison matrix."
+  domain: "portfolio_review"
+  evidence_required:
+    tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+  generation_model: "gpt-4o"
+  id: "portfolio_incremental_add_trim_0995_v1"
+  input_patterns:
+    - "should we add incrementally or reduce exposure"
+    - "portfolio position sizing by sector and stock"
+    - "review holdings for add trim decisions"
+    - "risk-first review for weekly review: should we add incrementally or reduce exposure"
+    - "review holdings for add trim decisions as comparison matrix"
+  output_contract:
+    - "portfolio_state"
+    - "sector_exposure"
+    - "add_candidates"
+    - "trim_candidates"
+    - "risk_flags"
+  python_tools:
+    -
+      approved_tables:
+        - "scores.stage_snapshots"
+      code: "\ndef run(context):\n    processed_context = context if isinstance(context, list) else []\n    return [{'symbol': row['symbol'], 'risk_metric': row['technical_score'] * row['change_1w_pct']} \n            for row in processed_context \n            if row.get('technical_score', 0) > 0]\n"
+      id: "calculate_risk_flags"
+      inputs:
+        context: "List of row dictionaries from scores.stage_snapshots"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        risk_flags: "List of high-risk symbols and their risk metrics"
+  review:
+    attempts: 3
+    findings:
+      - "calculate_risk_flags: inputs must be a list"
+      - "calculate_risk_flags: outputs must be a non-empty list"
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "needs_heal"
+  sql_templates:
+    -
+      name: "fetch_portfolio_state"
+      query: "SELECT h.symbol, h.qty, h.avg_cost, s.sector, s.stage, s.technical_score, s.trend_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE;"
+    -
+      name: "sector_exposure_analysis"
+      query: "WITH sector_totals AS (SELECT s.sector, SUM(h.qty * s.live_price) AS total_value FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE GROUP BY s.sector) SELECT sector, total_value FROM sector_totals ORDER BY total_value DESC;"
+  status: "generated"
+  synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+  tags:
+    - "portfolio"
+    - "position_sizing"
+    - "sector_exposure"
+    - "add_trim"
+    - "risk-first_review"
+    - "weekly_review"
+    - "comparison_matrix"
+  title: "Portfolio Incremental Add Trim Review Variant 0995"
+  tool_plan_template: "Highlight potential actions based on risk-first approach; comparison matrix style."
+  validation_errors:
+    - "calculate_risk_flags: inputs must be a list"
+    - "calculate_risk_flags: outputs must be a non-empty list"
+  validation_rules:
+    - "required_tables_exist"
+    - "sql_is_read_only"
+    - "output_contract_present"
+  version: 1

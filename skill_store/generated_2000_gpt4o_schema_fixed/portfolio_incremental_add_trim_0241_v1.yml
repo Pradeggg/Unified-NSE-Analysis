@@ -1,0 +1,54 @@
+id: "portfolio_incremental_add_trim_0241_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0241"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: last 3 months; response style: ranked candidates."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for last 3 months: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "last_3_months"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Use the latest 3-month snapshot to assess holdings for add or trim actions based on stage and signals."
+sql_templates:
+  -
+    description: "Select potential add candidates based on positive signals from the latest snapshots."
+    template: "WITH latest_snapshot AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT h.symbol, h.qty, h.avg_cost, s.company_name, s.sector, s.stage, s.trading_signal FROM portfolio.holdings h JOIN latest_snapshot s ON h.symbol = s.symbol WHERE s.trading_signal IN ('BUY', 'STRONG_BUY') AND s.snapshot_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY s.stage_score DESC LIMIT 10;"
+  -
+    description: "Select potential trim candidates based on negative signals from the latest snapshots."
+    template: "WITH latest_snapshot AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT h.symbol, h.qty, h.avg_cost, s.company_name, s.sector, s.stage, s.trading_signal FROM portfolio.holdings h JOIN latest_snapshot s ON h.symbol = s.symbol WHERE s.trading_signal IN ('SELL') AND s.snapshot_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY s.stage_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure SQL uses PostgreSQL syntax."
+  - "Limit result sets to 10 entries for candidates."
+  - "Always use snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)."
+synthesis_guidance: "Focus on efficient decision-making for portfolio adjustments, highlighting top-ranked candidates for incremental actions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

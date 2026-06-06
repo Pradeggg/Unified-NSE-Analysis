@@ -1,0 +1,65 @@
+id: "corporate_events_results_watchlist_1885_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1885"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: risk-first review; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "risk-first review for intraday context: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as action watchlist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "risk-first_review"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  -
+    title: "Upcoming Corporate Events"
+    template: "SELECT ce.symbol, ce.event_type, ce.event_date, ce.detail, ce.source FROM signals.corporate_events ce WHERE ce.event_date >= CURRENT_DATE ORDER BY ce.event_date LIMIT 50;"
+    notes: "Retrieve upcoming corporate events from today."
+  -
+    title: "Latest Results Analysis"
+    template: "SELECT DISTINCT ON (ra.symbol) ra.symbol, ra.company_name, ra.verdict, ra.growth_yoy_revenue_pct, ra.growth_qoq_revenue_pct, ra.period_label FROM scores.results_analysis ra ORDER BY ra.symbol, ra.period_end DESC NULLS LAST LIMIT 50;"
+    notes: "Get the latest results analysis for companies."
+  -
+    title: "Current Stage and Technical Context"
+    template: "WITH latest_snapshot AS (SELECT MAX(snapshot_date) as latest_date FROM scores.stage_snapshots) SELECT ss.symbol, ss.price, ss.change_1d_pct, ss.stage, ss.trading_signal FROM scores.stage_snapshots ss, latest_snapshot ls WHERE ss.snapshot_date = ls.latest_date AND ss.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 50;"
+    notes: "Fetch stocks with a positive trading signal based on the latest snapshot."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure result sets include current market context descriptors using stage and trading signals."
+  - "Check that the event_date is not in the past for corporate events."
+synthesis_guidance: "{'notes': ['Produce actionable watchlists with next steps leveraging event type and trading signals.', 'Prioritize stocks with events in the upcoming week for immediate actionability.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.ra is not approved"
+  - "signals.corporate_events.ce is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "scores.results_analysis.ra is not approved"
+    - "signals.corporate_events.ce is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

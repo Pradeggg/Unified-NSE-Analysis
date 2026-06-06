@@ -1,0 +1,62 @@
+id: "signal_outcome_feedback_review_1327_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1327"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for last 5 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as exceptions and gaps first"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    input_parameters:
+      sector:
+        data_type: "text"
+        description: "Sector to filter signal outcomes."
+    steps:
+      - "Query signals.signal_log for the last 5 sessions to retrieve signal outcomes by sector."
+      - "Join with current stage/score context from scores.stage_snapshots using symbol."
+      - "Aggregate results to identify successful and failed signals based on hit_target and hit_stop."
+      - "Provide sector-relative comparisons and detail exception cases where gaps exist."
+sql_templates:
+  -
+    name: "sector_relative_signal_outcomes"
+    template: "WITH recent_signals AS (SELECT * FROM signals.signal_log WHERE date_issued >= (CURRENT_DATE - INTERVAL '5 days') AND sector = :sector),\nlatest_stage AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)),\noutcome_summary AS (SELECT rs.symbol, rs.signal, rs.hit_target, rs.hit_stop, ss.stage FROM recent_signals rs JOIN latest_stage ss ON rs.symbol = ss.symbol)\nSELECT symbol, COUNT(*) FILTER (WHERE hit_target) AS target_hits, COUNT(*) FILTER (WHERE hit_stop) AS stop_hits, stage FROM outcome_summary GROUP BY symbol, stage;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure target and stop counts are accurate."
+  - "Validate sector filter is applied correctly."
+synthesis_guidance: "['Focus on highlighting exceptions and learning opportunities.', 'Provide clear guidance on repeated patterns and anomalies.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

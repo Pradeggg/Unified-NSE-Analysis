@@ -1,0 +1,57 @@
+id: "vcp_breakouts_with_fundamentals_0758_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0758"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: quarter to date; response style: QA checklist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  status: "generated"
+  filters: "stocks with close price creating new highs or VCP formations in the latest quarter with enhanced fundamental score and market cap > 1000 crore"
+sql_templates:
+  read_only:
+    -
+      name: "vcp_breakout_fundamentals_query"
+      template: "WITH latest_vcp_picks AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)), latest_eods AS (SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)), latest_stages AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2') SELECT e.symbol, e.close, v.vcp_score, s.enhanced_fund_score FROM latest_vcp_picks v JOIN latest_stages s ON v.symbol = s.symbol JOIN latest_eods e ON e.symbol = v.symbol AND e.series = 'EQ' WHERE s.enhanced_fund_score > 70 AND e.market_cap_cr > 1000 ORDER BY v.vcp_score DESC LIMIT 50"
+  evidence_gaps:
+    - "If average daily volume is required, capture evidence from historical tables not provided here."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure stocks returned are creating new highs, in VCP formations, or breakouts."
+  - "Confirm enhanced fundamental score exceeding 70 and market cap over 1000 crore."
+synthesis_guidance: "Interpret QA checklist for each stock to validate fundamentals alongside technical breakout characteristics."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

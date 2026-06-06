@@ -1,0 +1,70 @@
+created_at: "2026-06-06T12:45:52"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: quarter to date; response style: exceptions and gaps first."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0358_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    context: "Identify breakouts with strong fundamentals quarter to date."
+    query:
+      - "WITH breakout_candidates AS ("
+      - "    SELECT symbol, company_name, sector, week52_high, close, market_cap_cr"
+      - "    FROM market.equity_eod"
+      - "    WHERE close > 0.95 * week52_high"
+      - "    AND trade_date BETWEEN DATE_TRUNC('quarter', CURRENT_DATE) AND CURRENT_DATE"
+      - "    AND market_cap_cr > 100000"
+      - ")"
+      - "SELECT sc.symbol, sc.company_name, sc.sector, sc.fundamental_score, sp.vcp_score"
+      - "FROM scores.stage_snapshots sc"
+      - "JOIN breakout_candidates bc ON sc.symbol = bc.symbol"
+      - "JOIN scores.stage2_vcp_picks sp ON sc.symbol = sp.symbol"
+      - "WHERE sc.enhanced_fund_score > 70"
+      - "AND sp.vcp_score > 80"
+      - "AND sc.snapshot_date = sp.snapshot_date"
+      - "AND sc.snapshot_date > current_date - interval '90' day"
+status: "validated"
+synthesis_guidance: "['Focus on liquidity and market capitalization metrics.', 'Highlight gaps related to position-sizing.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+title: "VCP Breakouts With Fundamentals Variant 0358"
+tool_plan_template:
+  evidence_gaps:
+    - "position-sizing metrics"
+validation_rules:
+  - "Check if symbols appear in multiple tables."
+  - "Ensure enhanced_fund_score > 70."
+  - "Verify vcp_score > 80."
+version: 1

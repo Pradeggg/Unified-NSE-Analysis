@@ -1,0 +1,64 @@
+id: "portfolio_lab_paper_trading_review_1398_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1398"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: position-sizing context; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "position-sizing context for weekly review: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Assess paper trading positions and exposures using the relevant strategy entries, exits, stop-loss rules, and targets. Emphasize separating paper trades from real holdings."
+sql_templates:
+  -
+    name: "paper_trading_exposure"
+    description: "Calculate current paper trading portfolio exposure and open positions."
+    read_only: true
+    template: "SELECT h.symbol, h.qty, h.avg_cost, e.close, (e.close - h.avg_cost) * h.qty AS profit_loss FROM portfolio.holdings h JOIN market.equity_eod e ON h.symbol = e.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+  -
+    name: "strategy_entry_exit_evaluation"
+    description: "Evaluate entry and exit rules for signals in the paper trading strategy."
+    read_only: true
+    template: "SELECT s.symbol, s.signal, s.entry_low, s.entry_high, s.stop_loss, s.target_1, s.target_2 FROM signals.signal_log s WHERE s.date_issued >= (CURRENT_DATE - INTERVAL '1 week');"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure only paper trading data is evaluated."
+  - "Verify that position-sizing context is applied correctly."
+synthesis_guidance: "['Focus on identifying gaps in strategy execution.', 'Provide clear separation between paper trading and real portfolio assessments.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:08"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.s is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "signals.signal_log.s is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

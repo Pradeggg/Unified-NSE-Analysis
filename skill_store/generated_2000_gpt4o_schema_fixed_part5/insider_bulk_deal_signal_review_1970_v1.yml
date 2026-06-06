@@ -1,0 +1,79 @@
+id: "insider_bulk_deal_signal_review_1970_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1970"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: post results; response style: comparison matrix."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for post results: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as comparison matrix"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "post_results"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    tool: "SQL"
+    description: "Retrieve latest insider alerts with associated symbols from the approved tables."
+    template: "SELECT symbol, alert_date, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts) AND insider_score > 0;"
+  -
+    tool: "SQL"
+    description: "Identify recent bulk/block deals with notable volume."
+    template: "SELECT symbol, deal_date, entity, qty, price, deal_type FROM signals.bulk_block_deals WHERE deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals) AND qty > 100000;"
+  -
+    tool: "SQL"
+    description: "Fetch latest stage and technical scores for symbols."
+    template: "SELECT symbol, stage, technical_score, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY');"
+sql_templates:
+
+python_tools:
+  -
+    id: "insight_generator_01"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "insider_data"
+      - "deal_data"
+      - "technical_data"
+    outputs:
+      - "summary_report"
+    approved_tables:
+      - "signals.insider_alerts"
+      - "signals.bulk_block_deals"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    insider_data = context.inputs['insider_data']\n    deal_data = context.inputs['deal_data']\n    tech_data = context.inputs['technical_data']\n    summary = {}\n    for symbol in insider_data:\n        if symbol in tech_data and tech_data[symbol]['trading_signal'] in ('BUY', 'STRONG_BUY'):\n            summary[symbol] = {\n                'insider_activity': insider_data[symbol],\n                'bulk_deals': deal_data.get(symbol, []),\n                'technical_score': tech_data[symbol]['technical_score']\n            }\n    context.outputs['summary_report'] = summary\n    return context.outputs"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure insider_score is positive."
+  - "Check for minimum quantity threshold in bulk deals."
+  - "Ensure technical score aligns with a constructive trading signal."
+synthesis_guidance: "Aggregate insights, present comparison matrix, and highlight top symbols based on insider activity and technical confirmation."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:06"
+generation_model: "gpt-4o"
+validation_errors:
+  - "insight_generator_01: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "insight_generator_01: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

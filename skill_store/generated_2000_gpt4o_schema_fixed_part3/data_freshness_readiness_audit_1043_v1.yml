@@ -1,0 +1,56 @@
+id: "data_freshness_readiness_audit_1043_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1043"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: concise table."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for last 3 months: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as concise table"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  main_query:
+    description: "Generate a matrix showing data freshness and missing data for the last 3 months."
+    sql_template: "WITH latest_dates AS (\n  SELECT MAX(trade_date) AS latest_trade_date FROM market.equity_eod\n), \nrecent_data AS (\n  SELECT e.trade_date, e.symbol, ss.stage, md.advances, md.declines\n  FROM market.equity_eod e\n  JOIN scores.stage_snapshots ss ON e.symbol = ss.symbol AND e.trade_date = ss.snapshot_date\n  JOIN breadth.market_daily md ON e.trade_date = md.trade_date\n  WHERE e.trade_date > NOW() - INTERVAL '3 months'\n) \nSELECT * FROM recent_data;"
+sql_templates:
+  - "WITH latest_dates AS (\n  SELECT MAX(trade_date) AS latest_trade_date FROM market.equity_eod\n), \nrecent_data AS (\n  SELECT e.trade_date, e.symbol, ss.stage, md.advances, md.declines\n  FROM market.equity_eod e\n  JOIN scores.stage_snapshots ss ON e.symbol = ss.symbol AND e.trade_date = ss.snapshot_date\n  JOIN breadth.market_daily md ON e.trade_date = md.trade_date\n  WHERE e.trade_date > NOW() - INTERVAL '3 months'\n) \nSELECT * FROM recent_data;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all selected trade dates are within the last 3 months."
+  - "Check for any symbols missing data within the snapshot period."
+synthesis_guidance: "['Concisely display data freshness status for ease of follow-up.', 'Highlight gaps in loader processes that could impede data readiness.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:22"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

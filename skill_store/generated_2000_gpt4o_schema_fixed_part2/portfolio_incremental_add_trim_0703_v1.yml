@@ -1,0 +1,53 @@
+id: "portfolio_incremental_add_trim_0703_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0703"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: today; response style: QA checklist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for today: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh-follow-up"
+  - "today"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  - "Use the latest data from the scores.stage_snapshots table for stage and signal analysis."
+  - "Join with portfolio.holdings for current portfolio context."
+sql_templates:
+  determine_add_candidates:
+    template: "WITH latest_stages AS (\n    SELECT *\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n)\nSELECT h.symbol, ss.trading_signal, ss.stage_score\nFROM portfolio.holdings h\nJOIN latest_stages ss ON h.symbol = ss.symbol\nWHERE ss.trading_signal IN ('BUY', 'STRONG_BUY')\nORDER BY ss.stage_score DESC\nLIMIT 10;"
+  determine_trim_candidates:
+    template: "WITH latest_stages AS (\n    SELECT *\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n)\nSELECT h.symbol, ss.trading_signal, ss.stage_score\nFROM portfolio.holdings h\nJOIN latest_stages ss ON h.symbol = ss.symbol\nWHERE ss.trading_signal = 'SELL'\nORDER BY ss.stage_score DESC\nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure query response times are within acceptable limits."
+  - "Confirm correct identification of add and trim candidates."
+synthesis_guidance: "['Focus on actionable insights regarding add/trim decisions.', 'Integrate sector exposure analysis with candidate recommendations.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:35:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

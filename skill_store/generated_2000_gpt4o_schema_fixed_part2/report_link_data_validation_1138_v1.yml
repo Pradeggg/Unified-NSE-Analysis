@@ -1,0 +1,48 @@
+id: "report_link_data_validation_1138_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Position-Sizing Context Report Validation"
+description: "This skill card facilitates the validation of enhanced report run metadata, focusing on position-sizing context for the last 20 sessions. The goal is to identify broken links, missing data, and ensure data integrity in report outputs."
+input_patterns:
+  - "validate generated report links and missing data"
+  - "position-sizing context for last 20 sessions"
+tags:
+  - "report_qa"
+  - "position-sizing_context"
+  - "data_validation"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  task_type: "validation"
+  scope: "Validate enhanced report linkage and data."
+sql_templates:
+  -
+    name: "check_broken_links"
+    template: "SELECT run_id FROM report.enhanced_runs WHERE run_ts >= (CURRENT_DATE - INTERVAL '20 sessions') ORDER BY run_ts DESC;"
+  -
+    name: "missing_data_check"
+    template: "SELECT s.symbol, s.run_id FROM report.enhanced_filtered_stocks s LEFT JOIN report.enhanced_runs r ON s.run_id = r.run_id WHERE r.run_ts >= (CURRENT_DATE - INTERVAL '20 sessions') AND r.run_id IS NULL;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all recent report links (last 20 sessions) are functioning."
+  - "Verify the completeness of stock data for recent enhanced reports."
+synthesis_guidance: "Use narrative style to explain validation results and align them with position-sizing contexts observed."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:32"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

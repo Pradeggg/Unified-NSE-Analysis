@@ -1,0 +1,50 @@
+id: "report_link_data_validation_1488_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Report Link Validation and Data Verification"
+description: "Evaluate the integrity of report links and ensure complete data presence. Focus on intraday context with portfolio-aware outputs."
+input_patterns:
+  - "Review report links not functioning"
+  - "Check missing data in stock HTML files"
+  - "Validate report links and address missing data"
+  - "Intraday position-sizing check: report links malfunction"
+  - "Portfolio-aware output validation of report links and data"
+tags:
+  - "report_qa"
+  - "links_validation"
+  - "data_completeness"
+  - "intraday_context"
+  - "portfolio_awareness"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    description: "Examine enhanced report metadata and filtered stock records for completeness and link functionality."
+sql_templates:
+  -
+    id: "validation_query"
+    template: "WITH valid_runs AS (SELECT run_id FROM report.enhanced_runs), valid_stocks AS (SELECT run_id, symbol FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM valid_runs)) SELECT * FROM valid_stocks WHERE symbol IS NULL OR symbol = '';"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Check for missing symbols in filtered stocks."
+  - "Ensure all run IDs have corresponding entries in both tables."
+synthesis_guidance: "Compile output in a portfolio-aware format emphasizing intraday context. Address any issues impacting report link functionality or data completeness."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

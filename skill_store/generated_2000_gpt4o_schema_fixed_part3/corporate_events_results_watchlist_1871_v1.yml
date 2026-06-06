@@ -1,0 +1,53 @@
+id: "corporate_events_results_watchlist_1871_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1871"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for pre market: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as action watchlist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Identify upcoming or recent corporate events related to results and generate a watchlist based on the latest available data."
+sql_templates:
+  -
+    name: "upcoming_corporate_events_watchlist"
+    type: "primary"
+    template: "SELECT ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, ce.detail, ra.verdict, ra.growth_yoy_revenue_pct, ra.growth_yoy_pat_pct FROM signals.corporate_events ce LEFT JOIN scores.results_analysis ra ON ce.symbol = ra.symbol WHERE ce.event_date >= CURRENT_DATE AND ce.event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM') ORDER BY ce.event_date LIMIT 50;"
+    notes: "Select upcoming events and filter using event_date for the future events, with key results analysis metrics."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure SQL uses the approved join between corporate_events and results_analysis."
+  - "Verify event_date comparison logic adheres to global SQL rules."
+synthesis_guidance: "Combine events from corporate_events with analytical results context from results_analysis to form a comprehensive action watchlist. Prioritize events happening today or soon to be held."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:33"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

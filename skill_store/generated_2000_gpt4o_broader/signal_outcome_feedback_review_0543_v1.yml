@@ -1,0 +1,67 @@
+id: "signal_outcome_feedback_review_0543_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0543"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: research-only summary."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for last 3 months: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as research-only summary"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze signal outcomes for the last 3 months and identify improvement patterns in Indian markets."
+sql_templates:
+  -
+    template_name: "select_signals"
+    description: "Retrieve signals from the last 3 months and their outcomes."
+    sql: "SELECT id, date_issued, symbol, signal, price_at_issue, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+  -
+    id: "run_signal_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signal_data"
+    outputs:
+      - "summary_report"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    signals = context['signal_data']\n    # Analyze winner and loser patterns\n    winners = [s for s in signals if s['hit_target']]\n    losers = [s for s in signals if s['hit_stop']]\n    summary_report = {\n        'outcome_summary': 'Evaluated signal outcomes for the past 3 months.',\n        'winner_patterns': len(winners),\n        'failure_patterns': len(losers),\n        'route_improvements': 'Identify strategies where signals consistently hit targets.',\n        'next_checks': 'Review fundamental and technical scores for improvement.'\n    }\n    return summary_report"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure date filtering matches the last 3 months period"
+  - "Only include signals with known outcomes"
+synthesis_guidance: "Summarize findings based on the signal performance data to enhance skill strategies."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:48:21"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_signal_analysis: execution failed: KeyError: 'signal_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_signal_analysis: execution failed: KeyError: 'signal_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

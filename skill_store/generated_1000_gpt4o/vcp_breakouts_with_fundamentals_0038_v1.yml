@@ -1,0 +1,55 @@
+id: "vcp_breakouts_with_fundamentals_0038_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0038"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: concise table."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  VCP_Breakouts:
+    template: "WITH recent_vcp AS (SELECT symbol, price, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE AND vcp_score IS NOT NULL ORDER BY vcp_score DESC LIMIT 10), fundamentals AS (SELECT symbol, company_name, sector, fundamental_score FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE AND fundamental_score > 70) SELECT r.symbol, f.company_name, f.sector, r.price, f.fundamental_score FROM recent_vcp r JOIN fundamentals f ON r.symbol = f.symbol;"
+    description: "Select top 10 VCP breakout stocks with strong fundamentals."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:41:18"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table f.company_name"
+  - "unknown table f.fundamental_score"
+  - "unknown table f.sector"
+  - "unknown table f.symbol"
+  - "unknown table r.price"
+  - "unknown table r.symbol"

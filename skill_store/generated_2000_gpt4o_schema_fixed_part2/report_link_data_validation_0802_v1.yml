@@ -1,0 +1,52 @@
+id: "report_link_data_validation_0802_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0802"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for today: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Conduct a deep review of the report links and data."
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts, stocks_filtered FROM report.enhanced_runs WHERE run_ts::date = CURRENT_DATE;"
+    description: "Fetch today's report runs and filtered stock counts."
+  -
+    template: "WITH latest_runs AS (SELECT run_id FROM report.enhanced_runs WHERE run_ts::date = CURRENT_DATE) SELECT efs.run_id, efs.symbol, efs.score FROM report.enhanced_filtered_stocks efs JOIN latest_runs lr ON efs.run_id = lr.run_id;"
+    description: "Check stocks in today's reports."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "stocks_filtered_check"
+synthesis_guidance: "Aggregate report link and data validation issues into an actionable watchlist."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

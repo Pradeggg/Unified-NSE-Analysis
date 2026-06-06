@@ -1,0 +1,67 @@
+id: "market_3m_rotation_swing_0477_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0477"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: pre market; response style: portfolio-aware output."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  initial_assessment: "Evaluate broad market trends and sector performance over the last 3 months to identify market regime."
+  swing_candidate_identification: "Identify liquid swing candidates with favorable technical and fundamental scores."
+  sector_analysis: "Perform sector-relative comparison to pinpoint leading sectors."
+  portfolio_output: "Frame findings in a portfolio-aware manner, emphasizing opportunities and risks."
+sql_templates:
+  market_regime_analysis: "SELECT trade_date, index_symbol, close, change_pct, momentum_50d FROM market.index_eod WHERE trade_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE;"
+  swing_candidates: "SELECT symbol, company_name, sector, stage, stage_score, rsi, relative_strength FROM scores.stage_snapshots WHERE stage = 2 AND trade_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE;"
+  sector_relative_comparison: "WITH sector_performance AS (SELECT sector, AVG(stage_score) AS avg_stage_score FROM scores.stage_snapshots WHERE trade_date = (SELECT MAX(trade_date) FROM scores.stage_snapshots) GROUP BY sector) SELECT sector FROM sector_performance ORDER BY avg_stage_score DESC LIMIT 3;"
+python_tools:
+  -
+    id: "sector_trend"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_data"
+    outputs:
+      - "leading_sectors"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # This should analyze sector trends in terms of stage scores\n    pass"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+synthesis_guidance: "{'contextual_insights': 'Focus on Indian market nuances, recent macroeconomic factors influencing sector shifts, and provide action-oriented analysis.', 'data_assumptions': 'Ensure assumptions on data recency and completeness are communicated clearly.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.trade_date is not approved"

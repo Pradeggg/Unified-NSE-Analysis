@@ -1,0 +1,55 @@
+id: "portfolio_lab_paper_trading_review_1426_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1426"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: last 5 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for last 5 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  overview: "Analyze paper trading performance and strategy efficacy over the last five sessions, ensuring no mixing with real holdings."
+  steps:
+    - "Extract paper trading entries and exits from signals.signal_log."
+    - "Review trading performance metrics and strategy alignment."
+    - "Present freshness audit results for the last 5 sessions."
+sql_templates:
+  -
+    description: "Retrieve signal log entries for paper trading within the last five sessions."
+    template: "SELECT * FROM signals.signal_log WHERE date_issued >= DATEADD(day, -5, GETDATE());"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "check_recent_entries"
+synthesis_guidance: "['Ensure the delineation between paper and actual trading activities.', 'Focus on actionable insights for strategy improvement.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.dateadd is not approved"
+  - "signals.signal_log.day is not approved"
+  - "signals.signal_log.getdate is not approved"

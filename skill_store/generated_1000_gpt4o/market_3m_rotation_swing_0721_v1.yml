@@ -1,0 +1,50 @@
+id: "market_3m_rotation_swing_0721_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0721"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for last 5 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  - "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '5 days';"
+  - "SELECT sector, AVG(change_1m_pct) as avg_change FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_change DESC;"
+  - "SELECT symbol, company_name, price FROM scores.stage2_vcp_picks WHERE vcp_breakout_pct > 0.05 ORDER BY vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure data completeness for 'index_returns' over the specified timeframe."
+  - "Verify that 'leading_sectors' are based on calculated average change over the last 3 months."
+synthesis_guidance: "['Synthesize index performance and sector behavior to illustrate market regimes.', 'Identify top swing trading candidates with strong Stage 2 VCP characteristics.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:51:04"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.avg_change is not approved"

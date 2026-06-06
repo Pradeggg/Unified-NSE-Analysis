@@ -1,0 +1,59 @@
+id: "sector_breadth_rotation_watchlist_1259_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1259"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: quarter to date; response style: ranked candidates."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for quarter to date: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as ranked candidates"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+  tool_plan_template:
+    python:
+
+    sql_templates:
+      -
+        template: "WITH latest_stage_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), sector_breadth AS (SELECT sd.sector, sd.pct_above_50dma, sd.change_5d, sd.breadth_signal, sd.divergence_alert, ma.stage2_pct FROM breadth.sector_daily sd JOIN breadth.ma_pct_above ma ON sd.snapshot_date = ma.snapshot_date WHERE sd.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)) SELECT sb.sector, sb.pct_above_50dma, sb.change_5d, sb.breadth_signal FROM sector_breadth sb JOIN latest_stage_snapshots ls ON sb.sector = ls.sector WHERE ls.stage = 'STAGE_2' AND ls.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY sb.pct_above_50dma DESC LIMIT 10;"
+tool_plan_template:
+
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure referenced tables and columns exist in approved_schema."
+  - "SQL must adhere to approved_schema._global_rules and _join_rules."
+  - "Output must match specified output_contract."
+synthesis_guidance: "['Combine breadth, stage, and trading signals to rank sectors.', 'Focus on improving sectors and stocks for TradingView watchlist.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:25"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

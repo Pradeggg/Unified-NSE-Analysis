@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:53:30"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: weekly review; response style: comparison matrix."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0998_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    name: "fetch_vcp_candidates"
+    sql: "SELECT v.symbol, v.company_name, v.sector, v.price, v.vcp_score, s.enhanced_fund_score, s.earnings_quality, s.sales_growth, s.financial_strength FROM scores.stage2_vcp_picks AS v JOIN scores.stage_snapshots AS s ON v.symbol = s.symbol WHERE v.vcp_breakout_pct > 30 AND s.enhanced_fund_score > 70 ORDER BY v.vcp_score DESC"
+status: "validated"
+synthesis_guidance: "Construct a comparison matrix focusing on VCP potential and fundamental robustness, presenting it in a position-sizing context for weekly reviews."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "comparison_matrix"
+title: "VCP Breakouts With Fundamentals Variant 0998"
+tool_plan_template: "Use defined evidence tables for extracting stock candidates exhibiting new highs, VCP patterns, or breakouts with robust fundamentals."
+validation_rules:
+  - "Ensure the inclusion of only confirmed VCP patterns and high fundamentals."
+  - "All fields in 'output_contract' are populated as results."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,76 @@
+id: "portfolio_lab_paper_trading_review_1748_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1748"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: position-sizing context; timeframe: last 3 months; response style: QA checklist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "position-sizing context for last 3 months: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as QA checklist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "position-sizing_context"
+  - "last_3_months"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+  always_include:
+
+tool_plan_template: "Review and analyze paper trading strategies using the latest data within the last 3 months. Provide a QA checklist format."
+sql_templates:
+  -
+    description: "Fetch latest stage snapshot and EOD data for paper trading analysis."
+    sql: "SELECT sh.symbol, sh.qty, sh.avg_cost, sss.stage, sss.technical_score, me.close AS latest_close FROM portfolio.holdings sh JOIN scores.stage_snapshots sss ON sh.symbol = sss.symbol JOIN market.equity_eod me ON sh.symbol = me.symbol WHERE me.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND sss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 10;"
+python_tools:
+  -
+    language: "python"
+    mode: "read_only"
+    required_function: "run(context)"
+    approved_tables:
+      - "portfolio.holdings"
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    inputs:
+      - "context"
+    outputs:
+      - "filtered_data"
+    code: "def run(context):\n    # Example of extracting insights\n    data = context['portfolio.holdings']\n    # Process and append insights\n    context['filtered_data'] = data\n    return context"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure trade_date and snapshot_date filters are applied correctly for the last 3 months."
+  - "Check output against expected QA checklist format."
+synthesis_guidance: "['Frame responses as a QA checklist, highlighting insights about position-sizing and strategy outcomes.', 'Focus on the Indian market context, avoiding overlap with real holdings.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: execution failed: KeyError: 'portfolio.holdings'"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: execution failed: KeyError: 'portfolio.holdings'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

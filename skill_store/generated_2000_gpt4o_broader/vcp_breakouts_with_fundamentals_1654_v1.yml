@@ -1,0 +1,70 @@
+id: "vcp_breakouts_with_fundamentals_1654_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1654"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  sql_templates:
+    -
+      purpose: "Identify stocks in VCP pattern with strong fundamentals"
+      template: "WITH vcp_candidates AS (SELECT symbol, company_name, sector, price, change_1w_pct, rsi, relative_strength, trading_signal, investment_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE vcp_score > 70 AND enhanced_fund_score > 70) SELECT eod.symbol, eod.high, eod.low, eod.close, ss.company_name, ss.sector, ss.live_price, ss.change_1d_pct, ss.change_1w_pct, ss.enhanced_fund_score FROM market.equity_eod AS eod JOIN vcp_candidates AS ss ON eod.symbol = ss.symbol WHERE eod.trade_date = CURRENT_DATE;"
+sql_templates:
+
+python_tools:
+  -
+    id: "run_fundamentals_analysis"
+    language: "python"
+    mode: "read_only"
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    inputs:
+      - "equity_eod_data"
+      - "vcp_pick_data"
+    outputs:
+      - "filtered_candidates"
+    code: "def run(context):\n    equity_eod_data = context['equity_eod_data']\n    vcp_pick_data = context['vcp_pick_data']\n    filtered_candidates = []\n    for vcp in vcp_pick_data:\n        if vcp['vcp_score'] > 70 and vcp['enhanced_fund_score'] > 70:\n            symbol = vcp['symbol']\n            eod_data = next((eod for eod in equity_eod_data if eod['symbol'] == symbol), None)\n            if eod_data:\n                filtered_candidates.append({\n                    'symbol': symbol,\n                    'company_name': vcp['company_name'],\n                    'sector': vcp['sector'],\n                    'live_price': vcp['live_price'],\n                    'change_1w_pct': vcp['change_1w_pct'],\n                    'enhanced_fund_score': vcp['enhanced_fund_score']\n                })\n    return filtered_candidates"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all symbol data references are consistent."
+  - "Verify enhanced_fund_score and vcp_score threshold logic."
+  - "Do not modify input or evidence tables structure."
+synthesis_guidance: "Focus on stocks showing new highs, VCP patterns, and strong fundamentals using historical data and snapshots."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:54"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_fundamentals_analysis: execution failed: KeyError: 'equity_eod_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_fundamentals_analysis: execution failed: KeyError: 'equity_eod_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

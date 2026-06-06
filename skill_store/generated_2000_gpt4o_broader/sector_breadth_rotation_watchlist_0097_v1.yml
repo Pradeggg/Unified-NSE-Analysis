@@ -1,0 +1,75 @@
+id: "sector_breadth_rotation_watchlist_0097_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0097"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: weekly review; response style: concise table."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for weekly review: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as concise table"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  sector_ranks:
+    description: "Rank sectors by breadth and stage 2 participation."
+    query:
+      language: "SQL"
+      template: "SELECT sector, avg(change_5d) as avg_5d_change, avg(pct_above_50dma) as avg_pct_above_50dma, avg(stage2_pct) as avg_stage2_pct FROM breadth.sector_daily INNER JOIN breadth.ma_pct_above ON breadth.sector_daily.snapshot_date = breadth.ma_pct_above.snapshot_date GROUP BY sector ORDER BY avg_stage2_pct DESC, avg_5d_change DESC;"
+  improving_sectors:
+    description: "Identify sectors showing improvement."
+    query:
+      language: "SQL"
+      template: "SELECT sector, breadth_signal FROM breadth.sector_daily WHERE divergence_alert = 'positive' GROUP BY sector;"
+  candidate_symbols:
+    description: "Identify candidate stocks for rotation strategy."
+    query:
+      language: "SQL"
+      template: "SELECT symbol, company_name, stage, stage_score, relative_strength FROM scores.stage_snapshots WHERE stage = 2 AND stage_score > 5 ORDER BY relative_strength DESC;"
+  tradingview_symbols:
+    description: "Symbols to add to TradingView for tracking."
+    query:
+      language: "SQL"
+      template: "SELECT DISTINCT symbol FROM scores.stage_snapshots INNER JOIN market.equity_eod ON scores.stage_snapshots.symbol = market.equity_eod.symbol WHERE scores.stage_snapshots.stage = 2 AND market.equity_eod.change_pct > 0;"
+sql_templates:
+  - "SELECT sector, avg(change_5d) as avg_5d_change, avg(pct_above_50dma) as avg_pct_above_50dma, avg(stage2_pct) as avg_stage2_pct FROM breadth.sector_daily INNER JOIN breadth.ma_pct_above ON breadth.sector_daily.snapshot_date = breadth.ma_pct_above.snapshot_date GROUP BY sector ORDER BY avg_stage2_pct DESC, avg_5d_change DESC;"
+  - "SELECT sector, breadth_signal FROM breadth.sector_daily WHERE divergence_alert = 'positive' GROUP BY sector;"
+  - "SELECT symbol, company_name, stage, stage_score, relative_strength FROM scores.stage_snapshots WHERE stage = 2 AND stage_score > 5 ORDER BY relative_strength DESC;"
+  - "SELECT DISTINCT symbol FROM scores.stage_snapshots INNER JOIN market.equity_eod ON scores.stage_snapshots.symbol = market.equity_eod.symbol WHERE scores.stage_snapshots.stage = 2 AND market.equity_eod.change_pct > 0;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure SQL templates do not perform any data modification."
+  - "Verify only approved tables and columns are used."
+  - "Check for the correct application of joins and filters."
+synthesis_guidance: "['Focus on generating clear, concise tables.', 'Emphasize sector-relative comparisons and improvements.', 'Ensure results are succinct to fit a weekly review timeframe.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:11"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,91 @@
+id: "vcp_breakouts_with_fundamentals_0990_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0990"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    -
+      name: "market.equity_eod"
+      columns:
+        - "symbol"
+        - "high"
+        - "week52_high"
+        - "volume"
+    -
+      name: "scores.stage_snapshots"
+      columns:
+        - "symbol"
+        - "fundamental_score"
+        - "enhanced_fund_score"
+    -
+      name: "scores.stage2_vcp_picks"
+      columns:
+        - "symbol"
+        - "vcp_score"
+        - "vcp_breakout_pct"
+tool_plan_template:
+  title: "VCP and High Breakout Finder"
+  summary: "Identify stocks that are making new highs or exhibiting VCP breakouts with strong fundamentals."
+  steps:
+    - "Query latest equity data to find stocks at or near their 52-week highs."
+    - "Filter stocks with strong fundamental scores from the latest snapshots."
+    - "Identify stocks with significant VCP breakout scores."
+sql_templates:
+  -
+    template: "SELECT e.symbol FROM market.equity_eod e WHERE e.high >= e.week52_high ORDER BY e.volume DESC LIMIT 50;"
+    description: "Select stocks reaching new 52-week highs with high liquidity."
+  -
+    template: "SELECT s.symbol FROM scores.stage_snapshots s WHERE s.fundamental_score >= 80 AND s.enhanced_fund_score >= 75;"
+    description: "Filter for stocks with strong fundamentals."
+  -
+    template: "SELECT v.symbol FROM scores.stage2_vcp_picks v WHERE v.vcp_score > 70 AND v.vcp_breakout_pct > 5;"
+    description: "Identify significant VCP breakout stocks."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure selected stocks align with VCP or new-high patterns."
+  - "Validate fundamental scores are updated and accurate."
+synthesis_guidance: "Merge results into a comparison matrix for TradingView export."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:53:22"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.e is not approved"
+  - "scores.stage2_vcp_picks.v is not approved"
+  - "scores.stage_snapshots.s is not approved"
+  - "unknown table e.high"
+  - "unknown table e.symbol"
+  - "unknown table e.volume"
+  - "unknown table e.week52_high"
+  - "unknown table s.enhanced_fund_score"
+  - "unknown table s.fundamental_score"
+  - "unknown table s.symbol"
+  - "unknown table v.symbol"
+  - "unknown table v.vcp_breakout_pct"
+  - "unknown table v.vcp_score"
+  - "unknown table {'name': 'market.equity_eod', 'columns': ['symbol', 'high', 'week52_high', 'volume']}"
+  - "unknown table {'name': 'scores.stage2_vcp_picks', 'columns': ['symbol', 'vcp_score', 'vcp_breakout_pct']}"
+  - "unknown table {'name': 'scores.stage_snapshots', 'columns': ['symbol', 'fundamental_score', 'enhanced_fund_score']}"

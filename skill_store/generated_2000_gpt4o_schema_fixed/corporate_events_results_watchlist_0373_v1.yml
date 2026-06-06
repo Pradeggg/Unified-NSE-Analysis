@@ -1,0 +1,69 @@
+id: "corporate_events_results_watchlist_0373_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0373"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: pre market; response style: exceptions and gaps first."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for pre market: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as exceptions and gaps first"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Provide a read-only SQL query template with evidence sourcing that fits the watchlist need described."
+sql_templates:
+  -
+    description: "Fetch upcoming corporate events with latest stage and technical score."
+    template: "SELECT ce.symbol, ce.event_type, ce.event_date, ss.stage, ss.technical_score FROM signals.corporate_events ce JOIN scores.stage_snapshots ss ON ce.symbol = ss.symbol WHERE ce.event_date > CURRENT_DATE - INTERVAL '3 months' AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 100;"
+  -
+    description: "Fetch results with verdict and source trail for context."
+    template: "WITH latest_results AS (SELECT DISTINCT ON (symbol) symbol, period_end, verdict, source_trail FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC) SELECT ce.symbol, ce.event_type, ce.event_date, lr.verdict, lr.source_trail FROM signals.corporate_events ce LEFT JOIN latest_results lr ON ce.symbol = lr.symbol WHERE ce.event_date > CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+  -
+    id: "gap_analyzer_001"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "ce.symbol"
+      - "event_data"
+    outputs:
+      - "exceptions"
+      - "gaps"
+    approved_tables:
+      - "signals.corporate_events"
+      - "scores.results_analysis"
+    code: "def run(context):\n    # Analyzing gaps in data.\n    gaps = []\n    # Example logic to populate gaps\n    return {'exceptions': context['ce.symbol'], 'gaps': gaps}"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure SQL execution remains read-only with no modifications to source tables."
+  - "Confirm the SQL queries correctly use approved join conditions and filters."
+synthesis_guidance: "['Integrate SQL evidence gaps into user responses ensuring traceability of missing data.', 'Present exceptions and gaps in event-driven stock watchlists first before regular details.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:37"
+generation_model: "gpt-4o"
+validation_errors:
+  - "gap_analyzer_001: execution failed: KeyError: 'ce.symbol'"
+review:
+  status: "needs_heal"
+  findings:
+    - "gap_analyzer_001: execution failed: KeyError: 'ce.symbol'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

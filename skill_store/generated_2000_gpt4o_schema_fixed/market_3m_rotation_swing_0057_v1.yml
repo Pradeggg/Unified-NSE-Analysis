@@ -1,0 +1,50 @@
+id: "market_3m_rotation_swing_0057_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0057"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: concise table."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Identify key market rotational dynamics and sector leadership by evaluating Stage 2 equities and VCP candidates over the past three months."
+sql_templates:
+  - "SELECT index_symbol, AVG(change_pct) AS quarterly_return FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol"
+  - "SELECT sector, COUNT(symbol) AS stage_2_count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector"
+  - "SELECT symbol, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 10"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all indices have calculated returns for the past 3 months."
+  - "Verify the presence of Stage 2 symbols for latest performance insights."
+  - "Confirm leading VCP candidates have valid snapshot data."
+synthesis_guidance: "Summarize the data into actionable insights focusing on the Indian market's sector rotation and Stage 2 leadership dynamics over the last quarter."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.quarterly_return is not approved"

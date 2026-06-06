@@ -1,0 +1,69 @@
+id: "portfolio_incremental_add_trim_0183_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0183"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for intraday context: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Review current holdings and exposure for potential add/trim actions. Use provided data tables for assessment and decision-making."
+sql_templates:
+  -
+    description: "Select current holdings with latest price change data."
+    query: "WITH latest_snapshots AS (SELECT snapshot_date, symbol, company_name, sector, change_1d_pct, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT h.symbol, s.company_name, s.sector, h.qty, h.avg_cost, s.change_1d_pct, s.stage, s.stage_score FROM portfolio.holdings h JOIN latest_snapshots s ON h.symbol = s.symbol;"
+python_tools:
+  -
+    id: "calculate_sector_exposure"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      -
+        name: "holdings_data"
+        type: "DataFrame"
+    outputs:
+      -
+        name: "sector_exposure"
+        type: "DataFrame"
+    approved_tables:
+      - "portfolio.holdings"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    holdings_data = context[\"holdings_data\"]\n    sector_exposure = holdings_data.groupby('sector')['qty'].sum() / holdings_data['qty'].sum()\n    return sector_exposure"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure symbols in portfolio.holdings have corresponding entries in scores.stage_snapshots for the latest snapshot_date."
+  - "Check that sector exposure is balanced according to specified criteria."
+synthesis_guidance: "Use the SQL output to narratively recommend add/trim actions based on daily performance and current stage/sector exposure."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:42:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table h.avg_cost"
+  - "unknown table h.qty"
+  - "unknown table h.symbol"
+  - "unknown table s.change_1d_pct"
+  - "unknown table s.company_name"
+  - "unknown table s.sector"
+  - "unknown table s.stage"
+  - "unknown table s.stage_score"
+  - "unknown table s.symbol"

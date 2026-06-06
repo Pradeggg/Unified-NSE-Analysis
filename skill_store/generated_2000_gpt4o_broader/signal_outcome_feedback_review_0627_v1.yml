@@ -1,0 +1,52 @@
+id: "signal_outcome_feedback_review_0627_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Indian Market Signal Review Skill"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection in the Indian market. Focus on sector-relative comparison over the last 5 trading sessions."
+input_patterns:
+  - "Review prior signals hit target or stop"
+  - "Identify recommendations that worked or failed"
+  - "Learn from signal outcomes and add insights to skill store"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze trading signals over the last 5 sessions, focusing on sector-relative performance. Generate insights on winning and failing signals."
+sql_templates:
+  -
+    template: "SELECT symbol, sector, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_issued BETWEEN DATE_SUB(CURDATE(), INTERVAL 5 DAY) AND CURDATE()"
+    description: "Retrieve signal performance over the last 5 sessions."
+  -
+    template: "SELECT sector, AVG(return_pct) as avg_return FROM signals.signal_log WHERE date_issued BETWEEN DATE_SUB(CURDATE(), INTERVAL 5 DAY) AND CURDATE() GROUP BY sector"
+    description: "Compute average return per sector over the last 5 sessions."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure SQL queries are read-only and use approved columns."
+  - "Output must summarize outcomes and suggest improvements."
+  - "Incorporate sector-relative analysis."
+synthesis_guidance: "Highlight variations in signal success across sectors. Use insights to recognize patterns and refine strategies."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.avg_return is not approved"
+  - "signals.signal_log.curdate is not approved"
+  - "signals.signal_log.date_sub is not approved"
+  - "signals.signal_log.day is not approved"

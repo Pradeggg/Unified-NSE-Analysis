@@ -1,0 +1,60 @@
+id: "report_link_data_validation_1586_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1586"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: intraday context; response style: research-only summary."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for intraday context: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "intraday_context"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  steps:
+    - "Validate enhanced report run metadata from the table report.enhanced_runs."
+    - "Check filtered stock data integrity in report.enhanced_filtered_stocks."
+    - "Use the _join_rules to ensure correct linkage between runs and stocks."
+    - "Apply freshness audit within intraday context using specified global rules."
+sql_templates:
+  - "WITH latest_runs AS (SELECT * FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '1 day') SELECT efs.run_id, efs.symbol, efs.score FROM latest_runs er JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id WHERE efs.missing_data IS NOT NULL LIMIT 100;"
+python_tools:
+  -
+    id: "run_context_tool_1"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "summary"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Process context and produce summary\n    return {'summary': 'Processed research findings.'}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure run_id and symbol join correctly between tables."
+  - "Check for missing data fields in stocks filtered for the latest runs."
+synthesis_guidance: "['Summarize findings in a research-friendly format.', 'Highlight data patterns impacting intraday analyses only.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:44"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_filtered_stocks.missing_data is not approved"

@@ -1,0 +1,51 @@
+created_at: "2026-06-06T12:41:35"
+created_by: "llm_generated"
+description: "Validate report run metadata, filtered stock rows, and source trails focusing on watchlist creation post-results."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_card_001_0064_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for post results: review report links not working"
+  - "validate generated report links and missing data as concise table"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    description: "Retrieve report run metadata and stock data"
+    template: "SELECT r.run_id, r.universe_size, r.stocks_analyzed, f.symbol, f.current_price\nFROM report.enhanced_runs AS r\nJOIN report.enhanced_filtered_stocks AS f ON r.run_id = f.run_id\nWHERE r.universe_size > 0"
+    template_id: "sql_validate_links"
+status: "validated"
+synthesis_guidance: "['Summarize findings in concise report table.', 'Validate presence of all required data post-results.']"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "post_results"
+  - "concise_table"
+title: "Report Link Data Validation"
+tool_plan_template: "The agent will validate report links by checking:\n1. Enhanced run metadata completeness.\n2. Stock data presence in filtered stocks.\n3. Creation of a concise table for watchlist post-results."
+validation_rules:
+  - "Ensure tables and columns in SQL match approved schema."
+  - "Verify outputs follow the contract structure."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

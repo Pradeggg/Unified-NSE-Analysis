@@ -1,0 +1,1 @@
+def run(context): return sorted(context['symbols'], key=lambda x: (context['technical_data'][x]['stage_score'], context['technical_data'][x]['rsi']), reverse=True)

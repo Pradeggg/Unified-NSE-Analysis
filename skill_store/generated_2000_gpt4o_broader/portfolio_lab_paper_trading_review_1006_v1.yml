@@ -1,0 +1,70 @@
+id: "portfolio_lab_paper_trading_review_1006_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1006"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: today; response style: concise table."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for today: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as concise table"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "fetch_open_trades_today"
+    query: "SELECT symbol, date_issued, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued = CURRENT_DATE AND date_resolved IS NULL;"
+  -
+    name: "entry_exit_audit"
+    query: "SELECT s.symbol, s.entry_low, s.entry_high, s.stop_loss, s.target_1, s.target_2, h.avg_cost FROM signals.signal_log s JOIN portfolio.holdings h ON s.symbol = h.symbol WHERE s.date_issued = CURRENT_DATE AND s.date_resolved IS NULL;"
+python_tools:
+  -
+    id: "calculate_exposure"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "open_trades_today"
+    outputs:
+      - "calculated_exposure"
+    approved_tables:
+      - "portfolio.holdings"
+      - "signals.signal_log"
+    code: "def run(context):\n    # Calculate the exposure based on open trades and holdings\n    exposure = sum([trade['entry_high'] * trade['entry_low'] for trade in context['open_trades_today']])\n    return {'calculated_exposure': exposure}"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure data is current (freshness audit) for today."
+  - "Verify no mixing with real portfolio holdings."
+synthesis_guidance: "Compile data into a concise table format highlighting strategy entries, exits, stops, and targets for today's paper trading review."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:23"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_exposure: execution failed: KeyError: 'open_trades_today'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_exposure: execution failed: KeyError: 'open_trades_today'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

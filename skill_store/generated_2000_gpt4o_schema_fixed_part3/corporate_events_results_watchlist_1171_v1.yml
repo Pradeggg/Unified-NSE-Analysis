@@ -1,0 +1,51 @@
+id: "corporate_events_results_watchlist_1171_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1171"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: pre market; response style: narrative plus evidence."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for pre market: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as narrative plus evidence"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "pre_market"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "fetch_upcoming_events"
+    query: "SELECT ce.symbol, ce.event_date, ce.event_type, ce.purpose_raw FROM signals.corporate_events ce WHERE ce.event_date >= CURRENT_DATE ORDER BY ce.event_date LIMIT 50"
+  -
+    name: "fetch_recent_results"
+    query: "WITH latest_results AS (SELECT DISTINCT ON (ra.symbol) ra.symbol, ra.period_end, ra.verdict FROM scores.results_analysis ra ORDER BY ra.symbol, ra.period_end DESC NULLS LAST, ra.updated_at DESC) SELECT lr.symbol, lr.period_end, lr.verdict FROM latest_results lr"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "schema_conformance"
+  - "status"
+synthesis_guidance: "Synthesize a quick scan narrative of event-driven stock movements focusing on upcoming and recently reported results, enriched with corporate event context and latest market stage information. Make use of provided SQL templates for extracting key data points."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:56:16"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.corporate_events.ce is not approved"

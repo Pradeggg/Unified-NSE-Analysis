@@ -1,0 +1,57 @@
+id: "fii_dii_regime_breadth_review_1394_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1394"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as exceptions and gaps first"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    tool_name: "SQL Executor"
+    parameters:
+      query: "weekly_fii_dii_regime_insights"
+sql_templates:
+  weekly_fii_dii_regime_insights:
+    template: "WITH latest_flows AS (SELECT * FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows)), latest_regime AS (SELECT * FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history)), latest_breadth AS (SELECT * FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily)), latest_index AS (SELECT * FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod)) SELECT latest_flows.trade_date, latest_flows.flow_signal, latest_flows.fii_trend, latest_flows.dii_trend, latest_regime.regime, latest_regime.confidence, latest_breadth.ad_signal, latest_breadth.market_sentiment, latest_index.close, latest_index.trend_signal FROM latest_flows JOIN latest_regime ON latest_flows.trade_date = latest_regime.trade_date JOIN latest_breadth ON latest_flows.trade_date = latest_breadth.trade_date JOIN latest_index ON latest_flows.trade_date = latest_index.trade_date AND latest_index.index_symbol = 'Nifty 50';"
+    select: true
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure trade_date is current."
+  - "Verify flow_signal alignment with market sentiment."
+  - "Validate regime confidence level."
+synthesis_guidance: "['Focus on weekly trend coherence across FII/DII, regime, and breadth.', 'Highlight exceptions and data gaps upfront.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:50"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

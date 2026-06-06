@@ -1,0 +1,66 @@
+id: "fii_dii_regime_breadth_review_0792_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0792"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Provide a comprehensive weekly review of the market by analyzing FII/DII flows, market regime, breadth, and index data to assess risk context in a QA checklist format."
+sql_templates:
+  - "WITH flow_trend AS (SELECT trade_date, fii_net_5d, dii_net_5d, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= (SELECT MAX(trade_date) FROM signals.fii_dii_flows) - INTERVAL '7 days'), regime_data AS (SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date >= (SELECT MAX(trade_date) FROM signals.regime_history) - INTERVAL '7 days'), breadth_data AS (SELECT trade_date, advancements, declines, net_ad FROM breadth.market_daily WHERE trade_date >= (SELECT MAX(trade_date) FROM breadth.market_daily) - INTERVAL '7 days') SELECT * FROM flow_trend, regime_data, breadth_data ORDER BY trade_date DESC;"
+python_tools:
+  -
+    id: "risk_analysis_utility"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "flow_trend"
+      - "regime_data"
+      - "breadth_data"
+    outputs:
+      - "risk_flags"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+    code: "def run(context): return {'risk_flags': assess_risk(context['flow_trend'], context['regime_data'], context['breadth_data'])}"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "check_date"
+  - "ensure_complete_series"
+synthesis_guidance: "{'analyze_flow_trends': 'Identify net changes in FII/DII flows over the past week.', 'interpret_market_regime': 'Assess confidence in current market regime.', 'assess_breadth_conditions': 'Evaluate market breadth indicators like net advances and declines.', 'confirm_index_movement': 'Check index closing data for alignment with flow and breadth context.', 'flag_risk_indicators': 'Highlight any discrepancies or signals suggesting risk-on or risk-off conditions.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:44"
+generation_model: "gpt-4o"
+validation_errors:
+  - "risk_analysis_utility: execution failed: NameError: name 'assess_risk' is not defined"
+review:
+  status: "needs_heal"
+  findings:
+    - "risk_analysis_utility: execution failed: NameError: name 'assess_risk' is not defined"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

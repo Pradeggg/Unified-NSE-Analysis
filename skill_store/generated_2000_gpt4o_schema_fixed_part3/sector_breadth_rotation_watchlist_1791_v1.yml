@@ -1,0 +1,60 @@
+id: "sector_breadth_rotation_watchlist_1791_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1791"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for weekly review: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as QA checklist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  task: "Screen sectors for improving breadth and Stage 2 participation."
+  context: "Indian market focus with weekly review insights."
+  goal: "Identify sectors and stocks showing bullish potential for TradingView integration."
+sql_templates:
+  -
+    template_name: "identify_improving_sectors"
+    query: "WITH latest_sector_breadth AS (SELECT sector, pct_above_50dma, breadth_signal FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)), latest_stage_snapshots AS (SELECT sector, MAX(stage_score) as max_stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector) SELECT a.sector FROM latest_sector_breadth a INNER JOIN latest_stage_snapshots b ON a.sector = b.sector WHERE breadth_signal = 'IMPROVING' ORDER BY b.max_stage_score DESC;"
+  -
+    template_name: "identify_candidate_stocks"
+    query: "SELECT symbol, company_name, relative_strength, price FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY relative_strength DESC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sector breadth improvements are detected accurately."
+  - "Validate Stage 2 participation in improving sectors."
+  - "Stocks are correctly filtered by RS and trading signals."
+synthesis_guidance: "['Focus on sectors demonstrating both breadth improvement and high stage scores.', 'Identify and list stocks suitable for TradingView based on signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:47"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

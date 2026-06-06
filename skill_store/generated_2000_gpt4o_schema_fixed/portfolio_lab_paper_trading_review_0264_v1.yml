@@ -1,0 +1,63 @@
+id: "portfolio_lab_paper_trading_review_0264_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0264"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: post results; response style: ranked candidates."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for post results: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as ranked candidates"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    -
+      step: "Identify paper trading strategies"
+      task: "Generate a report for paper trading strategies based on selected holdings and signals."
+    -
+      step: "Analyze entries, exits, and stops"
+      task: "Review and provide insights on entries, exits, stop loss, and target prices for the paper trading portfolio."
+    -
+      step: "Create Watchlist"
+      task: "Formulate a watchlist of potential candidates ranked according to scores and market signals."
+sql_templates:
+  holdings_with_stage_context: "SELECT portfolio.holdings.symbol, qty, avg_cost, buy_date, stage, stage_score\nFROM portfolio.holdings\nJOIN scores.stage_snapshots ON portfolio.holdings.symbol = scores.stage_snapshots.symbol\nWHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nLIMIT 10;"
+  signals_with_outcome: "SELECT signals.signal_log.symbol, signal, setup_class, date_issued, date_resolved, return_pct\nFROM signals.signal_log\nJOIN scores.stage_snapshots ON signals.signal_log.symbol = scores.stage_snapshots.symbol\nWHERE date_resolved IS NOT NULL AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nLIMIT 20;"
+  watchlist_creation: "SELECT symbol, trading_signal, technical_score, investment_score\nFROM scores.stage_snapshots\nWHERE trading_signal IN ('BUY', 'STRONG_BUY')\nAND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nORDER BY investment_score DESC\nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "check_symbol_existence"
+  - "ensure_date_alignment"
+synthesis_guidance: "Synthesize results focusing on providing ranked candidates for portfolio lab strategy showcasing a comparative analysis between paper trading strategies and actual portfolio holdings."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

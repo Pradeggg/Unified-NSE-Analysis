@@ -1,0 +1,60 @@
+id: "insider_bulk_deal_signal_review_1186_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1186"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: intraday context; response style: narrative plus evidence."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for intraday context: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as narrative plus evidence"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "intraday_context"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Generate a narrative based on inputs: {{input_patterns}}, especially focusing on the timeframe: intraday context."
+sql_templates:
+  -
+    template_id: "insider_alert_query"
+    description: "Retrieve latest insider alerts with relevant technical context."
+    sql: "WITH latest_stage AS (SELECT symbol, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT a.symbol, a.alert_date, a.entity, a.qty, a.value_cr, b.technical_score FROM signals.insider_alerts a JOIN latest_stage b ON a.symbol = b.symbol WHERE a.alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts) LIMIT 10;"
+  -
+    template_id: "bulk_deal_query"
+    description: "Retrieve recent bulk or block deals with associated technical stage."
+    sql: "SELECT a.symbol, a.deal_date, a.entity, a.qty, a.price, b.stage, b.technical_score FROM signals.bulk_block_deals a JOIN scores.stage_snapshots b ON a.symbol = b.symbol WHERE a.deal_date >= CURRENT_DATE - INTERVAL '3 months' AND b.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 10;"
+python_tools:
+  - "run"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure results contain fields as per the output contract specifications."
+  - "Ranked symbols should align with technical confirmation scores."
+  - "Deal summaries must include deal date, symbol, and price."
+synthesis_guidance: "['Focus on recent insider and bulk deal activity with technical confirmations.', 'Use intraday context to interpret alerts and deals.', 'Discuss potential accumulation or distribution signals with appropriate risk notes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:56:28"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

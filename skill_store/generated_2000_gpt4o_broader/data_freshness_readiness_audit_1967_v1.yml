@@ -1,0 +1,54 @@
+id: "data_freshness_readiness_audit_1967_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1967"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: post results; response style: comparison matrix."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for post results: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as comparison matrix"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "{{ freshness_matrix }} | {{ missing_sources }} | {{ blocking_gaps }} | {{ loader_actions }} | {{ verification_queries }}"
+sql_templates:
+  -
+    template_name: "check_data_freshness"
+    query: "SELECT trade_date, MAX(trade_date) AS last_trade_date FROM market.index_eod GROUP BY trade_date HAVING MAX(trade_date) < CURRENT_DATE - INTERVAL '1 day';"
+  -
+    template_name: "sector_relative_comparison"
+    query: "WITH recent_results AS (SELECT trade_date, index_symbol, close FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '7 days') SELECT index_symbol, AVG(close) as avg_close FROM recent_results GROUP BY index_symbol;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure the SQL queries only select and do not modify data."
+  - "Validate the comparison matrix includes all relevant sectors."
+synthesis_guidance: "Consolidate sector-relative data freshness using comparative analysis and determine readiness actions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:51"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.last_trade_date is not approved"

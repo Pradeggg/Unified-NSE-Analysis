@@ -1,0 +1,65 @@
+id: "vcp_breakouts_with_fundamentals_0660_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0660"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  python_tools:
+    -
+      id: "filter_candidates"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "symbols"
+        - "fundamental_criteria"
+      outputs:
+        - "filtered_symbols"
+      approved_tables:
+        - "scores.stage_snapshots"
+      code: "def run(context):\n    return [s for s in context['symbols'] if context['fundamental_criteria'](s)]"
+sql_templates:
+  -
+    description: "Select VCP breakouts with strong fundamentals."
+    template: "SELECT sp.symbol, sp.company_name, e.high\nFROM scores.stage2_vcp_picks sp\nJOIN market.equity_eod e ON sp.symbol = e.symbol\nWHERE sp.enhanced_fund_score > 75 AND e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);\n"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure extracted symbols meet fundamental and breakout criteria."
+  - "Output symbols must be compatible with TradingView."
+synthesis_guidance: "['Prioritize stocks with high VCP scores and strong fundamentals.', 'Ensure liquidity and price data are current.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

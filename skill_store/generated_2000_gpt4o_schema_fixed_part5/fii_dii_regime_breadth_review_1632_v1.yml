@@ -1,0 +1,93 @@
+id: "fii_dii_regime_breadth_review_1632_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1632"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as debug trace"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+  freshness:
+    max_eod_age_days: 3
+tool_plan_template:
+  -
+    inputs:
+      - "latest FII/DII flows"
+      - "market regime"
+      - "breadth statistics"
+      - "index EOD data"
+    logic: "Identify market regime, interpret flows and breadth, confirm with index action."
+    outputs:
+      - "regime"
+      - "flow_context"
+      - "breadth_context"
+      - "index_confirmation"
+      - "risk_flags"
+sql_templates:
+  -
+    name: "Fetch Latest FII/DII Flows and Trends"
+    sql: "WITH latest_flows AS (SELECT * FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days') SELECT trade_date, fii_net_today, dii_net_today, flow_signal FROM latest_flows ORDER BY trade_date DESC;"
+  -
+    name: "Fetch Recent Market Regime"
+    sql: "WITH latest_regimes AS (SELECT * FROM signals.regime_history WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days') SELECT trade_date, regime, confidence FROM latest_regimes ORDER BY trade_date DESC;"
+  -
+    name: "Gather Market Breadth Details"
+    sql: "WITH latest_breadth AS (SELECT * FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days') SELECT trade_date, advances, declines, market_sentiment FROM latest_breadth ORDER BY trade_date DESC;"
+  -
+    name: "Retrieve Index EOD Data"
+    sql: "WITH latest_index AS (SELECT * FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days' AND index_symbol = 'Nifty 50') SELECT trade_date, close, change_pct, trend_signal FROM latest_index ORDER BY trade_date DESC;"
+python_tools:
+  -
+    id: "debug_trace_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "flow_data"
+      - "regime_data"
+      - "breadth_data"
+      - "index_data"
+    outputs:
+      - "trace_log"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context):\n    # Simulate processing of evidence\n    trace_log = []\n    for record in context['flow_data']:\n        trace_log.append(f\"Evaluating: Trade Date {record['trade_date']}, Flow Signal: {record['flow_signal']}\")\n    for record in context['regime_data']:\n        trace_log.append(f\"Regime: {record['regime']} with Confidence: {record['confidence']}\")\n    for record in context['breadth_data']:\n        trace_log.append(f\"Market Sentiment: {record['market_sentiment']} with {record['advances']} Advances and {record['declines']} Declines\")\n    for record in context['index_data']:\n        trace_log.append(f\"Index Close: {record['close']} with Change: {record['change_pct']}% and Trend: {record['trend_signal']}\")\n    return {'trace_log': trace_log}"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Status must be generated."
+synthesis_guidance: "Integrate evidence from flows, regimes, breadth, and index to evaluate market position."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:12"
+generation_model: "gpt-4o"
+validation_errors:
+  - "debug_trace_tool: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "debug_trace_tool: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

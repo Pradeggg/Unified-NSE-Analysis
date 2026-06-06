@@ -1,0 +1,65 @@
+id: "agent_route_failure_diagnostics_1540_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1540"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: last 20 sessions; response style: research-only summary."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as research-only summary"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Develop a diagnostic strategy using available databases to identify evidence of route failures, missing tools, and incorrect symbol resolution in the last 20 sessions."
+sql_templates:
+  - "SELECT run_id, run_ts, universe_size, stocks_analyzed, market_sentiment FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '20 days';"
+  - "SELECT symbol, recommendation, daily_signal, rsi FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '20 days');"
+python_tools:
+  -
+    id: "route_stability_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_data"
+      - "stock_data"
+    outputs:
+      - "stability_summary"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    run_data = context['run_data']\n    stock_data = context['stock_data']\n    # Analyze stability based on run and stock performance data\n    stability_summary = []\n    # Add analysis logic here without external dependencies\n    return stability_summary"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure output matches expected JSON structure."
+  - "Check SQL queries for read-only compliance."
+  - "Validate evidence tables against approved schema."
+synthesis_guidance: "['Summarize findings in a research-only format, focusing on the Indian market context.', 'Identify key patterns from the TradingView export data affecting route stability.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:09:44"
+generation_model: "gpt-4o"
+validation_errors:
+  - "route_stability_analysis: execution failed: KeyError: 'run_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "route_stability_analysis: execution failed: KeyError: 'run_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

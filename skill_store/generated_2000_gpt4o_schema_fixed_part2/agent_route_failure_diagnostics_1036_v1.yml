@@ -1,0 +1,67 @@
+id: "agent_route_failure_diagnostics_1036_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1036"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: last 20 sessions; response style: concise table."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as concise table"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze route failures by examining the last 20 sessions for patterns in tool usage, symbol resolution, and freshness."
+sql_templates:
+  -
+    template_name: "Latest Run Diagnostics"
+    template: "SELECT er.run_id, er.run_ts, ef.symbol, ef.recommendation, ef.score, IFNULL(sn.stage, 'UNKNOWN') as stage FROM report.enhanced_runs er LEFT JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id LEFT JOIN scores.stage_snapshots sn ON ef.symbol = sn.symbol WHERE er.run_ts >= (SELECT MAX(run_ts) FROM report.enhanced_runs) - INTERVAL '20 days' ORDER BY er.run_ts DESC LIMIT 20;"
+python_tools:
+  -
+    id: "route_diagnostics_analyzer"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_data"
+    outputs:
+      - "patterns"
+      - "anomalies"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze run_data to identify patterns\n    patterns = []\n    anomalies = []\n    for run in context[\"run_data\"]:\n        # processing logic here\n        pass\n    return {\"patterns\": patterns, \"anomalies\": anomalies}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates must be read-only SELECT/WITH."
+  - "Python tools must adhere to the read-only policy."
+synthesis_guidance: "['Focus on identifying patterns or anomalies in diagnostics over the last 20 sessions.', 'Highlight any missing tools or wrong symbol resolutions leading to route failures.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:31"
+generation_model: "gpt-4o"
+validation_errors:
+  - "route_diagnostics_analyzer: execution failed: KeyError: 'run_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "route_diagnostics_analyzer: execution failed: KeyError: 'run_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

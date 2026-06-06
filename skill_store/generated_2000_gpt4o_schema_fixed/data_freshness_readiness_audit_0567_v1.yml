@@ -1,0 +1,70 @@
+id: "data_freshness_readiness_audit_0567_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0567"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for post results: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as research-only summary"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  steps:
+    - "Assess data freshness across selected tables."
+    - "Identify missing sources impacting data readiness."
+    - "Highlight sector-relative gaps in data."
+sql_templates:
+  freshness_check:
+    query: "SELECT MAX(trade_date) FROM market.index_eod UNION ALL SELECT MAX(trade_date) FROM market.equity_eod; -- more steps as needed"
+    type: "SELECT"
+  sector_comparison:
+    query: "SELECT sector, AVG(technical_score) AS avg_technical_score FROM scores.stage_snapshots GROUP BY sector;"
+    type: "SELECT"
+python_tools:
+  -
+    id: "run_data_freshness_audit"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "evidence"
+    outputs:
+      - "summary"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "# Read-only Python logic to evaluate data freshness across tables\n# Example: import numpy as np\nsummary = 'Data is up to date'"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all required evidence tables are queried."
+  - "Validate sector-related metrics are analyzed."
+synthesis_guidance: "['Summarize data freshness issues impacting sector readiness.', 'Comment on potential improvements for data loaders.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:25:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.avg_technical_score is not approved"

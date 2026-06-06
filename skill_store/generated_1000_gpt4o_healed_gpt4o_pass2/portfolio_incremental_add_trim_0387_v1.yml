@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:46:06"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: intraday context; response style: exceptions and gaps first."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0387_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for intraday context: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as exceptions and gaps first"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "select_current_holdings"
+    query: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings"
+  -
+    name: "select_stage_snapshots"
+    query: "SELECT symbol, company_name, sector, market_cap_cat, stage, stage_score, relative_strength, investment_score, supertrend_state, narrative FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE"
+status: "validated"
+synthesis_guidance: "Evaluate holdings for add or trim actions based on intraday context and sector-relative analysis."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "exceptions_and_gaps_first"
+title: "Portfolio Incremental Add Trim Review Variant 0387"
+tool_plan_template: "Review current holdings against stage_snapshots to identify if sector-relative add/trim actions are needed."
+validation_rules:
+  - "Ensure all SQL queries are read-only and fit within the approved schema."
+  - "Ensure the response style prioritizes exceptions and gaps."
+version: 1

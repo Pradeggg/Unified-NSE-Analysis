@@ -1,0 +1,53 @@
+id: "fii_dii_regime_breadth_review_1814_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1814"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for latest EOD: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as action watchlist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  python_tools:
+
+sql_templates:
+  read_only:
+    -
+      query: "WITH latest_trades AS (SELECT MAX(trade_date) AS latest_date FROM market.index_eod), latest_data AS (SELECT f.trade_date, f.fii_net_today, f.dii_net_today, f.fii_trend, f.dii_trend, r.regime, r.confidence, b.advances, b.declines, b.ad_signal, i.close, i.rsi FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date JOIN breadth.market_daily b ON f.trade_date = b.trade_date JOIN market.index_eod i ON f.trade_date = i.trade_date WHERE f.trade_date = (SELECT latest_date FROM latest_trades) AND i.index_symbol = 'Nifty 50') SELECT *, CASE WHEN regime = 'BULL' AND fii_trend = 'Positive' AND dii_trend = 'Positive' AND ad_signal = 'Bullish' THEN 'Risk-On' ELSE 'Risk-Off' END AS market_status FROM latest_data LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "status"
+synthesis_guidance: "{'evidence_gaps': ['None']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

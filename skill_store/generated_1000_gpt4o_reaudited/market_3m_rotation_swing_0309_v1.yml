@@ -1,0 +1,69 @@
+created_at: "2026-06-06T12:44:20"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: today; response style: exceptions and gaps first."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0309_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as exceptions and gaps first"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    name: "Index Change"
+    template: "SELECT index_symbol, AVG(change_pct) AS avg_change_pct FROM market.index_eod WHERE trade_date >= :start_date GROUP BY index_symbol"
+  -
+    name: "Sector Leadership"
+    template: "SELECT sector, COUNT(symbol) AS count, AVG(stage_score) AS avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date >= :start_date GROUP BY sector"
+  -
+    name: "Swing Candidates"
+    template: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= :start_date AND vcp_breakout_pct > :threshold"
+status: "test_failed"
+synthesis_guidance: "Focus on identifying gaps and exceptions before conclusions."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "today"
+  - "exceptions_and_gaps_first"
+title: "3M Market Rotation Swing Assessment Variant 0309"
+tool_plan_template:
+  steps:
+    -
+      action: "Identify leading sectors and regime changes from index data"
+      input:
+        - "SELECT index_symbol, AVG(change_pct) AS avg_change_pct FROM market.index_eod WHERE trade_date >= '2023-07-01' GROUP BY index_symbol"
+    -
+      action: "Assess sector leadership and shift in stages from snapshots"
+      input:
+        - "SELECT sector, COUNT(symbol) AS count, AVG(stage_score) AS avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date >= '2023-07-01' GROUP BY sector"
+    -
+      action: "Identify liquid swing candidates from VCP picks"
+      input:
+        - "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= '2023-07-01' AND vcp_breakout_pct > 5"
+validation_rules:
+  - "Ensure all selected sectors have valid stage scores"
+  - "Verify liquid swing candidates have adequate VCP scores"
+version: 1
+validation_errors:
+  - "market.index_eod.avg_change_pct is not approved"
+  - "scores.stage_snapshots.avg_stage_score is not approved"

@@ -1,0 +1,1 @@
+def run(context): return perform_risk_analysis(context['portfolio_data'], context['market_signals'])

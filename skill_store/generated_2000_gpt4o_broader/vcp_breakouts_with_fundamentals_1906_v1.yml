@@ -1,0 +1,50 @@
+id: "vcp_breakouts_with_fundamentals_1906_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1906"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: today; response style: comparison matrix."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "today"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Identify stocks generating breakouts based on a combination of technical patterns (VCP, new highs) and fundamental strength using approved evidence tables."
+sql_templates:
+  new_high_or_vcp_breakouts: "WITH latest_data AS ( SELECT symbol, close, high, volume, market_cap_cr FROM market.equity_eod WHERE trade_date = CURRENT_DATE AND ( high = week52_high OR high > high * 0.95 ) ), strong_fundamentals AS ( SELECT symbol, enhanced_fund_score, earnings_quality, sales_growth FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE AND enhanced_fund_score > 80 ), vcp_ranking AS ( SELECT symbol, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE AND vcp_score > 70 ) SELECT ld.symbol FROM latest_data ld JOIN strong_fundamentals sf ON ld.symbol = sf.symbol JOIN vcp_ranking vr ON ld.symbol = vr.symbol;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "SQL queries must be read-only and SELECT-based."
+  - "All referenced tables and columns must exist in the approved schema."
+synthesis_guidance: "Provide results as a comparison matrix of stock candidates that exhibit both VCP breakouts and strong fundamentals."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:17"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

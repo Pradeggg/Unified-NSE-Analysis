@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:48:13"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: quarter to date; response style: portfolio-aware output."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0458_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Select breakout stocks with strong fundamentals and liquidity from the approved tables."
+    template: "WITH candidate_breakouts AS (SELECT s.symbol, s.company_name, s.sector, p.vcp_score, p.vcp_breakout_pct, sn.fundamental_score, e.high, e.volume FROM scores.stage2_vcp_picks p JOIN scores.stage_snapshots sn ON p.symbol = sn.symbol JOIN market.equity_eod e ON p.symbol = e.symbol WHERE p.vcp_score > 80 AND sn.fundamental_score > 70 AND e.volume > 1000000) SELECT * FROM candidate_breakouts WHERE high = week52_high;"
+status: "validated"
+synthesis_guidance: "Focus on high VCP scores and strong fundamentals while ensuring liquidity is adequate; highlight potential risks and market conditions."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+title: "VCP Breakouts With Fundamentals Variant 0458"
+tool_plan_template:
+  context: "Screening for VCP and breakout patterns in Indian market stocks with liquidity considerations."
+  use_case: "Identify breakout stocks with strong fundamentals for potential investment."
+validation_rules:
+  - "Ensure the volume is above 1,000,000 for liquidity."
+  - "Select stocks with VCP score greater than 80 and fundamental score greater than 70."
+version: 1

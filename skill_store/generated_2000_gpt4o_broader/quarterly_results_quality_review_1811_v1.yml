@@ -1,0 +1,65 @@
+id: "quarterly_results_quality_review_1811_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1811"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for latest EOD: latest quarterly results analysis"
+  - "which companies had strong quarterly results as action watchlist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "{}"
+sql_templates:
+  -
+    description: "Fetch the latest quarterly results for analysis."
+    template: "SELECT symbol, revenue, pat, opm_pct, growth_yoy_revenue_pct, growth_yoy_pat_pct, opm_delta_pp FROM scores.quarterly_results INNER JOIN scores.results_analysis ON scores.quarterly_results.symbol = scores.results_analysis.symbol WHERE scores.quarterly_results.period_end = (SELECT MAX(period_end) FROM scores.quarterly_results)"
+python_tools:
+  -
+    id: "analyze_pat_growth"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "pat"
+      - "growth_yoy_pat_pct"
+      - "opm_pct"
+    outputs:
+      - "ranking"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+    code: "def run(context):\n    # Example Python tool that ranks companies based on PAT growth and margin improvements\n    results = context\n    ranked_results = sorted(results, key=lambda x: (x['growth_yoy_pat_pct'], x['opm_pct']), reverse=True)\n    return {'ranking': ranked_results}"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "For this variant's synthesis: Prioritize companies with strong PAT growth and positive margin trends. Highlight those poised for action based on watchlist goals."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:16"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

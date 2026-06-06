@@ -1,0 +1,52 @@
+id: "report_link_data_validation_1362_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Agent Adda Skill: Enhanced Report Data Validation"
+description: "This skill validates enhanced report run metadata and filtered stock rows, focusing on deep institutional review for post-result checks. It emphasizes finding exceptions and gaps."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for post results: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "post_results"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    description: "Check for broken links and missing data in enhanced reports using given inputs and schema."
+sql_templates:
+  -
+    query: "SELECT r.run_id, r.analysis_date, f.symbol, f.recommendation FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks f ON r.run_id = f.run_id WHERE r.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) AND (f.symbol IS NULL OR f.recommendation = 'Missing Data');"
+    description: "Find latest run with missing data or symbols."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all join conditions follow approved schema."
+  - "Limit result sets to avoid excessive data retrieval."
+synthesis_guidance: "Consolidate findings into remediation strategies focusing on exceptions and gaps first."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:37"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

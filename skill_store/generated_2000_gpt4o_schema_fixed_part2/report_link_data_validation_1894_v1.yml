@@ -1,0 +1,58 @@
+id: "report_link_data_validation_1894_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1894"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for weekly review: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Use SQL template to validate report links and data presence for watchlist generation."
+sql_templates:
+  -
+    description: "Identify broken or missing report links and relevant data issues."
+    template: "SELECT r.run_id, r.run_ts, f.symbol, f.rank, f.missing_data_issue FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks f ON r.run_id = f.run_id WHERE r.run_ts >= CURRENT_DATE - INTERVAL '7 days';"
+python_tools:
+  -
+    id: "validate_report_links"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+    outputs:
+      - "is_valid"
+      - "broken_links"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    result = {'is_valid': [], 'broken_links': []}\n    for run_id in context['run_id']:\n        link_validation = fake_link_validation(run_id)  # Placeholder\n        result['is_valid'].append(link_validation['is_valid'])\n        if not link_validation['is_valid']:\n            result['broken_links'].append(link_validation['broken'])\n    return result"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure report links lead to existing stock data."
+  - "Verify all referenced stock names and symbols are present."
+synthesis_guidance: "Synthesize action items and remediation steps for detected issues in reports and links."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_filtered_stocks.missing_data_issue is not approved"

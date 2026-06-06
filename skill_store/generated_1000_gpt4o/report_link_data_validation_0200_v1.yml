@@ -1,0 +1,57 @@
+id: "report_link_data_validation_0200_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0200"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: weekly review; response style: narrative plus evidence."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for weekly review: review report links not working"
+  - "validate generated report links and missing data as narrative plus evidence"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "weekly_review"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  findings: "Compile findings from the reviewed report metadata and filtered stock rows."
+  broken_links: "Identify any non-functional links within the report."
+  missing_data: "Detect missing data in stock html files and TradingView exports."
+  remediation: "Suggest steps to fix identified issues in the report links or data."
+  verification: "Provide confirmation of validity or resolution post-remediation."
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= :start_date AND run_ts <= :end_date"
+    description: "Check the metadata for runs within the specified timeframe."
+  -
+    template: "SELECT run_id, rank, symbol, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = :run_id"
+    description: "Retrieve filtered stocks information for a specific run."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "status"
+synthesis_guidance: "{'style': 'Narrative', 'focus': 'Indian market evidence and research-only framing'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:43:21"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

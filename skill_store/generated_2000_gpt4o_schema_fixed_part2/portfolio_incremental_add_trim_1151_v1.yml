@@ -1,0 +1,48 @@
+id: "portfolio_incremental_add_trim_1151_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1151"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: quarter to date; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Evaluate current holdings based on recent stages and signals. Prioritize actions for adding or trimming positions using the most recent data."
+sql_templates:
+  portfolio_snapshot: "SELECT ph.symbol, ph.qty, ph.avg_cost, ss.price, ss.stage, ss.trading_signal, ss.sector FROM portfolio.holdings ph JOIN scores.stage_snapshots ss ON ph.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "ensure_latest_snapshot"
+  - "validate_stage_signal"
+synthesis_guidance: "['Synthesize data into a narrative report, highlighting key sectors for exposure adjustment.', 'Identify symbols with strong buy or sell signals and propose incremental changes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:45"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

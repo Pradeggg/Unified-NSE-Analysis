@@ -1,0 +1,78 @@
+id: "portfolio_incremental_add_trim_0723_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0723"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for last 5 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  task: "Analyze the portfolio for add/trim decisions."
+  steps:
+    - "Extract holdings and their current standing from portfolio.holdings."
+    - "Evaluate technical and fundamental scores from scores.stage_snapshots."
+    - "Identify sectors with over/under concentration."
+    - "Prepare recommendations for adding or trimming positions."
+sql_templates:
+  -
+    task: "Fetch recent score snapshots."
+    statement: "SELECT symbol, sector, stage, stage_score, technical_score, trading_signal, change_1w_pct FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '5 days';"
+    type: "SELECT"
+  -
+    task: "Retrieve portfolio holdings."
+    statement: "SELECT symbol, qty, avg_cost FROM portfolio.holdings;"
+    type: "SELECT"
+python_tools:
+  -
+    id: "check_stage_and_technical_score"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "stage_score"
+      - "technical_score"
+    outputs:
+      - "action"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    for row in context['snapshot_data']:\n        if row['stage_score'] > 80 and row['technical_score'] > 80:\n            row['action'] = 'Add Candidate'\n        elif row['stage_score'] < 40 or row['technical_score'] < 40:\n            row['action'] = 'Trim Candidate'\n    return context"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+synthesis_guidance: "{'approach': 'Compile information for a QA style checklist, ensuring that all sectors and stocks are covered for incremental add/trim decisions.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:51:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "check_stage_and_technical_score: execution failed: KeyError: 'snapshot_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "check_stage_and_technical_score: execution failed: KeyError: 'snapshot_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

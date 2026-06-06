@@ -1,0 +1,53 @@
+id: "sector_breadth_rotation_watchlist_0531_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0531"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: last 20 sessions; response style: research-only summary."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for last 20 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as research-only summary"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Research the relative strength and momentum within sectors based on the breadth and stage participation. Identify candidates for the watchlist."
+sql_templates:
+  -
+    type: "sector_rank"
+    query: "SELECT sector, AVG(pct_above_50dma) AS avg_pct_above_50dma, AVG(stage2_pct) AS avg_stage2_pct FROM breadth.sector_daily LEFT JOIN breadth.ma_pct_above ON breadth.sector_daily.snapshot_date = breadth.ma_pct_above.snapshot_date WHERE breadth.sector_daily.snapshot_date > (CURRENT_DATE - INTERVAL '20 days') GROUP BY sector ORDER BY avg_stage2_pct DESC, avg_pct_above_50dma DESC;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Each sector must show average improvement over the last 20 sessions."
+  - "Symbols added to TradingView must have relative strength and stage scores."
+synthesis_guidance: "Summarize sector improvements and provide candidate symbols for watchlist inclusion focusing on the Indian market."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:48:14"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

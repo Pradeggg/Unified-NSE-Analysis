@@ -1,0 +1,51 @@
+created_at: "2026-06-06T12:44:25"
+created_by: "llm_generated"
+description: "Skill card to aid in validating report run metadata and detect exceptions in the position-sizing context over the last 5 sessions."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_card_001_0328_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    name: "fetch_recent_runs"
+    template: "SELECT run_id, run_ts, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - 5"
+  -
+    name: "fetch_filtered_stocks"
+    template: "SELECT run_id, symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE day_change_pct IS NOT NULL"
+status: "validated"
+synthesis_guidance: "Report exceptions and data gaps clearly, with a focus on position-sizing deviations."
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "position-sizing_context"
+  - "exceptions_and_gaps_first"
+title: "Enhanced Report Validation Skill"
+tool_plan_template: "Analyze metadata consistency and data presence for reports, focusing on last 5 sessions for position-sizing."
+validation_rules:
+  - "Ensure links are accessible."
+  - "Verify stock data is populated for all required runs."
+  - "Highlight deviations in expected universe size."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

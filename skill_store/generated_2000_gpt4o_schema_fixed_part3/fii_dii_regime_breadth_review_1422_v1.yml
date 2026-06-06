@@ -1,0 +1,78 @@
+id: "fii_dii_regime_breadth_review_1422_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1422"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for last 5 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as portfolio-aware output"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    id: 1
+    type: "sql"
+    note: "Gather FII/DII trends and current flow signals for the last 5 trading sessions."
+    rules:
+      - "Apply the _global_rules for latest-date filters."
+      - "Join signals.fii_dii_flows with signals.regime_history for same-day data."
+    sql_templates:
+      - "SELECT trade_date, fii_net_5d, dii_net_5d, flow_signal, fii_trend, dii_trend FROM signals.fii_dii_flows WHERE trade_date >= (CURRENT_DATE - INTERVAL '5 days')"
+  -
+    id: 2
+    type: "sql"
+    note: "Retrieve regime information for correlation with FII/DII signals."
+    sql_templates:
+      - "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date >= (CURRENT_DATE - INTERVAL '5 days')"
+  -
+    id: 3
+    type: "sql"
+    note: "Acquire market breadth data to identify market volatility trends."
+    sql_templates:
+      - "SELECT trade_date, net_ad, ad_signal, market_sentiment FROM breadth.market_daily WHERE trade_date >= (CURRENT_DATE - INTERVAL '5 days')"
+  -
+    id: 4
+    type: "sql"
+    note: "Evaluate index performance and confirmation signals for the market."
+    sql_templates:
+      - "SELECT trade_date, index_symbol, close, change_pct, trading_signal FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '5 days')"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

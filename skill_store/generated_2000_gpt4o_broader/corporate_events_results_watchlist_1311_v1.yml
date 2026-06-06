@@ -1,0 +1,55 @@
+id: "corporate_events_results_watchlist_1311_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1311"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: latest EOD; response style: exceptions and gaps first."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for latest EOD: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as exceptions and gaps first"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Given context find gaps using SQL, and summarize events and watchlist from available evidence."
+sql_templates:
+  template_1:
+    description: "Select recent or upcoming corporate events and filter by event type."
+    sql: "SELECT symbol, event_type, event_date, detail, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE AND event_type IN ('Dividend', 'Split', 'Bonus', 'AGM') ORDER BY event_date ASC;"
+  template_2:
+    description: "Select financial analysis results based on symbols from the corporate events list."
+    sql: "WITH latest_results AS (SELECT symbol, company_name, period_label, growth_yoy_revenue_pct, growth_qoq_revenue_pct, verdict, score FROM scores.results_analysis WHERE symbol IN (SELECT symbol FROM signals.corporate_events WHERE event_date >= CURRENT_DATE) ORDER BY filing_date DESC) SELECT * FROM latest_results;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure corporate events are correctly mapped to symbols in results."
+  - "Validate no direct modification of data occurs."
+  - "All SQL queries must be read-only."
+synthesis_guidance: "Report gaps first followed by available watchlist symbols with events."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

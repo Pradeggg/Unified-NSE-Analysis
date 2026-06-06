@@ -1,0 +1,56 @@
+id: "report_link_data_validation_1978_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Enhanced Report Link Validation"
+description: "Validates the integrity of enhanced report links and detects missing data in the Indian market. This skill card focuses on pre-market assessment, employing a comparison matrix to synthesize findings."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for pre market: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "pre_market"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    steps:
+      -
+        action: "Identify missing or broken links in the enhanced report by reviewing the metadata in the 'report.enhanced_runs' table and correlating it with the 'report.enhanced_filtered_stocks' table."
+      -
+        action: "Use a comparison matrix to analyze the presence of stock data in the 'report.enhanced_filtered_stocks' table for each respective report run."
+sql_templates:
+  -
+    description: "Check for missing stock data in enhanced runs."
+    query: "SELECT er.run_id, er.analysis_date, er.universe_size, er.stocks_analyzed, er.stocks_filtered, es.symbol FROM report.enhanced_runs er LEFT JOIN report.enhanced_filtered_stocks es ON er.run_id = es.run_id WHERE es.symbol IS NULL AND er.run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all report links lead to available data."
+  - "Verify that the number of analyzed and filtered stocks matches between runs and stock tables."
+synthesis_guidance: "['Provide a detailed report of the validation process using a comparison matrix that highlights discrepancies and issues.', \"Use additional indicators from 'report.enhanced_filtered_stocks' to corroborate link integrity and data completeness.\"]"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

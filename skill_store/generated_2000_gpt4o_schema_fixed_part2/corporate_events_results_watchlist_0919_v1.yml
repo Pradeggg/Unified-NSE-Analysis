@@ -1,0 +1,68 @@
+id: "corporate_events_results_watchlist_0919_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0919"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for latest EOD: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as comparison matrix"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  title: "Corporate Events and Results Analysis Plan"
+  steps:
+    - "Extract latest corporate events and results data."
+    - "Identify significant stock movements correlated with events."
+    - "Validate source trail for data accuracy."
+sql_templates:
+  corporate_events_watchlist:
+    query:
+      - "WITH latest_stage AS ("
+      - "  SELECT DISTINCT ON (symbol) symbol, stage, trading_signal"
+      - "  FROM scores.stage_snapshots"
+      - "  WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+      - "  AND trading_signal IN ('BUY', 'STRONG_BUY')"
+      - ")"
+      - "SELECT ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, ce.detail, ra.verdict"
+      - "FROM signals.corporate_events ce"
+      - "JOIN latest_stage ls ON ce.symbol = ls.symbol"
+      - "LEFT JOIN scores.results_analysis ra ON ce.symbol = ra.symbol"
+      - "WHERE ce.event_date > CURRENT_DATE - INTERVAL '1 month'"
+      - "ORDER BY ce.event_date DESC"
+      - "LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event_date is within the last 1 month."
+  - "Verify symbols have recent results within the last quarter."
+synthesis_guidance: "['Compare event impacts across similar sectors.', 'Highlight stocks with dual positive signals: recent events and technical indicators.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:19"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

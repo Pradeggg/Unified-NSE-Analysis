@@ -1,0 +1,57 @@
+id: "sector_breadth_rotation_watchlist_0377_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0377"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: pre market; response style: exceptions and gaps first."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for pre market: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as exceptions and gaps first"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Evaluate sector improvements using sector breadth. Identify symbols in Stage 2 with strong RS and price momentum. List exceptions and gaps first."
+sql_templates:
+  -
+    query: "SELECT sd.sector, sd.breadth_signal, ma.stage2_pct FROM breadth.sector_daily sd JOIN breadth.ma_pct_above ma ON sd.snapshot_date = ma.snapshot_date WHERE sd.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) ORDER BY ma.stage2_pct DESC;"
+    description: "Fetch sectors with highest Stage 2 participation based on latest snapshot."
+  -
+    query: "WITH latest_stage AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT ss.symbol, ss.price, ss.relative_strength, ss.trading_signal FROM latest_stage ss JOIN market.equity_eod eod ON ss.symbol = eod.symbol WHERE ss.stage = 'STAGE_2' AND eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND ss.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY ss.relative_strength DESC LIMIT 50;"
+    description: "List top 50 stocks in Stage 2 with strong buy signals and relative strength."
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Rank by improving sectors with exceptions and gaps highlighted."
+  - "Ensure only latest data is used for analysis following global rules."
+  - "Output sectors and symbols must align with TradingView symbols."
+synthesis_guidance: "Emphasize sectors with improving breadth and high Stage 2 participation. Prioritize the exceptions and gaps in sector performance. Include a list of candidate symbols suitable for TradingView addition."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:45"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

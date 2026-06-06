@@ -1,0 +1,57 @@
+id: "portfolio_incremental_add_trim_0857_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0857"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: action watchlist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as action watchlist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Gather performance metrics for holdings and compare sector performance quarter to date."
+sql_templates:
+  -
+    name: "sector_relative_performance"
+    description: "Retrieve performance data for holdings and compare to sector averages."
+    template: "WITH sector_performance AS (SELECT sector, AVG(change_1m_pct) AS avg_change_1m FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(NOW(), INTERVAL 3 MONTH) GROUP BY sector) SELECT h.symbol, s.company_name, s.sector, s.change_1m_pct, sp.avg_change_1m FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol JOIN sector_performance sp ON s.sector = sp.sector WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.change_1m_pct IS NOT NULL;"
+    output_columns:
+      - "symbol"
+      - "company_name"
+      - "sector"
+      - "change_1m_pct"
+      - "avg_change_1m"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure that 'change_1m_pct' is calculated for all holdings."
+  - "Validate that sector performance is accurately reflected in 'avg_change_1m'."
+synthesis_guidance: "Focus on highlighting stocks that outperform or underperform relative to their sector averages quarter to date."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,53 @@
+id: "data_freshness_readiness_audit_0497_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0497"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for weekly review: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as portfolio-aware output"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Analyze data freshness using weekly review context with portfolio-aware output."
+sql_templates:
+  -
+    template_name: "sector_freshness_comparison"
+    sql: "SELECT snapshot_date, sector, MAX(updated_at) as last_update FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '7 days' GROUP BY sector, snapshot_date;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "All relevant data should be no older than 7 days for weekly reviews."
+  - "Identify sectors with missing or outdated data."
+  - "Ensure all sectors have up-to-date technical scores."
+synthesis_guidance: "['Emphasize sectors with the most significant freshness gaps.', 'Provide portfolio-aware recommendations for loader actions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:57"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.last_update is not approved"
+  - "scores.stage_snapshots.updated_at is not approved"

@@ -1,0 +1,49 @@
+id: "report_link_data_validation_0200_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0200"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: weekly review; response style: narrative plus evidence."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for weekly review: review report links not working"
+  - "validate generated report links and missing data as narrative plus evidence"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "weekly_review"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "SELECT json_build_object('findings', findings, 'broken_links', broken_links, 'missing_data', missing_data, 'remediation', remediation, 'verification', verification) AS result\nFROM (\n  SELECT COUNT(*) AS findings\n  FROM report.enhanced_runs\n  WHERE run_ts > CURRENT_DATE - INTERVAL '1 week'\n) AS findings,\n(\n  SELECT COUNT(*) AS broken_links\n  FROM report.enhanced_filtered_stocks\n  WHERE recommendation IS NULL\n) AS broken,\n(\n  SELECT COUNT(*) AS missing_data\n  FROM report.enhanced_filtered_stocks\n  WHERE symbol IS NULL\n) AS missing,\n(\n  SELECT 'Please verify data sources and ingestion pipelines for completeness.' AS remediation\n) AS remediation,\n(\n  SELECT 'Verification needed for report metadata completeness.' AS verification\n) AS verification;\n"
+sql_templates:
+  - "WITH recent_runs AS (\n  SELECT run_id\n  FROM report.enhanced_runs\n  WHERE run_ts > CURRENT_DATE - INTERVAL '1 week'\n),\nmissing_recommendations AS (\n  SELECT COUNT(*) AS cnt\n  FROM report.enhanced_filtered_stocks\n  WHERE recommendation IS NULL AND run_id IN (SELECT run_id FROM recent_runs)\n),\nmissing_symbols AS (\n  SELECT COUNT(*) AS cnt\n  FROM report.enhanced_filtered_stocks\n  WHERE symbol IS NULL AND run_id IN (SELECT run_id FROM recent_runs)\n)\nSELECT json_build_object(\n  'missing_recommendations', (SELECT cnt FROM missing_recommendations),\n  'missing_symbols', (SELECT cnt FROM missing_symbols)\n) AS validation_report"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure report.enhanced_runs timestamps are within the last week."
+  - "Check report.enhanced_filtered_stocks for NULL recommendations."
+  - "Check report.enhanced_filtered_stocks for NULL symbols."
+synthesis_guidance: "['Compose a narrative outlining the findings from the validation checks.', 'Document all evidence related to broken links or missing data.', 'Provide actionable remediation steps based on findings.', 'Ensure verification steps are clear for future compliance.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:15"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,59 @@
+id: "company_360_research_report_1938_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1938"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "position-sizing context for last 20 sessions: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as comparison matrix"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template: "Collect and analyze company data from approved sources focusing on financials, technical scores, and market positions."
+sql_templates:
+  -
+    template: "SELECT symbol, company_name, price, change_1d_pct, stage_score, technical_score FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date BETWEEN NOW() - INTERVAL '20 DAYS' AND NOW();"
+    description: "Fetch the technical scores and price changes for the last 20 sessions."
+  -
+    template: "SELECT period_label, revenue, pat, eps FROM scores.quarterly_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 4;"
+    description: "Get the last four quarterly results."
+  -
+    template: "SELECT period_label, revenue, pat, eps, dividend_payout_pct FROM scores.annual_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 2;"
+    description: "Extract the last two annual financial results."
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  -
+    rule: "Ensure all data fetched is within the last 20 sessions when specified."
+synthesis_guidance: "['Synthesize a comparison matrix to represent technical and financial insights concisely.', 'Highlight position-sizing recommendations based on historical patterns and technical setup.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.now is not approved"

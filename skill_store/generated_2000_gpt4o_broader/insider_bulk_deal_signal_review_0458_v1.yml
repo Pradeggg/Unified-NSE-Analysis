@@ -1,0 +1,54 @@
+id: "insider_bulk_deal_signal_review_0458_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0458"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for quarter to date: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as portfolio-aware output"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  context: "Analyze insider and bulk deal signals to derive accumulation or distribution insights with technical confirmation and generate a portfolio-aware output considering position-sizing context for the quarter until now."
+sql_templates:
+  -
+    template_name: "insider_alerts_bulk_deals_aggregation"
+    description: "Aggregate insider alerts and bulk deals with technical confirmation."
+    sql: "WITH InsiderAndBulkDeals AS ( SELECT ia.symbol, SUM(ia.qty) AS total_qty, AVG(ss.technical_score) AS avg_technical_score FROM signals.insider_alerts ia JOIN signals.bulk_block_deals bb ON ia.symbol = bb.symbol JOIN scores.stage_snapshots ss ON ia.symbol = ss.symbol WHERE ia.alert_date >= DATE_TRUNC('quarter', CURRENT_DATE) AND bb.deal_date >= DATE_TRUNC('quarter', CURRENT_DATE) AND ss.snapshot_date >= DATE_TRUNC('quarter', CURRENT_DATE) GROUP BY ia.symbol ) SELECT sd.symbol, sd.price, sd.change_1m_pct, sd.trend_signal, IBD.total_qty, IBD.avg_technical_score FROM scores.stage_snapshots sd JOIN InsiderAndBulkDeals IBD ON sd.symbol = IBD.symbol WHERE sd.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure data is filtered for the current quarter."
+  - "Include only symbols with significant insider or bulk transactions."
+synthesis_guidance: "['Focus on portfolios with strong accumulation signals.', 'Prioritize symbols with high technical scores and positive trend signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:36"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

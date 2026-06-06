@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:46:00"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: pre market; response style: exceptions and gaps first."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0372_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for pre market: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    description: "Find missing data in enhanced report runs."
+    template: "SELECT run_id, analysis_date FROM report.enhanced_runs WHERE universe_size = 0 OR stocks_analyzed = 0;"
+  -
+    description: "Identify missing or unusually low stock data."
+    template: "SELECT run_id, symbol FROM report.enhanced_filtered_stocks WHERE current_price IS NULL OR volume < 1000;"
+status: "validated"
+synthesis_guidance: "Focus on identifying discrepancies and documenting gaps. Emphasize accuracy and completeness in pre-market validations."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+title: "Enhanced Report Data Validation Variant 0372"
+tool_plan_template: "Review the report data and validate links and content availability."
+validation_rules:
+  - "Ensure run metadata is complete and reflective of actual analysis conducted."
+  - "Verify report links are operational and data is present."
+  - "Identify cases of missing or incomplete stock data for further investigation."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

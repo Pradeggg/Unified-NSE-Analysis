@@ -1,0 +1,52 @@
+id: "signal_outcome_feedback_review_0781_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0781"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: quick scan; timeframe: intraday context; response style: QA checklist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for intraday context: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as QA checklist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "intraday_context"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Evaluate intraday signal outcomes using historical data and filtered context. Identify winning and failing patterns to improve future strategies."
+sql_templates:
+  -
+    description: "Retrieve signals that hit targets or stop losses within intraday context."
+    template: "SELECT symbol, date_issued, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '1 day' AND (hit_target = true OR hit_stop = true);"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure that returned data covers only the specified intraday period."
+  - "Verify that both target hits and stop hits are captured."
+synthesis_guidance: "Use the extracted data to refine signal generation and enhance decision-making for future trades. Focus on developing a fast-response QA checklist."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:56"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

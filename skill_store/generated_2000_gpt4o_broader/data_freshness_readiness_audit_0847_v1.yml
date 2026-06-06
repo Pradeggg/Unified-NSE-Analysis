@@ -1,0 +1,55 @@
+id: "data_freshness_readiness_audit_0847_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0847"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: action watchlist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for last 3 months: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as action watchlist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  verification_steps:
+    - "Assess sector-relative data freshness for indices and equities."
+    - "Identify and document missing data entries for loader review."
+    - "Generate action-oriented watchlists for data completeness."
+sql_templates:
+  sector_comparison_freshness: "SELECT symbol, MAX(trade_date) AS last_trade_date FROM market.equity_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY symbol"
+  missing_data_analysis: "SELECT trade_date, COUNT(symbol) AS missing_count FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY trade_date HAVING COUNT(symbol) < expected_count"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure query results are for the specified 3-month timeframe."
+  - "Validate the presence of critical entries in the last trade date."
+synthesis_guidance: "['Summarize data freshness in sector-relative terms for the last quarter.', 'Prioritize identified data gaps in action watchlists for immediate review.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:47"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.last_trade_date is not approved"
+  - "market.equity_eod.missing_count is not approved"

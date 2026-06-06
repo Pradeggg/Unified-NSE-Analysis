@@ -1,0 +1,68 @@
+id: "portfolio_incremental_add_trim_0799_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0799"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  python_tools:
+    -
+      id: "incremental_add_trim_tool"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "portfolio.holdings"
+        - "scores.stage_snapshots"
+      outputs:
+        - "add_candidates"
+        - "trim_candidates"
+      approved_tables:
+        - "portfolio.holdings"
+        - "scores.stage_snapshots"
+      code: "def run(context):\n    # Identify symbols for adding or trimming based on scores\n    results = {'add_candidates': [], 'trim_candidates': []}\n    for holding in context['portfolio.holdings'].values():\n        symbol = holding['symbol']\n        stage_snapshot = context['scores.stage_snapshots'].get(symbol)\n        if stage_snapshot:\n            technical_score = stage_snapshot.get('technical_score', 0)\n            if technical_score > 70:  # Threshold for adding\n                results['add_candidates'].append(symbol)\n            elif technical_score < 30:  # Threshold for trimming\n                results['trim_candidates'].append(symbol)\n    return results"
+sql_templates:
+  get_portfolio_state:
+    template: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+    description: "Fetch current holdings from portfolio."
+  get_sector_exposure:
+    template: "SELECT symbol, sector, SUM(qty) as total_qty FROM scores.stage_snapshots JOIN portfolio.holdings ON scores.stage_snapshots.symbol = portfolio.holdings.symbol GROUP BY sector;"
+    description: "Calculate quantity exposure by sector."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Validate portfolio symbols against snapshots for scoring."
+  - "Ensure calculations are limited to approved tables."
+synthesis_guidance: "{'approach': ['Begin with portfolio state validation against current snapshots.', 'Analyze sector exposure to highlight concentration risks.', 'Identify add/trim candidates based on technical scores.'], 'considerations': ['Market conditions and volatility impacts on decision thresholds.', 'Weekly trend consistency for reliable source-trail validations.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:51:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

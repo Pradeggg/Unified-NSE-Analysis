@@ -1,0 +1,58 @@
+id: "insider_bulk_deal_signal_review_1172_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1172"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: pre market; response style: narrative plus evidence."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for pre market: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as narrative plus evidence"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze insider and bulk deal alerts with technical confirmations to generate pre market narratives and evidence.\n###\n* Review latest insider alerts from the signals.insider_alerts table.\n* Cross-reference with bulk deals in signals.bulk_block_deals for each symbol.\n* Gather stage and technical confirmation using scores.stage_snapshots.\n* Pull latest market context from market.equity_eod."
+sql_templates:
+  -
+    template_name: "Recent_Insider_Alerts"
+    template: "WITH latest_insider_alerts AS (\n  SELECT *\n  FROM signals.insider_alerts\n  WHERE alert_date >= (CURRENT_DATE - INTERVAL '3 months')\n)\nSELECT * FROM latest_insider_alerts;"
+  -
+    template_name: "Bulk_Deals_With_Confirmation"
+    template: "SELECT bbd.*, ss.stage, ss.trading_signal\nFROM signals.bulk_block_deals bbd\nJOIN scores.stage_snapshots ss ON bbd.symbol = ss.symbol\nWHERE deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals) \nAND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nAND ss.trading_signal IN ('BUY', 'STRONG_BUY');"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+synthesis_guidance: "Synthesize a narrative focusing on institutional and insider actions, prioritizing high-value deals and strong technical confirmations."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:56:15"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,52 @@
+id: "corporate_events_results_watchlist_1003_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1003"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: today; response style: concise table."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for today: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as concise table"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Identify relevant tables, apply joins, utilize filters for staging and event date accuracy, and format as a concise table."
+sql_templates:
+  -
+    description: "Fetch upcoming or recent corporate events with results-related actions."
+    sql: "SELECT ce.symbol, ce.event_type, ce.event_date, ra.verdict, ra.score, ss.stage, ss.trading_signal, ce.source \nFROM signals.corporate_events AS ce \nJOIN scores.results_analysis AS ra ON ce.symbol = ra.symbol \nJOIN scores.stage_snapshots AS ss ON ce.symbol = ss.symbol \nWHERE ce.event_date >= CURRENT_DATE AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) \nORDER BY ce.event_date ASC \nLIMIT 100;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event_date is for today or later."
+  - "Include stage snapshots for up-to-date market stage context."
+  - "Limit results to maintain relevance."
+synthesis_guidance: "['Provide a concise table of events with results and market context.', 'Focus on daily relevance, avoid historical data beyond immediate context.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

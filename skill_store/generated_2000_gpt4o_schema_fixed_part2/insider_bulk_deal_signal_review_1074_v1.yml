@@ -1,0 +1,52 @@
+id: "insider_bulk_deal_signal_review_1074_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1074"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: pre market; response style: concise table."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for pre market: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as concise table"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "pre_market"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Combine insider and bulk deal alerts, then overlay technical stages for key symbols."
+sql_templates:
+  -
+    statement: "WITH latest_stage AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT i.symbol, i.alert_date, b.deal_date, b.entity, s.stage, s.trading_signal FROM signals.insider_alerts i JOIN signals.bulk_block_deals b ON i.symbol = b.symbol JOIN latest_stage s ON i.symbol = s.symbol WHERE s.stage = 'STAGE_2' AND s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY b.deal_date DESC LIMIT 10;"
+    mode: "read_only"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure SQL returns expected columns: symbol, alert_date, deal_date, entity, stage, trading_signal."
+  - "Validation assumes watchlist creation; verify symbols and signals reflect current trends."
+synthesis_guidance: "['Use concise table format in responses.', 'Provide highlighted insights from alerts and deals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:48"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

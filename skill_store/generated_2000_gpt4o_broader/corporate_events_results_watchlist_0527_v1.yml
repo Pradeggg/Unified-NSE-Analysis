@@ -1,0 +1,74 @@
+id: "corporate_events_results_watchlist_0527_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0527"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: research-only summary."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for last 5 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as research-only summary"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  python_tools:
+    -
+      id: "run_context_0527"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        symbol: "str"
+        events: "List[str]"
+        sector: "str"
+      outputs:
+        summary: "str"
+        charts: "List[str]"
+      approved_tables:
+        - "signals.corporate_events"
+        - "scores.results_analysis"
+        - "scores.stage_snapshots"
+      code: "# Python code to analyze events context\n# Quarantined and read-only\n# Example placeholder: usage of pandas for analysis\n"
+  sql_templates:
+    -
+      template: "SELECT symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '5 days' AND symbol IN (SELECT symbol FROM scores.stage_snapshots WHERE sector = '{{sector}}')"
+      description: "Retrieve recent corporate events for the last 5 sessions in a specified sector."
+    -
+      template: "WITH latest_results AS (SELECT symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct FROM scores.results_analysis WHERE symbol IN ('{{symbol_list}}')) SELECT * FROM latest_results WHERE growth_yoy_revenue_pct > 10 OR growth_qoq_revenue_pct > 5"
+      description: "Fetch symbols with notable revenue growth over the specified periods."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure symbols match across tables."
+  - "Verify event timestamps are within the last 5 sessions."
+  - "Check revenue growth metrics for specified conditions."
+synthesis_guidance: "['Focus on sector-relative performance over recent sessions.', 'Provide a research-only summary based on analyzed events and results.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:48:16"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,70 @@
+id: "portfolio_lab_paper_trading_review_1874_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1874"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for pre market: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as action watchlist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Extract signals and current EOD prices for portfolio items, focusing on BUY or STRONG_BUY signals with STAGE_2 status. Develop and validate a pre-market watchlist using actionable trading signals."
+sql_templates:
+  -
+    template_name: "PreMarketWatchlist"
+    template: "WITH latest_stage AS (\n  SELECT symbol, stage, trading_signal\n  FROM scores.stage_snapshots\n  WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n),\nlatest_prices AS (\n  SELECT symbol, close\n  FROM market.equity_eod\n  WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND series = 'EQ'\n)\nSELECT s.symbol, s.company, s.signal, st.stage, st.trading_signal, lp.close\nFROM signals.signal_log s\nJOIN latest_stage st ON s.symbol = st.symbol\nJOIN latest_prices lp ON s.symbol = lp.symbol\nWHERE st.stage = 'STAGE_2' AND st.trading_signal IN ('BUY', 'STRONG_BUY')\nLIMIT 50;"
+python_tools:
+  -
+    id: "paper_trading_watchlist_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      symbol: "text"
+    outputs:
+      actionable_watchlist: "json"
+    approved_tables:
+      - "portfolio.holdings"
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Pseudo-code: Generate watchlist\n    return {'actionable_watchlist': []}"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure SQL uses approved tables and columns."
+  - "Constrain output to generated signals matching pre-market conditions."
+synthesis_guidance: "['Combine SQL results into watchlist recommendations.', 'Highlight actionable trades based on current signals and market conditions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:34"
+generation_model: "gpt-4o"
+validation_errors:
+  - "paper_trading_watchlist_tool: inputs must be a list"
+  - "paper_trading_watchlist_tool: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "paper_trading_watchlist_tool: inputs must be a list"
+    - "paper_trading_watchlist_tool: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

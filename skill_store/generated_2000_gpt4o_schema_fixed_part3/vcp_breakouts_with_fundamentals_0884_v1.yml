@@ -1,0 +1,59 @@
+id: "vcp_breakouts_with_fundamentals_0884_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0884"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters: "Candidates should be from latest snapshot date and have strong fundamentals."
+  output_contract:
+    - "filters"
+    - "candidates"
+    - "tradingview_symbols"
+    - "evidence"
+    - "risks"
+sql_templates:
+  -
+    template_name: "fetch_candidates"
+    query: "SELECT se.symbol, se.company_name, se.price, se.enhanced_fund_score, vcp.vcp_score FROM scores.stage2_vcp_picks vcp INNER JOIN scores.stage_snapshots se ON vcp.symbol = se.symbol WHERE vcp.snapshot_date =(SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND se.snapshot_date =(SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND se.trading_signal IN ('BUY', 'STRONG_BUY') AND se.stage = 'STAGE_2' ORDER BY vcp.vcp_score DESC, se.enhanced_fund_score DESC LIMIT 100"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "context"
+  - "output"
+synthesis_guidance: "['Identify high-potential breakout stocks with strong fundamentals and prepare them for a watchlist suitable for intraday trading decisions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

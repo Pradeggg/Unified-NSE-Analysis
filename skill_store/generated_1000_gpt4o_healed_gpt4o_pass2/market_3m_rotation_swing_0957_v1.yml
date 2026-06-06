@@ -1,0 +1,70 @@
+created_at: "2026-06-06T12:53:06"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: comparison matrix."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0957_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 3
+  findings:
+    - "market.index_eod.curdate is not approved"
+    - "market.index_eod.month is not approved"
+    - "scores.stage2_vcp_picks.curdate is not approved"
+    - "scores.stage2_vcp_picks.month is not approved"
+    - "scores.stage_snapshots.avg_relative_strength is not approved"
+    - "scores.stage_snapshots.curdate is not approved"
+    - "scores.stage_snapshots.month is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  index_returns: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURDATE() - INTERVAL 3 MONTH AND index_symbol IN ('NIFTY', 'SENSEX');"
+  leading_sectors: "SELECT sector, AVG(relative_strength) as avg_relative_strength FROM scores.stage_snapshots WHERE snapshot_date >= CURDATE() - INTERVAL 3 MONTH GROUP BY sector ORDER BY avg_relative_strength DESC LIMIT 5;"
+  primary_candidates: "SELECT symbol, company_name, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURDATE() - INTERVAL 3 MONTH ORDER BY vcp_score DESC LIMIT 10;"
+  stage_distribution_change: "SELECT snapshot_date, sector, stage, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date >= CURDATE() - INTERVAL 3 MONTH GROUP BY snapshot_date, sector, stage;"
+status: "test_failed"
+synthesis_guidance: "Compile comparative insights on market trends, highlighting sector rotations and swing trading opportunities."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "comparison_matrix"
+title: "3M Market Rotation Swing Assessment Variant 0957"
+tool_plan_template: "Assess quarterly sector rotation with a matrix comparing market index performance, stage shifts, and Stage 2 VCP picks."
+validation_errors:
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage2_vcp_picks.curdate is not approved"
+  - "scores.stage2_vcp_picks.month is not approved"
+  - "scores.stage_snapshots.avg_relative_strength is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.month is not approved"
+validation_rules:
+  - "Ensure data covers last 3 months"
+  - "Index returns must include NIFTY and SENSEX"
+  - "Identify top 5 leading sectors"
+  - "Select top 10 swing candidates by VCP score"
+version: 1

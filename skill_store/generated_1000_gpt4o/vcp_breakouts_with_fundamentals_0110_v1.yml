@@ -1,0 +1,58 @@
+id: "vcp_breakouts_with_fundamentals_0110_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0110"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: today; response style: narrative plus evidence."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "today"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  sql_templates:
+    -
+      template: "SELECT symbol, company_name, sector, live_price, enhanced_fund_score, vcp_score, change_1d_pct FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE AND vcp_score > 70 ORDER BY vcp_score DESC LIMIT 20"
+      description: "Select top VCP pick stocks with strong fundamentals from today's data."
+    -
+      template: "SELECT symbol, close, volume FROM market.equity_eod WHERE trade_date = CURRENT_DATE AND close > week52_high ORDER BY volume DESC LIMIT 20"
+      description: "Select stocks hitting new 52-week highs today with high trading volume."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure SQL templates are select-only and read-only."
+  - "Verify that all used columns and tables exist in the approved schema."
+  - "Ensure narrative evidence aligns with Indian market context."
+synthesis_guidance: "['Integrate data to create a coherent narrative on market conditions for today.', 'Provide insights into potential risks and opportunities for selected stocks.', 'Format results for clear presentation suitable for TradingView.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:42:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,52 @@
+id: "portfolio_incremental_add_trim_1445_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1445"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for last 3 months: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Select holdings with latest stage and score for risk-aware add/trim review"
+    template: "SELECT p.symbol, p.qty, p.avg_cost, s.sector, s.stage, s.trading_signal, s.rsi, s.relative_strength, s.supertrend_state, s.can_slim_score, s.investment_score FROM portfolio.holdings p JOIN scores.stage_snapshots s ON p.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure only the specified columns are selected."
+  - "Join on symbols between holdings and stage_snapshots as per join rules."
+  - "Limit selections to the latest snapshot date for up-to-date evaluation."
+synthesis_guidance: "['Emphasize risk-first review in the last 3 months context.', 'Focus on identifying sectors and stocks for incremental additions or reductions.', 'Provide a portfolio-aware output that details potential changes with respect to sector and risk exposure.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:22"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

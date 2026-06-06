@@ -1,0 +1,54 @@
+id: "portfolio_incremental_add_trim_0115_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0115"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: latest EOD; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for latest EOD: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "latest_EOD"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  steps:
+    - "Extract latest EOD data from 'scores.stage_snapshots' and 'portfolio.holdings'."
+    - "Evaluate stage, scores, and technical factors for add/trim decisions."
+sql_templates:
+  -
+    name: "latest_stage_snapshot"
+    description: "Get latest snapshot of stage scores for holdings."
+    query: "SELECT ss.symbol, ss.company_name, ss.sector, ss.stage, ss.stage_score, ss.technical_score, ss.rsi, ss.trend_signal FROM scores.stage_snapshots ss JOIN portfolio.holdings ph ON ss.symbol = ph.symbol ORDER BY ss.snapshot_date DESC LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Check if the SQL queries return expected data types and structures."
+  - "Validate that portfolio and sector exposure calculations are accurate."
+synthesis_guidance: "['Use narrative style to guide through decision-making based on evidence.', 'Focus on risk assessment and market indicators for Indian market.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:25"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,55 @@
+id: "data_freshness_readiness_audit_0259_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0259"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: quarter to date; response style: ranked candidates."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for quarter to date: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as ranked candidates"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Evaluate data freshness with SQL templates for all required tables."
+sql_templates:
+  -
+    template: "SELECT MAX(trade_date) AS last_trade_date, index_symbol FROM market.index_eod"
+    purpose: "Extract latest trade date for indices."
+  -
+    template: "SELECT COUNT(*) AS missing_days FROM market.equity_eod WHERE trade_date < CURRENT_DATE - INTERVAL '1 DAY'"
+    purpose: "Identify missing days in equity EOD data."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all required tables are queried."
+  - "All returned dates should be within acceptable freshness limits."
+synthesis_guidance: "Provide ranked freshness readiness candidates focusing on source-trail validation."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:15"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.missing_days is not approved"
+  - "market.index_eod.last_trade_date is not approved"

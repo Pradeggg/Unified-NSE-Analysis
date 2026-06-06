@@ -1,0 +1,52 @@
+id: "vcp_breakouts_with_fundamentals_1794_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1794"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Identify stocks with strong fundamentals and VCP patterns using recent market data and scoring."
+sql_templates:
+  -
+    template: "SELECT eod.symbol, eod.close, sn.stage, sn.minervini_score, sn.enhanced_fund_score FROM market.equity_eod eod JOIN scores.stage_snapshots sn ON eod.symbol = sn.symbol WHERE eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND sn.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND sn.stage = 'STAGE_2' AND sn.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY sn.minervini_score DESC, sn.enhanced_fund_score DESC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all symbol data matches expected format from NSE."
+  - "Only include stocks with stage 'STAGE_2'."
+  - "Ensure Minervini and fundamental scores are not null."
+synthesis_guidance: "Combine the best scores and patterns to select top breakout candidates."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

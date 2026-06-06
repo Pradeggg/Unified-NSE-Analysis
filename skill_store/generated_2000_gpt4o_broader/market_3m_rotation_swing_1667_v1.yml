@@ -1,0 +1,72 @@
+id: "market_3m_rotation_swing_1667_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1667"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: post results; response style: debug trace."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Evaluate sectors and indices for leadership and identify top swing candidates post earnings results. Conduct a three-month comparative analysis, emphasizing sector-relative performance."
+sql_templates:
+  -
+    name: "Index_Performance_Last_3_Months"
+    description: "Fetch index changes over the past 3 months for trend and signal assessment."
+    query: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= current_date - interval '3 months';"
+  -
+    name: "Sector_Stage2_Candidates"
+    description: "Identify active Stage 2 stocks for potential swing trades."
+    query: "SELECT symbol, company_name, sector, price, stage FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= current_date - interval '3 months' ORDER BY stage_score DESC LIMIT 10;"
+python_tools:
+  -
+    id: "sector_score_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_data"
+    outputs:
+      - "sector_leaderboard"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    # Analyze sector scores and produce leaderboard\n    sector_data = context['sector_data']\n    leaderboard = {}  # Placeholder for actual logic\n    # Perform sector-relative computations\n    return leaderboard"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure queries cover the last three months data"
+  - "Verify output respects index and sector-based inputs"
+  - "Focus on accurate and insightful candidate selection"
+synthesis_guidance: "Build narratives around sector movements and highlight robust swing setups, especially during earnings cycles."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "sector_score_analysis_tool: execution failed: KeyError: 'sector_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "sector_score_analysis_tool: execution failed: KeyError: 'sector_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

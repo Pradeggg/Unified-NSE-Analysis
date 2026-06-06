@@ -1,0 +1,74 @@
+id: "data_freshness_readiness_audit_1631_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1631"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for last 20 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as debug trace"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  plan: "Check freshness indicators for the last 20 trading sessions and identify blockers in data readiness. Use market index EOD and equity data for initial insights."
+sql_templates:
+  -
+    name: "Check Trend Signal Freshness"
+    description: "Determine if trend signals in the index EOD data are updated in the last 20 sessions."
+    template: "SELECT trade_date, index_symbol, trend_signal FROM market.index_eod ORDER BY trade_date DESC LIMIT 20;"
+  -
+    name: "Check RSI Update"
+    description: "Verify if the RSI values in equity data are fresh for the last 20 sessions."
+    template: "SELECT trade_date, symbol, rsi FROM market.equity_eod ORDER BY trade_date DESC LIMIT 20;"
+  -
+    name: "Snapshot Data Validation"
+    description: "Ensure snapshots have been recorded in the last 20 sessions."
+    template: "SELECT snapshot_date, symbol FROM scores.stage_snapshots ORDER BY snapshot_date DESC LIMIT 20;"
+python_tools:
+  -
+    id: "calculate_freshness_metrics"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "market.index_eod"
+      - "market.equity_eod"
+    outputs:
+      - "freshness_metrics"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+    code: "def run(context): return {'freshness_metrics': [{'table': k, 'last_update': max(v)} for k, v in context.items()]}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "ensure_freshness_within_threshold"
+  - "validate_presence_of_technical_narratives"
+  - "require_valid_loader_actions"
+synthesis_guidance: "{'combine_freshness_and_composite_analysis': True, 'highlight_missing_sources': True, 'suggest_actions_for_loader_issues': True}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:31"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.rsi is not approved"

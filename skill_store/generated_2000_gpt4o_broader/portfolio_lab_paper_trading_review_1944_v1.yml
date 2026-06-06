@@ -1,0 +1,56 @@
+id: "portfolio_lab_paper_trading_review_1944_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1944"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for last 3 months: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as comparison matrix"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Use SQL to extract signal logs and price changes, organize them into a matrix for comparison of paper trading strategies."
+sql_templates:
+  signal_extraction:
+    query: "SELECT symbol, date_issued, signal, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued >= DATEADD(month, -3, GETDATE())"
+    description: "Extract relevant signals for the last 3 months."
+  price_change_extraction:
+    query: "SELECT symbol, change_1m_pct, change_1w_pct, change_1d_pct FROM scores.stage_snapshots WHERE snapshot_date >= DATEADD(month, -3, GETDATE())"
+    description: "Extract price changes for comparison over the last 3 months."
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure extracted data covers the entire timeframe."
+  - "Matrix format must align signals with corresponding market data."
+synthesis_guidance: "['Use comparison matrix to highlight key performance indicators of strategies over the 3 months.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.dateadd is not approved"
+  - "scores.stage_snapshots.getdate is not approved"
+  - "scores.stage_snapshots.month is not approved"
+  - "signals.signal_log.dateadd is not approved"
+  - "signals.signal_log.getdate is not approved"
+  - "signals.signal_log.month is not approved"

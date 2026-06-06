@@ -1,0 +1,51 @@
+id: "portfolio_lab_paper_trading_review_0880_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Strategy Assessment"
+description: "Analyze paper trading strategies using historical signals and performance data for actionable insights."
+input_patterns:
+  - "Analyze paper trading strategies"
+  - "Action insights from paper trading"
+  - "Trading strategies review"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "analysis"
+  - "insights"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  task: "Review and analyze paper trading strategies."
+  integrations:
+    - "Historical signal and performance data."
+sql_templates:
+  -
+    name: "paper_trading_signal_analysis"
+    template: "SELECT symbol, date_issued, signal, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE signal = 'BUY' AND date_issued > '2023-01-01'"
+  -
+    name: "market_performance_metrics"
+    template: "WITH price_changes AS (SELECT symbol, change_1d_pct, change_1w_pct FROM scores.stage_snapshots WHERE snapshot_date > '2023-01-01') SELECT * FROM price_changes"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure signal integrity and match with market data."
+synthesis_guidance: "['Integrate signals with market trends for actionable insights.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:59"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

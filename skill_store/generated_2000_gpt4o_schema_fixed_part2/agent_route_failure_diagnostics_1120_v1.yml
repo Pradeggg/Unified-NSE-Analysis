@@ -1,0 +1,51 @@
+id: "agent_route_failure_diagnostics_1120_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1120"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: latest EOD; response style: narrative plus evidence."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for latest EOD: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as narrative plus evidence"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze recent agent route failures using TradingView export data. Extract relevant information on route breaks, symbol mismatches, and missing tools."
+sql_templates:
+  -
+    description: "Retrieve latest TradingView export run details."
+    query: "SELECT run_id, run_ts, universe_size, market_sentiment FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure the narrative includes specific references to TradingView export evidence."
+  - "Confirm the correct symbol resolution and detection of symbol mismatches or gaps."
+synthesis_guidance: "Combine data from the latest run with TradingView export insights to narrate agent route failures. Highlight missing tool implications and suggest fixes."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,1 @@
+def run(context): return {'patterns': [], 'outcomes': []}

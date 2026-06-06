@@ -1,0 +1,67 @@
+id: "agent_route_failure_diagnostics_1820_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1820"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for latest EOD: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as action watchlist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Evaluate the provided evidence and identify any route failures, missing tools, incorrect symbol resolutions, or fallback loops. Develop a structured plan to validate the trading tools and symbol resolutions. Present findings as a watchlist."
+sql_templates:
+  -
+    template_id: "latest_enhanced_runs"
+    description: "Fetch the latest report enhanced run data."
+    select: "SELECT * FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)"
+  -
+    template_id: "latest_filtered_stocks"
+    description: "Fetch the latest enhanced filtered stocks data."
+    select: "SELECT * FROM report.enhanced_filtered_stocks WHERE run_id = (SELECT run_id FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 1)"
+  -
+    template_id: "latest_stage_snapshots"
+    description: "Fetch the latest stage snapshots data."
+    select: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+python_tools:
+  - "required_function"
+  - "language"
+  - "mode"
+  - "inputs"
+  - "outputs"
+  - "approved_tables"
+  - "code"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "rules"
+synthesis_guidance: "Consolidate findings into a structured action watchlist. Prioritize tool gaps and symbol resolution issues. Recommend potential fixes and follow-up regression tests."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

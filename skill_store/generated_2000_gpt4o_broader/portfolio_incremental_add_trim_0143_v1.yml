@@ -1,0 +1,51 @@
+id: "portfolio_incremental_add_trim_0143_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0143"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for last 3 months: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Plan: Analyze portfolio holdings, evaluate stage and technical scores, and provide recommendations on incremental changes. Focus on sector exposure and risk flags."
+sql_templates:
+  -
+    description: "Fetch holdings with stage and technical scores for the last 3 months."
+    statement: "SELECT h.symbol, h.qty, h.avg_cost, s.stage, s.stage_score, s.trend_signal, s.trading_signal, s.sector, s.live_price FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all symbols in the portfolio have corresponding stage and technical scores."
+  - "Verify sector exposure aligns with market trends."
+  - "Assess if add/trim actions are backed by strong evidence."
+synthesis_guidance: "Provide a narrative assessing whether to add, hold, or trim positions based on stage and trend signals. Highlight key sectors and any potential risk flags."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:48"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

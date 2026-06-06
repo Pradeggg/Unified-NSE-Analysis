@@ -1,0 +1,51 @@
+id: "quarterly_results_quality_review_1027_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1027"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: concise table."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "sector-relative comparison for last 5 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as concise table"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze recent quarterly results focusing on key metrics like revenue growth, PAT growth, and OPM changes. Compare company performance relative to sector peers over the last 5 trading sessions."
+sql_templates:
+  -
+    template: "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.revenue, qr.pat, ra.growth_yoy_revenue_pct, ra.growth_yoy_pat_pct, ra.verdict\nFROM scores.quarterly_results qr\nJOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end\nWHERE qr.period_type = 'quarter'\n  AND qr.period_end = (SELECT MAX(period_end) FROM scores.quarterly_results) AND ra.verdict IN ('beat', 'inline')\nORDER BY qr.symbol, qr.period_end DESC NULLS LAST, ra.updated_at DESC\nLIMIT 10;"
+    description: "Fetch latest quarterly results with verdicts 'beat' or 'inline' for top 10 companies."
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure distinct identification of symbols."
+  - "Ensure the latest period is used per symbol."
+synthesis_guidance: "Summarize results in a concise table with ranking based on performance metrics relative to the sector."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

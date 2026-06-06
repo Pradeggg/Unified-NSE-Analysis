@@ -1,0 +1,72 @@
+id: "insider_bulk_deal_signal_review_1676_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1676"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: pre market; response style: debug trace."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for pre market: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as debug trace"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "pre_market"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Step 1: Retrieve latest insider alerts and bulk deals."
+  - "Step 2: Extract relevant technical confirmation signals."
+  - "Step 3: Construct a ranked list of symbols."
+  - "Step 4: Generate risk notes and summary outputs."
+sql_templates:
+  -
+    step: 1
+    sql: "WITH latest_insider_alerts AS (\n    SELECT * FROM signals.insider_alerts\n    WHERE alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts)\n), latest_bulk_deals AS (\n    SELECT * FROM signals.bulk_block_deals\n    WHERE deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals)\n)\nSELECT i.symbol, i.alert_date, b.deal_date, i.entity, b.qty, b.price\nFROM latest_insider_alerts i\nJOIN latest_bulk_deals b ON i.symbol = b.symbol\nWHERE i.qty > 10000 AND b.qty > 10000\nLIMIT 50;"
+  -
+    step: 2
+    sql: "SELECT s.symbol, s.snapshot_date, s.stage, s.technical_score\nFROM scores.stage_snapshots s\nWHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nAND s.trading_signal IN ('BUY', 'STRONG_BUY')\nLIMIT 50;"
+python_tools:
+  -
+    id: "tech_calc_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "snapshot_date"
+    outputs:
+      - "trend_score"
+      - "risk_level"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Basic calculation to rank symbols based on trend score\n    return [{'symbol': x['symbol'], 'trend_score': x['technical_score'] * 0.8, 'risk_level': 'low' if x['technical_score'] > 50 else 'high'} for x in context]"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "rule_set"
+synthesis_guidance: "['Validate SQL results for alignment with column types and value norms.', 'Confirm presence of DEBUG info in the freshness audit report.', 'Rank symbols by technical score and insider quantity.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:48"
+generation_model: "gpt-4o"
+validation_errors:
+  - "tech_calc_tool: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "tech_calc_tool: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,74 @@
+id: "data_freshness_readiness_audit_1729_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1729"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for last 5 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+  freshness:
+    max_eod_age_days: 3
+tool_plan_template:
+  -
+    sql_templates:
+      -
+        name: "index_eod_freshness"
+        query: "SELECT index_symbol, MAX(trade_date) as latest_trade_date FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '5 days' GROUP BY index_symbol;"
+      -
+        name: "equity_eod_freshness"
+        query: "SELECT symbol, MAX(trade_date) as latest_trade_date FROM market.equity_eod WHERE series = 'EQ' AND trade_date > CURRENT_DATE - INTERVAL '5 days' GROUP BY symbol;"
+    python_tools:
+      -
+        id: "freshness_check_tool"
+        language: "python"
+        mode: "read_only"
+        inputs:
+          - "index_eod_freshness"
+          - "equity_eod_freshness"
+        outputs:
+          - "freshness_matrix"
+        code: "def run(context):\n    index_data = context['index_eod_freshness']\n    equity_data = context['equity_eod_freshness']\n    # Detailed freshness check implementation here\n    return {'freshness_matrix': []}"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure the selected timeframes match the last 5 sessions."
+  - "Validate that sources are queried using approved conditions and tables."
+synthesis_guidance: "['Prioritize identifying missing or outdated data affecting market technical narratives.', 'Address checklist items systematically for a comprehensive audit response.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

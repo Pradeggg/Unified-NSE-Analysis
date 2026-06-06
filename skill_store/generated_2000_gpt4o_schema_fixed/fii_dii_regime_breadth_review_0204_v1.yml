@@ -1,0 +1,60 @@
+id: "fii_dii_regime_breadth_review_0204_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0204"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: today; response style: ranked candidates."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for today: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as ranked candidates"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "today"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  purpose: "Research-only market context analysis."
+  evidence_gathering:
+    - "Collect and interpret data from FII/DII flows, market regime, breadth, and index EOD tables for the latest trading date."
+  task_structure:
+    steps:
+      - "Determine the latest available date using PostgreSQL syntax."
+      - "Extract data from each evidence table for the specified date."
+      - "Combine evidence to identify the current market regime and risk sentiment."
+sql_templates:
+  -
+    name: "fii_dii_flow_regime_breadth_today"
+    query: "WITH latest_trade_date AS (SELECT MAX(trade_date) AS trade_date FROM signals.fii_dii_flows),\n      flows AS (SELECT f.trade_date, f.flow_signal, f.fii_trend, f.dii_trend FROM signals.fii_dii_flows f\n               JOIN latest_trade_date l ON f.trade_date = l.trade_date),\n      regime AS (SELECT r.trade_date, r.regime, r.confidence FROM signals.regime_history r\n                JOIN latest_trade_date l ON r.trade_date = l.trade_date),\n      breadth AS (SELECT b.trade_date, b.ad_signal, b.market_sentiment FROM breadth.market_daily b\n                 JOIN latest_trade_date l ON b.trade_date = l.trade_date)\nSELECT flows.flow_signal, flows.fii_trend, flows.dii_trend, regime.regime, regime.confidence, breadth.ad_signal, breadth.market_sentiment \nFROM flows\nJOIN regime ON flows.trade_date = regime.trade_date\nJOIN breadth ON flows.trade_date = breadth.trade_date\nLIMIT 5;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all evidence data aligns with the latest available trading date."
+  - "Validate flow and regime signals for coherence with defined market states."
+synthesis_guidance: "[\"Interpret combined data to classify the market context as 'risk-on' or 'risk-off'.\", 'Offer ranked action candidates based on regime and signal coherence.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:14"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

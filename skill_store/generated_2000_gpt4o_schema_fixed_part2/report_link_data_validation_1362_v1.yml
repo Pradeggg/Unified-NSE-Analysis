@@ -1,0 +1,51 @@
+id: "report_link_data_validation_1362_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Report Link Data Validation"
+description: "Validate report links and data integrity focusing on post results exceptions and gaps."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "exceptions_and_gaps"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "{title} validation task to check given report links and stock data for ensured correctness."
+sql_templates:
+  -
+    context: "Find latest valid run IDs from enhanced report metadata."
+    template: "SELECT run_id FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+    read_only: true
+  -
+    context: "Check for any missing stock data for the retrieved run IDs."
+    template: "SELECT ers.run_id, rsfs.symbol FROM report.enhanced_runs as ers LEFT JOIN report.enhanced_filtered_stocks as rsfs ON ers.run_id = rsfs.run_id WHERE rsfs.symbol IS NULL AND ers.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+    read_only: true
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure only latest run data is being evaluated."
+  - "Check for completeness of data reported to filtered stocks."
+synthesis_guidance: "['Prioritize reporting exceptions or missing data first.', 'Provide detailed analysis on broken links observed if any.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:31"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

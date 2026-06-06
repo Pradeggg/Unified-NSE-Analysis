@@ -1,0 +1,69 @@
+created_at: "2026-06-06T12:51:11"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: last 3 months; response style: QA checklist."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0744_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for last 3 months: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    broken_links = []\n    if 'report_links' in context:\n        for link in context['report_links']:\n            if not check_link_function(link):\n                broken_links.append(link)\n    return {'broken_links_identified': broken_links}"
+    id: "report_link_checker"
+    inputs:
+      - "report_links"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "broken_links_identified"
+review:
+  attempts: 3
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Select metadata from enhanced report runs for the last 3 months."
+    sql: "SELECT * FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+    template_id: "validate_report_runs"
+  -
+    description: "Select filtered stocks data for enhanced reports for the last 3 months."
+    sql: "SELECT * FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months');"
+    template_id: "validate_filtered_stocks"
+status: "validated"
+synthesis_guidance: "Combine findings from metadata and stock data validations to create a QA checklist focusing on watching for data gaps and broken links over the last 3 months."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "QA_checklist"
+title: "Enhanced Report Data Validation Variant 0744"
+tool_plan_template: "Identify and validate missing data and broken links in generated reports over the last 3 months, focusing on watchlist creation."
+validation_errors:
+
+validation_rules:
+  - "Ensure all necessary report links redirect correctly."
+  - "Verify stock data is populated in underlying HTML files."
+  - "Check for missing data across the identified watchlist stocks."
+version: 1

@@ -1,0 +1,69 @@
+id: "insider_bulk_deal_signal_review_1284_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1284"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for intraday context: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as ranked candidates"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Create a query to analyze insider alerts, bulk deals, and relevant technical confirmations for a watchlist."
+sql_templates:
+  -
+    name: "insider_bulk_deal_query"
+    description: "Fetch insider alerts and bulk deals with Stage 2 context and buy signals."
+    sql: "SELECT ia.symbol, ia.alert_date, ia.alert_type, bd.deal_date, bd.qty, bd.price, ss.stage, ss.stage_score, ss.trading_signal \nFROM signals.insider_alerts ia \nJOIN signals.bulk_block_deals bd ON ia.symbol = bd.symbol \nJOIN scores.stage_snapshots ss ON ia.symbol = ss.symbol \nWHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) \nAND ss.stage = 'STAGE_2' \nAND ss.trading_signal IN ('BUY', 'STRONG_BUY') \nAND ia.alert_date >= CURRENT_DATE - INTERVAL '3 months' \nLIMIT 100;"
+python_tools:
+  -
+    id: "rank_candidates"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "dataframe"
+    outputs:
+      - "ranked_dataframe"
+    approved_tables:
+      - "signals.insider_alerts"
+      - "signals.bulk_block_deals"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    df = context['dataframe']\n    return df.sort_values(by=['insider_score', 'stage_score'], ascending=[False, False])"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure symbols are correctly joined and ranked using the Python tool."
+  - "Verify that only recent insider alerts and deals are selected."
+  - "Restrict results to those with a positive trading signal."
+synthesis_guidance: "Focus on top-ranked candidates with substantial insider activity and technical strength."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:44"
+generation_model: "gpt-4o"
+validation_errors:
+  - "rank_candidates: execution failed: KeyError: 'dataframe'"
+review:
+  status: "needs_heal"
+  findings:
+    - "rank_candidates: execution failed: KeyError: 'dataframe'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,57 @@
+id: "signal_outcome_feedback_review_0697_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0697"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: weekly review; response style: debug trace."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for weekly review: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as debug trace"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Gather outcomes of signals with targets and stops hit in the last week."
+  - "Evaluate sector-relative performance by comparing resolved signals across different sectors."
+  - "Identify patterns in successful and failed signals focusing on setup class and supertrend state."
+  - "Generate a debug trace highlighting the findings and suggested improvements."
+sql_templates:
+  -
+    description: "Retrieve resolved signals outcomes in the last week."
+    sql: "SELECT \n    sl.symbol, \n    sl.sector, \n    sl.signal, \n    sl.hit_target, \n    sl.hit_stop, \n    sl.return_pct, \n    sl.setup_class, \n    sl.supertrend_state, \n    ss.trading_signal \nFROM \n    signals.signal_log sl \nJOIN \n    scores.stage_snapshots ss \nON \n    sl.symbol = ss.symbol \nWHERE \n    sl.date_resolved >= CURRENT_DATE - INTERVAL '1 week' \n    AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) \n    AND (sl.hit_target OR sl.hit_stop);"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all outcomes are grouped and summarized correctly by sector."
+  - "Ensure patterns are derived based on setup class and supertrend data."
+  - "Validate that debug trace is comprehensive and narrative-driven."
+synthesis_guidance: "['Focus on comparing sector performance in resolved signals.', 'Highlight technical and setup patterns in outcomes as key learning points.', 'Provide actionable route improvements with a focus on improving hit rates.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:49"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

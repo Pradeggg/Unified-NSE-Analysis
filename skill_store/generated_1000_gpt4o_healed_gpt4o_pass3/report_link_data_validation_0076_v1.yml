@@ -1,0 +1,71 @@
+created_at: "2026-06-06T12:41:43"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata and filtered stock rows. Focus: freshness audit; response: concise table."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+findings:
+  - "report.enhanced_runs.current_timestamp is not approved"
+  - "validate_run_freshness: execution failed: ImportError: __import__ not found"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0076_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for pre market: review report links not working"
+  - "validate generated report links and missing data as concise table"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_runs"
+    code: "def run(context):\n    from datetime import datetime, timedelta\n    run_ts = context['run_ts']\n    now = datetime.utcnow()\n    cutoff = now - timedelta(days=1)\n    return {'is_fresh': run_ts >= cutoff}"
+    id: "validate_run_freshness"
+    inputs:
+      - "run_id"
+      - "run_ts"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "is_fresh"
+review:
+  status: "needs_heal"
+  findings:
+    - "report.enhanced_runs.now is not approved"
+    - "validate_run_freshness: execution failed: ImportError: __import__ not found"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    sql: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '1 DAY';"
+    template_name: "fetch_recent_runs"
+  -
+    sql: "SELECT run_id, symbol, current_price FROM report.enhanced_filtered_stocks WHERE run_id = @run_id;"
+    template_name: "fetch_filtered_stocks"
+status: "test_failed"
+synthesis_guidance: "Summarize discrepancies in data availability for pre-market reports and suggest remediation."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "pre_market"
+  - "concise_table"
+title: "Enhanced Report Data Validation Variant 0076"
+tool_plan_template: "Evaluate the freshness and availability of report links by examining metadata and filtered stock rows prior to market opening. Compile findings in a concise table."
+validation_errors:
+  - "report.enhanced_runs.now is not approved"
+  - "validate_run_freshness: execution failed: ImportError: __import__ not found"
+validation_rules:
+  - "ensure_freshness"
+  - "check_links_integrity"
+version: 1

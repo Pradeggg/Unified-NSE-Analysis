@@ -1,0 +1,57 @@
+id: "vcp_breakouts_with_fundamentals_0622_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0622"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: debug trace."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    template: "WITH recent_vcp AS (SELECT symbol, company_name, sector, price, live_price, price_date FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '5 days' AND vcp_score > 7), fundamentals AS (SELECT symbol, company_name, fundamental_score, enhanced_fund_score, institutional_backing FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '5 days' AND (fundamental_score > 70 OR enhanced_fund_score > 70)) SELECT rv.symbol, rv.company_name, rv.price, rv.live_price, rv.price_date, f.fundamental_score, f.enhanced_fund_score FROM recent_vcp rv JOIN fundamentals f ON rv.symbol = f.symbol;"
+    description: "Identifies stocks with recent VCP signs and strong fundamentals over last 5 sessions."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure non-invented columns are used."
+  - "Respect read-only data policies."
+  - "Ensure SQL is read-only select statements."
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:50:14"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table f.enhanced_fund_score"
+  - "unknown table f.fundamental_score"
+  - "unknown table f.symbol"
+  - "unknown table rv.company_name"
+  - "unknown table rv.live_price"
+  - "unknown table rv.price"
+  - "unknown table rv.price_date"
+  - "unknown table rv.symbol"

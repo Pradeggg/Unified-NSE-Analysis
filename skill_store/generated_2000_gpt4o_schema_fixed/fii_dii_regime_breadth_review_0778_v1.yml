@@ -1,0 +1,53 @@
+id: "fii_dii_regime_breadth_review_0778_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0778"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: pre market; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for pre market: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "pre_market"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  tools:
+
+  evidence_gaps:
+
+sql_templates:
+  -
+    description: "Fetch latest FII/DII flows, market regime, and breadth."
+    sql: "SELECT fii.trade_date, fii.fii_net_today, fii.dii_net_today, fii.flow_signal, regime.regime, breadth.market_sentiment FROM signals.fii_dii_flows fii JOIN signals.regime_history regime ON fii.trade_date = regime.trade_date JOIN breadth.market_daily breadth ON fii.trade_date = breadth.trade_date WHERE fii.trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows)"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure trade_date alignment across evidence inputs."
+  - "Avoid statistical inference on thin, low-likelihood signals."
+  - "Verify flow and regime consistency with historical patterns."
+synthesis_guidance: "['Frame evidence narrative as a QA checklist.', 'Integrate flow, breadth, and regime feedback into risk context.', 'Ensure clarity: Focus on position-sizing implications for pre market.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:47"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.market_daily is not approved"

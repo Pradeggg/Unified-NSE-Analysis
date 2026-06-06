@@ -1,0 +1,65 @@
+id: "portfolio_incremental_add_trim_1851_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1851"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: quarter to date; response style: action watchlist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as action watchlist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  evidence_framework: "EVIDENCE_REQUIRED"
+  execution_strategy: "Default strategy aligns with domain and rules; no custom template or post-process stage requested."
+sql_templates:
+  -
+    id: "latest_stage_snapshots"
+    type: "SELECT"
+    template: "SELECT symbol, company_name, sector, market_cap_cat, price, live_price, change_1d_pct, change_1w_pct, change_1m_pct, stage, stage_score, technical_score, rsi, trend_signal, trading_signal, relative_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    id: "portfolio_holdings"
+    type: "SELECT"
+    template: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+  -
+    id: "portfolio_add_candidates"
+    type: "WITH"
+    template: "WITH latest_stage AS (SELECT ss.symbol, ss.trading_signal FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), holdings AS (SELECT ph.symbol FROM portfolio.holdings ph) SELECT ls.symbol FROM latest_stage ls WHERE ls.trading_signal IN ('BUY', 'STRONG_BUY') AND ls.symbol NOT IN (SELECT symbol FROM holdings) LIMIT 10;"
+  -
+    id: "portfolio_trim_candidates"
+    type: "WITH"
+    template: "WITH latest_stage AS (SELECT ss.symbol, ss.trading_signal FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), holdings AS (SELECT ph.symbol FROM portfolio.holdings ph) SELECT ls.symbol FROM latest_stage ls WHERE ls.trading_signal = 'SELL' AND ls.symbol IN (SELECT symbol FROM holdings) LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all required tables in 'evidence_required.tables' are queried."
+  - "Templates must adhere to 'global_sql_rules'."
+synthesis_guidance: "['Aggregate findings into concise insights.', 'Prioritize action-oriented recommendations for portfolio adjustments.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

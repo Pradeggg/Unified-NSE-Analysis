@@ -1,0 +1,61 @@
+created_at: "2026-06-06T12:43:21"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: weekly review; response style: narrative plus evidence."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0199_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "fetch_portfolio_holdings"
+    sql: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings"
+  -
+    name: "evaluate_scores"
+    sql: "SELECT symbol, company_name, sector, stage, stage_score, technical_score, fundamental_score, trend_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+status: "validated"
+synthesis_guidance: "{'narrative_construct': 'Construct a narrative that integrates the technical signals, stage analysis, and suggested actions for portfolio adjustments with source-trail annotations.'}"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "narrative_plus_evidence"
+title: "Portfolio Incremental Add Trim Review Variant 0199"
+tool_plan_template:
+  output:
+    - "Narrative on current holdings"
+    - "Sector exposure analysis"
+    - "Add and trim candidates highlighted with evidence"
+  steps:
+    - "Fetch current portfolio holdings from portfolio.holdings"
+    - "Evaluate stage, technical, and fundamental scores using scores.stage_snapshots"
+    - "Identify add/trim candidates based on performance metrics"
+validation_rules:
+  - "portfolio_validation"
+  - "sector_validation"
+version: 1

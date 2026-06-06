@@ -1,0 +1,79 @@
+created_at: "2026-06-06T12:42:45"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: intraday context; response style: narrative plus evidence."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0189_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as narrative plus evidence"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    code: "# Implement read-only analysis for market regime and sector leadership\ndef run(context):\n    # Placeholder for market analysis implementation\n    return {}"
+    id: "run_market_analysis"
+    inputs:
+      - "context"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "analysis_narrative"
+review:
+  attempts: 3
+  findings:
+    - "run_market_analysis: missing output analysis_narrative"
+    - "scores.stage_snapshots.sector_count is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  market_regime_analysis: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date BETWEEN ? AND ?;"
+  sector_leadership_analysis: "SELECT snapshot_date, sector, COUNT(symbol) AS sector_count FROM scores.stage_snapshots WHERE snapshot_date BETWEEN ? AND ? GROUP BY sector;"
+  stage_2_candidates: "SELECT symbol, company_name, sector, stage, stage_score FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date BETWEEN ? AND ? ORDER BY stage_score DESC;"
+status: "test_failed"
+synthesis_guidance:
+  - "Integrate data insights into a coherent narrative."
+  - "Highlight sectors with consistent leadership."
+  - "Maintain transparency in data sourcing and methodology."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "narrative_plus_evidence"
+title: "3M Market Rotation Swing Assessment Variant 0189"
+tool_plan_template:
+  task_outline:
+    - "Assess market regime and sector rotation over the last 3 months."
+    - "Identify sectors with leadership and Stages 2 stocks."
+    - "Select swing trading candidates using VCP and scoring methods."
+    - "Validate sources and data trails for analysis continuity."
+validation_errors:
+  - "run_market_analysis: missing output analysis_narrative"
+  - "scores.stage_snapshots.sector_count is not approved"
+validation_rules:
+  - "Ensure temporal consistency across all data points."
+  - "Verify sector data alignment with market movements."
+  - "Cross-verify candidates with multiple metrics to ensure robustness."
+version: 1

@@ -1,0 +1,53 @@
+id: "vcp_breakouts_with_fundamentals_0950_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0950"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "{tools} determine if enriched data can confirm variant deliverables."
+sql_templates:
+  -
+    name: "VCP_Breakouts"
+    query: "WITH recent_picks AS (SELECT symbol, company_name, enhanced_fund_score, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATEADD(MONTH, -3, CURRENT_DATE)), eod_data AS (SELECT symbol, MAX(high) as recent_high FROM market.equity_eod WHERE trade_date >= DATEADD(MONTH, -3, CURRENT_DATE) GROUP BY symbol) SELECT recent_picks.symbol, recent_picks.company_name, recent_picks.enhanced_fund_score, recent_picks.vcp_score, eod_data.recent_high FROM recent_picks JOIN eod_data ON recent_picks.symbol = eod_data.symbol WHERE recent_picks.vcp_score > 70 AND recent_picks.enhanced_fund_score > 80;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure data covers the last 3 months"
+  - "Ensure VCP score > 70 and fundamental score > 80"
+synthesis_guidance: "Synthesize to compare VCP stocks with strong fundamentals"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:53:03"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table eod_data.recent_high"
+  - "unknown table eod_data.symbol"
+  - "unknown table recent_picks.company_name"
+  - "unknown table recent_picks.enhanced_fund_score"
+  - "unknown table recent_picks.symbol"
+  - "unknown table recent_picks.vcp_score"

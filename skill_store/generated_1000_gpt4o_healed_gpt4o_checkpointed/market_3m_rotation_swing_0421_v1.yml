@@ -1,0 +1,93 @@
+created_at: "2026-06-06T12:46:28"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: last 5 sessions; response style: portfolio-aware output."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0421_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for last 5 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    define: "def run(context): pass"
+    description: "Tool to analyze market trends"
+    name: "market_analysis"
+    permission: "read-only"
+sql_templates:
+  index_returns:
+    description: "Recent index returns for market regime analysis."
+    sql: "SELECT trade_date, index_symbol, close, prev_close, change_pct FROM market.index_eod WHERE trade_date BETWEEN CURRENT_DATE - INTERVAL '5 days' AND CURRENT_DATE ORDER BY trade_date DESC"
+  leading_sectors:
+    description: "Leading sectors based on average relative strength."
+    sql: "SELECT sector, AVG(relative_strength) as avg_strength FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE GROUP BY sector ORDER BY avg_strength DESC"
+  primary_candidates:
+    description: "Top VCP candidates for swing trading."
+    sql: "SELECT symbol, company_name, sector, price, change_1d_pct FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE ORDER BY vcp_score DESC LIMIT 5"
+  risks:
+    description: "High RSI and bearish trend signals as risks."
+    sql: "SELECT symbol FROM market.index_eod WHERE trade_date = CURRENT_DATE AND rsi > 70"
+  stage_distribution_change:
+    description: "Stage distribution changes for leadership analysis."
+    sql: "SELECT snapshot_date, stage, COUNT(symbol) as count FROM scores.stage_snapshots WHERE snapshot_date BETWEEN CURRENT_DATE - INTERVAL '5 days' AND CURRENT_DATE GROUP BY snapshot_date, stage"
+status: "test_failed"
+synthesis_guidance:
+  - "Focus on high-impact sectors for market regime analysis"
+  - "Ensure portfolio-aware suggestions based on liquidity and VCP score"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "last_5_sessions"
+  - "portfolio-aware_output"
+title: "3M Market Rotation Swing Assessment Variant 0421"
+tool_plan_template:
+  as_of_date: "CURRENT_DATE"
+  index_returns: "SQL"
+  leading_sectors: "SQL"
+  primary_candidates: "SQL"
+  risks: "SQL"
+  stage_distribution_change: "SQL"
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: language must be python"
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: outputs must be a non-empty list"
+  - "market.index_eod.symbol is not approved"
+  - "scores.stage_snapshots.avg_strength is not approved"
+validation_rules:
+  - "Ensure dates align with CURRENT_DATE"
+  - "Verify presence of necessary columns from approved schema"
+version: 1
+review:
+  attempts: 3
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: code is required"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: language must be python"
+    - "<missing-id>: mode must be read_only"
+    - "<missing-id>: outputs must be a non-empty list"
+    - "market.index_eod.symbol is not approved"
+    - "scores.stage_snapshots.avg_strength is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"

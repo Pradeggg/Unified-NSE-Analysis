@@ -1,0 +1,96 @@
+id: "company_360_research_report_0552_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0552"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: deep institutional review; timeframe: quarter to date; response style: research-only summary."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "deep institutional review for quarter to date: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as research-only summary"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    evidence_type: "company_snapshot"
+    sql_template:
+      template: "SELECT symbol, company_name, sector, market_cap_cat, price, stage, trend_signal, trading_signal FROM scores.stage_snapshots WHERE symbol = {{symbol}} AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+      inputs:
+        - "symbol"
+      output_contract: "company_snapshot"
+  -
+    evidence_type: "financial_trends"
+    sql_template:
+      template: "SELECT period_label, revenue, pat, operating_profit FROM scores.quarterly_results WHERE symbol = {{symbol}} AND period_end = (SELECT MAX(period_end) FROM scores.quarterly_results WHERE symbol = {{symbol}});"
+      inputs:
+        - "symbol"
+      output_contract: "financial_trends"
+  -
+    evidence_type: "technical_setup"
+    sql_template:
+      template: "SELECT trade_date, open, high, low, close, volume, delivery_pct FROM market.equity_eod WHERE symbol = {{symbol}} AND trade_date = (SELECT MAX(trade_date) FROM market.equity_eod WHERE symbol = {{symbol}});"
+      inputs:
+        - "symbol"
+      output_contract: "technical_setup"
+  -
+    evidence_type: "valuation_gaps"
+    sql_template:
+      template: "SELECT symbol, equity_capital, reserves, borrowings FROM scores.balance_sheet WHERE symbol = {{symbol}} AND period_end = (SELECT MAX(period_end) FROM scores.balance_sheet WHERE symbol = {{symbol}});"
+      inputs:
+        - "symbol"
+      output_contract: "valuation_gaps"
+  -
+    evidence_type: "thesis"
+    sql_template:
+      template: "SELECT business_summary, pl_commentary, bs_commentary, cf_commentary FROM scores.results_analysis WHERE symbol = {{symbol}} AND period_end = (SELECT MAX(period_end) FROM scores.results_analysis WHERE symbol = {{symbol}});"
+      inputs:
+        - "symbol"
+      output_contract: "thesis"
+  -
+    evidence_type: "risks"
+    sql_template:
+      template: "SELECT key_risks FROM scores.results_analysis WHERE symbol = {{symbol}} AND period_end = (SELECT MAX(period_end) FROM scores.results_analysis WHERE symbol = {{symbol}});"
+      inputs:
+        - "symbol"
+      output_contract: "risks"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "global_rules"
+synthesis_guidance: "['Provide a concise research-focused summary.', 'Highlight key financial and technical insights for institutional review.', 'Ensure adherence to approved schema and global rules.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:59"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

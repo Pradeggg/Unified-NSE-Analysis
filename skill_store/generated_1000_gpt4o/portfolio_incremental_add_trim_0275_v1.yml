@@ -1,0 +1,57 @@
+id: "portfolio_incremental_add_trim_0275_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0275"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: pre market; response style: ranked candidates."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for pre market: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Initiate a risk-first review using available signals and position details."
+sql_templates:
+  -
+    query: "WITH latest_snapshots AS (SELECT MAX(snapshot_date) as snapshot_date FROM scores.stage_snapshots) SELECT s.symbol, s.sector, s.stage, s.stage_score, s.technical_score, s.rsi, s.trend_signal FROM scores.stage_snapshots s, latest_snapshots ls WHERE s.snapshot_date = ls.snapshot_date"
+    description: "Fetch latest scores based on stage and technical metrics."
+  -
+    query: "SELECT symbol, qty, avg_cost FROM portfolio.holdings"
+    description: "Fetch current portfolio holdings."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure snapshot date consistency across scores."
+  - "Verify holdings are non-zero quantities."
+synthesis_guidance: "Focus on risk assessment by comparing exposure and performance metrics."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:44:05"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table ls.snapshot_date"
+  - "unknown table s.rsi"
+  - "unknown table s.sector"
+  - "unknown table s.snapshot_date"
+  - "unknown table s.stage"
+  - "unknown table s.stage_score"
+  - "unknown table s.symbol"
+  - "unknown table s.technical_score"
+  - "unknown table s.trend_signal"

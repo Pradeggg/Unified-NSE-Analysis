@@ -1,0 +1,64 @@
+id: "company_360_research_report_0370_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Agent Adda Skill Card"
+description: "Skill card for constructing comprehensive company research using fundamental analysis with a focus on Indian markets."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "TradingView export for post results: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as exceptions and gaps first"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "TradingView_export"
+  - "post_results"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template: "Provide a structured methodology including SQL queries and analytical narratives to construct a comprehensive report."
+sql_templates:
+  -
+    template_id: "snapshot_overview"
+    query: "SELECT snapshot_date, symbol, company_name, sector, market_cap_cat, price, stage, stage_score, fundamental_score FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' ORDER BY snapshot_date DESC LIMIT 1;"
+  -
+    template_id: "financial_summary"
+    query: "SELECT period_end, revenue, expenses, operating_profit, eps FROM scores.annual_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 3;"
+  -
+    template_id: "technical_analysis"
+    query: "SELECT trade_date, close, week52_high, week52_low FROM market.equity_eod WHERE symbol = 'RELIANCE' ORDER BY trade_date DESC LIMIT 30;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Verify if tables contain relevant data for the requested period."
+  - "Ensure SQL templates are strictly read-only."
+  - "Ensure narrative synthesis aligns with evidence gaps."
+synthesis_guidance: "When available data gaps exist, emphasize narrative synthesis and exception reporting."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

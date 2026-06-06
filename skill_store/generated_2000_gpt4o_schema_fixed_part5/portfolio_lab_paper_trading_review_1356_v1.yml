@@ -1,0 +1,70 @@
+id: "portfolio_lab_paper_trading_review_1356_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1356"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for quarter to date: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Analyze paper trading strategies with a focus on the latest quarter's freshness. Identify exceptions and gaps in strategy execution, with an emphasis on separate evaluation from real holdings."
+sql_templates:
+  -
+    title: "Select Latest Paper Trading Signals"
+    description: "Retrieve the most recent paper trading signals for auditing."
+    template: "SELECT * FROM signals.signal_log WHERE date_issued > (CURRENT_DATE - INTERVAL '3 months') AND action_bucket = 'PAPER_TRADE'"
+    rules: "Read-only select for signal audit"
+python_tools:
+  -
+    id: "run_quarterly_freshness_audit"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "signal_log"
+    outputs:
+      - "freshness_audit_report"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context):\n    # Read-only function to analyze signal freshness\n    today = context['now']\n    symbols = context['inputs']['symbol']\n    # Perform analysis...\n    return {'freshness_audit_report': 'Report content...'}"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all required fields are present."
+  - "SQL templates must follow read-only constraints and only return necessary columns."
+synthesis_guidance: "['Prioritize identifying gaps and exceptions in strategy implementation.', 'Focus on quarter-to-date results without mixing real portfolio data.', 'Offer insights on entry, exit, and stop-loss efficiency.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:04"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_quarterly_freshness_audit: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_quarterly_freshness_audit: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,65 @@
+id: "corporate_events_results_watchlist_1787_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1787"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: intraday context; response style: QA checklist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for intraday context: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as QA checklist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    parameters:
+      -
+        name: "sector"
+        type: "text"
+        description: "Sector for relative comparison"
+      -
+        name: "date_range"
+        type: "text"
+        description: "Date range for filtering events"
+sql_templates:
+  -
+    template: "SELECT ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, ce.detail, sa.stage, sa.trading_signal FROM signals.corporate_events ce JOIN scores.stage_snapshots sa ON ce.symbol = sa.symbol WHERE ce.event_date >= CURRENT_DATE AND sa.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND sa.sector = {{ sector }} ORDER BY ce.event_date LIMIT 50;"
+    description: "Query for retrieving upcoming corporate events with the latest stage snapshot and trading signals."
+  -
+    template: "SELECT ra.symbol, ra.company_name, ra.industry, ra.verdict, ra.score, ra.growth_yoy_revenue_pct, ra.growth_qoq_revenue_pct, ra.eps_yoy_pct FROM scores.results_analysis ra JOIN signals.corporate_events ce ON ra.symbol = ce.symbol AND ra.period_end = ce.event_date WHERE ce.event_type = 'RESULTS' AND ce.event_date BETWEEN {{ date_range }} ORDER BY ra.verdict, ra.score DESC LIMIT 50;"
+    description: "Query for analyzing results-related corporate events in the given date range."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure ce.event_date is in the future for upcoming events."
+  - "Verify ra.verdict uses approved labels such as beat, inline, miss, etc."
+  - "Confirm stage and trading_signal values align with current snapshot data."
+synthesis_guidance: "['Align event-driven insights with sector-relative performance for enhanced comparison.', 'Provide a QA checklist format to assess upcoming events and results.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

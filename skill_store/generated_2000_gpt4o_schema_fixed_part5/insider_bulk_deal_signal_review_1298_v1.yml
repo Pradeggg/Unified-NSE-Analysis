@@ -1,0 +1,60 @@
+id: "insider_bulk_deal_signal_review_1298_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1298"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: weekly review; response style: ranked candidates."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for weekly review: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as ranked candidates"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    evidence_gathering: "Use SELECT queries on required tables to gather latest insider alerts and bulk/block deals with technical confirmations."
+    analysis_approach: "Rank stocks by insider and institutional activity signals, technical scores."
+sql_templates:
+  -
+    template_name: "LatestStageSnapshotQuery"
+    template: "SELECT symbol, stage, trading_signal, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY');"
+  -
+    template_name: "InsiderAlertQuery"
+    template: "SELECT symbol, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '1 week';"
+  -
+    template_name: "BulkDealQuery"
+    template: "SELECT symbol, entity, side, qty, price FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '1 week';"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "{'date_consistency': 'Ensure all dates are aligned to latest available entries.', 'symbol_integrity': 'All symbols must exist in the latest stage snapshot for context.'}"
+synthesis_guidance: "{'ranking_methodology': 'Use insider score and technical score to rank symbols.', 'interpretation_notes': 'Focus on accumulation cues evidenced by bulk deals and positive insider actions.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:29"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

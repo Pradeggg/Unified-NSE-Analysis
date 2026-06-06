@@ -1,0 +1,65 @@
+id: "report_link_data_validation_0578_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0578"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for pre market: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Research the report metadata and stock data quality using approved evidence tables. Report observations relevant to the Indian market."
+sql_templates:
+  -
+    description: "Retrieve latest enhanced report run metadata."
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 1;"
+  -
+    description: "Retrieve filtered stock details for latest run."
+    template: "SELECT symbol, recommendation, current_price, day_change_pct, volume FROM report.enhanced_filtered_stocks WHERE run_id = (SELECT run_id FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 1);"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "stock_data"
+    outputs:
+      - "missing_data_analysis"
+    approved_tables:
+      - "report.enhanced_filtered_stocks"
+    code: "def run(stock_data):\n    missing_data = [stock for stock in stock_data if not stock['day_change_pct']]\n    return {'missing_data': missing_data}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates are read-only SELECT/WITH templates."
+synthesis_guidance: "Summarize data validity and integrity issues, focusing on the potential impacts within the Indian market context."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:58:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "run: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

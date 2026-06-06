@@ -1,0 +1,78 @@
+id: "corporate_events_results_watchlist_0121_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0121"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: last 5 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for last 5 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as narrative plus evidence"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "last_5_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  inputs:
+    - "session_date_range"
+  outputs:
+    - "event_calendar"
+    - "symbol_watchlist"
+    - "result_context"
+    - "action_bucket"
+    - "source_trail"
+sql_templates:
+  event_calendar:
+    query: "SELECT symbol, event_type, event_date, purpose_raw, detail FROM signals.corporate_events WHERE event_date BETWEEN ? AND ? ORDER BY event_date DESC"
+    description: "Fetch events within the last 5 sessions."
+  symbol_watchlist:
+    query: "SELECT symbol, company_name, sector, stage, price FROM scores.stage_snapshots WHERE snapshot_date = ? AND (change_1d_pct > 0 OR change_1w_pct > 0) ORDER BY change_1d_pct DESC, change_1w_pct DESC"
+    description: "Identify symbols with positive changes within the last session."
+  result_context:
+    query: "SELECT symbol, company_name, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct FROM scores.results_analysis WHERE period_end BETWEEN ? AND ?"
+    description: "Gather results analysis for recent corporate earnings."
+python_tools:
+  -
+    id: "event_quick_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "event_data"
+    outputs:
+      - "narrative_summary"
+    approved_tables:
+      - "signals.corporate_events"
+      - "scores.results_analysis"
+    code: "def run(context):\n    return {'narrative_summary': f'Summary for events: {context[\"event_data\"]}'}"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure date ranges do not exceed the last 5 sessions."
+  - "Verify symbols appear in the event_calendar or symbol_watchlist if actioned."
+synthesis_guidance: "{'strategy': 'Combine event_calendar narratives with symbol_watchlist insights for a cohesive watchlist overview.', 'highlights': 'Focus on stocks with notable movements post-event announcements.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:37"
+generation_model: "gpt-4o"
+validation_errors:
+  - "event_quick_analysis: execution failed: KeyError: 'event_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "event_quick_analysis: execution failed: KeyError: 'event_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

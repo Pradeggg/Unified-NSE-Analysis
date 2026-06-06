@@ -1,0 +1,53 @@
+id: "signal_outcome_feedback_review_1439_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1439"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for last 20 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as portfolio-aware output"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze the last 20 sessions of signal outcomes based on approved evidence tables."
+sql_templates:
+  -
+    name: "Retrieve Signal Outcomes"
+    template: "SELECT id, date_issued, symbol, signal, target_1, target_2, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= (SELECT MAX(date_issued) FROM signals.signal_log) - INTERVAL '20 days';"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure SQL templates are read-only."
+  - "Use only approved tables and columns."
+  - "SQL must adhere to Indian market context."
+synthesis_guidance: "['Focus on deriving patterns and routes from the evidence.', 'Leverage outcomes to guide future signal strategies.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:07"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,59 @@
+id: "insider_bulk_deal_signal_review_0276_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0276"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: pre market; response style: ranked candidates."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for pre market: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as ranked candidates"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Combine insider alerts and bulk deal data with the latest stage snapshots and EOD equity data to identify accumulation or distribution signals. Sort symbols for pre-market review based on signal strength and recency."
+sql_templates:
+  -
+    name: "fetch_insider_signals"
+    template: "SELECT id, alert_date, symbol, alert_type, insider_score FROM signals.insider_alerts WHERE alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts) AND insider_score > 75 ORDER BY insider_score DESC LIMIT 50"
+  -
+    name: "fetch_bulk_deals"
+    template: "SELECT id, deal_date, symbol, qty, price FROM signals.bulk_block_deals WHERE deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals) ORDER BY qty DESC LIMIT 50"
+  -
+    name: "latest_stage_snapshots"
+    template: "SELECT symbol, stage, stage_score, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 50"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure symbols are valid NSE codes."
+  - "Filter based on insider_score > 75."
+  - "Include only STAGE_2 or higher."
+synthesis_guidance: "Analyze the dataset to determine if insider alerts and bulk deals are supported by technical signals, focusing on symbols with the highest insider scores and positive trading signals for potential accumulations."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:56"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

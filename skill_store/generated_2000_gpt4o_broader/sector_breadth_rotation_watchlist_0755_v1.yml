@@ -1,0 +1,64 @@
+id: "sector_breadth_rotation_watchlist_0755_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0755"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: risk-first review; timeframe: quarter to date; response style: QA checklist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "risk-first review for quarter to date: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as QA checklist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "risk-first_review"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+
+  sql_templates:
+    -
+      id: "rank_sectors_by_50dma_pct_above"
+      query: "SELECT sector, AVG(pct_above_50dma) AS avg_pct_above_50dma FROM breadth.sector_daily WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY sector ORDER BY avg_pct_above_50dma DESC;"
+    -
+      id: "find_improving_sectors"
+      query: "SELECT sector FROM breadth.sector_daily WHERE breadth_signal = 'improving' GROUP BY sector;"
+    -
+      id: "list_candidates_based_on_stage"
+      query: "SELECT s.symbol, s.company_name FROM scores.stage_snapshots AS s JOIN breadth.ma_pct_above AS b ON s.symbol = b.symbol WHERE s.stage = 2 AND b.stage2_pct > 50 AND s.snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH);"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,61 @@
+id: "company_360_research_report_1266_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Reliance Company Research"
+description: "Comprehensive research on Reliance focusing on financials, fundamentals, and technical analysis aligned with market trends."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "freshness_audit"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    task: "Generate company overview and financial data summary for RELIANCE."
+    sql_template: "SELECT * FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    task: "Fetch the latest quarterly results for RELIANCE."
+    sql_template: "SELECT * FROM scores.quarterly_results WHERE symbol = 'RELIANCE' AND period_type = 'quarter' ORDER BY period_end DESC LIMIT 1;"
+sql_templates:
+  -
+    template_name: "Latest Snapshot"
+    sql: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol = $1;"
+  -
+    template_name: "Quarterly Results"
+    sql: "SELECT * FROM scores.quarterly_results WHERE symbol = $1 AND period_type = 'quarter' ORDER BY period_end DESC LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+validation_rules:
+  - "Ensure snapshot_date is the latest available."
+  - "Verify period_label in quarterly results is recent."
+synthesis_guidance: "['Combine insights from technical and fundamental analysis to form a comprehensive view.', 'Focus on providing a summary that is easy to interpret for stakeholders.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

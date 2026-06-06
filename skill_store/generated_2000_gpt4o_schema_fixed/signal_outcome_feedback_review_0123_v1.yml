@@ -1,0 +1,65 @@
+id: "signal_outcome_feedback_review_0123_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0123"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for last 5 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as narrative plus evidence"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "last_5_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Assess the outcomes of trading signals over the last five sessions. Identify patterns that led to success or failure, and suggest route improvements based on learned lessons."
+sql_templates:
+  -
+    title: "Fetch Signal Outcomes"
+    description: "Retrieve signals issued and resolved in the last five sessions with outcomes."
+    query: "WITH latest_signals AS (SELECT * FROM signals.signal_log WHERE date_resolved IS NOT NULL ORDER BY date_resolved DESC LIMIT 5) SELECT * FROM latest_signals WHERE hit_target = TRUE OR hit_stop = TRUE;"
+python_tools:
+  -
+    id: "run_signal_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signal_outcomes"
+    outputs:
+      - "summary_analysis"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run_signal_analysis(signal_outcomes): return summary_analysis(signal_outcomes)"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all signal outcomes are considered."
+  - "Patterns and improvements must be derived from evidence."
+synthesis_guidance: "['Focus on narrative complexity; embrace evidence.', 'Highlight actionable insights in the Indian market context.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_signal_analysis: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_signal_analysis: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

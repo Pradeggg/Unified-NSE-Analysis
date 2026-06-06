@@ -1,0 +1,59 @@
+id: "data_freshness_readiness_audit_1169_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit - Variant 1169"
+description: "Check the freshness of Agent Adda evidence sources for various workflows. Focus on source-trail validation after results."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for post results: data freshness readiness thresholds"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "post_results"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Use available evidence to assess data freshness and readiness. Provide narrative explanations alongside evidence."
+sql_templates:
+  -
+    purpose: "Check freshest trade_date for market.index_eod"
+    sql: "SELECT MAX(trade_date) AS latest_index_date FROM market.index_eod;"
+  -
+    purpose: "Check freshest trade_date for market.equity_eod"
+    sql: "SELECT MAX(trade_date) AS latest_equity_date FROM market.equity_eod;"
+  -
+    purpose: "Check freshest snapshot_date for scores.stage_snapshots"
+    sql: "SELECT MAX(snapshot_date) AS latest_stage_snapshot FROM scores.stage_snapshots;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all relevant tables are queried for their latest date."
+  - "Confirm no SQL writes are performed."
+  - "Verify the integrity of joins, if any, adhere to schema join rules."
+synthesis_guidance: "Provide evidence-backed narrative explanations for missing or outdated data along with recommendations."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:56:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_equity_date is not approved"
+  - "market.index_eod.latest_index_date is not approved"
+  - "scores.stage_snapshots.latest_stage_snapshot is not approved"

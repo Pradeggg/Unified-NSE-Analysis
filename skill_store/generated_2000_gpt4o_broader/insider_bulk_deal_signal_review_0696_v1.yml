@@ -1,0 +1,62 @@
+id: "insider_bulk_deal_signal_review_0696_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0696"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: weekly review; response style: debug trace."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for weekly review: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as debug trace"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  tool_plan: "Leverage evidence to construct a review of recent insider and bulk deals, analyzing technical indicators for potential accumulation or distribution patterns."
+sql_templates:
+  -
+    name: "fetch_recent_insider_alerts"
+    description: "Retrieve recent insider alerts with scores."
+    sql: "SELECT * FROM signals.insider_alerts WHERE alert_date > CURRENT_DATE - INTERVAL '7 days';"
+  -
+    name: "fetch_recent_bulk_deals"
+    description: "Retrieve recent bulk and block deals."
+    sql: "SELECT * FROM signals.bulk_block_deals WHERE deal_date > CURRENT_DATE - INTERVAL '7 days';"
+  -
+    name: "analyze_technical_scores"
+    description: "Fetch technical scores for analysis."
+    sql: "SELECT symbol, technical_score, trend_signal FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all fetched data is within the last week."
+  - "Verify SQL templates are purely read-only."
+synthesis_guidance: "Aggregate findings with a focus on current actionable insights while maintaining a debug trace style."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,59 @@
+id: "data_freshness_readiness_audit_0721_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0721"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for last 5 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Conduct a quick audit to ensure the data freshness for the last 5 sessions across all relevant Agent Adda sources."
+sql_templates:
+  -
+    template: "SELECT MAX(trade_date) AS latest_trade_date FROM market.index_eod;"
+  -
+    template: "SELECT MAX(trade_date) AS latest_trade_date FROM market.equity_eod;"
+  -
+    template: "SELECT MAX(snapshot_date) AS latest_snapshot_date FROM scores.stage_snapshots;"
+  -
+    template: "SELECT MAX(trade_date) AS latest_trade_date FROM breadth.market_daily;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all tables have recent data within the last 5 sessions."
+  - "Check for any gaps in data sources."
+synthesis_guidance: "['Summarize findings in a QA checklist style for quick reference.', 'Highlight any critical data gaps or potential issues affecting workflows.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:08"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.latest_trade_date is not approved"
+  - "market.equity_eod.latest_trade_date is not approved"
+  - "market.index_eod.latest_trade_date is not approved"
+  - "scores.stage_snapshots.latest_snapshot_date is not approved"

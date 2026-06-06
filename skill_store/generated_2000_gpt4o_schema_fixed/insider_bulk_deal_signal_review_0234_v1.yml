@@ -1,0 +1,58 @@
+id: "insider_bulk_deal_signal_review_0234_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0234"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for last 20 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as ranked candidates"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "{Evidence retrieval based on insider and bulk deals, linked with technical signals for watchlist creation.}"
+sql_templates:
+  recent_insider_deals:
+    template: "SELECT symbol, alert_date, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '20 days';"
+    description: "Fetch recent insider deal alerts for the last 20 sessions."
+  recent_bulk_deals:
+    template: "SELECT symbol, deal_date, entity, qty, price FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '20 days';"
+    description: "Fetch bulk deal data for the last 20 sessions."
+  technical_confirmation:
+    template: "WITH recent_stage AS ( SELECT symbol, stage, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2') SELECT s.symbol, s.stage, s.technical_score FROM recent_stage s JOIN market.equity_eod e ON s.symbol = e.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND s.technical_scores >= 60 LIMIT 10;"
+    description: "Identify and confirm technical signals for strong accumulation phases."
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Verify insider deal dates within the last 20 sessions."
+  - "Assess technical confirmation for stage and score thresholds."
+synthesis_guidance: "['Confidentiality caution.', 'Ensure context alignment between insider deals and bulk deals for signaling.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

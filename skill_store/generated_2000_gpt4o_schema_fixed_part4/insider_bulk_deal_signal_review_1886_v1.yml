@@ -1,0 +1,59 @@
+id: "insider_bulk_deal_signal_review_1886_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1886"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for intraday context: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as action watchlist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    title: "Insider and Bulk Deal Signal Analysis"
+    steps:
+      - "Identify insider alerts for potential accumulation."
+      - "Filter bulk and block deals for institutional signals."
+      - "Use technical indicators for confirmation."
+      - "Cross-reference latest market data for current context."
+sql_templates:
+  -
+    query: "WITH latest_snapshots AS ( SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ), insider_deals AS ( SELECT a.symbol, a.alert_date, a.insider_score, b.qty, b.price FROM signals.insider_alerts a JOIN signals.bulk_block_deals b ON a.symbol = b.symbol WHERE a.alert_date = b.deal_date ) SELECT i.symbol, i.insider_score, s.trend_signal, s.trading_signal FROM insider_deals i JOIN latest_snapshots s ON i.symbol = s.symbol WHERE s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY i.insider_score DESC LIMIT 10;"
+    description: "Fetch latest insider alerts with technical confirmations."
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all selected symbols have valid insider scores."
+  - "Confirm trading signals are either 'BUY' or 'STRONG_BUY'."
+synthesis_guidance: "{'type': 'action_watchlist', 'instructions': ['Develop a watchlist of stocks based on insider activities and bulk deals.', 'Highlight those with strong technical confirmation.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:19"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

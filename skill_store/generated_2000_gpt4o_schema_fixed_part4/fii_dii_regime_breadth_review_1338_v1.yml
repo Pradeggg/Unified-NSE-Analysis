@@ -1,0 +1,74 @@
+id: "fii_dii_regime_breadth_review_1338_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1338"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as exceptions and gaps first"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    python_tools:
+      -
+        id: "analyze_market_condition"
+        language: "python"
+        mode: "read_only"
+        inputs:
+          - "fii_dii_flows"
+          - "regime_history"
+          - "market_daily"
+        outputs:
+          - "regime"
+          - "flow_context"
+          - "breadth_context"
+        approved_tables:
+          - "signals.fii_dii_flows"
+          - "signals.regime_history"
+          - "breadth.market_daily"
+        code: "def run(context):\n    pass  # Analyze market condition based on inputs"
+sql_templates:
+  -
+    description: "Fetch recent FII/DII flows, market regime, breadth, and index data."
+    template: "WITH latest_data AS (\n    SELECT flows.trade_date, flows.fii_net_today, flows.dii_net_today, flows.flow_signal,\n           regime.regime, regime.confidence,\n           breadth.advances, breadth.declines, breadth.ad_signal,\n           index_data.close\n    FROM signals.fii_dii_flows flows\n    JOIN signals.regime_history regime ON flows.trade_date = regime.trade_date\n    JOIN breadth.market_daily breadth ON flows.trade_date = breadth.trade_date\n    JOIN market.index_eod index_data ON flows.trade_date = index_data.trade_date\n    WHERE flows.trade_date >= CURRENT_DATE - INTERVAL '20 days'\n    AND index_data.index_symbol = 'Nifty 50'\n)\nSELECT * FROM latest_data;"
+    read_only: true
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data coverage for at least 20 sessions."
+  - "Check for any missing flow or regime snapshots."
+synthesis_guidance: "Focus on presenting exceptions and gaps first, highlighting the position-sizing context."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:31"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.market_daily is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "breadth.market_daily.market_daily is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

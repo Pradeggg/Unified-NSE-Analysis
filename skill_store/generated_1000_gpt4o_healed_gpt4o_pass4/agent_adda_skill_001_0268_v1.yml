@@ -1,0 +1,49 @@
+created_at: "2026-06-06T12:43:58"
+created_by: "llm_generated"
+description: "Validate Indian market report link functionality and associated data integrity for enhanced reporting."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_001_0268_v1"
+input_patterns:
+  - "review report links are not working"
+  - "underlying stock html files lack data"
+  - "validate generated report links and missing data"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation_steps"
+  - "verification_results"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Fetch runs from enhanced_runs after a specific date."
+    template: "SELECT run_id, run_ts, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE run_ts > '2023-01-01';"
+  -
+    description: "Retrieve top ranked stocks for analysis."
+    template: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE rank <= 10;"
+status: "validated"
+synthesis_guidance: "Interpret SQL findings focusing on link and data validation. Prioritize critical failures and recommend fixes."
+tags:
+  - "report_qa"
+  - "indian_market"
+  - "links_validation"
+  - "data_integrity"
+title: "Indian Market Report Link Validation and Data Check"
+tool_plan_template: "Assess the enhanced report metadata and content integrity involving report links and stock data."
+validation_rules:
+  - "Ensure all links return valid responses or highlight failures."
+  - "Check completeness and correctness of stock data."
+  - "Identify missing or anomalous data patterns."
+version: 1

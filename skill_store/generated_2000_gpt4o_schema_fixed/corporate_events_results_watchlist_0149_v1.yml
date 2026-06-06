@@ -1,0 +1,65 @@
+id: "corporate_events_results_watchlist_0149_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0149"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for last 3 months: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as narrative plus evidence"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  event_calendar: "Read upcoming events from signals.corporate_events."
+  symbol_watchlist: "Join with scores.stage_snapshots to enrich with symbols in a watchlist context."
+  result_context: "Align events with recent analysis from scores.results_analysis."
+  action_bucket: "Categorize based on event type such as RESULTS or DIVIDEND."
+  source_trail: "Collect source trails for validation."
+sql_templates:
+  -
+    template_id: "retrieve_corporate_events"
+    purpose: "Fetch recent or upcoming corporate events from the past 3 months."
+    sql: "SELECT id, symbol, event_type, event_date, purpose_raw, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY event_date DESC LIMIT 100;"
+  -
+    template_id: "join_stage_snapshots"
+    purpose: "Join corporate events with the latest stage snapshots."
+    sql: "SELECT se.id, se.symbol, se.event_type, ss.stage, ss.trading_signal FROM signals.corporate_events se JOIN scores.stage_snapshots ss ON se.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    template_id: "fetch_results_analysis"
+    purpose: "Join events with latest results analysis."
+    sql: "SELECT se.id, se.symbol, ra.company_name, ra.verdict FROM signals.corporate_events se JOIN scores.results_analysis ra ON se.symbol = ra.symbol WHERE ra.period_end = (SELECT MAX(period_end) FROM scores.results_analysis);"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "recent_event_date"
+  - "valid_event_type"
+synthesis_guidance: "{'narrative': 'Combine collected events and analysis to craft a narrative focused on upcoming influential market movements, detailing sources and expected impacts.', 'evidence_curation': 'Prioritize events with strong recent analysis and ensure diverse event types for a comprehensive view.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:21"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

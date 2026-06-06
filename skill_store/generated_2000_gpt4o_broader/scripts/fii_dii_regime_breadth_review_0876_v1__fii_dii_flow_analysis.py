@@ -1,0 +1,1 @@
+def run(fii_net_today, dii_net_today, fii_trend, dii_trend): return {'flow_context': 'Evaluate current FII and DII statuses.'}

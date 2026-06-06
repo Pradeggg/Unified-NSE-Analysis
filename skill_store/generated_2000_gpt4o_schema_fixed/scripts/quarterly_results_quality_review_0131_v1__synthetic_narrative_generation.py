@@ -1,0 +1,1 @@
+def run(context): pass # Placeholder for narrative generation logic

@@ -1,0 +1,68 @@
+created_at: "2026-06-06T12:51:42"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: weekly review; response style: QA checklist."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0799_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+  get_portfolio_state:
+    description: "Fetch current holdings from portfolio."
+    template: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+  get_sector_exposure:
+    description: "Calculate quantity exposure by sector."
+    template: "SELECT symbol, sector, SUM(qty) as total_qty FROM scores.stage_snapshots JOIN portfolio.holdings ON scores.stage_snapshots.symbol = portfolio.holdings.symbol GROUP BY sector;"
+status: "validated"
+synthesis_guidance: "{'approach': ['Begin with portfolio state validation against current snapshots.', 'Analyze sector exposure to highlight concentration risks.', 'Identify add/trim candidates based on technical scores.'], 'considerations': ['Market conditions and volatility impacts on decision thresholds.', 'Weekly trend consistency for reliable source-trail validations.']}"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "QA_checklist"
+title: "Portfolio Incremental Add Trim Review Variant 0799"
+tool_plan_template:
+  python_tools:
+    -
+      approved_tables:
+        - "portfolio.holdings"
+        - "scores.stage_snapshots"
+      code: "def run(context):\n    # Identify symbols for adding or trimming based on scores\n    results = {'add_candidates': [], 'trim_candidates': []}\n    for holding in context['portfolio.holdings'].values():\n        symbol = holding['symbol']\n        stage_snapshot = context['scores.stage_snapshots'].get(symbol)\n        if stage_snapshot:\n            technical_score = stage_snapshot.get('technical_score', 0)\n            if technical_score > 70:  # Threshold for adding\n                results['add_candidates'].append(symbol)\n            elif technical_score < 30:  # Threshold for trimming\n                results['trim_candidates'].append(symbol)\n    return results"
+      id: "incremental_add_trim_tool"
+      inputs:
+        - "portfolio.holdings"
+        - "scores.stage_snapshots"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "add_candidates"
+        - "trim_candidates"
+validation_rules:
+  - "Validate portfolio symbols against snapshots for scoring."
+  - "Ensure calculations are limited to approved tables."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

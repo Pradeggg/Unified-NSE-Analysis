@@ -1,0 +1,52 @@
+id: "insider_bulk_deal_signal_review_1452_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1452"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for quarter to date: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as portfolio-aware output"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "1. Identify symbols with recent insider alerts.\n2. Check for bulk or block deals for these symbols.\n3. Extract technical confirmations like RSI, trend signals, and supertrend state.\n4. Analyze data to create a ranked portfolio output."
+sql_templates:
+  insider_alerts_query: "SELECT symbol, alert_date, alert_type, qty, value_cr FROM signals.insider_alerts WHERE alert_date >= '2023-01-01' AND category = 'Buy';"
+  bulk_deals_query: "SELECT symbol, deal_date, side, qty, price FROM signals.bulk_block_deals WHERE deal_date >= '2023-01-01' AND side = 'Buy';"
+  technical_summary_query: "SELECT symbol, technical_score, rsi, trend_signal, supertrend_state FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all selected symbols appear in both insider alerts and bulk deals."
+  - "Validate technical confirmation aligns with positive market conditions."
+synthesis_guidance: "['Combine data to establish buy or sell signals based on insider activity and technical trends.', 'Prepare output to guide portfolio decisions with institutional context.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:17"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

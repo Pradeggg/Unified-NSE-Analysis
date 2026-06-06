@@ -1,0 +1,70 @@
+id: "agent_route_failure_diagnostics_0700_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0700"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: weekly review; response style: debug trace."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for weekly review: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as debug trace"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze weekly route discrepancies and debug steps."
+sql_templates:
+  - "SELECT run_id, analysis_date, universe_size, stocks_analyzed, notes FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '7 days';"
+  - "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE weekly_signal IS NOT NULL AND run_id = :run_id;"
+  - "SELECT symbol, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+python_tools:
+  -
+    id: "symbol_analysis_tool_v1"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      -
+        name: "symbol"
+        type: "string"
+    outputs:
+      -
+        name: "analysis_result"
+        type: "dict"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    symbol = context['symbol']\n    # Simulate a complex symbol analysis logic...\n    return {'analysis_result': 'dummy_result'}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure columns are referenced exactly as per schema."
+  - "Use evidence_required.tables precisely as defined."
+  - "Maintain read-only SQL templates."
+synthesis_guidance: "Focus on providing a detailed debug trace for each identified failure mode."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:42"
+generation_model: "gpt-4o"
+validation_errors:
+  - "symbol_analysis_tool_v1: inputs must contain only strings"
+  - "symbol_analysis_tool_v1: outputs must contain only strings"
+review:
+  status: "needs_heal"
+  findings:
+    - "symbol_analysis_tool_v1: inputs must contain only strings"
+    - "symbol_analysis_tool_v1: outputs must contain only strings"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,54 @@
+id: "insider_bulk_deal_signal_review_0822_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0822"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for clues. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for last 5 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as action watchlist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "insider_deal_alerts"
+    description: "Fetch the latest insider alerts and bulk deals with technical confirmation for the last 5 sessions."
+    template: "WITH recent_insider_alerts AS (\n    SELECT \n        ia.symbol, ia.alert_date, ia.alert_type, ia.entity, ia.qty, ia.value_cr, ia.insider_score,\n        bb.deal_date, bb.deal_type, bb.qty AS deal_qty, bb.price, bb.side, ss.stage, ss.technical_score\n    FROM \n        signals.insider_alerts ia\n    JOIN \n        signals.bulk_block_deals bb ON ia.symbol = bb.symbol\n    JOIN \n        scores.stage_snapshots ss ON ia.symbol = ss.symbol\n    WHERE \n        ia.alert_date > CURRENT_DATE - INTERVAL '5 days'\n        AND bb.deal_date > CURRENT_DATE - INTERVAL '5 days'\n        AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n        AND ss.trading_signal IN ('BUY', 'STRONG_BUY')\n)\nSELECT * FROM recent_insider_alerts\nORDER BY insider_score DESC\nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure insider alerts and bulk deals are within the last 5 sessions."
+  - "Technical confirmation should include stage and trading signal analysis."
+synthesis_guidance: "['Focus on stocks with strong insider activity and corroborating bulk deals.', 'Prioritize entities with high insider scores and positive trading signals.', 'Provide a watchlist format for ease of action identification.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,79 @@
+id: "sector_breadth_rotation_watchlist_1245_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1245"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: risk-first review; timeframe: last 3 months; response style: ranked candidates."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "risk-first review for last 3 months: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as ranked candidates"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "risk-first_review"
+  - "last_3_months"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    task_type: "ranking"
+    components:
+      - "Identify sectors with positive breadth signals over the last 3 months."
+      - "Rank sectors by percentage of stocks in Stage 2."
+      - "Identify symbols with positive relative strength and constructive trading signals."
+      - "Prepare candidate symbols for TradingView addition."
+    response_style: "ranked_candidates"
+sql_templates:
+  -
+    template_name: "sector_ranking"
+    query: "WITH recent_breadth AS (SELECT sector, snapshot_date, breadth_signal FROM breadth.sector_daily WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months'), stage_two_participation AS (SELECT sector, COUNT(*) as stage_two_count FROM scores.stage_snapshots WHERE stage = 'STAGE_2' GROUP BY sector) SELECT r.sector, COUNT(*) AS breadth_count, s.stage_two_count FROM recent_breadth r JOIN stage_two_participation s ON r.sector = s.sector WHERE r.breadth_signal = 'POSITIVE' GROUP BY r.sector, s.stage_two_count ORDER BY breadth_count DESC, s.stage_two_count DESC LIMIT 10"
+  -
+    template_name: "candidate_symbols"
+    query: "SELECT s.symbol, s.relative_strength, s.trading_signal FROM scores.stage_snapshots s WHERE s.stage = 'STAGE_2' AND s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY s.relative_strength DESC LIMIT 50"
+python_tools:
+  -
+    id: "calculate_sector_breadth"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_data"
+    outputs:
+      - "ranked_sectors"
+    approved_tables:
+      - "breadth.sector_daily"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Calculate sector breadth and rank sectors based on various metrics\n    breadth = context['sector_data'].groupby('sector').agg({'breadth_signal':'count'})\n    top_sectors = breadth.sort_values(by='breadth_signal', ascending=False).head(10)\n    return top_sectors.to_dict()"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure no more than 10 sectors are returned."
+  - "Candidate symbols must align with sectors showing improved breadth."
+synthesis_guidance: "['Focus on sectors with the highest stage two participation and positive breadth signals.', 'Highlight top-ranked sectors and matching symbols with strong buy signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_sector_breadth: execution failed: process exited 1"
+  - "scores.stage_snapshots.s is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_sector_breadth: execution failed: process exited 1"
+    - "scores.stage_snapshots.s is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,59 @@
+id: "sector_breadth_rotation_watchlist_1497_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1497"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for weekly review: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as portfolio-aware output"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Evaluate sectors based on breadth, stage migration, RS, and price momentum."
+sql_templates:
+  - "SELECT sector, AVG(pct_above_50dma) AS avg_above_50dma FROM breadth.sector_daily WHERE snapshot_date > CURRENT_DATE - INTERVAL '7 days' GROUP BY sector ORDER BY avg_above_50dma DESC;"
+  - "SELECT sector, COUNT(DISTINCT symbol) AS stage_2_count FROM scores.stage_snapshots WHERE stage = 2 GROUP BY sector ORDER BY stage_2_count DESC;"
+python_tools:
+  -
+    id: "calculate_relative_strength"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_data"
+    outputs:
+      - "relative_strength_scores"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    sector_data = context['sector_data']\n    # Calculate relative strength based on available data\n    # This is a dummy placeholder for actual logic\n    relative_strength_scores = {sector: sum(data)/len(data) for sector, data in sector_data.items()}\n    return {'relative_strength_scores': relative_strength_scores}"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure data freshness is within the weekly timeframe."
+  - "Compare sector metrics against historical benchmarks."
+synthesis_guidance: "Focus on the sectors showing improvement in both breadth and stage 2 counts relative to others in the Indian market."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:09:15"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.sector_daily.avg_above_50dma is not approved"
+  - "scores.stage_snapshots.stage_2_count is not approved"

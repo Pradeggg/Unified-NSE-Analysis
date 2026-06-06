@@ -1,0 +1,1 @@
+def run(context): return [{'anomaly_flag': True, 'summary': 'Missing trend signal patterns identified'} for entry in context if entry.get('trend_signal', None) is None]

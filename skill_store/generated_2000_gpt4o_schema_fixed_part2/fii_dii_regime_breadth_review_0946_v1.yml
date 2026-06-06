@@ -1,0 +1,68 @@
+id: "fii_dii_regime_breadth_review_0946_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0946"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for last 3 months: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as comparison matrix"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Generate a report using the Python tool to handle complex data manipulation."
+sql_templates:
+  flow_regime_query: "WITH latest_flows AS (SELECT * FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'), latest_regime AS (SELECT * FROM signals.regime_history WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months') SELECT * FROM latest_flows JOIN latest_regime ON latest_flows.trade_date = latest_regime.trade_date;"
+  breadth_index_query: "WITH latest_breadth AS (SELECT * FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'), latest_index AS (SELECT * FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' AND index_symbol = 'Nifty 50') SELECT * FROM latest_breadth JOIN latest_index ON latest_breadth.trade_date = latest_index.trade_date;"
+python_tools:
+  -
+    id: "data_processing"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "flow_regime_query"
+      - "breadth_index_query"
+    outputs:
+      - "comparison_matrix"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context):\n    # Process the combined data for comparison\n    return process_comparison(context)"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Integrate flow, regime, and breadth contexts as a comparative analysis for the Indian market."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:40"
+generation_model: "gpt-4o"
+validation_errors:
+  - "data_processing: execution failed: NameError: name 'process_comparison' is not defined"
+review:
+  status: "needs_heal"
+  findings:
+    - "data_processing: execution failed: NameError: name 'process_comparison' is not defined"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

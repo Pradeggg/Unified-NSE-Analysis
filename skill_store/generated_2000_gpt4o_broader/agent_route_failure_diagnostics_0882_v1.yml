@@ -1,0 +1,60 @@
+id: "agent_route_failure_diagnostics_0882_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0882"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for intraday context: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as action watchlist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Assess agent route failures using available reports. Check for tool validation issues and symbol resolution loops."
+sql_templates:
+  run_diagnostics: "SELECT r.run_id, r.run_ts, r.notes FROM report.enhanced_runs r WHERE r.universe_size > 0;"
+  analyze_symbols: "SELECT f.symbol, f.recommendation FROM report.enhanced_filtered_stocks f WHERE f.daily_signal <> 'NULL';"
+python_tools:
+  -
+    id: "symbol_trend_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "stage_score"
+    outputs:
+      - "trend_consistency"
+      - "volatility_status"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    results = []\n    for record in context['scores.stage_snapshots']:\n        trend_consistency = 'stable' if record['stage_score'] > 50 else 'volatile'\n        volatility_status = 'high' if record['change_1d_pct'] > 5 else 'low'\n        results.append({'trend_consistency': trend_consistency, 'volatility_status': volatility_status})\n    return results;"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure SQL Templates only use SELECT."
+  - "Verify all required keys are present."
+  - "Check conformity to domain-specific requirements."
+synthesis_guidance: "Focus on identifying traversal issues and mapping corrective actions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_filtered_stocks.f is not approved"
+  - "report.enhanced_runs.r is not approved"

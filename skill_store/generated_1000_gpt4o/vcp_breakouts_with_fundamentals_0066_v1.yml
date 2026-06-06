@@ -1,0 +1,59 @@
+id: "vcp_breakouts_with_fundamentals_0066_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0066"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: post results; response style: concise table."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "post_results"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "{results} = run(context)"
+sql_templates:
+  -
+    query: "WITH fundamental_criteria AS (SELECT symbol, enhanced_fund_score, earnings_quality, sales_growth, financial_strength FROM scores.stage_snapshots WHERE enhanced_fund_score > 70 AND earnings_quality > 70 AND sales_growth > 70 AND financial_strength > 70), breakout_picks AS (SELECT p.symbol, p.vcp_score, p.vcp_breakout_pct, p.vcp_contraction_pct FROM scores.stage2_vcp_picks p JOIN fundamental_criteria f ON p.symbol = f.symbol WHERE p.vcp_score > 80 AND p.vcp_breakout_pct > 10) SELECT e.symbol, e.trade_date, e.close, b.vcp_score FROM market.equity_eod e JOIN breakout_picks b ON e.symbol = b.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND e.close = e.week52_high"
+    type: "select"
+    description: "Identifies stocks meeting VCP breakout criteria with strong fundamentals."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Output must include symbols of stocks breaking out with enhanced fundamentals."
+  - "Output table must have columns: Symbol, Trade Date, Close Price, VCP Score."
+synthesis_guidance: "['Focus on stocks with recent breakout, ensuring they meet the freshness audit criteria.', 'Ensure the table is concise and includes only the most relevant information.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:41:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table b.symbol"
+  - "unknown table b.vcp_score"
+  - "unknown table e.close"
+  - "unknown table e.symbol"
+  - "unknown table e.trade_date"
+  - "unknown table e.week52_high"
+  - "unknown table f.symbol"
+  - "unknown table p.symbol"
+  - "unknown table p.vcp_breakout_pct"
+  - "unknown table p.vcp_contraction_pct"
+  - "unknown table p.vcp_score"

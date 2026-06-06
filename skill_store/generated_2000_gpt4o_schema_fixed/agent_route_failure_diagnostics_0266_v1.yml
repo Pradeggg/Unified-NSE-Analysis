@@ -1,0 +1,57 @@
+id: "agent_route_failure_diagnostics_0266_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0266"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: post results; response style: ranked candidates."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for post results: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as ranked candidates"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Use a combination of SQL evidence templates to extract the latest data, identify potential route failures, and analyze discrepancies. Enquire symbol resolution and stage data for insights."
+sql_templates:
+  -
+    name: "Latest_runs_and_stocks_diagnostics"
+    template: "SELECT ers.run_id, ers.run_ts, efs.symbol, efs.score, efs.recommendation FROM report.enhanced_runs ers JOIN report.enhanced_filtered_stocks efs ON ers.run_id = efs.run_id WHERE ers.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) LIMIT 10;"
+    description: "Fetch latest runs and stock diagnostics for analysis."
+  -
+    name: "Stage_analysis_check"
+    template: "SELECT ss.symbol, ss.stage, ss.stage_score FROM scores.stage_snapshots ss WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 5;"
+    description: "Analyze latest stage and trading signals for potential mismatches."
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure diagnostic queries utilize latest date filters correctly."
+  - "Verify all SQL joins align with approved schema _join_rules."
+  - "Review data freshness and accuracy based on reduced universe post filters."
+synthesis_guidance: "['Cross-reference identified issues with current available tools in Agent Adda.', 'Rank candidates for each identified problem by impact and likelihood.', 'Consider fallback loops and redundancies in routing.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:48"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

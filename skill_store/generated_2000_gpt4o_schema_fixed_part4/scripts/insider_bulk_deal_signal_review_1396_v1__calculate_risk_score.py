@@ -1,0 +1,1 @@
+def run(context): return {'risk_score': context['insider_score'] * 0.2 + (1 - context['trading_signal']) * 0.8}

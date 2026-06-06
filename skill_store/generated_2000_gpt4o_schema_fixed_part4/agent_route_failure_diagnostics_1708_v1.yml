@@ -1,0 +1,67 @@
+id: "agent_route_failure_diagnostics_1708_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1708"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: today; response style: QA checklist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for today: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as QA checklist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "today"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  -
+    template: "WITH latest_stage_snapshots AS ( SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ), latest_runs AS ( SELECT * FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) ) SELECT er.run_id, er.analysis_date, er.universe_size, er.stocks_analyzed, er.stocks_filtered, ef.symbol, ef.recommendation, ef.day_change_pct FROM latest_runs er JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id WHERE ef.day_change_pct < -2 ORDER BY ef.day_change_pct LIMIT 10;"
+    description: "Identify stocks with a significant negative day change in the latest enhanced report run"
+python_tools:
+  -
+    id: "route_failure_diagnostics_tool_1"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id_list"
+    outputs:
+      - "failure_analysis_report"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    latest_runs = context.fetch_data('''SELECT run_id FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)''')\n    run_ids = latest_runs['run_id'].tolist()\n    # Assuming context has a method fetch_diagnostics which processes these run_ids\n    failure_analysis_report = context.fetch_diagnostics(run_ids)\n    return failure_analysis_report"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:25"
+generation_model: "gpt-4o"
+validation_errors:
+  - "route_failure_diagnostics_tool_1: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "route_failure_diagnostics_tool_1: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

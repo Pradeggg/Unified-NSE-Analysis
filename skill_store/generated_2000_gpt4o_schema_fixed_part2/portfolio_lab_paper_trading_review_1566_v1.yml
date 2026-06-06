@@ -1,0 +1,56 @@
+id: "portfolio_lab_paper_trading_review_1566_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1566"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for post results: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as research-only summary"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  tools:
+
+sql_templates:
+  -
+    id: "latest_trades_analysis"
+    purpose: "Retrieve latest trades from paper trading and related stage info."
+    template: "WITH latest_trades AS (SELECT symbol, date_issued, signal, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log)) SELECT lt.symbol, lt.signal, lt.stop_loss, lt.target_1, lt.target_2, ss.stage, ss.stage_score FROM latest_trades lt JOIN scores.stage_snapshots ss ON lt.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure SQL template adheres to approved schema and global SQL rules."
+  - "Verification of stage and trading signal data."
+synthesis_guidance: "['Consolidate paper trading strategies based on latest market context.', 'Perform freshness audit using PostgreSQL date syntax.', 'Articulate results in a research-only summary format.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:36"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

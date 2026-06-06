@@ -1,0 +1,56 @@
+id: "portfolio_incremental_add_trim_1991_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1991"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: weekly review; response style: comparison matrix."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "weekly_review"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  -
+    1: "Fetch the latest stage snapshots and current portfolio holdings."
+    2: "Analyze scores and signals to generate add and trim candidates based on technical and fundamental criteria."
+    3: "Review risk flags and exposure by sector for strategic adjustments."
+sql_templates:
+  1:
+    template: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_holdings AS (SELECT * FROM portfolio.holdings) SELECT ls.symbol, ls.company_name, ls.sector, ls.price, ls.trading_signal FROM latest_snapshots ls JOIN latest_holdings lh ON lh.symbol = ls.symbol WHERE ls.trading_signal IN ('BUY', 'STRONG_BUY');"
+    description: "Fetch buy candidates for incremental adding actions."
+  2:
+    template: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_holdings AS (SELECT * FROM portfolio.holdings) SELECT ls.symbol, ls.company_name, ls.sector, ls.price, ls.trading_signal FROM latest_snapshots ls JOIN latest_holdings lh ON lh.symbol = ls.symbol WHERE ls.trading_signal = 'SELL';"
+    description: "Fetch sell candidates for trimming actions."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "{'1': 'Ensure all fetched symbols have corresponding entries in both stage_snapshots and holdings.', '2': 'Validate trading_signal adherence to the defined value rules.'}"
+synthesis_guidance: "{'1': 'Synthesize data into a comparison matrix highlighting add/trim actions.', '2': 'Illustrate sector exposure adjustments and risk flags.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:12"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

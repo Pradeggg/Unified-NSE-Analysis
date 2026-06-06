@@ -1,0 +1,67 @@
+id: "company_360_research_report_0468_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0468"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: position-sizing context; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "position-sizing context for post results: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as portfolio-aware output"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "position-sizing_context"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  overview: "Gather a comprehensive snapshot of the company, including position, market data, and key scores."
+  financial_trends: "Analyze both quarterly and annual financial results to identify trends in revenue, profit, and key financial metrics."
+  technical_setup: "Assess technical indicators and signals from recent market data to provide a current technical setup."
+  valuation_gaps: "Identify gaps in valuation metrics for potential opportunities."
+  thesis: "Present a coherent investment thesis based on the gathered data and analysis."
+  risks: "Highlight potential risks based on company financials, market positioning, and external factors."
+sql_templates:
+  company_snapshot: "SELECT company_name, sector, market_cap_cat, live_price, technical_score, fundamental_score, rsi, trend_signal, supertrend_state FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots WHERE symbol = 'RELIANCE')"
+  quarterly_financials: "SELECT period_label, revenue, operating_profit, pat, eps FROM scores.quarterly_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 4"
+  annual_financials: "SELECT period_label, revenue, operating_profit, pat, eps FROM scores.annual_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 3"
+  balance_sheet: "SELECT equity_capital, reserves, borrowings, total_assets FROM scores.balance_sheet WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1"
+  cash_flow: "SELECT operating_cf, investing_cf, financing_cf FROM scores.cash_flow WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1"
+  recent_market_data: "SELECT trade_date, close, volume, delivery_pct FROM market.equity_eod WHERE symbol = 'RELIANCE' ORDER BY trade_date DESC LIMIT 1"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "check_evidence_completion"
+  - "validate_financial_trends"
+  - "check_technical_signals"
+synthesis_guidance: "{'coherent_narrative': 'Integrate all quantitative and qualitative data to tell a coherent story.', 'portfolio_awareness': 'Ensure analysis considers how the company fits within broader portfolio strategies.', 'risk_management': 'Emphasize potential risks highlighted by data and market context.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:41"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

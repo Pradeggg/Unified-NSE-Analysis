@@ -1,0 +1,82 @@
+created_at: "2026-06-06T12:52:35"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: intraday context; response style: action watchlist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0890_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+
+status: "validated"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "intraday_context"
+  - "action_watchlist"
+title: "VCP Breakouts With Fundamentals Variant 0890"
+tool_plan_template:
+  evidence_gaps:
+    - "intraday_volume"
+  output_contract:
+    - "filters"
+    - "candidates"
+    - "tradingview_symbols"
+    - "evidence"
+    - "risks"
+  python_tools:
+    -
+      approved_tables:
+        - "market.equity_eod"
+      code: "def run(context):\n    # Implement pattern detection\n    pass"
+      id: "enhance_candlestick_patterns"
+      inputs:
+        - "trade_date"
+        - "symbol"
+        - "open"
+        - "high"
+        - "low"
+        - "close"
+        - "volume"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "candlestick_patterns"
+        - "support_resistance_levels"
+  sql_templates:
+    -
+      name: "select_vcp_breakouts"
+      template: "SELECT e.symbol, e.trade_date, e.close, e.high, e.volume, s.fundamental_score, s.enhanced_fund_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.high = e.week52_high AND s.enhanced_fund_score > 80 AND e.volume > 1000000"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+version: 1

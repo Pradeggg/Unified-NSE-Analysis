@@ -1,0 +1,50 @@
+id: "agent_route_failure_diagnostics_1974_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1974"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: pre market; response style: comparison matrix."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for pre market: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as comparison matrix"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "pre_market"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze Agent Adda's route and tool usage logs for discrepancies using provided evidence tables."
+sql_templates:
+  -
+    description: "Retrieve recent runs and diagnostics."
+    sql: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, notes FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '1 day';"
+  -
+    description: "Fetch filtered stocks and relevant trade signals."
+    sql: "SELECT run_id, symbol, score, recommendation, daily_signal, rsi FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '1 day');"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure that all SQL queries are read-only and within constraints."
+  - "Ensure output fields align with failure analysis context."
+synthesis_guidance: "Compare results across stages and use diagnostic patterns for consistency checks. Highlight potential tool or evidence gaps for route diagnostics."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:51"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.now is not approved"

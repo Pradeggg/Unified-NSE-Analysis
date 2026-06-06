@@ -1,0 +1,53 @@
+id: "report_link_data_validation_1166_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Link Validation Skill"
+description: "Agent Adda skill card for validating enhanced report run metadata and ensuring report links and underlying stock data are present and fresh."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for post results: review report links not working"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "post_results"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  directive: "Validate report links and ensure stock data presence and freshness"
+  steps:
+    - "Query the `report.enhanced_runs` table to find the latest report runs."
+    - "Validate the presence of stock data in `report.enhanced_filtered_stocks` and check for missing or outdated data."
+    - "Generate a narrative summary with findings on broken or missing links/data and propose relevant remediation."
+sql_templates:
+  validate_reports: "WITH latest_runs AS (SELECT * FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)) SELECT er.run_id, er.run_ts, er.analysis_date, COUNT(efs.symbol) AS stock_count FROM latest_runs er LEFT JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id GROUP BY er.run_id, er.run_ts, er.analysis_date;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure the SQL queries use only approved tables and columns."
+  - "Verify that the joining conditions follow the specified join rules."
+  - "Check that the SQL uses PostgreSQL date syntax as specified in global rules."
+  - "Confirm the output includes all required components: findings, broken links, missing data, remediation, and verification."
+synthesis_guidance: "Provide a clear summary of any broken or missing data elements discovered, backed by SQL-derived evidence. Suggest specific actions for fixing the issues found."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:56:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

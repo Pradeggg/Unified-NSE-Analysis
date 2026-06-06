@@ -1,0 +1,58 @@
+id: "data_freshness_readiness_audit_1253_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1253"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: ranked candidates."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for quarter to date: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as ranked candidates"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  description: "Framework to verify freshness by examining quarter to date data consistency across approved tables."
+  steps:
+    - "Collect latest trade_date or snapshot_date from each evidence table."
+    - "Rank tables by recency of these dates to identify stale data."
+    - "Generate insights on impact of stale data on research workflows."
+sql_templates:
+  check_freshness: "SELECT MAX(trade_date) AS latest_trade_date FROM {table_name} WHERE trade_date >= '2023-01-01';"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all required tables are queried."
+  - "Confirm freshness assessments are based on the latest available data."
+synthesis_guidance: "['Rank evidence sources by latest available data.', 'Highlight significant stale data issues.', 'Provide actionable suggestions for improving data freshness.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:15"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

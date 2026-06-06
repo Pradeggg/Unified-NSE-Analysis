@@ -1,0 +1,76 @@
+id: "corporate_events_results_watchlist_0219_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0219"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: latest EOD; response style: ranked candidates."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for latest EOD: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as ranked candidates"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  inputs:
+    - "event_type"
+    - "symbol"
+    - "event_date"
+  outputs:
+    - "event_calendar"
+    - "symbol_watchlist"
+    - "result_context"
+    - "action_bucket"
+    - "source_trail"
+sql_templates:
+  -
+    template: "SELECT symbol, event_date, event_type, purpose_raw, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY event_date ASC LIMIT 10"
+    description: "Retrieve upcoming corporate events."
+python_tools:
+  -
+    id: "run_latest_eod_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "event_type"
+    outputs:
+      - "event_calendar"
+      - "symbol_watchlist"
+    approved_tables:
+      - "signals.corporate_events"
+      - "scores.results_analysis"
+    code: "def run(context):\n    # Pseudocode for combining event and results analysis\n    events = context['signals.corporate_events']\n    results = context['scores.results_analysis']\n    merged_data = []\n    for event in events:\n        if event['symbol'] in results:\n            result = results[event['symbol']]\n            merged_data.append({\n                'symbol': event['symbol'],\n                'event_date': event['event_date'],\n                'event_type': event['event_type'],\n                'impact_score': result['score']\n            })\n    return merged_data"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all events have valid dates."
+  - "Cross-check source information for authenticity."
+synthesis_guidance: "['Rank stocks based on event significance and potential impact.', 'Include source-trail information for transparency.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_latest_eod_analysis: execution failed: KeyError: 'signals.corporate_events'"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_latest_eod_analysis: execution failed: KeyError: 'signals.corporate_events'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

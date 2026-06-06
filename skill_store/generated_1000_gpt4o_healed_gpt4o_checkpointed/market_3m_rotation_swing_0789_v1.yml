@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:51:33"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: intraday context; response style: QA checklist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0789_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  index_returns: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= (SELECT MAX(trade_date) FROM market.index_eod) - INTERVAL 3 MONTH"
+  leading_sectors: "SELECT snapshot_date, sector, AVG(stage_score) as avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date >= (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) - INTERVAL 3 MONTH AND stage = '2' GROUP BY sector, snapshot_date ORDER BY avg_stage_score DESC"
+  primary_candidates: "SELECT symbol, company_name, sector FROM scores.stage2_vcp_picks WHERE snapshot_date >= (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) - INTERVAL 3 MONTH AND vcp_score > 90"
+  stage_distribution_change: "SELECT snapshot_date, stage, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date >= (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) - INTERVAL 3 MONTH GROUP BY stage, snapshot_date"
+status: "validated"
+synthesis_guidance: "Use the evidence to form narrative explanations for the current stage and potential swing candidates."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "QA_checklist"
+title: "3M Market Rotation Swing Assessment Variant 0789"
+tool_plan_template: "Provide a structured checklist to assess market rotation for swing trading, considering sector and stage dynamics."
+validation_errors:
+
+validation_rules:
+  - "Ensure all selected data is within the last 3 months"
+  - "Focus on Stage 2 stocks for leadership determination"
+version: 1
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"

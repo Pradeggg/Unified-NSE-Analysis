@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:41:36"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: post results; response style: concise table."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0061_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    template: "WITH market_performance AS (SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date BETWEEN DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) AND CURRENT_DATE), top_sectors AS (SELECT sector, AVG(change_1m_pct) AS avg_change FROM scores.stage_snapshots WHERE snapshot_date BETWEEN DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) AND CURRENT_DATE GROUP BY sector ORDER BY avg_change DESC LIMIT 5), stage2_leaders AS (SELECT symbol, company_name, sector FROM scores.stage2_vcp_picks WHERE date(snapshot_date) BETWEEN DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) AND CURRENT_DATE AND stage = 2) SELECT * FROM market_performance, top_sectors, stage2_leaders"
+status: "validated"
+synthesis_guidance: "Synthesize data into a concise table highlighting regime changes, sector rotations, and potential swing trade opportunities."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "post_results"
+  - "concise_table"
+title: "3M Market Rotation Swing Assessment Variant 0061"
+tool_plan_template: "Analyze using concise table format to determine market regime and key sectors."
+validation_rules:
+  - "Ensure summary includes recent market performance and sector leadership."
+  - "Verify stage 2 candidates reflect current market leadership trends."
+version: 1

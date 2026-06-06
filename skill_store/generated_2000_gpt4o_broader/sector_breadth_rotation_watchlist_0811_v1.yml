@@ -1,0 +1,58 @@
+id: "sector_breadth_rotation_watchlist_0811_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0811"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for latest EOD: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as action watchlist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze sector-relative breadth, stage transitions, and price momentum to generate a watchlist."
+sql_templates:
+  -
+    template_id: "sector_breadth_analysis"
+    description: "Selects sectors with improving breadth and significant 50DMA participation"
+    query: "WITH sector_breadth AS (SELECT sector, pct_above_50dma, change_5d FROM breadth.sector_daily WHERE snapshot_date = CURRENT_DATE) SELECT sector FROM sector_breadth WHERE pct_above_50dma > 50 AND change_5d > 0 ORDER BY change_5d DESC;"
+  -
+    template_id: "stage2_participation"
+    description: "Identify symbols in sectors with significant Stage 2 participation"
+    query: "WITH stage2_symbols AS (SELECT symbol, sector FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE AND stage = 2 AND stage_score > 50) SELECT sector, COUNT(symbol) AS stage2_count FROM stage2_symbols GROUP BY sector ORDER BY stage2_count DESC;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure each sector has at least 50% stocks above the 50DMA for improvement."
+  - "Prioritize sectors with a positive 5-day percentage change."
+synthesis_guidance: "Use SQL templates to determine improving sectors and candidate symbols, then synthesize them into actionable insights for trading platforms like TradingView."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:11"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,76 @@
+id: "fii_dii_regime_breadth_review_1450_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1450"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for last 3 months: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as portfolio-aware output"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    task: "Merge data tables to analyze current FII/DII flow trend with market regime and breadth"
+sql_templates:
+  -
+    name: "fii_dii_flows_analysis"
+    template: "SELECT trade_date, fii_net_5d, dii_net_5d, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'"
+  -
+    name: "regime_history_analysis"
+    template: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'"
+  -
+    name: "market_breadth_analysis"
+    template: "SELECT trade_date, advances, declines, ad_signal, trin_signal FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'"
+  -
+    name: "index_confirmation_analysis"
+    template: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'"
+python_tools:
+  -
+    id: "breadth_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "advances"
+      - "declines"
+      - "ad_signal"
+      - "trin_signal"
+    outputs:
+      - "breadth_context"
+    approved_tables:
+      - "breadth.market_daily"
+    code: "def run(context):\n    advances = context.get('advances', 0)\n    declines = context.get('declines', 0)\n    ad_signal = context.get('ad_signal', '')\n    trin_signal = context.get('trin_signal', '')\n    breadth_context = ''\n    if ad_signal == 'bullish' and trin_signal == 'bullish':\n        breadth_context = 'Positive market breadth with strong buying interest.'\n    elif ad_signal == 'bearish' or trin_signal == 'bearish':\n        breadth_context = 'Negative market breadth indicating selling pressure.'\n    else:\n        breadth_context = 'Mixed signals in market breadth, indicating indecision.'\n    return {'breadth_context': breadth_context}"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all evidence required tables are queried."
+  - "Confirm data is extracted for the last 3 months."
+synthesis_guidance: "['Use extracted data to explain market risk-on or risk-off context.', 'Focus on portfolio-aware output based on FII/DII and breadth signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:21"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

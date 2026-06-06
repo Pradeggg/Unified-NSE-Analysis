@@ -1,0 +1,63 @@
+created_at: "2026-06-06T12:41:21"
+created_by: "llm_generated"
+description: "Conduct a freshness audit for report links over the last 20 sessions to identify broken links and missing data."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_card_001_0036_v1"
+input_patterns:
+  - "freshness audit for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as concise table"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+
+status: "validated"
+synthesis_guidance: "Provide a concise table of run statuses including any missing data or broken links."
+tags:
+  - "report_qa"
+  - "links"
+  - "data_validation"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "concise_table"
+title: "Agent Adda: Report Data Freshness Audit"
+tool_plan_template:
+  python_tools:
+    -
+      approved_tables:
+        - "report.enhanced_runs"
+      code: "def run(context):\n    threshold = get_freshness_threshold()\n    stale_runs = [run for run in context['run_ts'] if run < threshold]\n    return stale_runs"
+      id: "freshness_audit_tool"
+      inputs:
+        - "run_ts"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "stale_runs"
+  sql_templates:
+    -
+      name: "FetchRecentRuns"
+      query: "SELECT run_id, run_ts FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 20;"
+    -
+      name: "CheckLinkIntegrity"
+      query: "SELECT run_id, symbol FROM report.enhanced_filtered_stocks WHERE run_id IN (%RunIDs%) AND NOT EXISTS (SELECT 1 FROM available_links WHERE report_link_id = run_id);"
+validation_rules:
+  - "Ensure all links associated with the last 20 runs exist."
+  - "Identify any runs with missing data."
+version: 1

@@ -1,0 +1,63 @@
+id: "agent_route_failure_diagnostics_1092_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1092"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: weekly review; response style: concise table."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for weekly review: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as concise table"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze patterns from evidence required tables to identify route failures and tool gaps."
+sql_templates:
+  -
+    template_name: "route_diagnostics_summary"
+    sql: "SELECT run_id, run_ts, universe_size, stocks_analyzed, market_sentiment FROM report.enhanced_runs WHERE universe_size > 1000;"
+python_tools:
+  -
+    id: "symbol_analysis_tool_01"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol_data"
+    outputs:
+      - "resolved_symbols"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Sample code for symbol analysis\n    return {'resolved_symbols': context['symbol_data']}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "rule_1"
+  - "rule_2"
+synthesis_guidance: "Provide concise diagnostics with clear identification of failure modes and potential tool gaps, ensuring alignment with the deep institutional review context."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:13"
+generation_model: "gpt-4o"
+validation_errors:
+  - "symbol_analysis_tool_01: execution failed: KeyError: 'symbol_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "symbol_analysis_tool_01: execution failed: KeyError: 'symbol_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

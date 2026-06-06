@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:46:00"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: post results; response style: exceptions and gaps first."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0366_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+
+status: "validated"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "post_results"
+  - "exceptions_and_gaps_first"
+title: "VCP Breakouts With Fundamentals Variant 0366"
+tool_plan_template:
+  sql_templates:
+    -
+      description: "Identify stocks that are reaching new highs or are potential VCP breakouts with strong fundamentals."
+      template: "WITH latest_snapshots AS (SELECT symbol, MAX(snapshot_date) as max_date FROM scores.stage_snapshots GROUP BY symbol) SELECT e.symbol, e.trade_date, e.high, e.close, s.company_name, s.sector, s.market_cap_cat, s.fundamental_score, s.enhanced_fund_score, s.vcp_score FROM market.equity_eod AS e JOIN latest_snapshots AS l ON e.symbol = l.symbol AND e.trade_date = l.max_date JOIN scores.stage2_vcp_picks AS s ON e.symbol = s.symbol WHERE e.close = e.week52_high OR s.vcp_breakout_pct > 0.5 ORDER BY e.trade_date DESC;"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+version: 1

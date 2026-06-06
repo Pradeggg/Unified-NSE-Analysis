@@ -1,0 +1,49 @@
+created_at: "2026-06-06T12:45:54"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: quarter to date; response style: exceptions and gaps first."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0351_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as exceptions and gaps first"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  holdings_overview: "SELECT symbol, qty, avg_cost FROM portfolio.holdings;"
+  stage_snapshots_analysis: "SELECT symbol, stage, stage_score, change_1m_pct, sector FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+status: "validated"
+synthesis_guidance: "Focus on identifying gaps in sector exposure and highlight exceptions in performance. Consider stage scores and month-to-date performance for add/trim decisions."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+title: "Portfolio Incremental Add Trim Review Variant 0351"
+tool_plan_template: "Analyze holdings and stage snapshots for potential add/trim actions and identify exposure gaps."
+validation_rules:
+  - "unique_symbols"
+  - "non_zero_quantity"
+version: 1

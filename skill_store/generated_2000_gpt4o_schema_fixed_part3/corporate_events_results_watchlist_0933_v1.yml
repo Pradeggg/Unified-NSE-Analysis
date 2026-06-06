@@ -1,0 +1,83 @@
+id: "corporate_events_results_watchlist_0933_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0933"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for last 20 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as comparison matrix"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+  approved_columns:
+    -
+      table: "signals.corporate_events"
+      columns:
+        - "symbol"
+        - "event_type"
+        - "event_date"
+        - "purpose_raw"
+        - "source"
+    -
+      table: "scores.results_analysis"
+      columns:
+        - "symbol"
+        - "company_name"
+        - "verdict"
+        - "score"
+    -
+      table: "scores.stage_snapshots"
+      columns:
+        - "symbol"
+        - "company_name"
+        - "stage"
+        - "trading_signal"
+tool_plan_template:
+  evidence_framework: "Agent Adda Indian market evidence and research-only framing."
+  focus: "Present only SELECT SQL templates when possible, adhering strictly to rules."
+  steps:
+    - "Retrieve relevant symbols and event details from signals.corporate_events for upcoming corporate events."
+    - "Join with scores.results_analysis to obtain verdict and score contexts on results."
+    - "Join with scores.stage_snapshots for the latest stage and trading signal context."
+    - "Limit findings to the most recent 20 sessions as per input timeframe."
+sql_templates:
+  corporate_events: "SELECT symbol, event_date, event_type, purpose_raw, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '20 days' AND event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM');"
+  results_analysis: "WITH latest_analyses AS (SELECT DISTINCT ON (symbol) symbol, company_name, verdict, score FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC) SELECT symbol, company_name, verdict, score FROM latest_analyses;"
+  stage_snapshots: "SELECT symbol, company_name, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  join_query: "SELECT events.symbol, events.event_date, events.event_type, events.purpose_raw, ra.verdict, ra.score, ss.stage, ss.trading_signal FROM (SELECT symbol, event_type, event_date, purpose_raw, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '20 days' AND event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM')) AS events LEFT JOIN (SELECT DISTINCT ON (symbol) symbol, verdict, score FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC) AS ra ON events.symbol = ra.symbol LEFT JOIN (SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) AS ss ON events.symbol = ss.symbol;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "SQL templates must remain read-only."
+  - "Align evidence with schema constraints."
+  - "Ensure correct joins without inference."
+synthesis_guidance: "['Construct a comparison matrix using extracted data.', 'Frame findings relative to the last 20 sessions.', 'Present symbols with actionable event and results context.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,61 @@
+id: "insider_bulk_deal_signal_review_0318_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0318"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: latest EOD; response style: exceptions and gaps first."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for latest EOD: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as exceptions and gaps first"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  task: "Analyze data for insights"
+  steps:
+    - "Check insider alerts for significant deals"
+    - "Identify bulk or block deals with high volume"
+    - "Assess technical signals for confirmation"
+    - "Compile position-sizing context"
+    - "Highlight exceptions and address gaps"
+sql_templates:
+  check_insider_alerts: "SELECT symbol, alert_type, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date = CURRENT_DATE;"
+  identify_bulk_deals: "SELECT symbol, qty, price FROM signals.bulk_block_deals WHERE deal_date = CURRENT_DATE AND qty > 1000000;"
+  technical_signals_confirmation: "SELECT symbol, technical_score, trend_signal FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE AND technical_score > 70;"
+  eod_summary: "SELECT symbol, close, volume, delivery_pct FROM market.equity_eod WHERE trade_date = CURRENT_DATE;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure `insider_score` is above 70 for significant alerts"
+  - "Bulk deals must have volume > 1,000,000"
+  - "Technical confirmation requires `technical_score` > 70"
+synthesis_guidance: "['Focus on combining insider and technical insights', 'Prioritize exceptions and gaps']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:55"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,83 @@
+id: "company_360_research_report_1322_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1322"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "deep institutional review for last 5 sessions: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as exceptions and gaps first"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  type: "SQL"
+  details:
+    tables_used:
+      - "scores.stage_snapshots"
+      - "scores.quarterly_results"
+      - "scores.annual_results"
+      - "scores.balance_sheet"
+      - "scores.cash_flow"
+      - "scores.results_analysis"
+      - "market.equity_eod"
+    global_rules: "_global_rules.rules"
+sql_templates:
+  -
+    description: "Retrieve the latest stage snapshot for RELIANCE"
+    template: "\n            SELECT * \n            FROM scores.stage_snapshots\n            WHERE symbol = 'RELIANCE' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n        "
+  -
+    description: "Get last 5 sessions of market EOD data for RELIANCE"
+    template: "\n            SELECT *\n            FROM market.equity_eod\n            WHERE symbol = 'RELIANCE' AND series = 'EQ'\n            ORDER BY trade_date DESC\n            LIMIT 5\n        "
+python_tools:
+  -
+    id: "financial_description_parser"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "raw_json"
+    outputs:
+      - "parsed_details"
+    approved_tables:
+      - "scores.results_analysis"
+    code: "\n                def run(context):\n                    report = context['raw_json']\n                    ...\n                    return parsed_details\n            "
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL queries are read-only and follow approved schema and global SQL rules."
+  - "Verify all Python evidence tools are read-only and quarantined."
+synthesis_guidance: "['Integrate financial data, stage snapshots, and technical setup into a coherent company narrative.', 'Emphasize gaps and exceptions to provide an institutional-grade view.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:32"
+generation_model: "gpt-4o"
+validation_errors:
+  - "financial_description_parser: python syntax error: unexpected indent"
+review:
+  status: "needs_heal"
+  findings:
+    - "financial_description_parser: python syntax error: unexpected indent"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

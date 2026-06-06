@@ -1,0 +1,63 @@
+id: "vcp_breakouts_with_fundamentals_0268_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0268"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: post results; response style: ranked candidates."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  evidence_query:
+    sql_template: "SELECT * FROM scores.stage2_vcp_picks WHERE vcp_score IS NOT NULL AND enhanced_fund_score > 70 ORDER BY rank ASC"
+  output_template:
+    filters:
+      min_fund_score: 70
+    candidates: "Ranked breakout stocks based on VCP and fundamental scores."
+    tradingview_symbols: "Extracted TradingView-compatible symbols."
+    evidence: "Aggregated data for analysis including VCP scores and fundamentals."
+    risks: "Potential volatility in market post-result announcements."
+sql_templates:
+  -
+    description: "Selects VCP picks with sufficient fundamental score."
+    read_only: true
+    templates:
+      - "SELECT symbol, company_name, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE enhanced_fund_score > 70 ORDER BY vcp_score DESC"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all candidates meet the minimum fundamental score."
+  - "Verify SQL queries are read-only."
+synthesis_guidance: "['Rank candidates based on VCP and fundamental scores.', 'Consider the Indian market context in evaluations.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:17"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

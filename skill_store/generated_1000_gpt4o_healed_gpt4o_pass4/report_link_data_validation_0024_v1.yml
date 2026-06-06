@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:41:07"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: last 5 sessions; response style: concise table."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0024_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as concise table"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  check_missing_data: "SELECT run_id, symbol FROM report.enhanced_filtered_stocks WHERE current_price IS NULL"
+  collect_recent_runs: "SELECT run_id, run_ts FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 5"
+  identify_broken_links: "SELECT run_id, notes FROM report.enhanced_runs WHERE notes LIKE '%link broken%'"
+status: "validated"
+synthesis_guidance: "Provide a concise table detailing broken links and missing data."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "last_5_sessions"
+  - "concise_table"
+title: "Enhanced Report Data Validation Variant 0024"
+tool_plan_template:
+  steps:
+    - "Collect data from enhanced_runs for the last 5 sessions."
+    - "Identify broken report links in enhanced_runs."
+    - "Check missing data in enhanced_filtered_stocks."
+validation_rules:
+  - "Validate non-null run_id and run_ts for the last 5 sessions."
+  - "Ensure all links in notes are functional."
+  - "Check current_price is not null for essential stocks."
+version: 1

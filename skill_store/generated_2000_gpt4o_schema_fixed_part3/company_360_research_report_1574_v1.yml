@@ -1,0 +1,66 @@
+id: "company_360_research_report_1574_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1574"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: watchlist creation; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "watchlist creation for pre market: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as research-only summary"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "watchlist_creation"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template: "Use available SQL tables to extract company summary, financial trends, and technical setup."
+sql_templates:
+  -
+    name: "latest_stage_snapshot"
+    template: "SELECT symbol, company_name, stage, stage_score, technical_score, narrative FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol = '{{symbol}}';"
+  -
+    name: "latest_quarterly_results"
+    template: "WITH latest_quarters AS (SELECT DISTINCT ON (symbol) * FROM scores.quarterly_results WHERE period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC) SELECT symbol, revenue, pat, eps FROM latest_quarters WHERE symbol = '{{symbol}}';"
+  -
+    name: "latest_annual_results"
+    template: "SELECT symbol, revenue, pat, eps, opm_pct, dividend_payout_pct FROM scores.annual_results WHERE symbol = '{{symbol}}' AND period_type = 'annual' AND period_end = (SELECT MAX(period_end) FROM scores.annual_results WHERE symbol = '{{symbol}}') LIMIT 1;"
+  -
+    name: "recent_market_data"
+    template: "SELECT symbol, close, change_pct, volume FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND symbol = '{{symbol}}';"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all queries align with approved schema columns and join rules."
+  - "The output should include the latest stage snapshot and financial trends."
+synthesis_guidance: "['Present the synthesized data in a coherent and concise format suitable for market researchers.', 'Provide narrative explanations alongside quantitative data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:35"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

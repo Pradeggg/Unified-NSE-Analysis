@@ -1,0 +1,68 @@
+id: "corporate_events_results_watchlist_1059_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1059"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: quarter to date; response style: concise table."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for quarter to date: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as concise table"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  steps:
+    -
+      activity: "SQL Query"
+      input_table: "signals.corporate_events"
+      output_table: "event_calendar"
+      description: "Extract upcoming or recent corporate events for the current quarter."
+    -
+      activity: "Join"
+      input_table: "scores.stage_snapshots"
+      output_table: "symbol_watchlist"
+      description: "Join with current stage information to identify actionable stocks."
+    -
+      activity: "Validation"
+      input_table: "scores.results_analysis"
+      output_table: "result_context"
+      description: "Validate events against results analysis for source-trail consistency."
+sql_templates:
+  -
+    template: "SELECT ce.symbol, ce.event_type, ce.event_date, ce.detail as event_detail, ss.price, ss.trading_signal FROM signals.corporate_events ce JOIN scores.stage_snapshots ss ON ce.symbol = ss.symbol WHERE ce.event_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY ce.event_date DESC LIMIT 100;"
+    description: "Fetch corporate events with stage data for actionable insights."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure events are within the current quarter."
+  - "Match events with latest stage and signal data."
+  - "Validate source consistency between events and results."
+synthesis_guidance: "{'style': 'Concise Table', 'focus': 'Quarter to Date'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:35"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

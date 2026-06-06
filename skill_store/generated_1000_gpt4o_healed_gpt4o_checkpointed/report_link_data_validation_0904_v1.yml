@@ -1,0 +1,51 @@
+created_at: "2026-06-06T12:52:43"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: today; response style: comparison matrix."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0904_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for today: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  validate_runs: "SELECT run_id, run_ts, analysis_date, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE DATE(run_ts) = CURRENT_DATE;"
+  validate_stocks: "SELECT run_id, symbol, current_price, recommendation FROM report.enhanced_filtered_stocks WHERE DATE((SELECT run_ts FROM report.enhanced_runs WHERE run_id = report.enhanced_filtered_stocks.run_id)) = CURRENT_DATE;"
+status: "test_failed"
+synthesis_guidance: "Summarize key data validation issues found in today's reports with a focus on stock analysis readiness and data completeness."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "today"
+  - "comparison_matrix"
+title: "Enhanced Report Data Validation Variant 0904"
+tool_plan_template: "Analyze data from the enhanced runs and filtered stocks tables to find discrepancies or missing elements that may affect report generation and stock analysis for the day."
+validation_errors:
+  - "report.enhanced_runs.date is not approved"
+validation_rules:
+  - "Ensure data for today exists in both tables."
+  - "Check for missing or null fields in the critical columns such as 'current_price' and 'recommendation'."
+version: 1
+review:
+  attempts: 3
+  findings:
+    - "report.enhanced_runs.date is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"

@@ -1,0 +1,51 @@
+id: "vcp_breakouts_with_fundamentals_1990_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "Find VCP Breakouts with Strong Fundamentals"
+description: "This skill identifies stocks that are breaking out with strong fundamentals using the VCP method. Focus is on Indian markets with intraday analysis for potential TradingView exports."
+input_patterns:
+  - "Identify VCP breakout stocks with strong fundamentals"
+  - "List of stocks with new highs and VCP patterns"
+  - "Analyze intraday breakouts for TradingView"
+tags:
+  - "vcp"
+  - "breakout"
+  - "fundamentals"
+  - "tradingview"
+  - "Indian market"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    steps:
+      - "Filter latest VCP picks with high VCP scores."
+      - "Join with fundamental scores for strong candidates."
+      - "Output symbols for TradingView export."
+sql_templates:
+  -
+    template: "SELECT v.symbol, v.vcp_score, s.enhanced_fund_score FROM scores.stage2_vcp_picks v JOIN scores.stage_snapshots s ON v.symbol = s.symbol WHERE v.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND v.vcp_score > 70 ORDER BY v.vcp_score DESC LIMIT 50;"
+    description: "Selects top VCP breakout stocks with high enhanced fundamental scores."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "{'inputs': ['Valid stock patterns', 'Structured TradingView data'], 'outputs': ['Must include TradingView symbols within constraints']}"
+synthesis_guidance: "{'strategies': ['Present data in a comparison matrix', 'Highlight symbols suitable for TradingView']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

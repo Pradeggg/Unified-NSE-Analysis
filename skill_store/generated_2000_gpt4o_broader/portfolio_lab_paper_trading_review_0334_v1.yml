@@ -1,0 +1,48 @@
+id: "portfolio_lab_paper_trading_review_0334_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0334"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for last 20 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze each portfolio separately. Check for strategies implemented in entries, exits, stop loss, and targets. Create a watchlist from the last 20 sessions."
+sql_templates:
+  recent_signals: "WITH recent_sessions AS (SELECT DISTINCT trade_date FROM market.equity_eod ORDER BY trade_date DESC LIMIT 20) SELECT s.* FROM signals.signal_log s JOIN recent_sessions rs ON s.date_issued = rs.trade_date WHERE s.action_reason = 'paper_trading';"
+  holdings_summary: "SELECT symbol, SUM(qty) as total_qty, AVG(avg_cost) as avg_cost FROM portfolio.holdings GROUP BY symbol;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "ensure_separation"
+  - "validate_timeframe"
+synthesis_guidance: "Prioritize identifying gaps and exceptions in paper trading strategies. Ensure non-overlapping analysis with real holdings."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:08"
+generation_model: "gpt-4o"
+validation_errors:
+  - "portfolio.holdings.total_qty is not approved"

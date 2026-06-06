@@ -1,0 +1,56 @@
+id: "report_link_data_validation_1474_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1474"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: pre market; response style: portfolio-aware output."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for pre market: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "pre_market"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  - "Identify and validate report generation issues by examining enhanced report metadata and stock data."
+  - "Focus on potential missing information or broken links in watchlist reports for the Indian market pre-opening."
+sql_templates:
+  primary:
+    description: "Validate report links and identify potential issues in filtered stock data."
+    sql: "SELECT er.run_id, er.run_ts, COUNT(efs.symbol) AS total_stocks FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id WHERE er.run_ts >= CURRENT_DATE - INTERVAL '1 day' GROUP BY er.run_id;"
+python_tools:
+  - "tool1"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "run_id"
+  - "run_ts"
+  - "symbol"
+  - "total_stocks"
+synthesis_guidance: "['Assess link integrity and stock data completeness in generated reports.', 'Suggest remediation measures for identified gaps or inaccuracies.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:18"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:46:33"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 3 months; response style: portfolio-aware output."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0450_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    name: "find_breakouts_with_fundamentals"
+    template: "SELECT e.symbol, e.high, e.close, s.enhanced_fund_score, s.trading_signal FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date >= CURRENT_DATE - INTERVAL '3 months' AND (e.high = e.week52_high OR s.trading_signal = 'BUY') AND s.enhanced_fund_score > 80;"
+status: "validated"
+synthesis_guidance: "Provide results focused on potential portfolio benefits, including symbols for direct TradingView use."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_3_months"
+  - "portfolio-aware_output"
+title: "VCP Breakouts With Fundamentals Variant 0450"
+tool_plan_template:
+  strategy:
+    - "Initial check for recent new-highs or VCP breakouts with good fundamentals over the last 3 months."
+    - "Compile results with symbols for TradingView export."
+  task: "Identify stocks with VCP patterns and strong fundamentals suitable for TradingView export."
+validation_rules:
+  - "Ensure all selected stocks have strong fundamentals."
+  - "Validate breakout or VCP status for each candidate."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

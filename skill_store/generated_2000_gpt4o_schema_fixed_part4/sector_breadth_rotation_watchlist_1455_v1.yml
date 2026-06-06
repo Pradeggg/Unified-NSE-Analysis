@@ -1,0 +1,58 @@
+id: "sector_breadth_rotation_watchlist_1455_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1455"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: risk-first review; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "risk-first review for quarter to date: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as portfolio-aware output"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "risk-first_review"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Analyze sector breadth and stage data to generate a ranked sector watchlist."
+sql_templates:
+  -
+    description: "Fetch latest sector breadth data."
+    template: "WITH latest_snapshots AS (\n  SELECT * FROM breadth.sector_daily \n  WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)\n)\nSELECT sector, pct_above_50dma, change_5d \nFROM latest_snapshots \nORDER BY change_5d DESC\nLIMIT 10;"
+  -
+    description: "Fetch Stage 2 participation symbols."
+    template: "SELECT symbol, sector, stage, trading_signal \nFROM scores.stage_snapshots \nWHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) \nAND stage = 'STAGE_2' \nAND trading_signal IN ('BUY', 'STRONG_BUY')\nLIMIT 20;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "SQL must be read-only, SELECT/WITH statements only."
+  - "Ensure the query fetches the latest data."
+synthesis_guidance: "['Combine sector breadth and stage data insights for a comprehensive portfolio-aware watchlist.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:50"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

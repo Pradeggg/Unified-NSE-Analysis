@@ -1,0 +1,58 @@
+created_at: "2026-06-06T12:48:49"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: research-only summary."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0538_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+
+status: "validated"
+synthesis_guidance: "Summarize breakout candidates considering strong fundamentals and position sizing relevant to recent 20-day performance."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "research-only_summary"
+title: "VCP Breakouts With Fundamentals Variant 0538"
+tool_plan_template:
+  python_tools:
+
+  sql_templates:
+    -
+      description: "Select stocks with strong fundamentals and breakout patterns."
+      read_only: true
+      template: "WITH breakout_candidates AS ( SELECT e.symbol, e.close, s.minervini_score, s.fundamental_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date > CURRENT_DATE - INTERVAL '20 days' AND (e.close > e.week52_high OR s.minervini_score > 70) ) SELECT * FROM breakout_candidates WHERE fundamental_score > 60;"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates, if any, must be read-only SELECT/WITH templates."
+  - "Use only these approved tables and columns; do not invent tables, aliases, or columns."
+version: 1

@@ -1,0 +1,77 @@
+id: "quarterly_results_quality_review_1965_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1965"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: risk-first review; timeframe: post results; response style: comparison matrix."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "risk-first review for post results: latest quarterly results analysis"
+  - "which companies had strong quarterly results as comparison matrix"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "risk-first_review"
+  - "post_results"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  language: "SQL and Python"
+  mode: "read_only"
+sql_templates:
+  -
+    description: "Retrieve recent quarterly results with key metrics."
+    template: "SELECT symbol, company_name, revenue, pat, opm_pct FROM scores.quarterly_results WHERE period_end = (SELECT MAX(period_end) FROM scores.quarterly_results)"
+    read_only: true
+  -
+    description: "Get growth and margin data for analysis."
+    template: "SELECT symbol, growth_yoy_revenue_pct, growth_yoy_pat_pct, opm_delta_pp FROM scores.results_analysis WHERE period_end = (SELECT MAX(period_end) FROM scores.results_analysis)"
+    read_only: true
+  -
+    description: "Extract stage and fundamental scores."
+    template: "SELECT symbol, stage_score, fundamental_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+    read_only: true
+python_tools:
+  -
+    id: "compare_risk_matrix"
+    language: "python"
+    mode: "read_only"
+    code: "def run(context):\n    # Extract data from context and create a comparison matrix\n    data = context.get('results')\n    comparison_matrix = '...'  # Process the data into matrix form\n    return comparison_matrix"
+    inputs:
+      - "results"
+    outputs:
+      - "comparison_matrix"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+      - "scores.stage_snapshots"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure non-empty response for all output fields."
+  - "Verify revenue and PAT growth calculations."
+  - "Check if stage and fundamental scores align with trends."
+synthesis_guidance: "['Focus on risk assessment from the latest data.', 'Provide comparison matrix for easy visualization.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "compare_risk_matrix: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "compare_risk_matrix: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,57 @@
+id: "data_freshness_readiness_audit_0119_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0119"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: latest EOD; response style: narrative plus evidence."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for latest EOD: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as narrative plus evidence"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Perform a rigorous check of data freshness for all specified tables to assess readiness for utilization in market-related workflows. Validate the latest EOD data's currency including all key signals, indices, and equity details."
+sql_templates:
+  - "SELECT MAX(trade_date) AS latest_index_date FROM market.index_eod"
+  - "SELECT MAX(trade_date) AS latest_equity_date FROM market.equity_eod"
+  - "SELECT MAX(snapshot_date) AS latest_snapshot_date FROM scores.stage_snapshots"
+  - "SELECT MAX(trade_date) AS latest_market_daily_date FROM breadth.market_daily"
+  - "SELECT MAX(snapshot_date) AS latest_ma_date FROM breadth.ma_pct_above"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all tables are updated to the latest EOD date."
+  - "Identify any missing data sources that affect market narratives."
+synthesis_guidance: "Combine all the latest dates across the required tables to form a matrix detailing data readiness. Explore any large gaps or unexplained lags, providing a clear narrative and possible next steps."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:22"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.latest_ma_date is not approved"
+  - "breadth.market_daily.latest_market_daily_date is not approved"
+  - "market.equity_eod.latest_equity_date is not approved"
+  - "market.index_eod.latest_index_date is not approved"
+  - "scores.stage_snapshots.latest_snapshot_date is not approved"

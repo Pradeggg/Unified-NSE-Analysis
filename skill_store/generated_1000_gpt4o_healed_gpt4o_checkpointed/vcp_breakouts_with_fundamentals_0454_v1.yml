@@ -1,0 +1,57 @@
+created_at: "2026-06-06T12:48:16"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: quarter to date; response style: portfolio-aware output."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0454_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Select VCP breakout stocks with strong fundamentals and new highs."
+    sql: "SELECT e.symbol, e.trade_date, e.close, s.enhanced_fund_score, p.vcp_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol JOIN scores.stage2_vcp_picks p ON e.symbol = p.symbol WHERE e.trade_date = CURRENT_DATE AND e.close >= e.week52_high * 0.95 AND s.enhanced_fund_score >= 70 AND p.vcp_score >= 70"
+status: "validated"
+synthesis_guidance: "{'focus_on': ['Integrating strong fundamentals with technical breakouts.', 'Generating actionable insights for Indian market investors.']}"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+title: "VCP Breakouts With Fundamentals Variant 0454"
+tool_plan_template:
+  candidates: "Identify potential breakout candidates based on criteria."
+  evidence: "Use approved evidence tables for data sourcing."
+  filters: "Apply filters for new highs, VCP patterns, and strong fundamentals."
+  risks: "Consider market volatility and liquidity risks."
+  tradingview_symbols: "Format output for use with TradingView watchlists."
+validation_rules:
+  - "Ensure that selected stocks have robust fundamental and technical scores."
+  - "Validate against data integrity constraints of approved tables."
+version: 1

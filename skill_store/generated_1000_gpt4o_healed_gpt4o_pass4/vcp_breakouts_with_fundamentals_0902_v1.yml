@@ -1,0 +1,156 @@
+card:
+  created_at: "2026-06-06T12:52:42"
+  created_by: "llm_generated"
+  description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: today; response style: comparison matrix."
+  domain: "screening"
+  evidence_required:
+    tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "vcp_breakouts_with_fundamentals_0902_v1"
+  input_patterns:
+    - "stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "VCP breakout stocks for TradingView"
+    - "quality breakouts with strong fundamentals"
+    - "deep institutional review for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "quality breakouts with strong fundamentals as comparison matrix"
+  output_contract:
+    - "filters"
+    - "candidates"
+    - "tradingview_symbols"
+    - "evidence"
+    - "risks"
+  python_tools:
+    -
+      approved_tables:
+        - "scores.stage2_vcp_picks"
+        - "scores.stage_snapshots"
+      code: "def run(context):\n    filtered_stocks = [s for s in context['scores.stage2_vcp_picks'] if s['vcp_score'] > 80 and s['enhanced_fund_score'] > 70]\n    return filtered_stocks"
+      id: "run_vcp_analysis"
+      inputs:
+        - "scores.stage2_vcp_picks"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "filtered_stocks"
+  review:
+    attempts: 1
+    findings:
+      - "run_vcp_analysis: execution failed: KeyError: 'stocks_data'"
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "needs_heal"
+  sql_templates:
+    -
+      description: "Select relevant stocks with VCP breakouts and strong fundamentals."
+      template: "SELECT p.symbol, p.company_name, p.sector, p.price, p.vcp_score, s.enhanced_fund_score, s.earnings_quality FROM scores.stage2_vcp_picks p INNER JOIN scores.stage_snapshots s ON p.symbol = s.symbol WHERE p.vcp_score > 80 AND s.enhanced_fund_score > 70 ORDER BY p.vcp_score DESC;"
+  status: "generated"
+  synthesis_guidance:
+    - "Present findings in a comparison matrix format"
+    - "Focus on institutional review metrics for clarity"
+    - "Highlight top-performing sectors"
+  tags:
+    - "vcp"
+    - "breakout"
+    - "new_high"
+    - "fundamentals"
+    - "tradingview"
+    - "deep_institutional_review"
+    - "today"
+    - "comparison_matrix"
+  title: "VCP Breakouts With Fundamentals Variant 0902"
+  tool_plan_template:
+    candidates: "Determine candidate stocks based on VCP scores and fundamental assessments."
+    evidence: "Compile evidence from provided tables to support identified candidates."
+    filters: "Identify stocks creating new highs, breaking out, or exhibiting VCP patterns with strong fundamentals."
+    risks: "Assess risks based on market cap, trading volume, and recent price volatility."
+    tradingview_symbols: "Symbols formatted for TradingView import."
+  validation_errors:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  validation_rules:
+    - "Ensure SQL templates are read-only"
+    - "Confirm data matches with the schema provided"
+    - "Verification against false positives in candidate stocks"
+  version: 1
+created_at: "2026-06-06T12:52:42"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: today; response style: comparison matrix."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0902_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    filtered_stocks = [s for s in context['stocks_data'] if s['vcp_score'] > 80 and s['enhanced_fund_score'] > 70]\n    return filtered_stocks"
+    id: "run_vcp_analysis"
+    inputs:
+      - "stocks_data"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "filtered_stocks"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_vcp_analysis: execution failed: KeyError: 'stocks_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    description: "Select relevant stocks with VCP breakouts and strong fundamentals."
+    template: "SELECT p.symbol, p.company_name, p.sector, p.price, p.vcp_score, s.enhanced_fund_score, s.earnings_quality FROM scores.stage2_vcp_picks p INNER JOIN scores.stage_snapshots s ON p.symbol = s.symbol WHERE p.vcp_score > 80 AND s.enhanced_fund_score > 70 ORDER BY p.vcp_score DESC;"
+status: "test_failed"
+synthesis_guidance: "['Present findings in a comparison matrix format', 'Focus on institutional review metrics for clarity', 'Highlight top-performing sectors']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "today"
+  - "comparison_matrix"
+title: "VCP Breakouts With Fundamentals Variant 0902"
+tool_plan_template:
+  candidates: "Determine candidate stocks based on VCP scores and fundamental assessments."
+  evidence: "Compile evidence from provided tables to support identified candidates."
+  filters: "Identify stocks creating new highs, breaking out, or exhibiting VCP patterns with strong fundamentals."
+  risks: "Assess risks based on market cap, trading volume, and recent price volatility."
+  tradingview_symbols: "Symbols formatted for TradingView import."
+validation_errors:
+  - "run_vcp_analysis: execution failed: KeyError: 'stocks_data'"
+validation_rules:
+  - "Ensure SQL templates are read-only"
+  - "Confirm data matches with the schema provided"
+  - "Verification against false positives in candidate stocks"
+version: 1

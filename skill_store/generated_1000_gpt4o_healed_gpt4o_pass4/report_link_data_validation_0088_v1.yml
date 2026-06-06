@@ -1,0 +1,49 @@
+created_at: "2026-06-06T12:41:45"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: intraday context; response style: concise table."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0088_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for intraday context: review report links not working"
+  - "validate generated report links and missing data as concise table"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  missing_data_check: "SELECT run_id, rank, symbol, current_price FROM report.enhanced_filtered_stocks WHERE current_price IS NULL;"
+  report_links_validation: "SELECT run_id, run_ts, stocks_analyzed FROM report.enhanced_runs WHERE universe_size > 0;"
+status: "validated"
+synthesis_guidance: "['Concise tabular format preferred for output.', 'Focus on data presence and integrity for the Indian market.']"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "concise_table"
+title: "Enhanced Report Data Validation Variant 0088"
+tool_plan_template: "Analyze data consistency and connectivity for enhanced report run metadata and filtered stock details, focusing on the presence and accuracy of report links and stock data."
+validation_rules:
+  - "Ensure every run_id in enhanced_runs has corresponding records in enhanced_filtered_stocks."
+  - "Verify that current_price is non-empty for all filtered stocks."
+version: 1

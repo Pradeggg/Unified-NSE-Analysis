@@ -1,0 +1,64 @@
+id: "company_360_research_report_0860_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0860"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: TradingView export; timeframe: quarter to date; response style: action watchlist."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "TradingView export for quarter to date: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as action watchlist"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Collect recent quarterly results for the company."
+    sql: "SELECT symbol, period_label, period_end, revenue, operating_profit, eps FROM scores.quarterly_results WHERE symbol='RELIANCE' ORDER BY period_end DESC LIMIT 4;"
+  -
+    description: "Get the latest technical scores and signals for the company."
+    sql: "SELECT snapshot_date, price, stage, technical_score, rsi, trend_signal FROM scores.stage_snapshots WHERE symbol='RELIANCE' ORDER BY snapshot_date DESC LIMIT 1;"
+  -
+    description: "Retrieve current price and market details."
+    sql: "SELECT trade_date, close, week52_high, week52_low FROM market.equity_eod WHERE symbol='RELIANCE' ORDER BY trade_date DESC LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure data freshness by comparing current dates to standard reporting periods."
+  - "Cross-validate technical signals with recent market actions."
+synthesis_guidance: "['Combine financial trends with technical setup to outline potential market actions.', 'Highlight key company and market drivers for a comprehensive overview.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

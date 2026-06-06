@@ -1,0 +1,69 @@
+id: "signal_outcome_feedback_review_1187_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1187"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: intraday context; response style: narrative plus evidence."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for intraday context: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as narrative plus evidence"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze signals using approved tables, focusing on sector and intraday context. Summarize winners and failures."
+sql_templates:
+  -
+    name: "SectorPerformanceReview"
+    template: "SELECT s.sector, COUNT(*) AS total_signals, SUM(CASE WHEN s.hit_target THEN 1 ELSE 0 END) AS successful_signals FROM signals.signal_log s WHERE s.date_issued >= CURDATE() - INTERVAL 1 DAY GROUP BY s.sector"
+  -
+    name: "IntradayPerformanceTrend"
+    template: "SELECT e.trade_date, e.symbol, e.change_pct FROM market.equity_eod e WHERE e.trade_date >= CURDATE() - INTERVAL 1 DAY"
+python_tools:
+  -
+    id: "analyze_intraday_pattern"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      sector_data: "sql_template_result:SectorPerformanceReview"
+      market_data: "sql_template_result:IntradayPerformanceTrend"
+    outputs:
+      sector_performance_analysis: "json"
+    approved_tables:
+      - "signals.signal_log"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Placeholder for pattern analysis logic\n    sector_data = context['inputs']['sector_data']\n    market_data = context['inputs']['market_data']\n    # Process and analyze data\n    return {'sector_performance_analysis': []}"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "status"
+synthesis_guidance: "Plot sectoral success rates against market trends to find patterns and areas for improvement."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.curdate is not approved"
+  - "market.equity_eod.day is not approved"
+  - "market.equity_eod.e is not approved"
+  - "signals.signal_log.curdate is not approved"
+  - "signals.signal_log.day is not approved"
+  - "signals.signal_log.s is not approved"
+  - "signals.signal_log.successful_signals is not approved"
+  - "signals.signal_log.total_signals is not approved"

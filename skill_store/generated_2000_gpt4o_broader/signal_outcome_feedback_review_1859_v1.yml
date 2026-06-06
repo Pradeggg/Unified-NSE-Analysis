@@ -1,0 +1,61 @@
+id: "signal_outcome_feedback_review_1859_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1859"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: quarter to date; response style: action watchlist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for quarter to date: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as action watchlist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Fetch recent signal logs that have resolved in the quarter."
+    - "Analyze the hit targets versus stops to determine patterns of success and failure."
+    - "Identify potential areas for improving signal routes."
+    - "Compile an action watchlist based on insights gathered."
+sql_templates:
+  -
+    name: "FetchResolvedSignals"
+    template: "SELECT id, date_issued, symbol, signal, price_at_issue, target_1, target_2, stop_loss, date_resolved, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_resolved BETWEEN '2023-01-01' AND '2023-03-31';"
+  -
+    name: "AnalyzeSuccessPatterns"
+    template: "WITH resolved_signals AS (SELECT id, symbol, hit_target, hit_stop FROM signals.signal_log WHERE date_resolved BETWEEN '2023-01-01' AND '2023-03-31') SELECT symbol, COUNT(*) AS num_signals, SUM(CASE WHEN hit_target THEN 1 ELSE 0 END) AS targets_hit, SUM(CASE WHEN hit_stop THEN 1 ELSE 0 END) AS stops_hit FROM resolved_signals GROUP BY symbol;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all SQL queries are read-only and only access approved tables."
+  - "Do not introduce any SQL commands that could alter data."
+  - "Adhere to the evidence_required structure for gathering necessary data."
+synthesis_guidance: "['Identify signals with successful outcomes and analyze their setups.', 'Review failed signals to pinpoint common issues.', 'Suggest actionable improvements based on analyzed data.', 'Create a watchlist of symbols or setups to monitor moving forward.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:46"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

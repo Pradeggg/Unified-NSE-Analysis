@@ -1,0 +1,57 @@
+id: "signal_outcome_feedback_review_0851_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0851"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: quick scan; timeframe: quarter to date; response style: action watchlist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for quarter to date: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as action watchlist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  fields:
+    - "id"
+    - "title"
+    - "evidence_required"
+    - "sql_templates"
+    - "output_contract"
+sql_templates:
+  -
+    template: "SELECT symbol, COUNT(*) AS successful_signals FROM signals.signal_log WHERE hit_target = TRUE AND date_resolved >= CURRENT_DATE - INTERVAL '3 months' GROUP BY symbol ORDER BY successful_signals DESC LIMIT 10;"
+  -
+    template: "SELECT symbol, COUNT(*) AS failed_signals FROM signals.signal_log WHERE hit_stop = TRUE AND date_resolved >= CURRENT_DATE - INTERVAL '3 months' GROUP BY symbol ORDER BY failed_signals DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "sql_syntax"
+  - "join_conditions"
+  - "date_filters"
+synthesis_guidance: "Focus on extracting actionable insights from signal outcomes, identify patterns in winners and failures, suggest route optimizations, and specify next checks for better decision-making in the Indian market context."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.failed_signals is not approved"
+  - "signals.signal_log.successful_signals is not approved"

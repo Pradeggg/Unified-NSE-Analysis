@@ -1,0 +1,58 @@
+id: "sector_breadth_rotation_watchlist_0853_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0853"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: action watchlist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for quarter to date: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as action watchlist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  plan:
+    - "Identify improving sectors based on breadth and stage migration."
+    - "Fetch stock symbols with strong stage participation and momentum."
+    - "Prepare action-ready watchlist with TradingView import capability."
+sql_templates:
+  -
+    query: "WITH RecentSectors AS (SELECT sector, AVG(pct_above_50dma) AS Avg_Pct_Above_50DMA FROM breadth.sector_daily WHERE snapshot_date >= CURRENT_DATE - INTERVAL '7 days' GROUP BY sector) SELECT sd.sector, sd.breadth_signal, ma.stage2_pct FROM breadth.sector_daily sd JOIN breadth.ma_pct_above ma ON sd.snapshot_date = ma.snapshot_date WHERE sd.snapshot_date = CURRENT_DATE AND ma.stage2_pct > 50 ORDER BY ma.stage2_pct DESC;"
+    description: "Selects sectors with significant 50DMA participation and strong stage 2 involvement."
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sector ranking is by descending order of stage 2 participation."
+  - "Verify TradingView symbols compatibility format."
+  - "Confirm daily updates for relevant data."
+synthesis_guidance: "['Prioritize sectors showing consistent improvement in breadth.', 'Highlight stocks within these sectors demonstrating strong stage scores and technical momentum.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:39"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

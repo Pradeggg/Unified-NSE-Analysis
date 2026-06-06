@@ -1,0 +1,58 @@
+id: "market_3m_rotation_swing_0901_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0901"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: today; response style: comparison matrix."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "today"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  sql_templates:
+    -
+      description: "Calculate index performance over the last 3 months."
+      query: "SELECT index_symbol, AVG(change_pct) as avg_return FROM market.index_eod WHERE trade_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) GROUP BY index_symbol"
+    -
+      description: "Identify sectors with strong Stage 2 performance."
+      query: "SELECT sector, COUNT(symbol) as count_stage2 FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) GROUP BY sector ORDER BY count_stage2 DESC"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "Verify that tables used are in the approved schema."
+synthesis_guidance: "['Compile findings in a comparison matrix.', 'Highlight sectors and stocks demonstrating Stage 2 leadership.', 'Assess the potential risks associated with current market regimes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:52:41"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

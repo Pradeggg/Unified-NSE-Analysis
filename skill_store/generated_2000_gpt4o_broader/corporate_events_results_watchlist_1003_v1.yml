@@ -1,0 +1,50 @@
+id: "corporate_events_results_watchlist_1003_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1003"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: today; response style: concise table."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for today: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as concise table"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Use SQL to query the required data and present the upcoming or recent corporate events, results, and watchlist actions for today."
+sql_templates:
+  corporate_events: "SELECT symbol, event_type, event_date, detail, source FROM signals.corporate_events WHERE event_date = CURRENT_DATE;"
+  results_analysis: "SELECT symbol, company_name, growth_yoy_revenue_pct, eps_yoy_pct, verdict, score FROM scores.results_analysis WHERE filing_date = CURRENT_DATE;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all symbols have a corresponding entry in the events or results tables."
+  - "Check that the event or result dates match the current date."
+synthesis_guidance: "Synthesize data from corporate events and results analysis to identify opportunities or actions for the watchlist."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

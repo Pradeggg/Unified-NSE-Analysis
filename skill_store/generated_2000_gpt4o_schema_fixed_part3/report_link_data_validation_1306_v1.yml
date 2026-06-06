@@ -1,0 +1,73 @@
+id: "report_link_data_validation_1306_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1306"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: today; response style: exceptions and gaps first."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for today: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "today"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  data_inputs:
+    - "run_id"
+    - "run_ts"
+  parameters:
+    - "symbol"
+sql_templates:
+  -
+    description: "Fetch latest run information for today's reports."
+    sql: "SELECT * FROM report.enhanced_runs WHERE run_ts::date = CURRENT_DATE ORDER BY run_ts DESC LIMIT 1;"
+  -
+    description: "Get filtered stocks details for the latest run."
+    sql: "SELECT * FROM report.enhanced_filtered_stocks WHERE run_id = (SELECT run_id FROM report.enhanced_runs WHERE run_ts::date = CURRENT_DATE ORDER BY run_ts DESC LIMIT 1);"
+python_tools:
+  -
+    id: "data_checker"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_data"
+      - "stock_data"
+    outputs:
+      - "findings_report"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    run_data = context['run_data']\n    stock_data = context['stock_data']\n    findings = []\n    if not run_data or not stock_data:\n        findings.append('Missing report data for given day.')\n    # Add other checks here\n    return {'findings_report': findings}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Check for empty or missing fields."
+  - "Validate if all necessary records exist for today's audit."
+  - "Identify data gaps or integrity issues."
+synthesis_guidance: "['Emphasize exceptions and data gaps in output.', 'Focus on freshness audit for current date analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:20"
+generation_model: "gpt-4o"
+validation_errors:
+  - "data_checker: execution failed: KeyError: 'run_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "data_checker: execution failed: KeyError: 'run_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

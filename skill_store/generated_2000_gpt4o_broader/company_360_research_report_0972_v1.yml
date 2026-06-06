@@ -1,0 +1,67 @@
+id: "company_360_research_report_0972_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0972"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: deep institutional review; timeframe: pre market; response style: comparison matrix."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "deep institutional review for pre market: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as comparison matrix"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template: "Generate a research report with financial, technical, and narrative analysis for {symbol}."
+sql_templates:
+  -
+    query: "SELECT symbol, revenue, pat, eps FROM scores.quarterly_results WHERE symbol = :symbol"
+    description: "Fetch quarterly revenue, PAT, and EPS."
+  -
+    query: "SELECT symbol, revenue, pat FROM scores.annual_results WHERE symbol = :symbol"
+    description: "Fetch annual revenue and PAT."
+  -
+    query: "SELECT equity_capital, total_liabilities FROM scores.balance_sheet WHERE symbol = :symbol"
+    description: "Fetch balance sheet details."
+  -
+    query: "SELECT operating_cf, net_cf FROM scores.cash_flow WHERE symbol = :symbol"
+    description: "Fetch cash flow details."
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Output keys must match output_contract."
+  - "SQL must be read-only with SELECT/WITH statements."
+  - "Status must be generated."
+synthesis_guidance: "Combine financial data with technical and narrative insights to create a comprehensive report."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:50"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

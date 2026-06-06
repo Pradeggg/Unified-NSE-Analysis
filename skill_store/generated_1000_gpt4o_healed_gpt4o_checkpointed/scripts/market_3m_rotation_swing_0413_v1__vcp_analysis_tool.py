@@ -1,0 +1,1 @@
+def run(context): return {'swing_candidate_score': None}

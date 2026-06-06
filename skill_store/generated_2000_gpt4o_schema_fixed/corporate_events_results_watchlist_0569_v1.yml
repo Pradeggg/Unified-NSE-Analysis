@@ -1,0 +1,51 @@
+id: "corporate_events_results_watchlist_0569_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0569"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for post results: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as research-only summary"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Construct a research summary for analyzing corporate events-related watchlist actions post-results, utilizing source trails for validation."
+sql_templates:
+  -
+    template: "WITH latest_stage AS (SELECT symbol, stage, trading_signal, snapshot_date FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT ce.symbol, ce.event_type, ce.event_date, sa.verdict FROM signals.corporate_events ce JOIN scores.results_analysis sa ON ce.symbol = sa.symbol JOIN latest_stage ls ON ce.symbol = ls.symbol WHERE sa.verdict IN ('beat', 'miss') AND ce.event_date > CURRENT_DATE - INTERVAL '3 months' AND ls.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 50;"
+    description: "Identify recent corporate events with results marked as 'beat' or 'miss' and favorable trading signals."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "schema_validation"
+  - "data_quality"
+synthesis_guidance: "Provide a summary based on SQL result sets that include event types and trading signals for actionable watchlist creation."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:25:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

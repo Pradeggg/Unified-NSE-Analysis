@@ -1,0 +1,58 @@
+created_at: "2026-06-06T12:42:01"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: latest EOD; response style: narrative plus evidence."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0113_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as narrative plus evidence"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Get index performance over the last 3 months."
+    query: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    description: "Identify leading sectors based on stage distribution changes."
+    query: "WITH sector_changes AS (SELECT snapshot_date, sector, stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector, stage, snapshot_date) SELECT sector, stage, SUM(count) AS total_count FROM sector_changes GROUP BY sector, stage ORDER BY total_count DESC;"
+  -
+    description: "Select primary swing candidates from Stage 2 picks."
+    query: "SELECT symbol, company_name, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND vcp_score > 70 ORDER BY vcp_score DESC;"
+status: "validated"
+synthesis_guidance: "Generate a report narratively explaining the broad market regime over the last three months, highlighting the leading sectors, and identifying potential swing candidates. Base this on gathered data, ensuring a full narrative plus evidence approach."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "latest_EOD"
+  - "narrative_plus_evidence"
+title: "3M Market Rotation Swing Assessment Variant 0113"
+tool_plan_template: "SQL"
+validation_rules:
+  - "inputs_must_match_patterns"
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

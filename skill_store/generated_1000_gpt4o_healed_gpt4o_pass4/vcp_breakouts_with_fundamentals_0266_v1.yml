@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:43:59"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: post results; response style: ranked candidates."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0266_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Selects stocks hitting new highs with VCP patterns and strong fundamentals."
+    template: "WITH breakout_candidates AS (SELECT symbol, high, market_cap_cr, volume FROM market.equity_eod WHERE high > week52_high AND volume > 100000 AND market_cap_cr > 1000), vcp_and_scores AS (SELECT sc.symbol, sc.company_name, sc.enhanced_fund_score FROM scores.stage2_vcp_picks AS sc WHERE sc.vcp_score > 80 AND sc.enhanced_fund_score > 75) SELECT bc.symbol, vc.company_name, sc.enhanced_fund_score FROM breakout_candidates AS bc JOIN vcp_and_scores AS vc ON bc.symbol = vc.symbol ORDER BY sc.enhanced_fund_score DESC;"
+status: "validated"
+synthesis_guidance: "Focus on integrating VCP breakouts, fundamentals, and historical price action for target candidates."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "post_results"
+  - "ranked_candidates"
+title: "VCP Breakouts With Fundamentals Variant 0266"
+tool_plan_template: "Find stocks with VCP breakouts and strong fundamentals."
+validation_errors:
+
+validation_rules:
+  - "status"
+  - "tasks"
+version: 1

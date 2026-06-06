@@ -1,0 +1,58 @@
+id: "data_freshness_readiness_audit_0441_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0441"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for last 3 months: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as portfolio-aware output"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  - "Step 1: Retrieve the latest trade date from each table to assess data freshness."
+  - "Step 2: Compare dates against current date minus three months interval to ensure data is within the acceptable freshness range."
+  - "Step 3: Identify any missing data or gaps based on the latest available dates."
+sql_templates:
+  -
+    description: "Fetch latest trade date from the market.equity_eod table."
+    sql: "SELECT MAX(trade_date) AS latest_trade_date FROM market.equity_eod;"
+  -
+    description: "Fetch latest snapshot date from the scores.stage_snapshots table."
+    sql: "SELECT MAX(snapshot_date) AS latest_snapshot_date FROM scores.stage_snapshots;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure dates are compared using PostgreSQL date syntax."
+  - "Verify freshness by ensuring dates are within the last three months."
+synthesis_guidance: "['Summarize the latest data availability across different sources.', 'Flag any blocks or issues with data freshness that could impede analyses.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_trade_date is not approved"
+  - "scores.stage_snapshots.latest_snapshot_date is not approved"

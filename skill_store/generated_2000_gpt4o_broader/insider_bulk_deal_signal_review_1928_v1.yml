@@ -1,0 +1,69 @@
+id: "insider_bulk_deal_signal_review_1928_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1928"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: last 5 sessions; response style: comparison matrix."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for last 5 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as comparison matrix"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  sql_templates:
+    -
+      query: "SELECT i.symbol, i.entity, i.qty, i.value_cr, b.side, b.qty as bulk_qty, b.price, s.technical_score FROM signals.insider_alerts i JOIN signals.bulk_block_deals b ON i.symbol = b.symbol JOIN scores.stage_snapshots s ON i.symbol = s.symbol WHERE i.alert_date >= DATE_SUB(CURDATE(), INTERVAL 5 DAY) AND b.deal_date >= DATE_SUB(CURDATE(), INTERVAL 5 DAY)"
+      description: "Gather symbols with insider alerts and bulk deals in last 5 sessions."
+sql_templates:
+
+python_tools:
+  -
+    id: "filter_technical_confirmation"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol_data"
+    outputs:
+      - "filtered_symbols"
+    approved_tables:
+      - "signals.insider_alerts"
+      - "signals.bulk_block_deals"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    return [symbol for symbol in context['symbol_data'] if symbol['technical_score'] > threshold]"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "sql_read_only"
+  - "python_read_only"
+synthesis_guidance: "Focus on drawing conclusions about accumulation or distribution from recent insider activities and bulk deals, using technical confirmation to filter and rank potential investments."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:28"
+generation_model: "gpt-4o"
+validation_errors:
+  - "filter_technical_confirmation: execution failed: KeyError: 'symbol_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "filter_technical_confirmation: execution failed: KeyError: 'symbol_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

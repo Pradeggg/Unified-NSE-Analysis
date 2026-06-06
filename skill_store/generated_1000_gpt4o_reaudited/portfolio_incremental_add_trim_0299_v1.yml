@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:44:14"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: weekly review; response style: ranked candidates."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0299_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select top candidates for adding based on stage score and technical analysis."
+    template: "SELECT ss.symbol, ss.company_name, ss.sector, ss.stage, ss.stage_score, ss.technical_score FROM scores.stage_snapshots ss JOIN portfolio.holdings ph ON ss.symbol = ph.symbol WHERE ss.stage IN ('Accumulating', 'Advancing') AND ss.stage_score > 80 AND ss.technical_score > 70 ORDER BY ss.stage_score DESC, ss.technical_score DESC LIMIT 10;"
+  -
+    description: "Select top candidates for trimming based on stage score and technical analysis."
+    template: "SELECT ss.symbol, ss.company_name, ss.sector, ss.stage, ss.stage_score, ss.technical_score FROM scores.stage_snapshots ss JOIN portfolio.holdings ph ON ss.symbol = ph.symbol WHERE ss.stage IN ('Distribution', 'Declining') AND ss.stage_score < 30 AND ss.technical_score < 50 ORDER BY ss.stage_score ASC, ss.technical_score ASC LIMIT 10;"
+status: "validated"
+synthesis_guidance: "Rank candidates based on composite scores and technical signals. Consider sector balance."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "ranked_candidates"
+title: "Portfolio Incremental Add Trim Review Variant 0299"
+tool_plan_template:
+
+validation_rules:
+  - "consistency"
+  - "recency"
+  - "accuracy"
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

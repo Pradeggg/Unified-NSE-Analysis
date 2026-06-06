@@ -1,0 +1,67 @@
+created_at: "2026-06-06T12:44:14"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: weekly review; response style: ranked candidates."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0295_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "fetch_current_holdings"
+    query: "SELECT symbol, qty, avg_cost FROM portfolio.holdings"
+  -
+    name: "fetch_scores"
+    query: "SELECT symbol, sector, change_1w_pct, stage, trend_signal FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE"
+status: "validated"
+synthesis_guidance: "['Focus on risk assessment based on current data', 'Rank recommendations by potential impact and alignment with strategy']"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "weekly_review"
+  - "ranked_candidates"
+title: "Portfolio Incremental Add Trim Review Variant 0295"
+tool_plan_template:
+  approved_tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+  code: "def run(context):\n    # Example code to analyze portfolio\n    pass"
+  id: "run"
+  inputs:
+    portfolio_state: "Current state of portfolio"
+    sector_exposure: "Current sector exposure"
+  language: "python"
+  mode: "read_only"
+  outputs:
+    add_candidates: "List of symbols to consider for increment"
+    risk_flags: "Potential risk indicators to consider"
+    trim_candidates: "List of symbols to consider for reduction"
+validation_rules:
+  - "Check if holdings are up-to-date and consistent with scores"
+  - "Ensure no unauthorized schema interactions"
+version: 1

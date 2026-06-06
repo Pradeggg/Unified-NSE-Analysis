@@ -1,0 +1,64 @@
+id: "market_3m_rotation_swing_1695_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1695"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: weekly review; response style: debug trace."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for weekly review: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    steps:
+      -
+        name: "Index Returns"
+        description: "Calculate returns for major indices over the last 3 months."
+        sql_template: "SELECT index_symbol, (MAX(close) - MIN(close)) / MIN(close) * 100 AS return_pct FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 months') GROUP BY index_symbol;"
+      -
+        name: "Stage 2 Leaders"
+        description: "Identify top Stage 2 stocks with strong trends over the last 3 months."
+        sql_template: "SELECT symbol, company_name, sector, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY stage_score DESC LIMIT 10;"
+      -
+        name: "Sector Leadership"
+        description: "Determine leading sectors based on aggregated stock performance."
+        sql_template: "SELECT sector, AVG(change_1m_pct) AS avg_monthly_change FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY avg_monthly_change DESC LIMIT 5;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "{'rules': ['Ensure all output fields are populated.', 'Check date ranges to match the most recent data.', 'Validate sectors and stages align with expectations.']}"
+synthesis_guidance: "Read all returned data strictly for analytical use and construct summaries with references to tables, not direct charting or graphing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:17"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

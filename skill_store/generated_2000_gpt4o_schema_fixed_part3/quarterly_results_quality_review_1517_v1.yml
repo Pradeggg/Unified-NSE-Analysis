@@ -1,0 +1,65 @@
+id: "quarterly_results_quality_review_1517_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1517"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: research-only summary."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "sector-relative comparison for latest EOD: latest quarterly results analysis"
+  - "which companies had strong quarterly results as research-only summary"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Summarize quarterly results, focusing on revenue and PAT growth, margin changes, and sector comparison using approved evidence tables."
+sql_templates:
+  -
+    template: "WITH latest_quarterly_results AS (SELECT DISTINCT ON (symbol) symbol, period_end, revenue, pat, opm_pct FROM scores.quarterly_results WHERE period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC) SELECT l.symbol, l.revenue, l.pat, l.opm_pct FROM latest_quarterly_results l JOIN scores.results_analysis r ON l.symbol = r.symbol AND l.period_end = r.period_end WHERE r.verdict IN ('beat', 'miss') ORDER BY r.verdict, l.opm_pct DESC LIMIT 10;"
+    description: "Retrieve top companies with recent quarterly results, focusing on verdict and margin."
+python_tools:
+  -
+    id: "analyze_quarterly_results"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "latest_quarterly_results"
+    outputs:
+      - "top_performers_data"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+    code: "def run(context):\n    latest_results = context['latest_quarterly_results']\n    # Analyze top performers based on revenue and PAT growth\n    top_performers = sorted(latest_results, key=lambda x: (x['revenue'], x['pat']), reverse=True)[:5]\n    return top_performers"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure revenue and PAT growth are correctly summarized."
+  - "Validate margin movements with opm_pct data."
+  - "Rank companies based on sector-relative comparison."
+synthesis_guidance: "['Focus on presenting data as research-only summary.', 'Highlight any sector-specific trends or anomalies.', 'Be precise and clear in summarizing financial metrics.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analyze_quarterly_results: execution failed: KeyError: 'latest_quarterly_results'"
+review:
+  status: "needs_heal"
+  findings:
+    - "analyze_quarterly_results: execution failed: KeyError: 'latest_quarterly_results'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,50 @@
+id: "company_360_research_report_0342_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Comprehensive Company Research"
+description: "Generate a research report with financials, fundamentals, and technical context for a deep institutional review of a company over the past 3 months."
+input_patterns:
+  - "/research SYMBOL comprehensive report"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "deep_institutional_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+  filters:
+    - "snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+  concepts:
+
+tool_plan_template: "Generate a comprehensive report using the latest snapshot and results data.\nFocus on financial trends, technical setup, and valuation gaps."
+sql_templates:
+  latest_stage_snapshot: "SELECT * FROM scores.stage_snapshots WHERE symbol = :symbol AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  latest_quarterly_results: "SELECT DISTINCT ON (symbol) * FROM scores.quarterly_results WHERE symbol = :symbol AND period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC;"
+  latest_analysis: "SELECT DISTINCT ON (symbol) * FROM scores.results_analysis WHERE symbol = :symbol ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all data is sourced from the last 3 months."
+  - "Align financial results with analysis commentary."
+synthesis_guidance: "Focus on identifying exceptions and valuation gaps first to convey critical insights."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

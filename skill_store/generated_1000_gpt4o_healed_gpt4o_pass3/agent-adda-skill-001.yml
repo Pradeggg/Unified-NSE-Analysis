@@ -1,0 +1,60 @@
+created_at: "2026-06-06T12:44:22"
+created_by: "llm_generated"
+description: "The skill card for Agent Adda focuses on generating market intelligence using a variety of approved data schemas for analyzing equity and index performance. It incorporates technical and fundamental analysis to provide insights and recommendations."
+domain: "Market Intelligence"
+evidence_required: true
+generation_model: "gpt-4o"
+id: "agent-adda-skill-001"
+input_patterns:
+  - "Analyze equity data"
+  - "Generate market trends"
+  - "Calculate RSI and momentum"
+  - "Assess market sentiment"
+output_contract:
+  -
+    description: "Output must include validated market data analytics results following the approved schema."
+    format: "JSON"
+    schema_required: true
+python_tools:
+  -
+    approved_tables:
+      - "portfolio.holdings"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    holdings = context['holdings'] if isinstance(context['holdings'], list) else []\n    snapshots = context['snapshots'] if isinstance(context['snapshots'], list) else []\n    sector_exposure = {}\n    for holding in holdings:\n        symbol = holding['symbol']\n        qty = holding['qty']\n        snapshot = next((s for s in snapshots if s['symbol'] == symbol), None)\n        if snapshot:\n            sector = snapshot['sector']\n            sector_exposure[sector] = sector_exposure.get(sector, 0) + qty\n    return {'sector_exposure': [{'sector': k, 'exposure': v} for k, v in sector_exposure.items()]}"
+    id: "calculate_sector_exposure"
+    inputs:
+      holdings: "portfolio.holdings"
+      snapshots: "scores.stage_snapshots"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      sector_exposure: "list of sectors with total exposure"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_sector_exposure: inputs must be a list"
+    - "calculate_sector_exposure: outputs must be a non-empty list"
+    - "evidence_required is required"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    query: "SELECT h.symbol, h.qty, s.sector, s.stage, s.stage_score, s.trend_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    title: "Current Holdings with Market Indicators"
+status: "test_failed"
+synthesis_guidance: "Focus on identifying high-risk stocks for trimming and potential growth stocks for adding based on the latest market data."
+tags:
+  - "Market Data"
+  - "Analysis"
+  - "Financial Intelligence"
+title: "Market Data Analysis and Intelligence Skill Card"
+tool_plan_template: "Research and review current holdings for add or trim decisions based on risk assessments and market conditions."
+validation_errors:
+  - "calculate_sector_exposure: inputs must be a list"
+  - "calculate_sector_exposure: outputs must be a non-empty list"
+  - "evidence_required is required"
+validation_rules:
+  - "Ensure adherence to approved schema."
+  - "Validate input data integrity."
+  - "Verify output contract compliance."
+version: 1

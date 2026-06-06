@@ -1,0 +1,53 @@
+id: "company_360_research_report_0412_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Comprehensive Company Research Report"
+description: "Generate a comprehensive research card for a selected company, focusing on institutional-grade analysis and portfolio-aware output, using latest EOD data."
+input_patterns:
+  - "/research <SYMBOL> comprehensive report"
+  - "institutional grade 360 research for stock"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Query latest EOD price and stage data."
+    - "Extract financial trends from quarterly and annual results."
+    - "Analyze technical setup and generate company snapshot."
+sql_templates:
+  - "SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND symbol = <SYMBOL>;"
+  - "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol = <SYMBOL>;"
+  - "SELECT * FROM scores.quarterly_results WHERE symbol = <SYMBOL> ORDER BY period_end DESC LIMIT 1;"
+  - "SELECT * FROM scores.annual_results WHERE symbol = <SYMBOL> ORDER BY period_end DESC LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure latest data is used for financial and technical analysis."
+  - "Align and annotate all evidence with timestamps for consistency."
+synthesis_guidance: "['Combine financial, technical, and narrative insights into a cohesive report.', 'Reflect institutional awareness and deep insights suitable for portfolio decisions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:07"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

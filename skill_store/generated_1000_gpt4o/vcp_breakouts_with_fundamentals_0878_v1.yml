@@ -1,0 +1,63 @@
+id: "vcp_breakouts_with_fundamentals_0878_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0878"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "This card will utilize SQL to screen for stocks achieving new highs, VCP patterns, or breakouts, and exhibiting strong fundamental metrics. Analysis will be conducted in a pre-market context, focusing on TradingView compatibility for actionable watchlists."
+sql_templates:
+  - "SELECT e.symbol, e.trade_date, e.high, e.volume, s.enhanced_fund_score, s.vcp_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.high = e.week52_high AND s.vcp_score > 70 AND s.enhanced_fund_score > 80 ORDER BY e.trade_date DESC;"
+  - "SELECT p.symbol, p.price, p.relative_strength, p.vcp_breakout_pct FROM scores.stage2_vcp_picks p WHERE p.trading_signal = 'buy' AND p.enhanced_fund_score > 80 ORDER BY p.vcp_breakout_pct DESC;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure SQL queries only SELECT and are read-only."
+  - "Verify columns used exist in the approved schema."
+  - "Frequency cap: Queries should not request more than 100 stocks at a time."
+synthesis_guidance: "Focus on extracting a concise list of actionable stocks that align with VCP and breakout criteria, backed by robust fundamental insights. Emphasize clarity in communicating reasoning behind stock selections."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:52:27"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.p is not approved"
+  - "scores.stage_snapshots.vcp_score is not approved"
+  - "unknown table e.high"
+  - "unknown table e.symbol"
+  - "unknown table e.trade_date"
+  - "unknown table e.volume"
+  - "unknown table e.week52_high"
+  - "unknown table p.enhanced_fund_score"
+  - "unknown table p.price"
+  - "unknown table p.relative_strength"
+  - "unknown table p.symbol"
+  - "unknown table p.trading_signal"
+  - "unknown table p.vcp_breakout_pct"
+  - "unknown table s.enhanced_fund_score"
+  - "unknown table s.symbol"
+  - "unknown table s.vcp_score"

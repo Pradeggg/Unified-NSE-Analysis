@@ -1,0 +1,53 @@
+id: "enhanced_report_data_validation_0280_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation"
+description: "Validate enhanced report run metadata, filtered stock rows, and source trails in the Indian market. Variant focus: TradingView export with pre-market timeframe."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for pre market: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Examine metadata and stock data consistency using the Indian market framing. Use SQL templates to extract relevant insights."
+sql_templates:
+  -
+    description: "Extract run metadata and validate against expected analyses."
+    template: "SELECT run_id, run_ts, universe_size, stocks_analyzed, indices_analyzed FROM report.enhanced_runs WHERE run_ts BETWEEN 'start' AND 'end';"
+  -
+    description: "Retrieve filtered stock data for a specific analysis and validate completeness."
+    template: "SELECT run_id, symbol, score, tech_score, fund_score FROM report.enhanced_filtered_stocks WHERE run_id = 'specific_run_id';"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all run IDs have corresponding filtered stock data."
+  - "Check for HTML links that fail and their connection to missing data."
+synthesis_guidance: "Rank candidate issues in terms of criticality and provide potential remediation steps."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:44:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

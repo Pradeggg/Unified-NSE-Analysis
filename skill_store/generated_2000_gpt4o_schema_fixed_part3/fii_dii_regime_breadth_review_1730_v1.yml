@@ -1,0 +1,57 @@
+id: "fii_dii_regime_breadth_review_1730_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1730"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for last 5 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  python_tools: null
+  sql_templates:
+    contextual_enquiry:
+      template: "SELECT f.trade_date, f.fii_net_today, f.dii_net_today, f.flow_signal, r.regime, r.confidence, b.ad_signal, i.trading_signal FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date JOIN breadth.market_daily b ON f.trade_date = b.trade_date JOIN market.index_eod i ON f.trade_date = i.trade_date WHERE f.trade_date IN (SELECT DISTINCT trade_date FROM signals.fii_dii_flows ORDER BY trade_date DESC LIMIT 5) AND i.index_symbol = :index_symbol ORDER BY f.trade_date DESC"
+      params:
+        index_symbol: "Nifty 50"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  -
+    rule: "Standard QA checklist format"
+    details: "Ensure output is structured to reflect the checklist format with clear headers and bullet points for clarity."
+synthesis_guidance: "['Combine the analysis of FII and DII flows, market regime, breadth indicators like AD signal, and index trading signals.', 'Evaluate the confidence in the current regime and its impact on flow and breadth contexts.', 'Intelligently infer likely market risk-on or risk-off stances based on multi-indicator consensus.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:33"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,75 @@
+id: "portfolio_lab_paper_trading_review_1440_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Paper Trading Strategy Review"
+description: "Reviews strategies from paper trading portfolios separately from real holdings over the last 20 sessions."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "TradingView export for last 20 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Generate a strategy review by analyzing paper trading signals issued in the last 20 sessions against price actions and snapshot scores."
+sql_templates:
+  -
+    name: "latest_signals"
+    sql: "SELECT date_issued, symbol, signal, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued > CURRENT_DATE - INTERVAL '20 days';"
+  -
+    name: "latest_snapshots"
+    sql: "SELECT symbol, stage, technical_score, rsi FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    name: "latest_prices"
+    sql: "SELECT symbol, close FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+python_tools:
+  -
+    id: "compute_strategic_insights"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "latest_signals"
+      - "latest_snapshots"
+      - "latest_prices"
+    outputs:
+      - "strategy_performance_insights"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Placeholder function to compute insights using context data\n    insights = {'summary': 'Performance insights over last 20 sessions'}\n    return insights"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure signals are from paper trading portfolios."
+  - "Cross-verify price movements with the latest EOD data."
+  - "Validate stage and technical score context for signals."
+synthesis_guidance: "Compile a review focusing on how well the paper trading strategies would have performed against market changes in the last 20 sessions and suggest possible improvements."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "compute_strategic_insights: missing output strategy_performance_insights"
+review:
+  status: "needs_heal"
+  findings:
+    - "compute_strategic_insights: missing output strategy_performance_insights"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

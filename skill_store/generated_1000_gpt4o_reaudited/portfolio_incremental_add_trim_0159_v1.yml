@@ -1,0 +1,51 @@
+created_at: "2026-06-06T12:42:26"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: quarter to date; response style: narrative plus evidence."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0159_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+  -
+    name: "current_holdings_review"
+    template: "SELECT h.symbol, h.qty, h.avg_cost, h.buy_date, s.sector, s.stage, s.stage_score, s.technical_score, s.trend_signal FROM portfolio.holdings AS h JOIN (SELECT symbol, max(snapshot_date) AS latest FROM scores.stage_snapshots WHERE snapshot_date <= current_date GROUP BY symbol) AS latest_snap ON h.symbol = latest_snap.symbol JOIN scores.stage_snapshots AS s ON h.symbol = s.symbol AND s.snapshot_date = latest_snap.latest WHERE s.snapshot_date >= date_trunc('quarter', current_date);"
+status: "validated"
+synthesis_guidance: "Summarize portfolio health in narrative form, suggest add/trim actions based on evidence. Ensure alignment with Indian market context and approved schema."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+title: "Portfolio Incremental Add Trim Review Variant 0159"
+tool_plan_template: "First, review current portfolio holdings for performance and exposure. Then, identify candidates for incremental add or trim based on stage, technical score, and market signals. Conclude with a narrative synthesis, embedding evidence from the approved tables."
+validation_rules:
+  - "Use only approved schema tables and columns"
+  - "SQL templates must be read-only"
+  - "Python tools allowed only if SQL becomes complex"
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

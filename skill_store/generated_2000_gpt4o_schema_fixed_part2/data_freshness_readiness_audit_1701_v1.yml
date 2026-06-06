@@ -1,0 +1,56 @@
+id: "data_freshness_readiness_audit_1701_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1701"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: today; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for today: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "today"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "\n1. Check if the freshest data is from today for each evidence source.\n2. Identify any missing sources or gaps in the approved history.\n3. Prepare a QA checklist to verify loader actions.\n4. Use only read-only SQL queries and approved tools for checks.\n5. Ensure verification queries return data within freshness matrix.\n"
+sql_templates:
+  index_freshness_check: "SELECT trade_date FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+  equity_freshness_check: "SELECT trade_date FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND series = 'EQ';"
+  stage_snapshot_freshness_check: "SELECT snapshot_date FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all tables have today's freshest date information."
+  - "Verify approved history coverage for mandatory workflows."
+  - "Identify any discrepancies or stale data across tables."
+synthesis_guidance: "['Synthesize the findings into a QA checklist format.', 'Prioritize immediate actions for sources with stale data.', 'Highlight any evidence gaps indicating missing loaders.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

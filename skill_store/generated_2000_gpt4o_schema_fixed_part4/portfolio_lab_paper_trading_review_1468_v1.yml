@@ -1,0 +1,47 @@
+id: "portfolio_lab_paper_trading_review_1468_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Position-Sizing Focused Paper Trading Review"
+description: "Analyze and review position-sizing strategies within the context of paper trading portfolios, focusing on entries, exits, stops, targets, and exposure."
+input_patterns:
+  - "paper trading position-sizing strategy review"
+  - "evaluate position-sizing in strategies"
+  - "portfolio lab position-sizing analysis"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "strategy_review"
+  - "paper_trading"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    tool: "SQL"
+    description: "Extract strategy state and outcomes for paper trades."
+    template: "WITH strategy_signals AS (SELECT symbol, date_issued, signal, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log)), portfolio_info AS (SELECT holdings.symbol, qty, avg_cost, buy_date FROM portfolio.holdings AS holdings JOIN scores.stage_snapshots AS stages ON holdings.symbol = stages.symbol WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT ss.symbol, ss.signal, ss.entry_low, ss.entry_high, ss.stop_loss, ss.target_1, ss.target_2, pi.qty, pi.avg_cost, pi.buy_date FROM strategy_signals AS ss JOIN portfolio_info AS pi ON ss.symbol = pi.symbol;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "position_sizing"
+  - "entry_exit_rules"
+  - "exposure"
+validation_rules:
+  - "Ensure all extracted data respects the latest available dates per table."
+  - "Verify alignment of signals with portfolio data based on symbol."
+synthesis_guidance: "['Provide portfolio-aware insights on position-sizing efficacy.', 'Highlight any anomalies or strategic misalignments in position-sizing.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:17"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

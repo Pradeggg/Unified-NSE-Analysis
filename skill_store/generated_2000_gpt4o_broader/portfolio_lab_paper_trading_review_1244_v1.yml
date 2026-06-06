@@ -1,0 +1,58 @@
+id: "portfolio_lab_paper_trading_review_1244_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1244"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: last 3 months; response style: ranked candidates."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for last 3 months: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as ranked candidates"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "This skill card requires evaluating paper trading strategies and ranking them based on their efficacy over the last 3 months. We focus on entries, exits, stops, and targets without mixing real holdings."
+sql_templates:
+  -
+    name: "Recent Signals"
+    description: "Select signals issued in the last 3 months."
+    query: "SELECT * FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    name: "Watchlist Performance"
+    description: "Evaluate portfolio performance based on recent signals."
+    query: "WITH recent_performance AS (SELECT symbol, AVG(price_at_resolution / price_at_issue - 1) as avg_return_pct FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months' GROUP BY symbol) SELECT h.symbol, h.qty, h.avg_cost, rp.avg_return_pct FROM portfolio.holdings h JOIN recent_performance rp ON h.symbol = rp.symbol;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure signal logs are accurate for recent entries"
+  - "Validate that returned portfolio evaluations are consistent with signals"
+synthesis_guidance: "Rank trading strategies based on performance metrics such as avg_return_pct derived from SQL queries, maintaining separation from real holdings."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

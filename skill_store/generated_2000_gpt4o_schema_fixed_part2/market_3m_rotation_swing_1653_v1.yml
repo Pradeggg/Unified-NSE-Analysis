@@ -1,0 +1,61 @@
+id: "market_3m_rotation_swing_1653_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1653"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Assess Indian market conditions over the last 3 months and identify leading sectors. Generate debug trace for understanding stage 2 leadership shifts and swing trade candidates with SQL diagnostics."
+sql_templates:
+  -
+    name: "LatestIndexReturns"
+    description: "Fetches last 3 months index returns."
+    sql: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY trade_date DESC;"
+  -
+    name: "Stage2Candidates"
+    description: "Identifies stage 2 candidates with buy signals."
+    sql: "SELECT snapshot_date, symbol, sector, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY');"
+  -
+    name: "VCPTopCandidates"
+    description: "Ranks top VCP patterns from recent stage 2 selections."
+    sql: "SELECT symbol, vcp_score, sector FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC, rank ASC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "fields"
+synthesis_guidance: "Combine the SQL outputs to narrate sector shifts and identify robust swing trade candidates, framing results in the context of a market stage assessment. Highlight top-performing sectors and key risks apparent from technical changes."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:39"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

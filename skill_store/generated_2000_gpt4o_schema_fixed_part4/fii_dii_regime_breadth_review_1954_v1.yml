@@ -1,0 +1,52 @@
+id: "fii_dii_regime_breadth_review_1954_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1954"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for quarter to date: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as comparison matrix"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    description: "Retrieve FII/DII institutional flows, market regime, and breadth for the latest quarter. Construct a comparison matrix to highlight risk-on or risk-off signals after confirming index action."
+sql_templates:
+  -
+    template: "SELECT fi.trade_date, fi.fii_net_today, fi.dii_net_today, rh.regime, rh.confidence, md.advances, md.declines, md.market_sentiment, ie.index_symbol, ie.close AS index_close FROM signals.fii_dii_flows AS fi JOIN signals.regime_history AS rh ON fi.trade_date = rh.trade_date JOIN breadth.market_daily AS md ON fi.trade_date = md.trade_date JOIN market.index_eod AS ie ON fi.trade_date = ie.trade_date WHERE ie.index_symbol = 'Nifty 50' AND fi.trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY fi.trade_date DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Check that data covers the previous quarter; confirm that the index symbol is 'Nifty 50'."
+synthesis_guidance: "Present findings in a tabulated comparison format, focusing on regime, flow trends, breadth indicators, and index confirmation. Highlight any risk-on or risk-off signals clearly."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,59 @@
+id: "market_3m_rotation_swing_0949_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0949"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "RecentMarketRegime"
+    query: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    name: "SectorLeadership"
+    query: "SELECT snapshot_date, sector, SUM(change_1m_pct) as sector_change FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector, snapshot_date ORDER BY sector_change DESC;"
+  -
+    name: "Stage2Candidates"
+    query: "SELECT snapshot_date, symbol, company_name, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' AND vcp_score > 70;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure index returns reflect the last 3 months of data."
+  - "Check stage distribution changes align with recent sector movements."
+  - "Leading sectors must be identified from recent top performers."
+  - "Primary candidates should have significant stage 2 scores."
+  - "Risk considerations should reflect volatility and relative strength changes."
+synthesis_guidance: "Compile data into a comparison matrix, highlighting index trends, sector leadership shifts, and viable swing trading candidates over the last three months."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:53:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.sector_change is not approved"

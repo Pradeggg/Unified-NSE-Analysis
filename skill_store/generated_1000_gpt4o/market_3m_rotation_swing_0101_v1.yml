@@ -1,0 +1,66 @@
+id: "market_3m_rotation_swing_0101_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0101"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: today; response style: narrative plus evidence."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as narrative plus evidence"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "today"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze the market using the Agent Adda skill card to determine market regime, sector rotations, and identify potential swing candidates based on the last 3 months of data."
+sql_templates:
+  -
+    description: "Fetch the most recent index performance data."
+    query: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '90 days';"
+  -
+    description: "Identify leading sectors based on technical scores."
+    query: "SELECT sector, AVG(technical_score) AS avg_technical_score FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '90 days' GROUP BY sector ORDER BY avg_technical_score DESC;"
+  -
+    description: "Retrieve Stage 2 candidates with high VCP scores."
+    query: "SELECT symbol, company_name, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND vcp_score > threshold ORDER BY vcp_score DESC;"
+python_tools:
+  -
+    id: "index_performance_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "index_data"
+    outputs:
+      - "index_returns"
+      - "precision"
+    approved_tables:
+      - "market.index_eod"
+    code: "def run(context):\n    # Analyze index data to calculate average returns\n    return {\"index_returns\": calculate_index_returns(context['index_data']), \"precision\": 0.01}"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure input data is within the last 3 months."
+  - "Verify that sector averages and VCP scores are computed correctly."
+synthesis_guidance: "Combine market data to provide a coherent narrative on market trends, sector leadership, and potential swing trading candidates. Address risks such as sudden market shifts."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:41:55"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.avg_technical_score is not approved"

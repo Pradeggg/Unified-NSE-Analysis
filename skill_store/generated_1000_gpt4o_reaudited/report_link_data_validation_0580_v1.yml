@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:49:17"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: pre market; response style: research-only summary."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0580_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for pre market: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  check_link_status: "SELECT run_id, run_ts FROM report.enhanced_runs WHERE universe_size > stocks_analyzed;"
+  inspect_missing_data: "SELECT run_id, symbol, recommendation FROM report.enhanced_filtered_stocks WHERE daily_signal IS NULL OR weekly_signal IS NULL;"
+status: "validated"
+synthesis_guidance: "Compile findings into a cohesive research-only summary. Focus on providing insights into link failures and data gaps specific to the Indian market pre-market scenario."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "pre_market"
+  - "research-only_summary"
+title: "Enhanced Report Data Validation Variant 0580"
+tool_plan_template:
+  broken_links: "List any broken report links identified."
+  findings: "Identify and summarize issues with report links and data."
+  missing_data: "Highlight any missing data in the stock reports."
+  remediation: "Suggest possible steps for fixing broken links or handling missing data."
+  verification: "Include methods to verify that the issues have been resolved."
+validation_rules:
+  - "Ensure all report links are accessible and data is complete."
+  - "Verify the TradingView exports for pre-market data are properly linked."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

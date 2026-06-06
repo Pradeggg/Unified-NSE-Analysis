@@ -1,0 +1,63 @@
+created_at: "2026-06-06T12:46:18"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: today; response style: portfolio-aware output."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0407_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for today: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as portfolio-aware output"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    trend_data = context['trend_signal_data']\n    insights = analyze_trend_signals(trend_data)\n    return {'trend_insights': insights}"
+    id: "trend_signal_analysis"
+    inputs:
+      - "trend_signal_data"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "trend_insights"
+sql_templates:
+  -
+    description: "Select current holdings with market cap category and sector to evaluate potential add/trim decisions."
+    sql: "SELECT h.symbol, h.qty, s.sector, s.market_cap_cat, s.stage_score, s.trend_signal, s.trading_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE;"
+status: "test_failed"
+synthesis_guidance: "Focus on sector-relative comparison to inform add/trim decisions for today."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "today"
+  - "portfolio-aware_output"
+title: "Portfolio Incremental Add Trim Review Variant 0407"
+tool_plan_template:
+
+validation_rules:
+  - "Ensure all output data respects the structure and requirements of the contract."
+  - "No write operations should be performed on the database."
+version: 1
+validation_errors:
+  - "trend_signal_analysis: execution failed: KeyError: 'trend_signal_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "trend_signal_analysis: execution failed: KeyError: 'trend_signal_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

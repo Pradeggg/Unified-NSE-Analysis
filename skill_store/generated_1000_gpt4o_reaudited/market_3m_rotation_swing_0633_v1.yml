@@ -1,0 +1,61 @@
+created_at: "2026-06-06T12:50:23"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: last 20 sessions; response style: debug trace."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0633_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for last 20 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  market_index_analysis: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date BETWEEN DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) AND CURRENT_DATE;"
+  primary_swing_candidates: "SELECT symbol, company_name, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date BETWEEN DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) AND CURRENT_DATE ORDER BY vcp_score DESC LIMIT 10;"
+  sector_performance_analysis: "SELECT sector, AVG(change_1m_pct) as average_change FROM scores.stage_snapshots WHERE snapshot_date BETWEEN DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) AND CURRENT_DATE GROUP BY sector;"
+  stage_distribution_change: "SELECT sector, COUNT(*) as count, stage FROM scores.stage_snapshots WHERE snapshot_date BETWEEN DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) AND CURRENT_DATE GROUP BY sector, stage;"
+status: "test_failed"
+synthesis_guidance: "['Correlate stage changes with index trends to identify potential market regime shifts.', 'Link sector performance with top candidates for swing trading signals.']"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "last_20_sessions"
+  - "debug_trace"
+title: "3M Market Rotation Swing Assessment Variant 0633"
+tool_plan_template:
+  plan_steps:
+    - "Run index EOD analysis to determine market trend and technical signals."
+    - "Evaluate sector performance over the last 3 months to identify leading sectors."
+    - "Analyze stage distribution changes from scores.stage_snapshots to pinpoint sector leadership."
+    - "Identify primary swing trading candidates using scores.stage2_vcp_picks."
+validation_rules:
+  - "Ensure all SQL queries use only approved columns and tables."
+  - "Output fields must conform to output_contract structure."
+version: 1
+validation_errors:
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage2_vcp_picks.date_sub is not approved"
+  - "scores.stage2_vcp_picks.month is not approved"
+  - "scores.stage_snapshots.average_change is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"

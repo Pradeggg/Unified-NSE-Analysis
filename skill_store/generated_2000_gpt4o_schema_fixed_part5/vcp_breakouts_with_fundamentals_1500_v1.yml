@@ -1,0 +1,59 @@
+id: "vcp_breakouts_with_fundamentals_1500_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1500"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    filters:
+      - "Select stocks with a trading_signal of 'BUY' or 'STRONG_BUY'"
+      - "Ensure stocks are in the 'EQ' series and have a market_cap_cat of 'large'"
+    candidates: "Use the latest data and sort by vcp_score DESC"
+    tradingview_symbols: "Format symbols for TradingView export"
+    evidence: "Gather fundamental scores and EOD prices"
+    risks: "Identify downside risks using change_1w_pct"
+sql_templates:
+  -
+    template: "WITH latest_stage AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_eod AS (SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)) SELECT vcp.symbol, vcp.company_name, vcp.price, eod.close AS last_close, vcp.vcp_score FROM scores.stage2_vcp_picks vcp JOIN latest_stage stage ON vcp.symbol = stage.symbol JOIN latest_eod eod ON vcp.symbol = eod.symbol WHERE vcp.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND stage.trading_signal IN ('BUY', 'STRONG_BUY') AND eod.series = 'EQ' AND stage.market_cap_cat = 'large' ORDER BY vcp.vcp_score DESC LIMIT 20;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Match SQL field references with approved schema columns"
+  - "Ensure filters align with common_filters and global_sql_rules"
+synthesis_guidance: "['Focus on providing portfolio-aware insights', 'Prioritize TradingView friendly formats']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:46"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

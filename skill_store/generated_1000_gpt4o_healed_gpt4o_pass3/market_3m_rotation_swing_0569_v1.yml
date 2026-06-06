@@ -1,0 +1,82 @@
+created_at: "2026-06-06T12:49:13"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: post results; response style: research-only summary."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0569_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as research-only summary"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    name: "analyze_market_regime"
+    description: "Analyze market regime changes over the last 3 months."
+    run: "def run(context):\n    # Read-only function to analyze the market regime\n    pass"
+  -
+    name: "identify_swing_candidates"
+    description: "Identify primary swing candidates from VCP picks."
+    run: "def run(context):\n    # Read-only function to identify swing candidates\n    pass"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: code is required"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: language must be python"
+    - "<missing-id>: mode must be read_only"
+    - "<missing-id>: outputs must be a non-empty list"
+    - "scores.stage_snapshots.num_symbols is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    description: "Retrieve index performance over the last 3 months."
+    sql: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 MONTH')"
+  -
+    description: "Get the stage distribution changes for sectors."
+    sql: "SELECT sector, COUNT(symbol) AS num_symbols FROM scores.stage_snapshots WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '3 MONTH') GROUP BY sector"
+status: "test_failed"
+synthesis_guidance:
+  - "Summarize leading sectors based on stage score improvement."
+  - "Identify primary swing candidates from VCP picks."
+  - "Assess overall market regime changes."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "post_results"
+  - "research-only_summary"
+title: "3M Market Rotation Swing Assessment Variant 0569"
+tool_plan_template:
+
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: language must be python"
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: outputs must be a non-empty list"
+  - "scores.stage_snapshots.num_symbols is not approved"
+validation_rules:
+  - "Ensure that data is current as of the latest available date."
+  - "Validate that SQL queries return non-empty datasets."
+  - "Ensure stage distribution change reflects recent data."
+version: 1

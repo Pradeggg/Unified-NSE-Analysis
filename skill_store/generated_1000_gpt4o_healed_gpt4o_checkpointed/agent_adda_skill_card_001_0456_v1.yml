@@ -1,0 +1,89 @@
+created_at: "2026-06-06T12:48:13"
+created_by: "llm_generated"
+description: "Skill card to validate enhanced report data including stock analysis, run metadata, and source validation in the Indian market context. Focus is on freshness audit for the quarter to date."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_card_001_0456_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock HTML files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for quarter to date: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Placeholder for validation code\n    pass"
+    id: "validate_report_links"
+    inputs:
+      - "context"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "broken_links"
+sql_templates:
+  -
+    query: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE analysis_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)"
+    template_name: "select_report_freshness"
+  -
+    query: "SELECT run_id, symbol, current_price, recommendation FROM report.enhanced_filtered_stocks WHERE rank <= 10"
+    template_name: "select_filtered_stocks_status"
+status: "test_failed"
+synthesis_guidance:
+  - "Cross-verify run metadata with filtered stock data to identify gaps."
+  - "Aggregate findings for a portfolio-aware perspective on missing data and freshness."
+  - "Provide a comprehensive summary of validation with actionable insights."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+title: "Enhanced Report Data Validation \u2013 Indian Market"
+tool_plan_template:
+  python_tools:
+    -
+      approved_tables:
+        - "report.enhanced_runs"
+        - "report.enhanced_filtered_stocks"
+      code: "def run(context):\n    # Placeholder for validation code\n    pass"
+      id: "validate_report_links"
+      inputs:
+        - "context"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "broken_links"
+validation_errors:
+  - "report.enhanced_runs.curdate is not approved"
+  - "report.enhanced_runs.date_sub is not approved"
+  - "report.enhanced_runs.month is not approved"
+  - "validate_report_links: run(context) must return a dict"
+validation_rules:
+  - "Ensure that the run_ts and analysis_date are recent and within the quarter."
+  - "Check that the number of stocks analyzed matches stocks_filtered."
+  - "Validate that all critical price and signal data are populated."
+version: 1
+review:
+  attempts: 3
+  findings:
+    - "report.enhanced_runs.curdate is not approved"
+    - "report.enhanced_runs.date_sub is not approved"
+    - "report.enhanced_runs.month is not approved"
+    - "validate_report_links: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"

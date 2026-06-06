@@ -1,0 +1,184 @@
+created_at: "2026-06-06T12:51:05"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 5 sessions; response style: QA checklist."
+domain: "screening"
+evidence_required:
+  tables:
+    -
+      columns:
+        - "trade_date"
+        - "symbol"
+        - "open"
+        - "high"
+        - "low"
+        - "close"
+        - "prev_close"
+        - "change_pct"
+        - "volume"
+        - "turnover_cr"
+        - "total_trades"
+        - "week52_high"
+        - "week52_low"
+        - "market_cap_cr"
+      table: "market.index_eod"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0726_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    name: "context_reader"
+    description: "A tool to read data without modification."
+    run: "def run(context):\n    return context.get('data')"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: code is required"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: language must be python"
+    - "<missing-id>: mode must be read_only"
+    - "<missing-id>: outputs must be a non-empty list"
+    - "unknown table {'columns': ['trade_date', 'symbol', 'open', 'high', 'low', 'close', 'prev_close', 'change_pct', 'volume', 'turnover_cr', 'total_trades', 'week52_high', 'week52_low', 'market_cap_cr'], 'table': 'market.index_eod'}"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    description: "Fetch stocks reaching new highs in the past 5 sessions."
+    template: "SELECT symbol, MAX(high) AS recent_high FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '5 days' GROUP BY symbol HAVING MAX(high) > (SELECT week52_high FROM market.index_eod WHERE symbol = market.index_eod.symbol);"
+status: "test_failed"
+synthesis_guidance: "Combine technical indicators with fundamental analysis to shortlist stocks. Ensure the final candidate list aligns with the freshness criterion, focusing on breakout potentials and recent high achievers."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "QA_checklist"
+title: "VCP Breakouts With Fundamentals Variant 0726"
+tool_plan_template:
+  sql_templates:
+    -
+      description: "Fetch stocks reaching new highs in the past 5 sessions."
+      template: "SELECT symbol, MAX(high) AS recent_high FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '5 days' GROUP BY symbol HAVING MAX(high) > (SELECT week52_high FROM market.index_eod WHERE symbol = market.index_eod.symbol);"
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: language must be python"
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: outputs must be a non-empty list"
+  - "unknown table {'columns': ['trade_date', 'symbol', 'open', 'high', 'low', 'close', 'prev_close', 'change_pct', 'volume', 'turnover_cr', 'total_trades', 'week52_high', 'week52_low', 'market_cap_cr'], 'table': 'market.index_eod'}"
+validation_rules:
+  - "Output must contain a list of candidate stocks with the required performance metrics."
+  - "Ensure freshness by using data within the last 5 sessions."
+  - "Check adherence to the fundamental scores criteria."
+version: 3
+approved_tables:
+  - "market.equity_eod"
+  - "market.index_eod"
+  - "scores.stage_snapshots"
+  - "scores.stage2_vcp_picks"
+  - "portfolio.holdings"
+  - "report.enhanced_runs"
+  - "report.enhanced_filtered_stocks"
+code: "vcp_breakouts_with_fundamentals_0726_v1"
+inputs:
+
+language: "python"
+mode: "read_only"
+outputs:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+card:
+  created_at: "2026-06-06T12:51:05"
+  created_by: "llm_generated"
+  description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 5 sessions; response style: QA checklist."
+  domain: "screening"
+  evidence_required:
+    tables:
+      -
+        columns:
+          - "trade_date"
+          - "symbol"
+          - "open"
+          - "high"
+          - "low"
+          - "close"
+          - "prev_close"
+          - "change_pct"
+          - "volume"
+          - "turnover_cr"
+          - "total_trades"
+          - "week52_high"
+          - "week52_low"
+          - "market_cap_cr"
+        table: "market.index_eod"
+  generation_model: "gpt-4o"
+  id: "vcp_breakouts_with_fundamentals_0726_v1"
+  input_patterns:
+    - "stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "VCP breakout stocks for TradingView"
+    - "quality breakouts with strong fundamentals"
+    - "freshness audit for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "quality breakouts with strong fundamentals as QA checklist"
+  output_contract:
+    - "filters"
+    - "candidates"
+    - "tradingview_symbols"
+    - "evidence"
+    - "risks"
+  python_tools:
+    -
+      name: "context_reader"
+      description: "A tool to read data without modification."
+      run: "def run(context):\n    return context.get('data')"
+  review:
+    attempts: 3
+    findings:
+
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "needs_heal"
+  sql_templates:
+    -
+      description: "Fetch stocks reaching new highs in the past 5 sessions."
+      template: "SELECT symbol, MAX(high) AS recent_high FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '5 days' GROUP BY symbol HAVING MAX(high) > (SELECT week52_high FROM market.index_eod WHERE symbol = market.index_eod.symbol);"
+  status: "generated"
+  synthesis_guidance: "Combine technical indicators with fundamental analysis to shortlist stocks. Ensure the final candidate list aligns with the freshness criterion, focusing on breakout potentials and recent high achievers."
+  tags:
+    - "vcp"
+    - "breakout"
+    - "new_high"
+    - "fundamentals"
+    - "tradingview"
+    - "freshness_audit"
+    - "last_5_sessions"
+    - "QA_checklist"
+  title: "VCP Breakouts With Fundamentals Variant 0726"
+  tool_plan_template:
+    sql_templates:
+      -
+        description: "Fetch stocks reaching new highs in the past 5 sessions."
+        template: "SELECT symbol, MAX(high) AS recent_high FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '5 days' GROUP BY symbol HAVING MAX(high) > (SELECT week52_high FROM market.index_eod WHERE symbol = market.index_eod.symbol);"
+  validation_errors:
+
+  validation_rules:
+    - "Output must contain a list of candidate stocks with the required performance metrics."
+    - "Ensure freshness by using data within the last 5 sessions."
+    - "Check adherence to the fundamental scores criteria."
+  version: 3

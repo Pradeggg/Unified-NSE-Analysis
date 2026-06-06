@@ -1,0 +1,68 @@
+id: "data_freshness_readiness_audit_1687_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1687"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: intraday context; response style: debug trace."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for intraday context: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as debug trace"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    steps:
+      -
+        goal: "Verify the latest date from market.index_eod"
+        template: "SELECT MAX(trade_date) AS latest_index_date FROM market.index_eod"
+      -
+        goal: "Verify the latest date from market.equity_eod"
+        template: "SELECT MAX(trade_date) AS latest_equity_date FROM market.equity_eod"
+      -
+        goal: "Verify the latest date from scores.stage_snapshots"
+        template: "SELECT MAX(snapshot_date) AS latest_snapshot_date FROM scores.stage_snapshots"
+      -
+        goal: "Check data freshness consistency between sources"
+        template: "SELECT MAX(trade_date) AS max_date FROM (SELECT trade_date FROM market.index_eod UNION ALL SELECT trade_date FROM market.equity_eod UNION ALL SELECT snapshot_date FROM scores.stage_snapshots) AS combined"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Compare the latest dates from each source to ensure consistency."
+  - "Identify any missing sources or gaps in data updates."
+  - "Prepare loader actions required to address any gaps."
+synthesis_guidance: "['Synthesize sector-relative narratives if data is fresh.', 'Identify and report any blocking gaps preventing narrative generation.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:04"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

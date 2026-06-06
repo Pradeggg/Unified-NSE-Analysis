@@ -1,0 +1,53 @@
+id: "sector_breadth_rotation_watchlist_0825_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0825"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: risk-first review; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "risk-first review for last 5 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as action watchlist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "risk-first_review"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review sector breadth and identify improving sectors with high stage 2 participation for potential inclusion in a TradingView watchlist, focusing on the last 5 sessions for risk-first screening."
+sql_templates:
+  -
+    template: "SELECT sector, AVG(pct_above_50dma)::NUMERIC AS avg_pct_above_50dma, SUM(CASE WHEN stage = 'STAGE_2' THEN 1 ELSE 0 END)::NUMERIC AS stage_2_count FROM breadth.sector_daily JOIN scores.stage_snapshots ON breadth.sector_daily.sector = scores.stage_snapshots.sector WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) GROUP BY sector ORDER BY avg_pct_above_50dma DESC LIMIT 10;"
+    description: "Rank sectors by average percentage above 50DMA and count of Stage 2 stocks."
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure the result includes rankings for sectors based on average percentage above 50DMA."
+  - "Verify inclusion of top sectors by Stage 2 stock count."
+synthesis_guidance: "Focus on sectors with growing breadth and Stage 2 stocks to support actionable TradingView watchlists."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

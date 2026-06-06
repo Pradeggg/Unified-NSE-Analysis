@@ -1,0 +1,67 @@
+id: "quarterly_results_quality_review_1867_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1867"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: sector-relative comparison; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "sector-relative comparison for post results: latest quarterly results analysis"
+  - "which companies had strong quarterly results as action watchlist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    ranked_companies:
+      recipes:
+        - "latest_results_with_growth"
+      evidence:
+        - "sector_relative_ranking"
+sql_templates:
+  latest_results_with_growth: "WITH latest_results AS (SELECT DISTINCT ON (symbol) symbol, period_end, revenue, pat FROM scores.quarterly_results WHERE period_type = 'quarter' ORDER BY symbol, period_end DESC, fetched_at DESC), latest_analysis AS (SELECT DISTINCT ON (symbol) symbol, growth_yoy_revenue_pct, growth_yoy_pat_pct, verdict FROM scores.results_analysis WHERE verdict IN ('beat', 'miss') ORDER BY symbol, period_end DESC, updated_at DESC) SELECT lr.symbol, lr.period_end, lr.revenue, lr.pat, la.growth_yoy_revenue_pct, la.growth_yoy_pat_pct, la.verdict FROM latest_results lr JOIN latest_analysis la ON lr.symbol = la.symbol AND lr.period_end = la.period_end ORDER BY la.verdict DESC, la.growth_yoy_revenue_pct DESC, la.growth_yoy_pat_pct DESC LIMIT 10;"
+python_tools:
+  -
+    id: "growth_computation_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "raw_growth_data"
+    outputs:
+      - "normalized_growth_scores"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+    code: "def run(context): # placeholder for growth computation logic return normalized_growth_scores"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "{'general_consistency': 'Ensure all company symbols in the ranked list appear in the latest period results analysis.', 'growth_validation': 'Confirm growth percentages are correctly ordered from highest to lowest.'}"
+synthesis_guidance: "Focus on companies with 'beat' verdicts and significant growth percentages for inclusion in the action watchlist. Highlight sector-relative outperformers."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "growth_computation_tool: python syntax error: expected an indented block after function definition on line 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "growth_computation_tool: python syntax error: expected an indented block after function definition on line 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

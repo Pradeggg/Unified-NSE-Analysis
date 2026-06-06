@@ -1,0 +1,67 @@
+id: "signal_outcome_feedback_review_1789_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1789"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: intraday context; response style: QA checklist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for intraday context: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as QA checklist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "{}"
+sql_templates:
+  outcome_summary: "SELECT symbol, COUNT(*) AS total_signals, SUM(CASE WHEN hit_target THEN 1 ELSE 0 END) AS targets_hit, SUM(CASE WHEN hit_stop THEN 1 ELSE 0 END) AS stops_hit FROM signals.signal_log GROUP BY symbol;"
+  winner_patterns: "SELECT symbol, setup_class, COUNT(*) AS times_successful FROM signals.signal_log WHERE hit_target = TRUE GROUP BY symbol, setup_class HAVING COUNT(*) > 5;"
+  failure_patterns: "SELECT symbol, setup_class, COUNT(*) AS times_failed FROM signals.signal_log WHERE hit_stop = TRUE GROUP BY symbol, setup_class HAVING COUNT(*) > 5;"
+  route_improvements: "WITH latest_stage_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT s.symbol, s.price_at_issue, eod.close, st.stage FROM signals.signal_log AS s JOIN latest_stage_snapshots AS st ON s.symbol = st.symbol JOIN market.equity_eod AS eod ON s.symbol = eod.symbol AND eod.trade_date = s.date_resolved WHERE s.hit_stop = TRUE;"
+  next_checks: "SELECT DISTINCT symbol, sector FROM signals.signal_log WHERE date_resolved > CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all signals processed have a valid symbol."
+  - "Check that the total counts represent signal hits accurately."
+  - "Validate sector entries are consistent with approved schema."
+synthesis_guidance: "['Focus on patterns that consistently hit targets or stops.', 'Derive insights for route improvements based on latest available data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.stops_hit is not approved"
+  - "signals.signal_log.targets_hit is not approved"
+  - "signals.signal_log.times_failed is not approved"
+  - "signals.signal_log.times_successful is not approved"
+  - "signals.signal_log.total_signals is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "signals.signal_log.stops_hit is not approved"
+    - "signals.signal_log.targets_hit is not approved"
+    - "signals.signal_log.times_failed is not approved"
+    - "signals.signal_log.times_successful is not approved"
+    - "signals.signal_log.total_signals is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

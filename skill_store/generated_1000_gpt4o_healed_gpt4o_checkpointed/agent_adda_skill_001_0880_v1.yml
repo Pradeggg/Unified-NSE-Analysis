@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:52:28"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata for issues with report links, missing stock data, and source consistency, focusing on TradingView exports pre market."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_001_0880_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for pre market: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    sql: "SELECT run_id, run_ts, stocks_filtered FROM report.enhanced_runs WHERE analysis_date = ?"
+    template_id: "verify_links_and_data"
+  -
+    sql: "SELECT run_id, symbol, current_price FROM report.enhanced_filtered_stocks WHERE run_id = ? AND current_price IS NOT NULL"
+    template_id: "check_stocks_data"
+status: "validated"
+synthesis_guidance: "Combine metadata validation with stock data checks to ensure comprehensive report integrity before market open."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "pre_market"
+  - "action_watchlist"
+title: "Report Link Data Validation"
+tool_plan_template: "Validate report link integrity and stock data presence using pre-approved evidence tables."
+validation_rules:
+  - "Ensure report.enhanced_runs entries have non-empty stocks_filtered."
+  - "Validate report.enhanced_filtered_stocks entries have non-null current_price."
+version: 1

@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:46:35"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: last 3 months; response style: portfolio-aware output."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0441_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    template: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+    template_id: "index_performance_summary"
+  -
+    template: "SELECT symbol, sector, stage_score, change_1m_pct FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' AND stage = 2 ORDER BY stage_score DESC LIMIT 5;"
+    template_id: "sector_leading_stocks"
+status: "validated"
+synthesis_guidance: "Focus on identifying key market shifts and top-performing sectors, presenting actionable insights for potential swing trades."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "last_3_months"
+  - "portfolio-aware_output"
+title: "3M Market Rotation Swing Assessment Variant 0441"
+tool_plan_template: "Analyze market data for the last 3 months, focusing on regime shifts, leading sectors, and swing trading opportunities."
+validation_rules:
+  - "Verify that index returns cover the required timeframe."
+  - "Ensure sector leadership identifies top performers from the last 3 months."
+version: 1

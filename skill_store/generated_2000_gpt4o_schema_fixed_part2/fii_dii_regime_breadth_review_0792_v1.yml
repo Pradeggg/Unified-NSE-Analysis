@@ -1,0 +1,52 @@
+id: "fii_dii_regime_breadth_review_0792_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0792"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Use approved tables and join rules to extract the latest institutional flow, regime, breadth, and index data. Analyze and synthesize findings into a QA checklist format."
+sql_templates:
+  -
+    template: "SELECT fii.trade_date, fii.flow_signal, fii.fii_trend, fii.dii_trend, reg.regime, reg.confidence, br.market_sentiment, idx.trend_signal, idx.trading_signal FROM signals.fii_dii_flows AS fii JOIN signals.regime_history AS reg ON fii.trade_date = reg.trade_date JOIN breadth.market_daily AS br ON fii.trade_date = br.trade_date JOIN market.index_eod AS idx ON fii.trade_date = idx.trade_date WHERE idx.index_symbol = 'Nifty 500' AND fii.trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all output fields are populated with the latest available data."
+  - "Check for consistency between flow trends and regime labels."
+  - "Validate breadth context against market sentiment and index signals."
+synthesis_guidance: "['Prioritize regime signals and confirm with index trends.', 'Highlight discrepancies between flow signals and breadth.', 'Focus on confidence levels in regime determination.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:46"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

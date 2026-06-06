@@ -1,0 +1,79 @@
+id: "insider_bulk_deal_signal_review_0990_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0990"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for intraday context: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as comparison matrix"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    step: "Collect recent insider alerts and bulk/block deals."
+    evidence: "Use SELECT queries on the 'signals.insider_alerts' and 'signals.bulk_block_deals' tables."
+  -
+    step: "Align collected data with the latest technical scores."
+    evidence: "Join with 'scores.stage_snapshots' on symbol and use latest dates."
+  -
+    step: "Filter and rank opportunities based on insider score and technical confirmation."
+    evidence: "Apply filters for insider_score and technical_score using WHERE clauses."
+sql_templates:
+  -
+    template: "SELECT ia.symbol, ia.alert_date, ia.insider_score, s.stage, s.technical_score FROM signals.insider_alerts ia JOIN scores.stage_snapshots s ON ia.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ia.alert_date >= CURRENT_DATE - INTERVAL '3 months' AND s.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 100;"
+  -
+    template: "SELECT bd.symbol, bd.deal_date, bd.qty, bd.price, s.stage, s.technical_score FROM signals.bulk_block_deals bd JOIN scores.stage_snapshots s ON bd.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND bd.deal_date >= CURRENT_DATE - INTERVAL '3 months' AND s.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 100;"
+python_tools:
+  -
+    id: "insider_alert_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "alert_date"
+    outputs:
+      - "insider_context"
+      - "risk_notes"
+    approved_tables:
+      - "signals.insider_alerts"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Placeholder for extended analysis\n    return {}"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure latest snapshot and alert dates are used."
+  - "Verify insider scores and technical confirmations are aligned with reported deal activities."
+synthesis_guidance: "['Interpret data as an accumulation or distribution signal.', 'Present results in a comparison matrix with ranked opportunities.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:51:08"
+generation_model: "gpt-4o"
+validation_errors:
+  - "insider_alert_analysis_tool: missing output insider_context"
+  - "insider_alert_analysis_tool: missing output risk_notes"
+review:
+  status: "needs_heal"
+  findings:
+    - "insider_alert_analysis_tool: missing output insider_context"
+    - "insider_alert_analysis_tool: missing output risk_notes"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

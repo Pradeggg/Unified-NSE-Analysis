@@ -1,0 +1,65 @@
+id: "vcp_breakouts_with_fundamentals_0506_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0506"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: today; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "today"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    template: "SELECT e.symbol, e.trade_date, e.high, s.company_name, s.sector, s.fundamental_score, s.enhanced_fund_score FROM market.equity_eod e LEFT JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date = CURRENT_DATE AND e.high >= e.week52_high AND s.fundamental_score >= 2 AND s.enhanced_fund_score >= 2"
+    name: "Highs_and_Fundamentals"
+  -
+    template: "SELECT v.symbol, v.company_name, v.price, v.vcp_score, v.enhanced_fund_score FROM scores.stage2_vcp_picks v WHERE v.snapshot_date = CURRENT_DATE AND v.vcp_score >= 75 AND v.enhanced_fund_score >= 2"
+    name: "VCP_Filter"
+python_tools:
+  -
+    id: "vcp_analysis_utility"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "trade_date"
+    outputs:
+      - "analysis_report"
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    # Simulate fetching data for analysis report generation\n    symbol = context['symbol']\n    trade_date = context['trade_date']\n    # Perform analysis (placeholder)\n    return {'analysis_report': f'Analysis for {symbol} as of {trade_date}'}"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure symbols are unique and available in equity_eod."
+  - "Validate fundamental scores range."
+  - "No DML operations allowed. Only SELECT queries."
+synthesis_guidance: "['Summarize quality breakout candidates.', 'Emphasize current day data.', 'Present results in a research-only format.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:58"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.v is not approved"

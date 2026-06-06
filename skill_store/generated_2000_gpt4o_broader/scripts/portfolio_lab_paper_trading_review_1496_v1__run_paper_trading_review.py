@@ -1,0 +1,1 @@
+def run(context): return {'analysis_summary': analyze(context['current_trades'], context['strategy_metrics'])}

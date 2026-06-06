@@ -1,0 +1,62 @@
+id: "corporate_events_results_watchlist_0541_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0541"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: last 3 months; response style: research-only summary."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for last 3 months: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as research-only summary"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "last_3_months"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Use available corporate event signals and results analysis to compile a research-focused watchlist."
+sql_templates:
+  -
+    name: "corporate_events_query"
+    query: "SELECT symbol, event_type, event_date, purpose_raw, detail FROM signals.corporate_events WHERE event_date BETWEEN NOW() - INTERVAL '3 months' AND NOW();"
+  -
+    name: "results_analysis_query"
+    query: "SELECT symbol, period_end, company_name, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct, pl_commentary FROM scores.results_analysis WHERE period_end BETWEEN NOW() - INTERVAL '3 months' AND NOW();"
+python_tools:
+  -
+    id: "filter_events_by_significance"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "events"
+    outputs:
+      - "significant_events"
+    approved_tables:
+      - "signals.corporate_events"
+    code: "def run(events): return [e for e in events if 'AGM' in e['event_type'] or 'Dividend' in e['purpose_raw']];"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure events are within the last 3 months."
+  - "Gather relevant results and link with identified events."
+  - "Compile a coherent research-based summary."
+synthesis_guidance: "['Focus on major corporate events affecting stock movements.', 'Highlight results with significant financial changes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:48:23"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.now is not approved"
+  - "signals.corporate_events.now is not approved"

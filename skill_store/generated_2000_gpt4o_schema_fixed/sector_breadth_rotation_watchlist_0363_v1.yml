@@ -1,0 +1,70 @@
+id: "sector_breadth_rotation_watchlist_0363_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0363"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: post results; response style: exceptions and gaps first."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for post results: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as exceptions and gaps first"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Fetch sectors with improving breadth and stage 2 participation"
+    sql: "WITH latest_sector_daily AS (SELECT * FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)), latest_ma_pct AS (SELECT * FROM breadth.ma_pct_above WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.ma_pct_above)), sector_improvement AS (SELECT sector, AVG(pct_above_50dma) AS avg_pct_above_50dma, MAX(stage2_pct) AS max_stage2_pct FROM latest_sector_daily JOIN latest_ma_pct ON latest_sector_daily.snapshot_date = latest_ma_pct.snapshot_date WHERE breadth_signal = 'IMPROVING' GROUP BY sector) SELECT sector, avg_pct_above_50dma, max_stage2_pct FROM sector_improvement WHERE max_stage2_pct > 20 ORDER BY avg_pct_above_50dma DESC, max_stage2_pct DESC LIMIT 10;"
+python_tools:
+  -
+    id: "sector_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector"
+      - "snapshot_date"
+    outputs:
+      - "improvement_score"
+      - "stage2_participation"
+    approved_tables:
+      - "breadth.sector_daily"
+      - "breadth.ma_pct_above"
+    code: "def run(context): # analyze improvement and stage 2 participation pass"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure only approved columns are queried."
+  - "SQL should remain read-only and SELECT-oriented."
+  - "Adhere to join conditions and filters as per approved schema."
+synthesis_guidance: "['Focus on exceptions and gaps in data presentation.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "sector_analysis_tool: python syntax error: expected an indented block after function definition on line 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "sector_analysis_tool: python syntax error: expected an indented block after function definition on line 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

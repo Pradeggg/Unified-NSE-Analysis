@@ -1,0 +1,64 @@
+created_at: "2026-06-06T12:50:43"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: intraday context; response style: debug trace."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0684_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for intraday context: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Placeholder for GDP computation and report link validation\n    return {'debug_trace': 'Not implemented yet.'}"
+    id: "run"
+    inputs:
+      - "context"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "debug_trace"
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Retrieve today's enhanced report run metadata."
+    template: "SELECT run_id, run_ts, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE analysis_date = CURRENT_DATE;"
+  -
+    description: "Get filtered stocks for a specific run."
+    template: "SELECT symbol, recommendation, current_price FROM report.enhanced_filtered_stocks WHERE run_id = ?;"
+status: "validated"
+synthesis_guidance: "['Compile data validation findings into a comprehensive report for debugging.']"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "intraday_context"
+  - "debug_trace"
+title: "Enhanced Report Data Validation Variant 0684"
+tool_plan_template: "Investigate report links and data issues using debugging steps."
+validation_rules:
+  - "Ensure SQL templates are strictly read-only."
+  - "Match inputs with evidence_required tables."
+version: 1

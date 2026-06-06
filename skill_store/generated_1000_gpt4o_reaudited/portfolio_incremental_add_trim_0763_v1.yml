@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:51:17"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: post results; response style: QA checklist."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0763_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for post results: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+  -
+    name: "current_holdings_analysis"
+    template: "SELECT h.symbol, h.qty, h.avg_cost, s.sector, s.stage, s.stage_score, s.trend_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE;"
+  -
+    name: "potential_add_candidates"
+    template: "SELECT symbol, stage, stage_score, trend_signal FROM scores.stage_snapshots WHERE stage_score > 80 AND snapshot_date = CURRENT_DATE;"
+  -
+    name: "potential_trim_candidates"
+    template: "SELECT symbol, stage, stage_score, trend_signal FROM scores.stage_snapshots WHERE stage_score < 50 AND snapshot_date = CURRENT_DATE;"
+status: "validated"
+synthesis_guidance: "Provide a QA checklist that includes portfolio state, identifies sectors with over or underexposure, and highlights candidate actions for both adding and trimming holdings."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "QA_checklist"
+title: "Portfolio Incremental Add Trim Review Variant 0763"
+tool_plan_template: "Assess portfolio holdings and exposure using scores.stage_snapshots and portfolio.holdings. Identify potential add or trim actions based on technical and fundamental scores."
+validation_rules:
+  - "Ensure all outputs are populated based on the sql_templates results."
+  - "Validate add_candidates and trim_candidates are consistent with trend_signal and stage_score."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

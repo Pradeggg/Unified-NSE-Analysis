@@ -1,0 +1,66 @@
+id: "portfolio_incremental_add_trim_0519_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0519"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: latest EOD; response style: research-only summary."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for latest EOD: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as research-only summary"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "Fetch Portfolio Holdings"
+    sql: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings"
+  -
+    name: "Fetch Stage Snapshots"
+    sql: "SELECT symbol, sector, stage, stage_score, price, change_1d_pct, change_1w_pct, trading_signal FROM scores.stage_snapshots"
+python_tools:
+  -
+    id: "run_evidence_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "portfolio_data"
+      - "snapshot_data"
+    outputs:
+      - "analysis_results"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    # Analyze portfolio and snapshot data to identify add/trim candidates\n    return {'analysis_results': []}"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data consistency between holdings and snapshots."
+  - "Cross-verify stage and trading signals for add/trim decisions."
+synthesis_guidance: "['Summarize insights into potential add or trim actions.', 'Evaluate sector exposure and potential risk flags.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:48:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

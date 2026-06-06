@@ -1,0 +1,71 @@
+id: "agent_route_failure_diagnostics_1722_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1722"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for last 5 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as QA checklist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "QA checklist focusing on institutional review with diagnostics for route failures."
+sql_templates:
+  -
+    description: "List the most recent five enhanced run IDs and their analysis date."
+    query: "SELECT run_id, analysis_date FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 5;"
+  -
+    description: "Fetch symbols with looping or missing resolution issues for the last 5 sessions."
+    query: "WITH recent_runs AS (SELECT run_id FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 5) SELECT ef.run_id, ef.symbol, ef.recommendation FROM report.enhanced_filtered_stocks ef JOIN recent_runs rr ON ef.run_id = rr.run_id WHERE ef.recommendation = 'SYMBOL_LOOP' OR ef.recommendation = 'MISSING_TOOL';"
+python_tools:
+  -
+    id: "symbol_resolution_checker"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      session_data: "List of recent sessions with potential symbol resolution issues."
+    outputs:
+      analysis_summary: "Summary of symbols and resolution status."
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Perform symbol resolution checks\n    analysis_summary = {}\n    # Logic to evaluate symbols\n    return analysis_summary"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure latest run dates are covered."
+  - "Check for presence of SYMBOL_LOOP or MISSING_TOOL recommendations."
+synthesis_guidance: "Focus on accurate extraction of evidence pertaining to the last 5 sessions with emphasis on tool and resolution issues."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:29"
+generation_model: "gpt-4o"
+validation_errors:
+  - "symbol_resolution_checker: inputs must be a list"
+  - "symbol_resolution_checker: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "symbol_resolution_checker: inputs must be a list"
+    - "symbol_resolution_checker: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

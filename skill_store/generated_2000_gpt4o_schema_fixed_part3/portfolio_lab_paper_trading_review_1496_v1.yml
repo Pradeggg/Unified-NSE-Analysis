@@ -1,0 +1,79 @@
+id: "portfolio_lab_paper_trading_review_1496_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1496"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for weekly review: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    -
+      action: "Perform a freshness audit"
+      details: "Ensure signals and holdings are current with the latest available data."
+    -
+      action: "Review trading signals"
+      details: "Analyze entries, exits, stop-loss, and targets for each strategy against the latest market context."
+    -
+      action: "Assess portfolio exposure"
+      details: "Evaluate exposure in terms of sectors and asset allocation."
+sql_templates:
+  -
+    purpose: "Fetch latest signals and outcomes"
+    template: "SELECT * FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log) LIMIT 100"
+  -
+    purpose: "Fetch latest stage snapshots"
+    template: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 100"
+python_tools:
+  -
+    id: "calculate_portfolio_exposure"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "portfolio.holdings"
+      - "scores.stage_snapshots"
+    outputs:
+      - "exposure"
+    approved_tables:
+      - "portfolio.holdings"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Compute exposure based on holdings and latest stage snapshots\n    return exposure_summary"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "rule_set"
+synthesis_guidance: "{'guidance': ['Provide insights in a portfolio-aware manner.', 'Ensure clarity in the separation of paper trading and real holdings.', 'Include weekly review focus in the analysis.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:40"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_portfolio_exposure: execution failed: NameError: name 'exposure_summary' is not defined"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_portfolio_exposure: execution failed: NameError: name 'exposure_summary' is not defined"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

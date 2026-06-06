@@ -1,0 +1,61 @@
+id: "vcp_breakouts_with_fundamentals_0394_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0394"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters: "Select symbols with strong fundamentals and liquidity from VCP picks and EOD data."
+  candidates: "Stocks identified with key breakout patterns like VCP alongside comprehensive fundamental scores."
+  tradingview_symbols: "Formatted symbols for integration with TradingView watchlists."
+  evidence: "Detailed analysis using approved market and scoring tables."
+  risks: "Market volatility and data incompleteness."
+sql_templates:
+  -
+    description: "Identify VCP breakout stocks with strong fundamentals."
+    template: "SELECT sp.symbol, sp.company_name, sp.price, sp.vcp_score, sp.enhanced_fund_score, eod.high, eod.low, eod.close FROM scores.stage2_vcp_picks sp JOIN market.equity_eod eod ON sp.symbol = eod.symbol WHERE sp.vcp_score > 80 AND sp.enhanced_fund_score > 70 AND eod.high >= eod.week52_high - (eod.week52_high * 0.05)"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "status"
+synthesis_guidance: "{'approach': 'Address exceptions and data gaps first, ensuring integration readiness for TradingView.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:46:14"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table eod.close"
+  - "unknown table eod.high"
+  - "unknown table eod.low"
+  - "unknown table eod.symbol"
+  - "unknown table eod.week52_high"
+  - "unknown table sp.company_name"
+  - "unknown table sp.enhanced_fund_score"
+  - "unknown table sp.price"
+  - "unknown table sp.symbol"
+  - "unknown table sp.vcp_score"

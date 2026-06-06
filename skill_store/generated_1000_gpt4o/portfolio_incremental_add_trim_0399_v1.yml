@@ -1,0 +1,52 @@
+id: "portfolio_incremental_add_trim_0399_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0399"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Examine current portfolio holdings and scores to identify symbols suitable for addition or reduction based on their stage and technical indicators. Highlight gaps or discrepancies in data and provide suggestions for risk flags."
+sql_templates:
+  analysis: "WITH recent_snapshots AS (SELECT symbol, stage, stage_score, technical_score, rsi, trend_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), holding_info AS (SELECT h.symbol, qty, avg_cost FROM portfolio.holdings h JOIN recent_snapshots rs ON h.symbol = rs.symbol) SELECT h.symbol, h.qty, h.avg_cost, rs.stage, rs.stage_score, rs.technical_score, rs.rsi, rs.trend_signal FROM holding_info h JOIN recent_snapshots rs ON h.symbol = rs.symbol;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Check for data integrity and stage consistency."
+  - "Verify alignment between technical indicators and portfolio actions."
+synthesis_guidance: "Begin with exceptions and data gaps, prioritize stage and trend signal indicators, synthesize portfolio insights with a focus on the Indian market."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:46:12"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table h.avg_cost"
+  - "unknown table h.qty"
+  - "unknown table h.symbol"
+  - "unknown table rs.rsi"
+  - "unknown table rs.stage"
+  - "unknown table rs.stage_score"
+  - "unknown table rs.symbol"
+  - "unknown table rs.technical_score"
+  - "unknown table rs.trend_signal"

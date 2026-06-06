@@ -1,0 +1,58 @@
+id: "fii_dii_regime_breadth_review_1492_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1492"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as portfolio-aware output"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  executor_type: "sql/synthesis"
+  steps:
+    - "Identify the latest trade date across all involved tables using global SQL rules."
+    - "Join tables on trade_date using approved schema join rules."
+    - "Select relevant columns to determine the regime, flow context, breadth context, and index confirmation."
+sql_templates:
+  -
+    template: "SELECT A.trade_date, B.regime, C.ad_signal, A.flow_signal FROM signals.fii_dii_flows A JOIN signals.regime_history B ON A.trade_date = B.trade_date JOIN breadth.market_daily C ON A.trade_date = C.trade_date WHERE A.trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows)"
+    description: "Selects flow signals, regime, and breadth signals for the latest available trade date for analysis."
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Check non-nullability of joined fields in the result."
+  - "Verify latest trade date matches across all data components."
+  - "Ensure the number of records matches expected weekly outputs."
+synthesis_guidance: "['Provide a concise summary of the flow context and current regime, using synthesized data.', 'Highlight key breadth indicators from market_daily, contextualizing the analysis for a portfolio-aware output.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

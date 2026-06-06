@@ -1,0 +1,51 @@
+id: "portfolio_incremental_add_trim_0941_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0941"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for last 3 months: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Given a request for reviewing portfolio holdings for add/trim decisions, perform a quick scan using the latest data from scores.stage_snapshots and portfolio.holdings. Generate a comparison matrix to summarize findings."
+sql_templates:
+  -
+    template_name: "get_latest_portfolio_status"
+    template_body: "WITH latest_snapshots AS (\n    SELECT *\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n    AND snapshot_date >= CURRENT_DATE - INTERVAL '3 months'\n),\nportfolio_analysis AS (\n    SELECT ph.symbol, ph.qty, ph.avg_cost, ls.price, ls.stage, ls.stage_score, ls.trading_signal\n    FROM portfolio.holdings ph\n    JOIN latest_snapshots ls\n    ON ph.symbol = ls.symbol\n)\nSELECT * FROM portfolio_analysis;"
+    description: "Fetches the latest portfolio status with relevant stage and trading signals for the past 3 months."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure only the last 3 months of data is considered."
+  - "Verify that portfolio symbols match the scores.stage_snapshots symbols."
+synthesis_guidance: "Present findings in a comparison matrix, highlighting sectors or stocks for potential addition or reduction based on trading signals and stages."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:25"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

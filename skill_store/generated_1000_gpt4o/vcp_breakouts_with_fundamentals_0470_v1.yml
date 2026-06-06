@@ -1,0 +1,64 @@
+id: "vcp_breakouts_with_fundamentals_0470_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0470"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  python_tools:
+    -
+      id: "calculate_tradingview_symbols"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "candidates"
+      outputs:
+        - "tradingview_symbols"
+      approved_tables:
+        - "scores.stage2_vcp_picks"
+      code: "def run(context):\n  return [c['symbol'] for c in context['candidates']]"
+sql_templates:
+  -
+    template_name: "fetch_vcp_candidates"
+    template: "SELECT symbol, company_name, sector, price, enhanced_fund_score, earnings_quality FROM scores.stage2_vcp_picks WHERE vcp_score > 80 AND enhanced_fund_score > 70 AND trading_signal = 'Buy'"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "SQL must be read-only and based on approved schema."
+  - "Python functions must be read-only and comply with restricted capabilities."
+synthesis_guidance: "{'focus': 'Generate trading ideas that integrate market dynamics and strong fundamentals.', 'considerations': ['liquidity', 'market conditions']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:48:21"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

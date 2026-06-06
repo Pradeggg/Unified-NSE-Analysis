@@ -1,0 +1,58 @@
+created_at: "2026-06-06T12:48:50"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: last 20 sessions; response style: research-only summary."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0540_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Fetch report runs in the last 20 days."
+    query: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - interval '20 days';"
+  -
+    description: "Fetch stock data for the recent runs."
+    query: "SELECT run_id, symbol, current_price, high_price, low_price, volume FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - interval '20 days');"
+status: "validated"
+synthesis_guidance: "Synthesized results should provide a clear and concise summary of the validation status and suggest improvements for consistency and data integrity."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "research-only_summary"
+title: "Enhanced Report Data Validation Variant 0540"
+tool_plan_template: "Perform a research-driven assessment of report link functionality and data presence for the last 20 sessions, focusing on validated runs, filtered stocks, and possible missing elements."
+validation_errors:
+  - "report.enhanced_filtered_stocks.recent_runs is not approved"
+validation_rules:
+  - "1"
+  - "2"
+  - "3"
+  - "4"
+  - "5"
+version: 1

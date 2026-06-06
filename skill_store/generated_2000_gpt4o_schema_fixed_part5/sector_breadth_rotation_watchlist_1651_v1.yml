@@ -1,0 +1,68 @@
+id: "sector_breadth_rotation_watchlist_1651_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1651"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for quarter to date: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as debug trace"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "start -> execute_sql -> end"
+sql_templates:
+  -
+    name: "fetch_sector_breadth"
+    template: "WITH latest_sector_data AS (SELECT * FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)), stage_2_stocks AS (SELECT symbol, sector FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2'), sector_stage_data AS (SELECT s.sector, COUNT(s.symbol) AS stage2_count FROM latest_sector_data lsd JOIN stage_2_stocks s ON lsd.sector = s.sector GROUP BY s.sector) SELECT lsd.sector, lsd.pct_above_50dma, ssd.stage2_count FROM latest_sector_data lsd LEFT JOIN sector_stage_data ssd ON lsd.sector = ssd.sector ORDER BY ssd.stage2_count DESC LIMIT 10;"
+python_tools:
+  -
+    id: "calculate_price_momentum"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "snapshot_date"
+      - "symbol"
+    outputs:
+      - "momentum_score"
+    approved_tables:
+      - "market.equity_eod"
+    code: "# Define a read-only function to calculate a simple momentum score.\\ndef run(context):\\n    from datetime import timedelta\\n    # Extract inputs\\n    snapshot_date = context['snapshot_date']\\n    symbol = context['symbol']\\n    # SQL to calculate momentum\\n    sql = (\"\"\"SELECT trade_date, close FROM market.equity_eod \\n            WHERE symbol = %(symbol)s AND trade_date BETWEEN\\n            %(start_date)s AND %(end_date)s ORDER BY trade_date DESC;\"\"\")\\n    # Define time frame for momentum calculation\\n    start_date = snapshot_date - timedelta(days=90)\\n    end_date = snapshot_date\\n    # Execute SQL\\n    result_set = context.db.execute(sql, {'symbol': symbol, 'start_date': start_date, 'end_date': end_date})\\n    # Calculate momentum\\n    close_prices = [row['close'] for row in result_set]\\n    if len(close_prices) < 2:\\n        return {'momentum_score': None}\\n    momentum_score = (close_prices[0] - close_prices[-1]) / close_prices[-1]\\n    return {'momentum_score': momentum_score}"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure data from latest snapshot_date is used."
+  - "Limit candidate list to top sectors by stage 2 participation."
+synthesis_guidance: "['Focus on sectors with increasing breadth indicators and significant stage 2 stock participation.', 'Consider recent price momentum when selecting trading candidates.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_price_momentum: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_price_momentum: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

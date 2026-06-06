@@ -1,0 +1,73 @@
+id: "data_freshness_readiness_audit_0609_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0609"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: today; response style: debug trace."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for today: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as debug trace"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "today"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  language: "python"
+  required_function: "run(context)"
+  mode: "read_only"
+  blocked_capabilities:
+    network: false
+    subprocess: false
+    filesystem_write: false
+    db_write: false
+    broker_api: false
+  required_fields:
+    - "id"
+    - "language"
+    - "mode"
+    - "inputs"
+    - "outputs"
+    - "approved_tables"
+    - "code"
+sql_templates:
+  current_freshness_check: "SELECT MAX(trade_date) AS latest_trade_date, MAX(snapshot_date) AS latest_snapshot_date FROM market.equity_eod, scores.stage_snapshots WHERE market.equity_eod.symbol = scores.stage_snapshots.symbol;"
+  latest_index_check: "SELECT MAX(trade_date) AS latest_index_date FROM market.index_eod;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all selected dates are within expected freshness thresholds."
+  - "Verify all required tables are returning data as expected for the latest date."
+synthesis_guidance: "['Compile results into a matrix showing data freshness status per table.', 'Identify any missing source data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:26:50"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_snapshot_date is not approved"
+  - "market.equity_eod.latest_trade_date is not approved"
+  - "market.equity_eod.market is not approved"
+  - "market.equity_eod.scores is not approved"
+  - "market.equity_eod.snapshot_date is not approved"
+  - "market.equity_eod.stage_snapshots is not approved"
+  - "market.index_eod.latest_index_date is not approved"

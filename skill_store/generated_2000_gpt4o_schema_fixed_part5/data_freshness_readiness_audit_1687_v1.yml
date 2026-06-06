@@ -1,0 +1,70 @@
+id: "data_freshness_readiness_audit_1687_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1687"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: intraday context; response style: debug trace."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for intraday context: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as debug trace"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    title: "Sector-Relative Data Freshness Analysis"
+    steps:
+      - "Check latest date in 'market.index_eod' and 'market.equity_eod'."
+      - "Confirm 'scores.stage_snapshots' latest dates align with EOD data."
+      - "Assess 'breadth.market_daily' and 'breadth.ma_pct_above' for up-to-date market sentiment."
+      - "Verify 'report.enhanced_runs' metadata against expectations for freshness and coverage."
+    output: "A detailed matrix indicating the freshness of each evidence source and suggested actions if data is stale."
+sql_templates:
+  -
+    name: "Check Latest Trade Dates"
+    query: "SELECT MAX(trade_date) AS latest_trade_date FROM market.index_eod UNION SELECT MAX(trade_date) FROM market.equity_eod;"
+    purpose: "Verify the most recent trade date in core data tables."
+  -
+    name: "Check Latest Snapshot Dates"
+    query: "SELECT MAX(snapshot_date) AS latest_snapshot_date FROM scores.stage_snapshots;"
+    purpose: "Ensure the latest stage snapshot date aligns with the trade date."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all evidence sources have trade or snapshot dates within allowed intervals."
+  - "Identify any missing data that might block analysis workflows."
+synthesis_guidance: "Focus on sector-relative freshness by comparing recent data availability across index and sector snapshots, highlighting variations or delays."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:51"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.latest_snapshot_date is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "scores.stage_snapshots.latest_snapshot_date is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

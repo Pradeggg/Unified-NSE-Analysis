@@ -1,0 +1,1 @@
+def run(context): return [snapshot for snapshot in context['snapshots'] if snapshot['snapshot_date'] == max(context['snapshots'], key=lambda x: x['snapshot_date'])['snapshot_date']]

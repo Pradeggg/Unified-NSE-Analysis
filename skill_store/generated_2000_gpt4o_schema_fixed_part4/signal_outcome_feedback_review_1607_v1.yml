@@ -1,0 +1,66 @@
+id: "signal_outcome_feedback_review_1607_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1607"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: today; response style: debug trace."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for today: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as debug trace"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "today"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    type: "sql"
+    template: "SELECT sl.symbol, sl.sector, sl.company, sl.signal, sl.date_issued, sl.date_resolved, sl.price_at_issue, sl.price_at_resolution, sl.return_pct, sl.hit_target, sl.hit_stop, ss.stage, ss.investment_score, ss.technical_score FROM signals.signal_log sl JOIN scores.stage_snapshots ss ON sl.symbol = ss.symbol WHERE sl.date_resolved IS NOT NULL AND sl.date_issued >= CURRENT_DATE - INTERVAL '3 months' AND sl.date_resolved <= CURRENT_DATE;"
+sql_templates:
+
+python_tools:
+  -
+    id: "run_signal_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sql_results"
+    outputs:
+      - "debug_trace"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "# Analyze SQL results to produce a debug trace\n\ndef run(context):\n    results = context['sql_results']\n    debug_trace = []\n    for result in results:\n        trace = {\n            'symbol': result['symbol'],\n            'sector': result['sector'],\n            'hit_target': result['hit_target'],\n            'hit_stop': result['hit_stop'],\n            'return_pct': result['return_pct']\n        }\n        debug_trace.append(trace)\n    return {'debug_trace': debug_trace}\n"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "{'rules': ['Ensure that SQL queries are read-only and follow approved schema.', 'Validate that all evidence tables and columns used are within the approved schema.']}"
+synthesis_guidance: "{'notes': ['Focus on generating insights based on sector performance relative to signal outcomes.', 'Provide a debug trace style response for clear understanding of decision routes.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_signal_analysis: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_signal_analysis: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,48 @@
+created_at: "2026-06-06T12:50:21"
+created_by: "llm_generated"
+description: "Analyze and validate report data accuracy over the last 20 sessions within the Indian market."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_001_0632_v1"
+input_patterns:
+  - "validate report link data"
+  - "check missing stock data"
+  - "ensure report consistency and traceability"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  filtered_stock_data:
+    description: "Retrieve filtered stock data linked to the recent report runs."
+    query: "SELECT run_id, symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '20 DAYS');"
+  run_data_validation:
+    description: "Fetch metadata of report runs for the last 20 sessions."
+    query: "SELECT run_id, run_ts, universe_size, stocks_analyzed, market_composite_score FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '20 DAYS';"
+status: "validated"
+synthesis_guidance: "Aggregate all findings to provide a comprehensive overview of report validity and accuracy."
+tags:
+  - "data_validation"
+  - "report_qa"
+  - "Indian_market"
+  - "debug_trace"
+title: "Agent Adda Skill Card 001"
+tool_plan_template: "This skill plans to analyze report metadata and filtered stock data to identify discrepancies."
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "Cross-verify data extraction with available schema."
+version: 1

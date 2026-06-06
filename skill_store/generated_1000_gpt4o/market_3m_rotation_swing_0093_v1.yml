@@ -1,0 +1,53 @@
+id: "market_3m_rotation_swing_0093_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0093"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: concise table."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for weekly review: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "weekly_review"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Generate a concise table of key insights from the last 3 months focusing on market regime, sector leadership, stages, and liquid swing candidates using a weekly review approach."
+sql_templates:
+  index_returns: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  stage_distribution_change: "WITH recent_stages AS (SELECT symbol, stage FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months') SELECT stage, COUNT(*) FROM recent_stages GROUP BY stage;"
+  leading_sectors: "SELECT sector, AVG(change_1m_pct) AS avg_monthly_return FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_monthly_return DESC LIMIT 5;"
+  primary_candidates: "SELECT symbol, company_name, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY vcp_score DESC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+synthesis_guidance: "Provide a clear, concise synthesis capturing the essence of market regime shifts, sector rotations, and candidate viability, with a focus on short-term tactical opportunities within a weekly review rhythm. Highlight any outstanding risks."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:41:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.avg_monthly_return is not approved"

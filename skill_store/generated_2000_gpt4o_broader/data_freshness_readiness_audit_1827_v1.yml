@@ -1,0 +1,62 @@
+id: "data_freshness_readiness_audit_1827_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1827"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for last 5 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as action watchlist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  steps:
+    - "Verify data freshness for the last 5 sessions for critical evidence tables."
+    - "Compare sector-wise data freshness metrics."
+    - "Identify gaps in data that are preventing narrative generation."
+  responses_style: "Generate actions for a watchlist to address missing data or stale sources."
+sql_templates:
+  -
+    name: "Data Freshness Check"
+    query: "SELECT trade_date, index_symbol, MAX(trade_date) AS latest_date FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '5 days' GROUP BY index_symbol;"
+  -
+    name: "Sector Comparison"
+    query: "SELECT sector, COUNT(symbol) AS total_symbols, SUM(CASE WHEN trade_date >= CURRENT_DATE - INTERVAL '5 days' THEN 1 ELSE 0 END) AS fresh_count FROM scores.stage_snapshots GROUP BY sector;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all data freshness metrics are within defined thresholds."
+  - "Flag sectors with inadequate coverage in the last 5 sessions."
+synthesis_guidance: "['Use data freshness metrics to identify potential weaknesses.', 'Prioritize actions based on sector importance and data stale risk.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:26"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.latest_date is not approved"
+  - "scores.stage_snapshots.fresh_count is not approved"
+  - "scores.stage_snapshots.total_symbols is not approved"
+  - "scores.stage_snapshots.trade_date is not approved"

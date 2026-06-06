@@ -1,0 +1,59 @@
+id: "corporate_events_results_watchlist_1227_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1227"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: ranked candidates."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for last 5 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as ranked candidates"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  python_tools:
+
+sql_templates:
+  -
+    name: "Fetch_Corporate_Events"
+    query: "SELECT symbol, event_type, event_date, purpose_raw, detail FROM signals.corporate_events WHERE event_date > CURRENT_DATE - INTERVAL '5 days';"
+  -
+    name: "Fetch_Results_Analysis"
+    query: "SELECT symbol, company_name, filing_date, growth_yoy_revenue_pct, growth_qoq_revenue_pct FROM scores.results_analysis WHERE filing_date > CURRENT_DATE - INTERVAL '5 days';"
+  -
+    name: "Fetch_Stage_Snapshots"
+    query: "SELECT symbol, company_name, sector, change_1d_pct, change_1w_pct FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL '5 days';"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all SQL templates are read-only and use approved tables and columns."
+  - "Check that the tool plan aligns with approved evidence tables."
+synthesis_guidance: "['Combine corporate event data with results analysis to identify key stocks.', 'Rank stocks based on sector-relative changes over the last 5 sessions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,73 @@
+id: "report_link_data_validation_1698_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1698"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: weekly review; response style: debug trace."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for weekly review: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  title: "Plan to Validate Report Data"
+  steps:
+    - "Extract and review metadata from enhanced report runs."
+    - "Check integrity and completeness of filtered stocks data."
+    - "Identify missing data or broken links in report."
+    - "Provide a debug trace log for issues found."
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts, analysis_date, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE universe_size > 0;"
+    description: "Fetch metadata for enhanced report runs where universe size is positive."
+  -
+    template: "SELECT run_id, symbol, recommendation FROM report.enhanced_filtered_stocks WHERE score > 0;"
+    description: "Retrieve filtered stocks with positive scores."
+python_tools:
+  -
+    id: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "display_results"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "# Read-only analysis code to process report data\n def run(context):\n     # Sample code to simulate report processing\n     results = context.sql_templates\n     # Process each SQL result to validate report\n     display_results = {'findings': [], 'broken_links': [], 'missing_data': [], 'remediation': [], 'verification': []}\n     # Placeholder logic for extracting findings\n     for result in results:\n         if result: # Simulating condition check\n             display_results['findings'].append('Issue found during processing')\n     return display_results"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "SQL templates must be read-only SELECT/WITH templates."
+  - "Status must be generated."
+  - "Using only approved schema: report.enhanced_runs, report.enhanced_filtered_stocks."
+synthesis_guidance: "{'summary': 'Compile findings into a cohesive debug trace and present results addressing broken links and missing data specifically.', 'style': 'Structured debug trace with clear references to SQL results.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:16"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run(context): python syntax error: unexpected indent"
+review:
+  status: "needs_heal"
+  findings:
+    - "run(context): python syntax error: unexpected indent"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,67 @@
+created_at: "2026-06-06T12:46:06"
+created_by: "llm_generated"
+description: "Validate enhanced report links and data freshness for pre-market analysis with Indian market evidence. Focus on exceptions and data gaps."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_card_001_0376_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for pre market: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    findings = []\n    for entry in context['enhanced_runs']:\n        if entry['analysis_date'] < datetime.today() - timedelta(days=1):\n            findings.append({'run_id': entry['run_id'], 'issue': 'old_analysis_date'})\n    return findings"
+    id: "python_tool_001"
+    language: "python"
+    mode: "read_only"
+sql_templates:
+  -
+    description: "Select data from enhanced report runs for freshness audit."
+    template: "SELECT run_id, run_ts, analysis_date, universe_size FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '1 day';"
+  -
+    description: "Retrieve stock information where data might be missing or links are broken."
+    template: "SELECT run_id, symbol, recommendation FROM report.enhanced_filtered_stocks WHERE score IS NULL OR volume IS NULL;"
+status: "test_failed"
+synthesis_guidance: "Focus on identifying data gaps and exceptions. Prioritize freshness and completeness of the data in pre-market contexts."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+title: "Pre-Market Report Validation"
+tool_plan_template:
+
+validation_rules:
+  - "Check that all pre-market report links are functional."
+  - "Ensure data freshness by confirming that analysis_date is within the last day."
+  - "Identify any missing stock data in filtered reports."
+  - "Provide a list of any broken report links found."
+version: 1
+validation_errors:
+  - "python_tool_001: inputs must be a list"
+  - "python_tool_001: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "python_tool_001: inputs must be a list"
+    - "python_tool_001: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

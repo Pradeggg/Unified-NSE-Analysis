@@ -1,0 +1,1 @@
+def run(fii_dii_flows_data): return {'flow_analysis': 'Read FII/DII net flow patterns.'}

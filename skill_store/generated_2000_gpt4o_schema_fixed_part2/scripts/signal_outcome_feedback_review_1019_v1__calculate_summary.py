@@ -1,0 +1,1 @@
+def run(context): return {'outcome_summary': context[:10]}

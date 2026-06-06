@@ -1,0 +1,58 @@
+id: "insider_bulk_deal_signal_review_1704_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1704"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: today; response style: QA checklist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for today: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as QA checklist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "today"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    context: "Generate insights for today's insider and bulk/block deal signals for the Indian market. Focus on creating a watchlist with technical confirmations."
+    steps:
+      - "Extract latest insider alerts and bulk/block deals."
+      - "Filter relevant symbols with technical confirmation."
+      - "Rank symbols by insider and technical scores."
+      - "Prepare a QA checklist for validation."
+sql_templates:
+  -
+    description: "Retrieve insider alerts and bulk/block deals with latest stage and score context."
+    sql: "WITH latest_stage AS (SELECT symbol, technical_score, insider_score, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT ia.symbol, ia.alert_type, ia.qty, ia.value_cr, ia.insider_score, bd.deal_type, bd.qty AS bd_qty, bd.price, ls.stage, ls.technical_score FROM signals.insider_alerts AS ia JOIN signals.bulk_block_deals AS bd ON ia.symbol = bd.symbol JOIN latest_stage AS ls ON ia.symbol = ls.symbol WHERE ia.alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts) AND bd.deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals) AND ls.technical_score > 70 LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "{'symbol_validity': 'Ensure all symbols are valid NSE symbols.', 'score_threshold': 'Symbols must have technical scores above 70.', 'insider_confusion': 'Cross-check insider alerts against disclosure dates.'}"
+synthesis_guidance: "['Focus on creating a concise, actionable watchlist.', 'Prioritize insights based on technical and insider ranks.', 'Evaluate and address potential risk factors in outputs.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

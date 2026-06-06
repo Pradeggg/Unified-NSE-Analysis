@@ -1,0 +1,51 @@
+id: "corporate_events_results_watchlist_0653_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0653"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for quarter to date: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as debug trace"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh-follow-up"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Use the following SQL templates to find upcoming or recent corporate events and related result actions for symbols in the watchlist."
+sql_templates:
+  - "WITH latest_stage AS (SELECT symbol, stage, snapshot_date FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_results AS (SELECT DISTINCT ON (symbol) symbol, filing_date, verdict FROM scores.results_analysis WHERE verdict IN ('beat', 'inline', 'miss', 'mixed') ORDER BY symbol, filing_date DESC, updated_at DESC), upcoming_events AS (SELECT symbol, event_type, event_date, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE AND event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM')) SELECT ue.symbol, ue.event_type, ue.event_date, lr.verdict, ls.stage, ue.source FROM upcoming_events ue LEFT JOIN latest_results lr ON ue.symbol = lr.symbol LEFT JOIN latest_stage ls ON ue.symbol = ls.symbol LIMIT 100"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event_type values are among ['RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM']"
+  - "Ensure verdict values are one of ['beat', 'inline', 'miss', 'mixed']"
+  - "Ensure symbol exists in both event and results data"
+  - "Ensure no more than 100 symbols in final output"
+synthesis_guidance: "Combine data from corporate events and results analysis to generate a comprehensive watchlist for the quarter to date"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:21"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

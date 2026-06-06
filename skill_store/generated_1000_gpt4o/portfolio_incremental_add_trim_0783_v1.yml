@@ -1,0 +1,53 @@
+id: "portfolio_incremental_add_trim_0783_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0783"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: QA checklist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for intraday context: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  sector_review:
+    evidence_sources:
+      - "scores.stage_snapshots"
+    analysis: "Evaluate sector exposure and identify over/under-weight sectors."
+  holding_review:
+    evidence_sources:
+      - "portfolio.holdings"
+    analysis: "Analyze current holdings and quantity for potential adjustments."
+sql_templates:
+  sector_exposure_template: "SELECT sector, COUNT(symbol) AS num_stocks, AVG(stage_score) FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE GROUP BY sector;"
+  holding_review_template: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all output contracts are populated based on evidence."
+  - "Verify sector exposure is within predefined limits."
+synthesis_guidance: "Cross-reference sector performance with holding quantities to make evidence-based add/trim decisions."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:51:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.num_stocks is not approved"

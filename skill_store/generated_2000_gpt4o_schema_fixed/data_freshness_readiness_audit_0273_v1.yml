@@ -1,0 +1,66 @@
+id: "data_freshness_readiness_audit_0273_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0273"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: pre market; response style: ranked candidates."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for pre market: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as ranked candidates"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Template: Utilize latest date rules from '_global_rules'. Ensure all queries use the latest data."
+sql_templates:
+  - "WITH latest_index AS (SELECT * FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod)), latest_equity AS (SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)), latest_stage AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT i.index_symbol, e.symbol, s.stage FROM latest_index i LEFT JOIN latest_equity e ON i.trade_date = e.trade_date LEFT JOIN latest_stage s ON e.symbol = s.symbol LIMIT 100"
+python_tools:
+  -
+    id: "freshness_ranker"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "freshness_matrix"
+    outputs:
+      - "ranked_candidates"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+    code: "# Function to rank freshness based on importance and freshness_age.\ndef run(context):\n    ranked = sorted(context['freshness_matrix'], key=lambda x: x['freshness_age'], reverse=True)\n    return {'ranked_candidates': ranked}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all columns used in SQL are from approved schema."
+  - "Do not modify the latest date logic."
+synthesis_guidance: "['Focus on identifying gaps in data freshness.', 'Prioritize high-impact sources with missing or stale data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:00"
+generation_model: "gpt-4o"
+validation_errors:
+  - "freshness_ranker: execution failed: KeyError: 'freshness_matrix'"
+review:
+  status: "needs_heal"
+  findings:
+    - "freshness_ranker: execution failed: KeyError: 'freshness_matrix'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

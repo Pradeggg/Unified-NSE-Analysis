@@ -1,0 +1,60 @@
+id: "report_link_data_validation_0248_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0248"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: last 3 months; response style: ranked candidates."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for last 3 months: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "last_3_months"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  sketch:
+    - "Identify broken report links and missing stock data."
+    - "Focus on the position-sizing context in the past 3 months."
+    - "Provide a list of ranked candidates for investigation."
+sql_templates:
+  -
+    description: "Fetch report runs within the last 3 months."
+    query: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '3 months';"
+  -
+    description: "Retrieve missing stock data and ranking details."
+    query: "WITH recent_runs AS ( SELECT run_id FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '3 months' ) SELECT efs.run_id, efs.symbol, efs.rank FROM report.enhanced_filtered_stocks efs JOIN recent_runs rr ON efs.run_id = rr.run_id WHERE efs.current_price IS NULL OR efs.volume = 0 ORDER BY efs.rank ASC;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure report runs are recent and data is complete."
+  - "Identify any missing data in critical fields."
+  - "Rank candidates for detailed investigation based on missing data."
+synthesis_guidance: "['Prioritize the most impactful issues first.', 'Ensure clear synthesis of findings with recommended actions.', 'Provide context-sensitive remediation and verification steps.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:43:42"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.now is not approved"
+  - "unknown table efs.current_price"
+  - "unknown table efs.rank"
+  - "unknown table efs.run_id"
+  - "unknown table efs.symbol"
+  - "unknown table efs.volume"
+  - "unknown table rr.run_id"

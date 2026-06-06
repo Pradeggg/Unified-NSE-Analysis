@@ -1,0 +1,53 @@
+id: "fii_dii_regime_breadth_review_1226_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1226"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: last 5 sessions; response style: ranked candidates."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for last 5 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as ranked candidates"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    description: "{\n  \"plan\": \"Gather FII/DII flows, regime history, market breadth, and index EOD data for the last 5 sessions. Analyze for risk-on/risk-off signals and rank context candidates.\",\n  \"context\": \"Agent Adda Indian market research.\"\n}"
+sql_templates:
+  - "WITH latest_flows AS (\n    SELECT trade_date, fii_net_5d, dii_net_5d, flow_signal\n    FROM signals.fii_dii_flows\n    WHERE trade_date >= (CURRENT_DATE - INTERVAL '5 days')\n),\nlatest_regimes AS (\n    SELECT trade_date, regime, confidence\n    FROM signals.regime_history\n    WHERE trade_date >= (CURRENT_DATE - INTERVAL '5 days')\n),\nlatest_breadth AS (\n    SELECT trade_date, advances, declines, ad_signal\n    FROM breadth.market_daily\n    WHERE trade_date >= (CURRENT_DATE - INTERVAL '5 days')\n),\nlatest_indices AS (\n    SELECT trade_date, index_symbol, close, change_pct\n    FROM market.index_eod\n    WHERE trade_date >= (CURRENT_DATE - INTERVAL '5 days')\n)\nSELECT f.trade_date, f.flow_signal, r.regime, r.confidence, b.ad_signal, i.change_pct\nFROM latest_flows f\nJOIN latest_regimes r ON f.trade_date = r.trade_date\nJOIN latest_breadth b ON f.trade_date = b.trade_date\nJOIN latest_indices i ON f.trade_date = i.trade_date\nWHERE i.index_symbol = 'Nifty 50'\nORDER BY f.trade_date DESC;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all evidence table joins use approved _join_rules."
+  - "Validate date filters use _global_rules syntax."
+  - "Ensure data types match column_details specifications."
+synthesis_guidance: "Collate and rank risk-on/risk-off interpretations based on synthesized flow, regime, breadth, and index data for clarity in Indian market context."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

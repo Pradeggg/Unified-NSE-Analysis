@@ -1,0 +1,55 @@
+id: "report_link_data_validation_1992_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1992"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: weekly review; response style: comparison matrix."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for weekly review: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  type: "comparison_matrix"
+  focus: "deep_institutional_review"
+  frequency: "weekly"
+sql_templates:
+  -
+    description: "Select latest enhanced report run metadata for validation."
+    sql: "SELECT * FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '7 days' ORDER BY run_ts DESC LIMIT 1;"
+  -
+    description: "Select stock data associated with the latest enhanced report run."
+    sql: "SELECT es.* FROM report.enhanced_filtered_stocks es JOIN report.enhanced_runs er ON es.run_id = er.run_id WHERE er.run_ts > CURRENT_DATE - INTERVAL '7 days';"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "join_checks"
+synthesis_guidance: "{'focus': 'Institutional insight and matrix-based comparison to highlight anomalies.', 'criteria': 'Focus on data completeness, consistency, and accurate linkage.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

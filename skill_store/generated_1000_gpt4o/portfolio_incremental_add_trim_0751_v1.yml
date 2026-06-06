@@ -1,0 +1,56 @@
+id: "portfolio_incremental_add_trim_0751_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0751"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: quarter to date; response style: QA checklist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  sql_templates:
+    -
+      name: "get_current_holdings"
+      description: "Retrieve current portfolio holdings with associated stage scores."
+      sql: "SELECT h.symbol, h.qty, h.avg_cost, ss.stage, ss.stage_score, ss.relative_strength FROM portfolio.holdings AS h JOIN scores.stage_snapshots AS ss ON h.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY ss.stage_score DESC;"
+    -
+      name: "get_sector_exposure"
+      description: "Aggregate portfolio exposure by sector."
+      sql: "SELECT ss.sector, SUM(h.qty * ss.live_price) AS total_value FROM portfolio.holdings AS h JOIN scores.stage_snapshots AS ss ON h.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY ss.sector ORDER BY total_value DESC;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "status"
+synthesis_guidance: "{'summary': 'Guide the user through a QA checklist to assess whether to add or trim holdings based on stage scores, sector exposure, and market signals.', 'checklist_items': ['Review top stage scores and relative strength for add candidates.', 'Identify holdings with declining stage scores as trim candidates.', 'Assess sector exposure for potential over-concentration risks.', 'Ensure alignment with quarter-to-date investment themes.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:51:16"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

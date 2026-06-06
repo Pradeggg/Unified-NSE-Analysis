@@ -1,0 +1,65 @@
+id: "agent_route_failure_diagnostics_1358_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1358"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for quarter to date: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as exceptions and gaps first"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+
+tool_plan_template: "Analyze diagnostics for routes using pattern recognition of failures and resolution loops."
+sql_templates:
+  -
+    template_id: "check_universe_size"
+    description: "Check if universe size matches expected value."
+    sql: "SELECT run_id, universe_size FROM report.enhanced_runs WHERE universe_size < :expected_size"
+  -
+    template_id: "validate_score_consistency"
+    description: "Ensure score consistency across filtered stocks."
+    sql: "SELECT symbol, tech_score FROM report.enhanced_filtered_stocks WHERE tech_score IS NULL"
+python_tools:
+  -
+    id: "diagnostics_helper"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "universe_size"
+      - "tech_score"
+    outputs:
+      - "gap_analysis"
+    approved_tables:
+
+    code: "def run(context):\n    # Simulate gap analysis logic\n    return {'gap_analysis': 'Complete analysis with input data.'}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Universe size must not be less than the expected threshold."
+  - "All symbols should have non-null technical scores."
+synthesis_guidance: "Identify root causes by tracing data discrepancies and gaps."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:25"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

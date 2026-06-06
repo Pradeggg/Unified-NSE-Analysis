@@ -1,0 +1,1 @@
+['def run(context):', "    signals = context.query('SELECT symbol, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log WHERE symbol=data.symbol)')", '    pattern_insights = analyze_patterns(signals)', '    return pattern_insights']

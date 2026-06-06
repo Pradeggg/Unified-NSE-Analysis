@@ -1,0 +1,1 @@
+def run_signal_analysis(signal_outcomes): return summary_analysis(signal_outcomes)

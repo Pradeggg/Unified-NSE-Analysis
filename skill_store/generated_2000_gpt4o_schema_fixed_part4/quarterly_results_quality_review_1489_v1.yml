@@ -1,0 +1,53 @@
+id: "quarterly_results_quality_review_1489_v1"
+version: 1
+status: "review_pending"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1489"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: source-trail validation; timeframe: intraday context; response style: portfolio-aware output."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "source-trail validation for intraday context: latest quarterly results analysis"
+  - "which companies had strong quarterly results as portfolio-aware output"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Assess quarterly results for selected companies with portfolio-aware output."
+sql_templates:
+  -
+    template_name: "analyze_quarterly_results"
+    query: "WITH latest_quarterly_results AS (SELECT DISTINCT ON (symbol) symbol, revenue, expenses, operating_profit, opm_pct, pat, eps, period_end, source, source_url FROM scores.quarterly_results WHERE period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC), latest_results_analysis AS (SELECT DISTINCT ON (symbol) symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct, opm_delta_pp, verdict, score FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC), latest_stage_snapshots AS (SELECT DISTINCT ON (symbol) symbol, stage, trading_signal, snapshot_date FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY symbol) SELECT qr.symbol, qr.revenue, ra.growth_yoy_revenue_pct, ra.growth_qoq_revenue_pct, ra.growth_yoy_pat_pct, ra.growth_qoq_pat_pct, ra.verdict, ss.stage, ss.trading_signal FROM latest_quarterly_results qr JOIN latest_results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end JOIN latest_stage_snapshots ss ON qr.symbol = ss.symbol LIMIT 100"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure the latest results are compared and aligned by symbol and period."
+  - "Check that verdict and growth percentages are matched to the relevant symbols."
+synthesis_guidance: "Provide analysis on companies with strong quarterly results using intraday context and portfolio considerations."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:29"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

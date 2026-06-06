@@ -1,0 +1,61 @@
+id: "insider_bulk_deal_signal_review_0458_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0458"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for quarter to date: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as portfolio-aware output"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review of insider and institutional activities, including technical confirmation, to identify accumulation or distribution trends."
+sql_templates:
+  -
+    query: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY')) SELECT i.symbol, i.alert_date, i.entity, b.deal_date, s.trading_signal FROM signals.insider_alerts i JOIN signals.bulk_block_deals b ON i.symbol = b.symbol JOIN latest_snapshots s ON i.symbol = s.symbol WHERE i.alert_date >= CURRENT_DATE - INTERVAL '3 months' AND b.deal_date >= CURRENT_DATE - INTERVAL '3 months';"
+    description: "Identify insider and bulk deals with technical confirmation."
+python_tools:
+  - "required_function"
+  - "language"
+  - "mode"
+  - "inputs"
+  - "outputs"
+  - "approved_tables"
+  - "code"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure that the tables signals.insider_alerts, signals.bulk_block_deals, and scores.stage_snapshots are consistently joined with valid conditions."
+  - "Verify that only the SQL SELECT templates are utilized."
+  - "Confirm that the SQL query conforms to PostgreSQL syntax and adheres to _global_rules."
+synthesis_guidance: "Combine insights from insider alerts, bulk deals, and stage snapshots to provide a comprehensive view on position-sizing strategy and risk analysis."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:49"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

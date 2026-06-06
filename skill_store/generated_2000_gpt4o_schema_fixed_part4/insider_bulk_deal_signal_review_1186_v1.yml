@@ -1,0 +1,73 @@
+id: "insider_bulk_deal_signal_review_1186_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1186"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: intraday context; response style: narrative plus evidence."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for intraday context: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as narrative plus evidence"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "intraday_context"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    step: "Prepare insider alerts with latest context"
+    description: "Select latest insider alerts."
+    evidence_type: "insider_alerts"
+  -
+    step: "Analyze bulk or block deals"
+    description: "Select latest bulk deals."
+    evidence_type: "bulk_deals"
+  -
+    step: "Conduct technical confirmation analysis"
+    description: "Use technical scores to confirm accumulation or distribution."
+    evidence_type: "technical_confirmation"
+sql_templates:
+  -
+    template_name: "Latest Insider Alerts"
+    description: "Select the latest insider alerts for symbols with fresh updates."
+    sql: "SELECT * FROM signals.insider_alerts WHERE alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts)"
+  -
+    template_name: "Latest Bulk Deals"
+    description: "Select the latest bulk and block deals."
+    sql: "SELECT * FROM signals.bulk_block_deals WHERE deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals)"
+  -
+    template_name: "Technical Confirmation"
+    description: "Gather latest technical scores for context."
+    sql: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure that inputs match the pattern for insider buying alerts."
+  - "Check freshness by comparing against the latest possible update dates for bulk deals and technical scores."
+synthesis_guidance: "['Construct narrative while summarizing deal activity and insider accumulation.', 'Emphasize technical strength or any divergence and construct recommendations.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:29"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

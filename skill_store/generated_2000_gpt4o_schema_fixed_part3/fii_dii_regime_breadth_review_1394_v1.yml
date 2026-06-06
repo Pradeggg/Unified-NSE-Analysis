@@ -1,0 +1,79 @@
+id: "fii_dii_regime_breadth_review_1394_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1394"
+description: "Combines FII/DII flow trends, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Focus on watchlist creation; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as exceptions and gaps first"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  use_sql_to:
+    - "Retrieve the latest flow indicator from FII/DII flows"
+    - "Check the current market regime and regime confidence"
+    - "Assess market breadth using advance/decline data"
+    - "Confirm index performance indicators for risk assessment"
+sql_templates:
+  -
+    template_id: "flow_check"
+    sql: "SELECT fii_net_5d, dii_net_5d, flow_signal FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+    metadata:
+      description: "Retrieve flow signals for the latest available date."
+      role: "Flow analysis component"
+  -
+    template_id: "regime_check"
+    sql: "SELECT regime, confidence FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history);"
+    metadata:
+      description: "Fetch the current market regime."
+      role: "Regime analysis component"
+  -
+    template_id: "breadth_assessment"
+    sql: "SELECT advances, declines, net_ad, market_sentiment FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+    metadata:
+      description: "Gather breadth indicators for market sentiment."
+      role: "Breadth analysis component"
+  -
+    template_id: "index_confirmation"
+    sql: "SELECT index_symbol, close, change_pct, technical_score FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND index_symbol='Nifty 50';"
+    metadata:
+      description: "Confirm index performance and trend signals."
+      role: "Index confirmation component"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Emphasize exceptions and coverage gaps in the results to guide risk assessment. Prioritize interpreting the flow and regime data within the broader market context."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

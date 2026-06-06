@@ -1,0 +1,55 @@
+id: "signal_outcome_feedback_review_0921_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Focus on a quick scan for the last 5 sessions; results presented as a comparison matrix."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "quick scan for last 5 sessions: review prior signals hit target or stop"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  primary_task: "Analyze signal outcomes to determine patterns of success and failure."
+  steps:
+    - "Identify signals from the last 5 sessions and their outcomes using signals.signal_log and market.equity_eod."
+    - "Evaluate each signal's performance by determining if targets were hit or stops were triggered."
+    - "Combine the signal outcome data with the latest context from scores.stage_snapshots to identify any correlations."
+    - "Present the analysis as a comparison matrix identifying successful and unsuccessful patterns."
+sql_templates:
+  -
+    description: "Retrieve signals and their outcomes from the last 5 sessions."
+    sql: "SELECT symbol, date_issued, signal, price_at_issue, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= (CURRENT_DATE - INTERVAL '5 days') ORDER BY date_issued DESC;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure outcome_summary clearly differentiates between signals that hit targets and those stopped out."
+  - "Ensure comparison matrix aligns with input_patterns when reviewing successful and failed signals."
+  - "Confirm that all evaluated data are within the last 5 sessions."
+synthesis_guidance: "['Prioritize crafting a concise outcome_summary that provides immediate insights.', 'Highlight distinct patterns and deviations in success versus failure among different sectors and setups.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

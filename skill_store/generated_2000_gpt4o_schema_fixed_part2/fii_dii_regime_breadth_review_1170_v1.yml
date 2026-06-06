@@ -1,0 +1,56 @@
+id: "fii_dii_regime_breadth_review_1170_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1170"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: post results; response style: narrative plus evidence."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for post results: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as narrative plus evidence"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "post_results"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  step1: "Fetch latest data on FII/DII flows using the max date condition."
+  step2: "Join with regime history to understand current market regime."
+  step3: "Validate breadth by joining market daily records."
+  step4: "Confirm with index EOD data to check for technical signals indicating market risk-on or risk-off status."
+sql_templates:
+  -
+    name: "combine_fii_dii_regime_breadth"
+    query: "WITH latest_data AS (SELECT MAX(trade_date) AS max_date FROM signals.fii_dii_flows) SELECT f.trade_date, f.fii_net_today, f.dii_net_today, r.regime, r.confidence, b.ad_signal, m.close FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date JOIN breadth.market_daily b ON f.trade_date = b.trade_date JOIN market.index_eod m ON f.trade_date = m.trade_date WHERE f.trade_date = (SELECT max_date FROM latest_data) AND m.index_symbol = 'Nifty 50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all joins are made strictly according to approved join rules."
+  - "Check that all date conditions use the latest available data."
+synthesis_guidance: "['Explain the relevance of FII/DII flows in the context of current market regime.', 'Narrate how breadth indicators confirm or challenge the evident market regime.', 'Provide evidence through current index action confirmation, focusing on key technical signals.', 'Summarize with risk-on or risk-off sentiment based on compiled evidence.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,50 @@
+id: "report_link_data_validation_1264_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Validate Report Links and Data"
+description: "Check for broken report links and missing data in post-result enhanced reports. Focus on watchlist creation."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for post results: review report links not working"
+tags:
+  - "report_qa"
+  - "links"
+  - "data_validation"
+  - "watchlist_creation"
+  - "post_results"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  steps:
+    - "Identify recently generated reports."
+    - "Select related stocks where data might be missing or links are broken."
+    - "Output ranked candidates for missing or broken report components."
+sql_templates:
+  - "SELECT er.run_id, ef.symbol, ef.rank, ef.recommendation FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id WHERE er.run_ts >= CURRENT_DATE - INTERVAL '3 months' ORDER BY ef.rank LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure SQL uses approved tables and columns only."
+  - "Confirm adherence to schema join rules."
+  - "Apply global SQL rules for good practice."
+synthesis_guidance: "['Focus on identifying gaps in post-result data and broken watchlist links.', 'Rank issues by relevance and frequency.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:33"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

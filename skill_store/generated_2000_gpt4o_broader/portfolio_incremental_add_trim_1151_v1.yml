@@ -1,0 +1,51 @@
+id: "portfolio_incremental_add_trim_1151_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1151"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: quarter to date; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Examine current portfolio positions and sector exposure. Identify candidates for incremental add or trim actions based on market trends and signals."
+sql_templates:
+  -
+    name: "current_holdings_analysis"
+    query: "SELECT symbol, qty, avg_cost FROM portfolio.holdings"
+  -
+    name: "stage_and_signal_analysis"
+    query: "SELECT symbol, stage, stage_score, trend_signal, trading_signal FROM scores.stage_snapshots WHERE snapshot_date >= DATEADD(quarter, -1, GETDATE())"
+python_tools:
+  - "run"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "inputs"
+  - "outputs"
+synthesis_guidance: "Combine data insights with market analysis to form a clear narrative on potential portfolio adjustments."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:48"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.dateadd is not approved"
+  - "scores.stage_snapshots.getdate is not approved"
+  - "scores.stage_snapshots.quarter is not approved"

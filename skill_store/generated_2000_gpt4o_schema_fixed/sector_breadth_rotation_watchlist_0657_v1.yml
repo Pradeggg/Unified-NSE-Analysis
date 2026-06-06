@@ -1,0 +1,53 @@
+id: "sector_breadth_rotation_watchlist_0657_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0657"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for quarter to date: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as debug trace"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Generate a debug trace sector watchlist"
+sql_templates:
+  -
+    description: "Select top sectors by breadth signal and stage 2 participation"
+    template: "WITH latest_breadth AS (SELECT sector, breadth_signal, pct_above_50dma FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)), latest_stage_results AS (SELECT sector, stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.ma_pct_above)) SELECT lb.sector, lb.breadth_signal, ls.stage2_pct FROM latest_breadth lb JOIN latest_stage_results ls ON lb.sector = ls.sector ORDER BY lb.breadth_signal DESC, ls.stage2_pct DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure that sectors are ranked by breadth signal and stage 2 participation"
+  - "Verify that the SQL uses latest data according to global rules"
+synthesis_guidance: "Aggregate sector breadth with technical stage insights to produce a coordinated watchlist for TradingView."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:22"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

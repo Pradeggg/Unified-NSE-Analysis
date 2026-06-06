@@ -1,0 +1,71 @@
+id: "agent_route_failure_diagnostics_0518_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0518"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: latest EOD; response style: research-only summary."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for latest EOD: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as research-only summary"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Investigate symbol resolution issues and route failures using a combination of SQL template queries and if necessary, deploy Python tools for complex aggregation."
+sql_templates:
+  -
+    description: "Extract latest runs with market sentiment for diagnostics"
+    query: "SELECT run_id, analysis_date, market_sentiment, notes FROM report.enhanced_runs WHERE analysis_date = (SELECT MAX(analysis_date) FROM report.enhanced_runs)"
+  -
+    description: "Identify filtered stocks with the highest RS score"
+    query: "SELECT symbol, score, rs_score FROM report.enhanced_filtered_stocks WHERE rs_score IS NOT NULL ORDER BY rs_score DESC LIMIT 10"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    approved_tables:
+      - "scores.stage_snapshots"
+    inputs:
+      context: "Evidence from SQL queries"
+    outputs:
+      enhanced_analysis: "Detailed insights on stage failures"
+    code: "# Placeholder for complex analysis logic\n# def run(context):\n#     process context data here\n#     return insights"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure inputs align with pattern requirements."
+  - "Verify SQL queries are read-only and compliant with table schema."
+  - "Confirm all generated outputs adhere to specified output contract."
+synthesis_guidance: "{'steps': ['Analyze gathered evidence for failure modes.', 'Trace potential sources using SQL output to understand routes.', 'Synthesize insights to recommend fixes and identify gaps.', 'Draft regression tests based on discovered failure modes.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:48:03"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run: inputs must be a list"
+  - "run: must define run(context)"
+  - "run: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "run: inputs must be a list"
+    - "run: must define run(context)"
+    - "run: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

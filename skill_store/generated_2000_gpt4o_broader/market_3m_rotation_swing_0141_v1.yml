@@ -1,0 +1,58 @@
+id: "market_3m_rotation_swing_0141_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0141"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as narrative plus evidence"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "{ \"plan\": \"Conduct a comprehensive analysis using SQL templates to identify market trends and potential swing trading candidates, following the narrative guidance.\" }"
+sql_templates:
+  -
+    description: "Calculate index returns over the last 3 months"
+    sql: "SELECT index_symbol, (MAX(close) - MIN(close)) / MIN(close) * 100 AS return_pct FROM market.index_eod WHERE trade_date >= DATE_ADD(CURRENT_DATE(), INTERVAL -3 MONTH) GROUP BY index_symbol;"
+  -
+    description: "Identify leading sectors based on stage 2 leadership"
+    sql: "SELECT sector, COUNT(*) AS sector_leads FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATE_ADD(CURRENT_DATE(), INTERVAL -3 MONTH) GROUP BY sector ORDER BY sector_leads DESC;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL templates are SELECT queries."
+  - "SQL must not perform updates or deletions."
+  - "Python tools, if any, must adhere to read-only constraints."
+synthesis_guidance: "Synthesize analysis into a concise narrative highlighting key market dynamics, leading sectors, potential swing candidates, and associated risks. Include data-driven insights and ensure adherence to evidence-based strategies."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.date_add is not approved"
+  - "market.index_eod.month is not approved"
+  - "market.index_eod.return_pct is not approved"
+  - "scores.stage2_vcp_picks.date_add is not approved"
+  - "scores.stage2_vcp_picks.month is not approved"
+  - "scores.stage2_vcp_picks.sector_leads is not approved"

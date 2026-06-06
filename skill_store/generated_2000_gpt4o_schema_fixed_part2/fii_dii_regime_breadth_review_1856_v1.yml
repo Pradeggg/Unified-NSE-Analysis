@@ -1,0 +1,68 @@
+id: "fii_dii_regime_breadth_review_1856_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1856"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: quarter to date; response style: action watchlist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for quarter to date: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as action watchlist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  python_tools:
+    -
+      id: "market_audit_quadrant"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "context"
+      outputs:
+        - "audit_results"
+      approved_tables:
+        - "signals.fii_dii_flows"
+        - "signals.regime_history"
+        - "breadth.market_daily"
+        - "market.index_eod"
+      code: "def run(context):\n    # Example audit logic placeholder\n    # Must extract relevant data without modification\n    pass"
+sql_templates:
+  -
+    template: "WITH latest_flows AS (\n  SELECT\n    trade_date,\n    fii_net_5d,\n    dii_net_5d,\n    flow_signal\n  FROM\n    signals.fii_dii_flows\n  WHERE\n    trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows)\n),\nlatest_regime AS (\n  SELECT\n    trade_date,\n    regime,\n    confidence\n  FROM\n    signals.regime_history\n  WHERE\n    trade_date = (SELECT MAX(trade_date) FROM signals.regime_history)\n),\nlatest_breadth AS (\n  SELECT\n    trade_date,\n    adv_signal,\n    trin_signal\n  FROM\n    breadth.market_daily\n  WHERE\n    trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily)\n),\nlatest_index AS (\n  SELECT\n    trade_date,\n    close,\n    trend_signal\n  FROM\n    market.index_eod\n  WHERE\n    trade_date = (SELECT MAX(trade_date) FROM market.index_eod)\n    AND index_symbol = 'Nifty 50'\n)\nSELECT\n  lf.trade_date,\n  lf.fii_net_5d,\n  lf.dii_net_5d,\n  lf.flow_signal,\n  lr.regime,\n  lr.confidence,\n  lb.adv_signal,\n  lb.trin_signal,\n  li.close,\n  li.trend_signal\nFROM\n  latest_flows lf\n  JOIN latest_regime lr ON lf.trade_date = lr.trade_date\n  JOIN latest_breadth lb ON lf.trade_date = lb.trade_date\n  JOIN latest_index li ON lf.trade_date = li.trade_date;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  -
+    id: "data_freshness_check"
+    description: "Ensure data is within the current quarter."
+    logic: "Verify trade_date is within the last 3 months."
+synthesis_guidance: "{'notes': \"To assess the market context, evaluate the interplay between the FII and DII flows, the current market regime, breadth signals, and the index's technical state.\"}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:46"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

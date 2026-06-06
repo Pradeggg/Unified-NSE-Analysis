@@ -1,0 +1,64 @@
+id: "portfolio_incremental_add_trim_1655_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1655"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Analyze portfolio exposure and performance using approved tables to recommend adding or trimming positions."
+sql_templates:
+  -
+    description: "Analyze current holdings by sector to identify add/trim candidates."
+    sql: "SELECT h.symbol, h.qty, h.avg_cost, s.sector, s.stage, s.stage_score FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.stage IN ('Stage 1', 'Stage 2') ORDER BY s.stage_score DESC;"
+python_tools:
+  -
+    id: "risk_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "portfolio_state"
+      - "sector_exposure"
+    outputs:
+      - "risk_flags"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    # Extract data from context inputs\n    portfolio_state = context['portfolio_state']\n    sector_exposure = context['sector_exposure']\n    # Example logic for identifying risk flags\n    risk_flags = []\n    for holding in portfolio_state:\n        if holding['stage_score'] < 50 and holding['qty'] > 100:\n            risk_flags.append({'symbol': holding['symbol'], 'risk': 'High'})\n    return risk_flags"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure stage analysis aligns with holding profitability."
+  - "Check sector exposure for imbalances."
+synthesis_guidance: "Emphasize risk assessment through stage and sector analysis to determine recommendations."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "risk_analysis_tool: execution failed: KeyError: 'portfolio_state'"
+review:
+  status: "needs_heal"
+  findings:
+    - "risk_analysis_tool: execution failed: KeyError: 'portfolio_state'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

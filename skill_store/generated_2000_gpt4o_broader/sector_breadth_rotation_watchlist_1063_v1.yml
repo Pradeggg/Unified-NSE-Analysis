@@ -1,0 +1,63 @@
+id: "sector_breadth_rotation_watchlist_1063_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1063"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: post results; response style: concise table."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for post results: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as concise table"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze approved tables to identify improving sectors and relevant stocks for a TradingView watchlist."
+sql_templates:
+  sector_breadth_analysis: "WITH recent_breadth AS (SELECT sector, AVG(pct_above_50dma) AS avg_pct_above_50dma FROM breadth.sector_daily WHERE snapshot_date = CURRENT_DATE GROUP BY sector) SELECT sector, avg_pct_above_50dma FROM recent_breadth ORDER BY avg_pct_above_50dma DESC;"
+python_tools:
+  -
+    id: "improving_sectors_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_data"
+    outputs:
+      - "sorted_sectors"
+    approved_tables:
+
+    code: "def run(context):\n    sectors = context['sector_data']\n    sorted_sectors = sorted(sectors, key=lambda x: x['avg_pct_above_50dma'], reverse=True)\n    return sorted_sectors"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure SQL queries use read-only operations."
+  - "Do not create or modify tables."
+synthesis_guidance: "Focus on identifying sectors with increasing breadth and potential stage 2 leaders, presented in a concise table format."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:54"
+generation_model: "gpt-4o"
+validation_errors:
+  - "improving_sectors_analysis: execution failed: KeyError: 'sector_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "improving_sectors_analysis: execution failed: KeyError: 'sector_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

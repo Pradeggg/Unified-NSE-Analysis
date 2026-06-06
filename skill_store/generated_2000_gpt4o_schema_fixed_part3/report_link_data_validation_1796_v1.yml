@@ -1,0 +1,46 @@
+id: "report_link_data_validation_1796_v1"
+version: 1
+status: "validated"
+domain: "data_validation"
+title: "Agent Adda Report Link Data Validation"
+description: "An Agent Adda skill card for report link validation and missing data checks."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+tags:
+  - "report_qa"
+  - "links"
+  - "data_validation"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+
+sql_templates:
+  -
+    id: "validate_links"
+    template: "SELECT r.run_id, r.run_ts, fs.symbol, fs.score, fs.recommendation FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks fs ON r.run_id = fs.run_id WHERE r.run_ts > CURRENT_DATE - INTERVAL '7 days';"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "verification"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:41"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

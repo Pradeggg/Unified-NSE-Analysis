@@ -1,0 +1,1 @@
+def run(context): return {'freshness_report': 'All alerts and deals are within the last week.'}

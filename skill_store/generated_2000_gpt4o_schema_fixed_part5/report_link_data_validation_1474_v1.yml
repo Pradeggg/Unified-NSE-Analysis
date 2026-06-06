@@ -1,0 +1,71 @@
+id: "report_link_data_validation_1474_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1474"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: pre market; response style: portfolio-aware output."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for pre market: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "pre_market"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    plan:
+      - "Verify if the generated report links are functioning."
+      - "Check for missing data in the underlying stock HTML files."
+      - "Create a pre-market watchlist based on the latest report run metadata."
+    steps:
+      -
+        description: "Use SQL templates to select the latest run data for validation."
+        action: "Query the report.enhanced_runs table for the latest report runs."
+      -
+        description: "Examine rows in report.enhanced_filtered_stocks for missing data."
+        action: "Check for null or empty values in crucial stock data columns."
+      -
+        description: "Compile a pre-market watchlist with stocks marked as top recommendations."
+        action: "Filter and rank stocks according to recommendation and score."
+sql_templates:
+  -
+    template: "SELECT * FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+    description: "Select the latest report runs for validation."
+    read_only: true
+  -
+    template: "SELECT * FROM report.enhanced_filtered_stocks WHERE run_id = (SELECT run_id FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs));"
+    description: "Check for missing data in the latest filtered stocks."
+    read_only: true
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure that all output fields are populated correctly."
+  - "Validate that the report links are intact and point to accessible resources."
+  - "Check the syntactic and semantic validity of the SQL queries used."
+synthesis_guidance: "Provide comprehensive but concise feedback based on identified issues, highlighting any broken links or missing data, alongside potential remediation strategies."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:29"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

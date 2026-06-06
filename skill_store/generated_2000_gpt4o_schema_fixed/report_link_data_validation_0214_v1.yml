@@ -1,0 +1,64 @@
+id: "report_link_data_validation_0214_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Skill Card"
+description: "This skill card enables review and validation of enhanced report data with a focus on the latest end-of-day reports, highlighting issues such as broken links and missing data."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for latest EOD: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  steps:
+    -
+      name: "FetchLatestRuns"
+      description: "Retrieve the latest enhanced report runs for analysis."
+      template: "SELECT run_id, run_ts, analysis_date, stocks_filtered FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) LIMIT 10;"
+    -
+      name: "FetchFilteredStocks"
+      description: "Retrieve filtered stocks for the latest runs."
+      template: "SELECT efs.run_id, efs.symbol, efs.rank FROM report.enhanced_filtered_stocks AS efs JOIN report.enhanced_runs AS er ON efs.run_id = er.run_id WHERE er.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) ORDER BY efs.rank LIMIT 10;"
+sql_templates:
+  -
+    name: "FetchLatestRunMetadata"
+    description: "Fetch metadata for the latest enhanced report run."
+    template: "SELECT run_id, run_ts, stocks_filtered FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+  -
+    name: "FetchTopRankedStocks"
+    description: "Fetch top ranked stocks from the latest report."
+    template: "WITH latest_run AS (SELECT run_id FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)) SELECT efs.run_id, efs.symbol, efs.rank FROM report.enhanced_filtered_stocks efs JOIN latest_run lr ON efs.run_id = lr.run_id ORDER BY efs.rank LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure the data for the latest run is consistent and correctly ordered."
+  - "Confirm links are present and functional in the report outputs."
+synthesis_guidance: "['Provide a clear and concise summary of validation results, highlighting any issues detected and potential remediation steps.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:24"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

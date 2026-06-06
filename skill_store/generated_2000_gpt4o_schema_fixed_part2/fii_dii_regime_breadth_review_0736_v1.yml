@@ -1,0 +1,52 @@
+id: "fii_dii_regime_breadth_review_0736_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0736"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  - "Analyze the FII/DII flows in the last 20 sessions to determine if there is a risk-on or risk-off market condition."
+  - "Examine the regime history to see if the market trends align with FII/DII flows."
+  - "Evaluate market breadth to confirm the general market sentiment."
+  - "Review the index EOD data to provide additional confirmation of market conditions."
+  - "Follow the QA checklist format to present the findings clearly."
+sql_templates:
+  -
+    template: "SELECT reg.trade_date, reg.regime, reg.confidence, reg.days_in_regime, flow.fii_net_today, flow.dii_net_today, flow.fii_trend, flow.dii_trend, breadth.advances, breadth.declines, breadth.bullish_pct, index.close FROM signals.fii_dii_flows AS flow JOIN signals.regime_history AS reg ON flow.trade_date = reg.trade_date JOIN breadth.market_daily AS breadth ON flow.trade_date = breadth.trade_date JOIN market.index_eod AS index ON flow.trade_date = index.trade_date WHERE flow.trade_date > CURRENT_DATE - INTERVAL '20 days' AND index.index_symbol = 'Nifty 50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure the analysis timeframe covers exactly the last 20 trading sessions."
+  - "Verify regime and flow trend align with general market indicators."
+synthesis_guidance: "Provide a clear summary of FII/DII trends, regime status, and market breadth in the last 20 sessions. Use data points to validate whether the market is in a risk-on or risk-off position."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.market_daily is not approved"

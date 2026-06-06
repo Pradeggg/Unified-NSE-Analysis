@@ -1,0 +1,74 @@
+id: "fii_dii_regime_breadth_review_1786_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1786"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: intraday context; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for intraday context: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "intraday_context"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    step: "Select the latest FII/DII flow and regime context for intraday analysis."
+    outputs:
+      - "regime"
+      - "flow_context"
+  -
+    step: "Assess market breadth using advances/declines and TRIN."
+    outputs:
+      - "breadth_context"
+  -
+    step: "Validate market regime with index-level confirmation."
+    outputs:
+      - "index_confirmation"
+  -
+    step: "Identify any risk flags or anomalies."
+    outputs:
+      - "risk_flags"
+sql_templates:
+  -
+    description: "Fetch the latest FII and DII flow data with regime context."
+    template: "SELECT f.trade_date, f.fii_net_today, f.dii_net_today, f.flow_signal, r.regime, r.confidence FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date WHERE f.trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+  -
+    description: "Fetch daily market breadth, TRIN, and AD Oscillator indicator for intraday context."
+    template: "SELECT trade_date, advances, declines, ad_signal, trin, market_sentiment FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+  -
+    description: "Retrieve the latest index EOD data for confirmation."
+    template: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND index_symbol = 'Nifty 50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'guidance': ['Frame the response as a checklist with specific points related to regime, flows, breadth, and risk flags.', 'Highlight any anomalies or risk indicators clearly in the checklist.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

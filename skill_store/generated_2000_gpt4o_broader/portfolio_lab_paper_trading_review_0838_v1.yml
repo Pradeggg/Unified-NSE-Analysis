@@ -1,0 +1,60 @@
+id: "portfolio_lab_paper_trading_review_0838_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0838"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "position-sizing context for last 20 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as action watchlist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Gather recent paper trading entries from signals.signal_log for the last 20 sessions."
+    - "Filter open trades from the portfolio.holdings based on active symbols."
+    - "Assess entry and exit rules for each trade using signals.signal_log."
+    - "Evaluate exposure and position sizing context using scores.stage_snapshots."
+    - "Highlight exceptions or deviations from expected strategies."
+sql_templates:
+  recent_signals: "SELECT * FROM signals.signal_log WHERE date_issued > CURRENT_DATE - INTERVAL '20 days';"
+  open_trades: "SELECT * FROM portfolio.holdings;"
+  entry_exit_rules: "SELECT symbol, signal, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_resolved IS NULL;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure recent signals are evaluated within the last 20 sessions."
+  - "Confirm open trades match active symbols in signals."
+  - "Verify entry and exit rules align with provided strategy targets."
+synthesis_guidance: "['Analyze the strategy effectiveness based on entry and exit criteria.', 'Provide insights into potential improvements in position sizing.', 'Identify any deviations from the planned trade strategy.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

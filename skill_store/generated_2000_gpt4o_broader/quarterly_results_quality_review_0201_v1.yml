@@ -1,0 +1,64 @@
+id: "quarterly_results_quality_review_0201_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0201"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: today; response style: ranked candidates."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for today: latest quarterly results analysis"
+  - "which companies had strong quarterly results as ranked candidates"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "today"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Assess quarterly results using provided tables to rank companies by performance."
+sql_templates:
+  quarterly_results_analysis: "SELECT qr.symbol, ra.company_name, ra.growth_yoy_revenue_pct, ra.growth_qoq_pat_pct, ss.stage_score FROM scores.quarterly_results qr JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end JOIN scores.stage_snapshots ss ON qr.symbol = ss.symbol WHERE ra.period_label = 'Latest Quarter' AND ss.snapshot_date = CURRENT_DATE ORDER BY ra.growth_yoy_revenue_pct DESC;"
+python_tools:
+  -
+    id: "calculate_filing_freshness"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "scores.results_analysis:filing_date"
+      - "scores.quarterly_results:period_end"
+    outputs:
+      - "filing_days_difference"
+    approved_tables:
+      - "scores.results_analysis"
+      - "scores.quarterly_results"
+    code: "from datetime import datetime\n\n# Mock function assuming input is provided correctly\n\ndef calculate_filing_freshness(filing_date: str, period_end: str) -> int:\n    filing_dt = datetime.strptime(filing_date, '%Y-%m-%d')\n    period_end_dt = datetime.strptime(period_end, '%Y-%m-%d')\n    return (filing_dt - period_end_dt).days\n"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure growth percentages are calculated correctly."
+  - "Rank companies based on growth and stage_score."
+  - "Validate company name matches across evidence."
+synthesis_guidance: "Focus on recent performance metrics and highlight top-performing companies with quality narratives."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:40"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_filing_freshness: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_filing_freshness: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

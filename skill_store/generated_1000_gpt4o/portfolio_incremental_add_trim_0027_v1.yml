@@ -1,0 +1,73 @@
+id: "portfolio_incremental_add_trim_0027_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0027"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: concise table."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for last 5 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as concise table"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  - "Extract recent performance and technical indicators of current holdings."
+  - "Perform relative sector comparison for the last 5 trading sessions."
+  - "Identify potential add and trim candidates based on analysis."
+sql_templates:
+  -
+    description: "Fetch recent performance data for portfolio holdings."
+    query: "SELECT ss.symbol, ss.company_name, ss.sector, ss.stage, ss.stage_score, ss.change_1d_pct, ss.change_1w_pct, ss.relative_strength, ss.trend_signal FROM scores.stage_snapshots ss JOIN portfolio.holdings ph ON ss.symbol = ph.symbol WHERE ss.snapshot_date >= (CURRENT_DATE - INTERVAL '5 DAY');"
+  -
+    description: "Calculate average performance by sector."
+    query: "WITH sector_performance AS (SELECT ss.sector, AVG(ss.change_1w_pct) AS avg_change_1w_pct FROM scores.stage_snapshots ss WHERE ss.snapshot_date >= (CURRENT_DATE - INTERVAL '5 DAY') GROUP BY ss.sector) SELECT * FROM sector_performance;"
+python_tools:
+  -
+    id: "calculate_relativity_scores"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_data"
+    outputs:
+      - "relative_sector_score"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "# Calculate sector-relative scores based on average performance.\n# Make sure this calculation remains read-only and provides insight without changing data.\ndef run(context):\n    sector_data = context['sector_data']\n    # ... Perform calculations here\n    return {'relative_sector_score': relative_sector_score}"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:41:06"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table ph.symbol"
+  - "unknown table ss.change_1d_pct"
+  - "unknown table ss.change_1w_pct"
+  - "unknown table ss.company_name"
+  - "unknown table ss.relative_strength"
+  - "unknown table ss.sector"
+  - "unknown table ss.snapshot_date"
+  - "unknown table ss.stage"
+  - "unknown table ss.stage_score"
+  - "unknown table ss.symbol"
+  - "unknown table ss.trend_signal"

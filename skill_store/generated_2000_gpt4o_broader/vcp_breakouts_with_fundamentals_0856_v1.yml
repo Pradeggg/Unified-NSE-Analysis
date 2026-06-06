@@ -1,0 +1,69 @@
+id: "vcp_breakouts_with_fundamentals_0856_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0856"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: quarter to date; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  python_tool_policy:
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    required_fields:
+      - "id"
+      - "language"
+      - "mode"
+      - "inputs"
+      - "outputs"
+      - "approved_tables"
+      - "code"
+sql_templates:
+  -
+    template: "WITH latest_eod AS (SELECT symbol, max(trade_date) AS latest_date FROM market.equity_eod GROUP BY symbol) SELECT ee.symbol, ee.close, ss.fundamental_score, vcp.vcp_score FROM market.equity_eod ee JOIN latest_eod le ON ee.symbol = le.symbol AND ee.trade_date = le.latest_date JOIN scores.stage_snapshots ss ON ee.symbol = ss.symbol AND ee.trade_date = ss.snapshot_date JOIN scores.stage2_vcp_picks vcp ON ee.symbol = vcp.symbol WHERE ee.close = ee.week52_high OR vcp.vcp_score > 70 OR ss.stage = 'Breakout' AND ss.fundamental_score > 50"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "Ensure no unnecessary use of Python when SQL suffices."
+synthesis_guidance: "Combine the evidence prioritizing freshness and quarter-to-date performance for compiling an action watchlist based on VCP, new highs, or breakout activities."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

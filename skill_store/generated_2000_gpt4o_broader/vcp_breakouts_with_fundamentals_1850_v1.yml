@@ -1,0 +1,66 @@
+id: "vcp_breakouts_with_fundamentals_1850_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1850"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 3 months; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_3_months"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Combine EOD and scores data to identify stocks reaching new highs or exhibiting VCP patterns, and then filter for strong fundamentals."
+sql_templates:
+  -
+    description: "Identify potential breakout stocks from EOD data."
+    template: "SELECT symbol, high, close, volume FROM market.equity_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND high = week52_high;"
+  -
+    description: "Fetch VCP candidates with strong fundamentals."
+    template: "SELECT s.symbol, s.company_name, s.sector, v.vcp_score, v.enhanced_fund_score FROM scores.stage2_vcp_picks v JOIN scores.stage_snapshots s ON v.symbol = s.symbol WHERE v.vcp_score > 0.75 AND v.enhanced_fund_score > 0.8;"
+python_tools:
+  -
+    id: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sql_results"
+    outputs:
+      - "filtered_results"
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    code: "# This function processes SQL results to align with the TradingView format.\ndef run(context):\n    filtered_results = []\n    for result in context['sql_results']:\n        if result['vcp_score'] > 0.75 and result['enhanced_fund_score'] > 0.8:\n            filtered_results.append(result)\n    return filtered_results"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all data is current within the last 3 months"
+  - "Only include stocks with a strong VCP pattern and robust fundamental scores"
+  - "Output should be compatible with TradingView specifications"
+synthesis_guidance: "Emphasize breakout potential and strong fundamentals, ensuring alignment with TradingView requirements."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:46"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.curdate is not approved"
+  - "market.equity_eod.date_sub is not approved"
+  - "market.equity_eod.month is not approved"

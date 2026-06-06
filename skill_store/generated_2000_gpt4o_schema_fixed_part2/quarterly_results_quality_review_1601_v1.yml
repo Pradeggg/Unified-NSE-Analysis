@@ -1,0 +1,50 @@
+id: "quarterly_results_quality_review_1601_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1601"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: today; response style: debug trace."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for today: latest quarterly results analysis"
+  - "which companies had strong quarterly results as debug trace"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "today"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "To assess the latest quarterly results, use the approved schema to evaluate revenue and PAT growth, margin trends, filing freshness, and quality of the narrative."
+sql_templates:
+  -
+    description: "Query to get the latest quarterly results"
+    query: "WITH latest_results AS (SELECT DISTINCT ON (symbol) symbol, period_end, revenue, pat, opm_pct, period_label FROM scores.quarterly_results WHERE period_type = 'quarter' ORDER BY symbol, period_end DESC, fetched_at DESC) SELECT lr.symbol, lr.period_label, ra.company_name, ra.industry, ra.verdict, ra.growth_yoy_revenue_pct, ra.growth_qoq_revenue_pct, ra.growth_yoy_pat_pct, ra.growth_qoq_pat_pct, ra.opm_delta_pp FROM latest_results lr JOIN scores.results_analysis ra ON lr.symbol = ra.symbol AND lr.period_end = ra.period_end;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "check"
+synthesis_guidance: "{'guidance': 'Synthesize the results to provide meaningful insights regarding revenue and PAT growth trends, margin movements, and overall results quality.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,63 @@
+id: "signal_outcome_feedback_review_0333_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Daily Signal Outcome Review"
+description: "Analyse signal outcomes from the last 20 sessions, focusing on exceptions and gaps in performance. Enhance signal decision-making."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "daily_refresh_follow-up"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Select outcome summary of signals issued in the last 20 sessions."
+    template: "SELECT id, date_issued, symbol, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= (CURRENT_DATE - INTERVAL '20 days');"
+python_tools:
+  -
+    id: "outcome_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "outcome_summary"
+    outputs:
+      - "winner_patterns"
+      - "failure_patterns"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    outcomes = context['outcome_summary']\n    winners = [o for o in outcomes if o['hit_target']]\n    failures = [o for o in outcomes if o['hit_stop']]\n    return {\n        'winner_patterns': analyze_winners(winners),\n        'failure_patterns': analyze_failures(failures)\n    }\n\n# Helper functions to analyze winners and failures\n# (Definitions for `analyze_winners`, `analyze_failures` not shown)"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:04"
+generation_model: "gpt-4o"
+validation_errors:
+  - "outcome_analysis: execution failed: KeyError: 'outcome_summary'"
+review:
+  status: "needs_heal"
+  findings:
+    - "outcome_analysis: execution failed: KeyError: 'outcome_summary'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

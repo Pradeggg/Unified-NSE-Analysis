@@ -1,0 +1,62 @@
+id: "portfolio_lab_paper_trading_review_0404_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Paper Trading Watchlist Creation Review"
+description: "Analyze paper trading strategies focusing on entries, exits, and exposure with a watchlist tailored for today's market. Generate portfolio-aware insights without mixing real holdings."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "watchlist creation for today: paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  sql_templates:
+    -
+      name: "current_holdings_analysis"
+      sql: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+    -
+      name: "signal_analysis"
+      sql: "SELECT date_issued, symbol, sector, signal, setup_class, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_resolved IS NULL;"
+    -
+      name: "performance_snapshot"
+      sql: "SELECT snapshot_date, symbol, price, stage, technical_score FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+    -
+      name: "equity_performance"
+      sql: "SELECT symbol, close, change_pct FROM market.equity_eod WHERE trade_date = CURRENT_DATE;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure only approved tables and columns are used."
+  - "All SQL queries must be read-only."
+  - "Python tools, if used, should be read-only and quarantined."
+synthesis_guidance: "Focus on today's market dynamics for paper trading strategies without mixing with real portfolio details. Tailor insights for actionable watchlist development."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:45"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

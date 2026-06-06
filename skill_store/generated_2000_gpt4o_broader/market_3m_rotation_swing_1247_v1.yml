@@ -1,0 +1,70 @@
+id: "market_3m_rotation_swing_1247_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1247"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: ranked candidates."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  description: "Assess the Indian market rotation in the last 3 months focusing on sector-relative strength, broad regime analysis, and swing trading opportunities."
+  steps:
+    - "Analyze broad market regime using market.index_eod."
+    - "Identify leading and lagging sectors based on scores.stage_snapshots."
+    - "Identify potential swing trading candidates from scores.stage2_vcp_picks."
+sql_templates:
+  -
+    description: "Get index returns and trend signals for the last 3 months."
+    template: "SELECT index_symbol, (close - prev_close) / prev_close * 100 AS change_pct, trend_signal FROM market.index_eod WHERE trade_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND CURDATE();"
+  -
+    description: "Find sector change and identify leading sectors."
+    template: "SELECT sector, AVG(change_1m_pct) AS avg_change, STAGE(stage) AS stage FROM scores.stage_snapshots WHERE snapshot_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND CURDATE() GROUP BY sector ORDER BY avg_change DESC;"
+  -
+    description: "Select top swing candidates based on VCP score."
+    template: "SELECT symbol, company_name, vcp_score, relative_strength FROM scores.stage2_vcp_picks WHERE snapshot_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND CURDATE() ORDER BY vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure data is current as of the last available trade date."
+  - "Verify sector-leading changes are consistent with overall market trends."
+  - "Check swing candidate selections reflect high VCP and relative strength."
+synthesis_guidance: "Focus on deriving insights regarding the shift in market trends and identifying strong sectors along with potential swing trade candidates based on VCP analysis."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage2_vcp_picks.curdate is not approved"
+  - "scores.stage2_vcp_picks.date_sub is not approved"
+  - "scores.stage2_vcp_picks.month is not approved"
+  - "scores.stage_snapshots.avg_change is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"

@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:42:20"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: last 20 sessions; response style: narrative plus evidence."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0140_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as narrative plus evidence"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    description: "Fetch recent report runs within the last 20 sessions."
+    query: "SELECT run_id, run_ts, universe_size FROM report.enhanced_runs WHERE run_ts > current_date - interval '20 days';"
+  -
+    description: "Fetch stock recommendations and prices for recent runs."
+    query: "SELECT symbol, recommendation, current_price FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts > current_date - interval '20 days');"
+status: "validated"
+synthesis_guidance: "Combine metadata insights with stock data to provide a narrative report on data integrity and linkage issues. Highlight discrepancies in report exports."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "narrative_plus_evidence"
+title: "Enhanced Report Data Validation Variant 0140"
+tool_plan_template: "Execute SQL to pull data from 'report.enhanced_runs' and 'report.enhanced_filtered_stocks' for narrative synthesis."
+validation_rules:
+  - "Ensure no missing data in 'run_id' and 'symbol' columns."
+  - "Verify links are functional using metadata."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,53 @@
+id: "corporate_events_results_watchlist_1325_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1325"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: risk-first review; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "risk-first review for last 5 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as exceptions and gaps first"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "risk-first_review"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Review recent and upcoming corporate events and results. Use tables: signals.corporate_events, scores.results_analysis, and scores.stage_snapshots."
+sql_templates:
+  -
+    template: "WITH latest_stage AS (SELECT symbol, stage_score, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_events AS (SELECT symbol, event_type, event_date FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '5 days') SELECT le.symbol, le.event_type, le.event_date, ls.stage_score, ls.stage FROM latest_events le JOIN latest_stage ls ON le.symbol = ls.symbol WHERE ls.stage = 'STAGE_2' AND le.event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM') ORDER BY le.event_date DESC LIMIT 10;"
+    description: "Retrieve recent corporate events of types RESULTS, DIVIDEND, SPLIT, BONUS, and AGM for symbols in Stage 2."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Verify all mandatory fields."
+  - "Validate SQL WHERE clause adherence to schema join rules."
+synthesis_guidance: "Focus on risk-first strategy by identifying events that diverge from recent performance trends."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

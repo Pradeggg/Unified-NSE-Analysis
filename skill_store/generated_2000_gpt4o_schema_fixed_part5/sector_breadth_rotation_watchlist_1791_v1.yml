@@ -1,0 +1,59 @@
+id: "sector_breadth_rotation_watchlist_1791_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1791"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for weekly review: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as QA checklist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Analyze sector improvements using snapshots from sector_daily and stage_snapshots to identify sectors and stocks with strong stage 2 participation and favorable breadth signals."
+sql_templates:
+  -
+    template_name: "latest_sector_breadth"
+    sql: "SELECT sd.sector, sd.breadth_signal, ma.stage2_pct FROM breadth.sector_daily sd JOIN breadth.ma_pct_above ma ON sd.snapshot_date = ma.snapshot_date WHERE sd.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily);"
+  -
+    template_name: "stage_2_participation"
+    sql: "SELECT sector, COUNT(symbol) as stage_2_count FROM scores.stage_snapshots WHERE stage = 'STAGE_2' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sector breadth includes stage 2 count."
+  - "Validate that breadth signal corresponds with price momentum."
+  - "Cross-check breadth data with latest snapshot for consistency."
+synthesis_guidance: "['Present sectors with top-stage 2 participation and positive breadth signals.', 'Highlight improving sectors in TradingView.', 'Formulate QA checklist format for sector comparison.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:54"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

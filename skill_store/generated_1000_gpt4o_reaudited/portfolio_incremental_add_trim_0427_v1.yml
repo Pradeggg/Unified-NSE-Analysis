@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:46:26"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: portfolio-aware output."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0427_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for last 5 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as portfolio-aware output"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+  -
+    id: "sector_relative_performance"
+    template: "SELECT symbol, sector, AVG(change_1d_pct) as avg_change_1d_pct, AVG(change_1w_pct) as avg_change_1w_pct FROM scores.stage_snapshots WHERE snapshot_date > (SELECT MAX(snapshot_date) - INTERVAL '5 days' FROM scores.stage_snapshots) GROUP BY symbol, sector"
+  -
+    id: "current_holdings"
+    template: "SELECT symbol, qty, avg_cost FROM portfolio.holdings"
+status: "validated"
+synthesis_guidance: "Focus on balancing portfolio state with sector exposure. Highlight areas where risk flags may require attention and justify add/trim actions with supporting data."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "portfolio-aware_output"
+title: "Portfolio Incremental Add Trim Review Variant 0427"
+tool_plan_template: "Analyze current portfolio holdings compared to sector-relative performance in the last five sessions. Determine add/trim recommendations using technical indicators and exposure data."
+validation_rules:
+  - "Ensure the portfolio-aware output covers both current holdings and sector-relative performance."
+  - "Recommendations for add/trim must align with the sector performance over the last 5 sessions."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

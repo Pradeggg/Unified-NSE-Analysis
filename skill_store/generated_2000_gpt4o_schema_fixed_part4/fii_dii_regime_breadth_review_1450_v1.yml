@@ -1,0 +1,65 @@
+id: "fii_dii_regime_breadth_review_1450_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1450"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for last 3 months: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as portfolio-aware output"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    sql_templates:
+      -
+        description: "Fetch FII DII flow trends and market regimes in the last 3 months."
+        query: "SELECT f.trade_date, f.fii_net_5d, f.dii_net_5d, f.flow_signal, r.regime, r.confidence FROM signals.fii_dii_flows f INNER JOIN signals.regime_history r ON f.trade_date = r.trade_date WHERE f.trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+      -
+        description: "Fetch market breadth and index confirmation for the last 3 months."
+        query: "SELECT b.trade_date, b.ad_signal, m.close, m.trend_signal FROM breadth.market_daily b INNER JOIN market.index_eod m ON b.trade_date = m.trade_date AND m.index_symbol = 'Nifty 50' WHERE b.trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+    validation_rules:
+      - "Ensure all dates are aligned for 3-month review."
+      - "Confirm index participation with 'Nifty 50'."
+    synthesis_guidance:
+      - "Synthesize flow, regime, and breadth for risk-on/risk-off context."
+      - "Frame the result in a portfolio-aware manner with TradingView export format."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,73 @@
+id: "vcp_breakouts_with_fundamentals_0156_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0156"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: quarter to date; response style: narrative plus evidence."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters:
+    - "breakout"
+    - "new_high"
+    - "VCP"
+    - "strong_fundamentals"
+  candidates:
+    - "symbols_meeting_criteria"
+  tradingview_symbols:
+    - "formatted_list_for_tradingview"
+  evidence:
+    - "supporting_data_points"
+  risks:
+    - "potential_risks_and_gaps"
+sql_templates:
+  -
+    name: "select_vcp_breakouts"
+    description: "Select VCP breakout stocks with strong fundamentals and new highs."
+    template: "SELECT symbol, company_name, sector, price, live_price, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE vcp_score > 80 AND enhanced_fund_score > 70 AND price = week52_high;"
+python_tools:
+  -
+    id: "run_vcp_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "filtered_data"
+    outputs:
+      - "detailed_analysis"
+    approved_tables:
+      - "scores.stage2_vcp_picks"
+    code: "def run(context): return calculate_vcp(context['filtered_data'])"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "status must be generated"
+  - "no write operations in SQL templates"
+  - "only read-only Python tools if SQL is complex"
+synthesis_guidance: "['Ensure clarity in narrative explanation.', 'Use evidence to support breakout and fundamental strength claims.', 'Identify stocks reaching new highs, exhibiting VCP patterns, and strong fundamentals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:58"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.week52_high is not approved"

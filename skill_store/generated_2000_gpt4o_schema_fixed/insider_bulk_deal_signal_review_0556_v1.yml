@@ -1,0 +1,54 @@
+id: "insider_bulk_deal_signal_review_0556_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0556"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: quarter to date; response style: research-only summary."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for quarter to date: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as research-only summary"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  sql_templates:
+    -
+      description: "Retrieve insider alerts and bulk deals with latest technical scores."
+      sql: "WITH insider_alerts_cte AS (SELECT symbol, alert_date FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '3 months'), bulk_deals_cte AS (SELECT symbol, deal_date FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '3 months') SELECT s.symbol, s.stage, s.technical_score FROM scores.stage_snapshots s JOIN insider_alerts_cte ia ON ia.symbol = s.symbol OR JOIN bulk_deals_cte bd ON bd.symbol = s.symbol WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 100;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure result sets are within the quarter-to-date timeframe."
+  - "Verify symbol alignment across tables using approved join rules."
+synthesis_guidance: "['Prioritize symbols with recent alerts and strong technical confirmation.', 'Utilize research-only framing in summaries to maintain clarity and focus.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:25:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

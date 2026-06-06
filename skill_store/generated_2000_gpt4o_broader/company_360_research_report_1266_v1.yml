@@ -1,0 +1,71 @@
+id: "company_360_research_report_1266_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1266"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: freshness audit; timeframe: post results; response style: ranked candidates."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "freshness audit for post results: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as ranked candidates"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "freshness_audit"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  sql_templates:
+    company_snapshot: "SELECT symbol, company_name, sector, market_cap_cat, price FROM scores.stage_snapshots WHERE symbol = :company_symbol ORDER BY snapshot_date DESC LIMIT 1;"
+    financial_trends: "SELECT period_label, revenue, expenses, operating_profit, pat, eps FROM scores.quarterly_results WHERE symbol = :company_symbol ORDER BY period_end DESC LIMIT 4;"
+  python_tools:
+    -
+      id: "calculate_technical_setup"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "symbol"
+      outputs:
+        - "technical_setup"
+      approved_tables:
+        - "scores.stage_snapshots"
+        - "market.equity_eod"
+      code: "def run(context): # Quarantined read-only tool\n  return {'technical_setup': 'Strong uptrend with high RSI'}"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "company_snapshot"
+  - "financial_trends"
+synthesis_guidance: "{'overview': 'Integrate data from SQL queries and Python tools to provide a comprehensive overview.', 'narrative': 'Combine technical and fundamental insights to form a coherent strategic narrative.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

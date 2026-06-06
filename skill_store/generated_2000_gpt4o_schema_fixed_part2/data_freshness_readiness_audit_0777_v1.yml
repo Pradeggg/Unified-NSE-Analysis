@@ -1,0 +1,73 @@
+id: "data_freshness_readiness_audit_0777_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0777"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: pre market; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for pre market: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  - "Assess data freshness for each evidence source based on latest available trade_date or snapshot_date."
+  - "Identify sector-relative readiness using technical scores and breadth indicators."
+sql_templates:
+  -
+    template_id: "check_latest_equity_eod"
+    template: "SELECT MAX(trade_date) AS latest_trade_date FROM market.equity_eod;"
+  -
+    template_id: "check_latest_index_eod"
+    template: "SELECT MAX(trade_date) AS latest_trade_date FROM market.index_eod;"
+  -
+    template_id: "check_latest_stage_snapshots"
+    template: "SELECT MAX(snapshot_date) AS latest_snapshot_date FROM scores.stage_snapshots;"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "freshness_report"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Use the context information to assess data freshness\n    # This is a placeholder implementation\n    freshness_report = {}  # Logic to check freshness\n    return freshness_report"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all evidence sources have data within the last trading session."
+  - "Cross-verify sector readiness using market sentiment and composite scores."
+synthesis_guidance: "['Employ matrix format to display freshness status per source.', 'Provide a checklist of missing data components and the impact on technical narratives.', 'Offer remediation actions for out-of-date data loaders.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:29"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_trade_date is not approved"
+  - "market.index_eod.latest_trade_date is not approved"
+  - "scores.stage_snapshots.latest_snapshot_date is not approved"

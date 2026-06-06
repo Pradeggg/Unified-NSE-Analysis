@@ -1,0 +1,62 @@
+created_at: "2026-06-06T12:49:17"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: intraday context; response style: research-only summary."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0581_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as research-only summary"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 2
+sql_templates:
+  -
+    description: "Get index returns for the last 3 months"
+    query: "SELECT index_symbol, AVG(change_pct) AS avg_change FROM market.index_eod WHERE trade_date > (SELECT MAX(trade_date) FROM market.index_eod WHERE trade_date <= CURDATE() - INTERVAL 90 DAY) GROUP BY index_symbol;"
+  -
+    description: "Find stage distribution change over the last 3 months"
+    query: "WITH stage_counts AS (SELECT COUNT(*) AS count, stage FROM scores.stage_snapshots WHERE snapshot_date > (SELECT MAX(snapshot_date) FROM scores.stage_snapshots WHERE snapshot_date <= CURDATE() - INTERVAL 90 DAY) GROUP BY stage) SELECT stage, count FROM stage_counts;"
+  -
+    description: "Identify leading sectors based on technical score"
+    query: "SELECT sector, AVG(technical_score) AS avg_technical_score FROM scores.stage_snapshots WHERE snapshot_date > (SELECT MAX(snapshot_date) FROM scores.stage_snapshots WHERE snapshot_date <= CURDATE() - INTERVAL 90 DAY) GROUP BY sector ORDER BY avg_technical_score DESC LIMIT 5;"
+status: "validated"
+synthesis_guidance: "Synthesize SQL results into a brief market regime and sector leadership summary, including swing candidate identification."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "intraday_context"
+  - "research-only_summary"
+title: "3M Market Rotation Swing Assessment Variant 0581"
+tool_plan_template: "{ToolDirective} {ContextSummary}"
+validation_errors:
+
+validation_rules:
+  - "Validate that index returns are from the last 3 months"
+  - "Ensure stage distribution is correctly calculated"
+  - "Verify leading sectors are correctly identified"
+version: 1

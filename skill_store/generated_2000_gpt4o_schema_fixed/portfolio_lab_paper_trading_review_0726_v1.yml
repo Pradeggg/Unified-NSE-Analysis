@@ -1,0 +1,60 @@
+id: "portfolio_lab_paper_trading_review_0726_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0726"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for last 5 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as QA checklist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Create a QA checklist based on paper trading data, including separate analysis of entries and exits using fresh data from the last 5 sessions."
+sql_templates:
+  -
+    name: "FetchLatestHoldings"
+    sql: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings"
+  -
+    name: "FetchRecentSignals"
+    sql: "SELECT * FROM signals.signal_log WHERE date_issued >= (SELECT MAX(date_issued) FROM signals.signal_log) - INTERVAL '5 days'"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  -
+    rule: "Verify data freshness for the last 5 sessions."
+  -
+    rule: "Ensure separation of paper trading data from real holdings."
+  -
+    rule: "Validate entry and exit strategy logic."
+synthesis_guidance: "Generate a QA checklist to ensure separation of paper trading strategies from real holdings with verification of strategy freshness over the last 5 sessions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

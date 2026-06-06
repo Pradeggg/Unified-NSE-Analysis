@@ -1,0 +1,51 @@
+id: "signal_outcome_feedback_review_0179_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: pre market; response style: narrative plus evidence."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for pre market: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as narrative plus evidence"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "pre_market"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  signal_outcomes: "WITH latest_signals AS (SELECT * FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months'), latest_stages AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), resolved_signals AS (SELECT sl.*, ss.stage_score FROM latest_signals sl JOIN latest_stages ss ON sl.symbol = ss.symbol WHERE sl.date_resolved IS NOT NULL) SELECT symbol, signal, hit_target, hit_stop, return_pct, stage_score FROM resolved_signals ORDER BY date_resolved DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure SQL templates are read-only."
+  - "Limit evidence rows to maintain data payload efficiency."
+synthesis_guidance: "['Narrative should connect how successful and failed signals impact future recommendations.', 'Highlight striking patterns or anomalies discovered in the signal feedback loop.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

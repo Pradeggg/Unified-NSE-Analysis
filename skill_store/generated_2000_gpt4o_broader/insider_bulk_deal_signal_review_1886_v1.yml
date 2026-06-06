@@ -1,0 +1,73 @@
+id: "insider_bulk_deal_signal_review_1886_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1886"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for intraday context: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as action watchlist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  context: "Review and prioritize insider and bulk deal signals, using freshness and technical scores, for creating actionable watchlists within an intraday context."
+sql_templates:
+  -
+    purpose: "Fetch recent insider alerts and bulk deals."
+    template: "WITH recent_insider_alerts AS (SELECT * FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '1 DAY'), recent_bulk_deals AS (SELECT * FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '1 DAY') SELECT * FROM recent_insider_alerts INNER JOIN recent_bulk_deals ON recent_insider_alerts.symbol = recent_bulk_deals.symbol;"
+  -
+    purpose: "Evaluate technical confirmation for relevant symbols."
+    template: "SELECT * FROM scores.stage_snapshots WHERE symbol IN (SELECT symbol FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '1 DAY') AND rsi > 70 AND trend_signal = 'Positive';"
+  -
+    purpose: "Fetch EOD data for volume and price context."
+    template: "SELECT * FROM market.equity_eod WHERE trade_date = CURRENT_DATE - INTERVAL '1 DAY';"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "recent_insider_alerts"
+      - "recent_bulk_deals"
+    outputs:
+      - "filtered_symbols"
+    approved_tables:
+      - "signals.insider_alerts"
+      - "signals.bulk_block_deals"
+    code: "def run(context):\n    alerts = context['recent_insider_alerts']\n    deals = context['recent_bulk_deals']\n    # Filter logic here\n    return {'filtered_symbols': set(alert['symbol'] for alert in alerts).intersection(deal['symbol'] for deal in deals)}"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure data freshness is respected based on alert and deal dates."
+  - "Confirm technical signals match expected patterns for accumulation."
+synthesis_guidance: "{'focus': 'Prioritize signals with technical alignment and recent activity. Structure findings to support an action-oriented watchlist.', 'style': 'Use concise summaries with clear actionable insights, emphasizing the intraday context and technical confirmations.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: execution failed: KeyError: 'recent_insider_alerts'"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: execution failed: KeyError: 'recent_insider_alerts'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

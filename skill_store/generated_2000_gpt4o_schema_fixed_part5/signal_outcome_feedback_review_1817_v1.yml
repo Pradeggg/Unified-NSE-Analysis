@@ -1,0 +1,55 @@
+id: "signal_outcome_feedback_review_1817_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1817"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for latest EOD: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as action watchlist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Use this plan to evaluate and compare signal outcomes using SQL templates and map the analysis to the action watchlist template. Rely on 'approved_schema' for table and column usage. You may use Python tools only if SQL templates become overly complex for outcome tracking."
+sql_templates:
+  -
+    template_id: "outcome_analysis"
+    description: "Compare signal outcomes against the latest EOD market data and stage snapshots."
+    sql: "WITH latest_signals AS (SELECT * FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months'), \n latest_eod AS (SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND series = 'EQ'), \n latest_stage AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) \n SELECT ls.symbol, ls.hit_target, ls.hit_stop, ls.return_pct, le.close AS latest_close, ss.stage \n FROM latest_signals ls \n JOIN latest_eod le ON ls.symbol = le.symbol \n JOIN latest_stage ss ON ls.symbol = ss.symbol \n WHERE ls.return_pct IS NOT NULL;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure SQL template follows the latest EOD rules."
+  - "Validate that sector comparisons have been made correctly using available data."
+synthesis_guidance: "Provide a clear summary of winners and failures from signal outcomes and suggest potential improvements for future signal selection. Capture these insights in an action watchlist format."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:11"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,50 @@
+created_at: "2026-06-06T12:49:17"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: intraday context; response style: research-only summary."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0584_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for intraday context: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  filtered_stocks_check: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '1 day');"
+  metadata_validation: "SELECT run_id, run_ts, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '1 day';"
+status: "validated"
+synthesis_guidance: "Summarize findings with a focus on research and insights into potentially missing data points or broken reference links."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "intraday_context"
+  - "research-only_summary"
+title: "Enhanced Report Data Validation Variant 0584"
+tool_plan_template: "Use SQL to access and verify metadata and filtered stock rows for research."
+validation_rules:
+  - "All data references are read-only."
+  - "Ensure report links are correctly associated with runs."
+  - "Verify that there are no missing stocks for given dates."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

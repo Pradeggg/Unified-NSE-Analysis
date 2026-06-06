@@ -1,0 +1,61 @@
+id: "signal_outcome_feedback_review_0305_v1"
+version: 1
+status: "validated"
+domain: "signal_review"
+title: "Risk-First Signal Outcome Review"
+description: "Review trading signals to evaluate targets, stops and outcomes with a risk-first approach."
+input_patterns:
+  - "review signal outcomes"
+  - "evaluate what worked or failed"
+  - "risk-focused review today"
+tags:
+  - "signal_review"
+  - "risk_management"
+  - "outcome_analysis"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  sql_templates:
+    -
+      description: "Fetch latest resolved signals with outcomes."
+      sql: "SELECT s.id, s.symbol, s.date_issued, s.date_resolved, s.hit_target, s.hit_stop, s.return_pct FROM signals.signal_log s WHERE s.date_resolved <= CURRENT_DATE"
+  python_tools:
+    -
+      id: "calculate_risk_metrics"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        fields:
+          - "return_pct"
+          - "hit_target"
+          - "hit_stop"
+      outputs:
+        - "risk_assessment"
+      approved_tables:
+        - "signals.signal_log"
+      code: "def run(context):\n    signals = context.get('signals.signal_log')\n    risk_assessment = []\n    for signal in signals:\n        risk = calculate_risk(signal['return_pct'], signal['hit_target'], signal['hit_stop'])\n        risk_assessment.append(risk)\n    return risk_assessment"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "risk_analysis"
+  - "improvement_suggestions"
+  - "next_checkpoints"
+validation_rules:
+  - "Ensure resolved signals have return percentages calculated."
+  - "Assess risks based on hit targets and stops."
+synthesis_guidance: "['Focus on exceptions and gaps.', 'Highlight risk factors and improvement areas.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:51"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

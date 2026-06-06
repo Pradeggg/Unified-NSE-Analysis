@@ -1,0 +1,52 @@
+id: "vcp_breakouts_with_fundamentals_1318_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1318"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: latest EOD; response style: exceptions and gaps first."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Draft tool plan using latest evidence from approved tables only for concept framing."
+sql_templates:
+  -
+    description: "Identify stocks that are VCP breakouts or new highs with strong fundamentals."
+    query: "WITH latest_eod AS (SELECT symbol, close, volume, week52_high FROM market.equity_eod WHERE trade_date = CURRENT_DATE), vcp_picks AS (SELECT symbol, vcp_score, vcp_breakout_pct FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE) SELECT eod.symbol, eod.close, eod.volume, vcp.vcp_score, vcp.vcp_breakout_pct FROM latest_eod eod JOIN vcp_picks vcp ON eod.symbol = vcp.symbol WHERE eod.week52_high <= eod.close AND vcp.vcp_score > 0.5 ORDER BY eod.volume DESC;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "ensure_completeness"
+  - "verify_max_ranges"
+synthesis_guidance: "Highlight exceptions or gaps in evidence and prioritize strong, actionable insights."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

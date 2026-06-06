@@ -1,0 +1,76 @@
+id: "agent_route_failure_diagnostics_1218_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1218"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: latest EOD; response style: ranked candidates."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for latest EOD: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as ranked candidates"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  steps:
+    - "Validate available evidence for diagnostics."
+    - "Apply latest-date filter using global SQL rules."
+    - "Join required tables to cross-verify data consistency."
+    - "Analyze position-sizing context for diagnostic insights."
+sql_templates:
+  -
+    name: "latest_eod_stage2"
+    description: "Retrieve latest Stage 2 stocks for centralized diagnostics."
+    template: "SELECT e.run_id, s.symbol, s.stage, s.trading_signal FROM report.enhanced_runs e JOIN report.enhanced_filtered_stocks f ON e.run_id = f.run_id JOIN scores.stage_snapshots s ON f.symbol = s.symbol WHERE e.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.stage = 'STAGE_2' LIMIT 50;"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+
+    outputs:
+
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    code: "# Placeholder for future development where SQL complexity exceeds capabilities."
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates must be read-only and adhere to approved schemas."
+  - "Use approved join rules where available."
+  - "Ensure valid date filtering using global rules."
+  - "Validate the connection between diagnostics and output structure."
+synthesis_guidance: "Focus on identifying systemic failures within the data transition and tool integration phases. Emphasize readability and concise presentation of diagnostics, using ranking to prioritize critical issues."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run: must define run(context)"
+  - "run: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "run: must define run(context)"
+    - "run: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

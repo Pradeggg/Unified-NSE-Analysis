@@ -1,0 +1,70 @@
+created_at: "2026-06-06T12:52:36"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: weekly review; response style: action watchlist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0894_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.equity_eod"
+    code: "def run(context):\n    price = context.get('price')  # Using .get() to safely access 'price'\n    week52_high = context.get('week52_high')  # Using .get() to safely access 'week52_high'\n    if price is None or week52_high is None:\n        return {'error': 'price or week52_high not found in context'}\n    return {'w52_high_gap': (week52_high - price) / week52_high * 100}\n"
+    id: "calculate_w52_high_gap"
+    inputs:
+      - "symbol"
+      - "week52_high"
+      - "price"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "w52_high_gap"
+review:
+  attempts: 3
+  findings:
+    - "calculate_w52_high_gap: missing output w52_high_gap"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    description: "Fetch symbols that are either VCP breakouts or new highs, based on strong fundamentals."
+    template: "SELECT symbol, company_name, price, change_1w_pct FROM scores.stage2_vcp_picks WHERE vcp_score > 80 AND enhanced_fund_score > 70 AND change_1w_pct > 5"
+    template_id: "new_highs_vcp_breakouts"
+status: "test_failed"
+synthesis_guidance:
+  - "Focus on creating a weekly review watchlist capable of identifying breakout stocks."
+  - "Prioritize stocks with a combination of high VCP scores and robust fundamentals."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "action_watchlist"
+title: "VCP Breakouts With Fundamentals Variant 0894"
+tool_plan_template: "{ skill_name: 'VCP Breakouts With Fundamentals', ... }"
+validation_errors:
+  - "calculate_w52_high_gap: missing output w52_high_gap"
+validation_rules:
+  - "Ensure SQL templates are read-only SELECT queries."
+  - "Ensure compliance with schema and evidence requirements."
+  - "Output must adhere to the specified output contract."
+version: 1

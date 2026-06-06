@@ -1,0 +1,54 @@
+id: "fii_dii_regime_breadth_review_1548_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1548"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: last 3 months; response style: research-only summary."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for last 3 months: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as research-only summary"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "last_3_months"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    description: "Combine available evidence using SQL to describe FII/DII flows, market regime, breadth, and index context in the Indian market for the last 3 months."
+sql_templates:
+  -
+    name: "fii_dii_breadth_index_review"
+    description: "Fetch FII/DII flows, regime, breadth, and index data for the last 3 months."
+    template: "WITH latest_data AS (SELECT MAX(trade_date) AS max_date FROM market.index_eod) SELECT f.trade_date, f.fii_net_today, f.dii_net_today, r.regime, r.confidence, b.advances, b.declines, i.index_symbol, i.close FROM signals.fii_dii_flows AS f JOIN signals.regime_history AS r ON f.trade_date = r.trade_date JOIN breadth.market_daily AS b ON f.trade_date = b.trade_date JOIN market.index_eod AS i ON f.trade_date = i.trade_date WHERE f.trade_date BETWEEN (SELECT max_date FROM latest_data) - INTERVAL '3 months' AND (SELECT max_date FROM latest_data) AND i.index_symbol = 'Nifty 50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "{'rule_sets': [{'name': 'check_valid_id', 'description': 'Ensure ID is non-null and matches pattern.', 'conditions': [{'type': 'regex', 'pattern': '^[\\\\w\\\\-]+$'}]}]}"
+synthesis_guidance: "Analyze FII/DII flow trends, current market regime, market breadth signals, and index performance to determine a composite view of market sentiment and potential risk-on or risk-off posture. Frame output as an informative and objective research summary suitable for Indian market stakeholders."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

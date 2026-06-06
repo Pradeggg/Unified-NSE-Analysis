@@ -1,0 +1,77 @@
+id: "data_freshness_readiness_audit_1519_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit"
+description: "Evaluate the freshness of Agent Adda data sources for latest EOD using approved Indian market tables."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "source-trail validation for latest EOD: data freshness readiness thresholds"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  python_tools:
+    -
+      id: "check_data_freshness"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "trade_date"
+        - "analysis_date"
+        - "generated_at"
+        - "updated_at"
+      outputs:
+        - "freshness_results"
+      approved_tables:
+        - "market.index_eod"
+        - "market.equity_eod"
+        - "scores.stage_snapshots"
+        - "breadth.market_daily"
+        - "breadth.ma_pct_above"
+        - "report.enhanced_runs"
+      code: "def run(context):\n    # Extract dates from tables\n    # Compare dates to current date\n    # Determine freshness levels\n    return freshness_results"
+sql_templates:
+  -
+    query: "SELECT trade_date FROM market.index_eod ORDER BY trade_date DESC LIMIT 1"
+    description: "Get the latest trade date from index EOD data."
+  -
+    query: "SELECT analysis_date FROM report.enhanced_runs ORDER BY analysis_date DESC LIMIT 1"
+    description: "Get the most recent analysis date from enhanced report runs."
+  -
+    query: "SELECT generated_at FROM breadth.market_daily ORDER BY generated_at DESC LIMIT 1"
+    description: "Retrieve the latest generated timestamp from market daily breadth."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all dates are within allowable freshness thresholds."
+  - "Validate presence of all expected data sources."
+  - "Identify any blocking gaps in data freshness."
+synthesis_guidance: "Focus on rigorous validation of data source freshness, particularly concerning the latest end-of-day processing. Provide a comprehensive research-only summary highlighting any freshness issues and suggested actions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:09:35"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

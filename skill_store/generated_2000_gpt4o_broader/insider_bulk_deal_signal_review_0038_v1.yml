@@ -1,0 +1,77 @@
+id: "insider_bulk_deal_signal_review_0038_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0038"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: concise table."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for last 20 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as concise table"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  introduction: "Generate a concise analysis of insider and bulk deals, with technical signals for last 20 sessions."
+  steps:
+    - "Identify relevant insider alerts and bulk/block deals."
+    - "Confirm technical signals using stage_snapshots."
+    - "Compile into a concise table focusing on position-sizing context."
+sql_templates:
+  -
+    description: "Retrieve insider alerts and bulk deals for the last 20 sessions."
+    query: "WITH recent_insider_alerts AS (SELECT symbol, qty, value_cr FROM signals.insider_alerts WHERE alert_date > CURRENT_DATE - INTERVAL '20 days'), recent_bulk_deals AS (SELECT symbol, qty FROM signals.bulk_block_deals WHERE deal_date > CURRENT_DATE - INTERVAL '20 days') SELECT r.symbol, SUM(r.qty) AS total_qty, SUM(r.value_cr) AS total_value FROM recent_insider_alerts r INNER JOIN recent_bulk_deals b ON r.symbol = b.symbol GROUP BY r.symbol"
+  -
+    description: "Get technical confirmation from stage_snapshots."
+    query: "SELECT symbol, stage, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage IN ('Stage 1', 'Stage 2')"
+python_tools:
+  -
+    id: "calculate_position_sizing_factors"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "total_qty"
+      - "total_value"
+      - "technical_score"
+    outputs:
+      - "position_size"
+    approved_tables:
+      - "signals.insider_alerts"
+      - "signals.bulk_block_deals"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Calculate optimal position size based on inputs\n    total_qty = context['total_qty']\n    total_value = context['total_value']\n    technical_score = context['technical_score']\n    position_size = (total_qty * technical_score) / total_value\n    return position_size"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure data is from the last 20 sessions."
+  - "Confirm technical signals align with insider and bulk deal data."
+  - "Data presentation must be concise and informative."
+synthesis_guidance: "{'approach': 'Integrate insider and bulk deal records with technical signals to generate a clear position-sizing context.', 'format': 'Concise table summarizing core insights.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_position_sizing_factors: execution failed: KeyError: 'total_qty'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_position_sizing_factors: execution failed: KeyError: 'total_qty'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

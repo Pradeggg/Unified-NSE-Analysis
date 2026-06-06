@@ -1,0 +1,56 @@
+id: "market_3m_rotation_swing_0589_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0589"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: intraday context; response style: research-only summary."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as research-only summary"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "For a 3-month market rotation analysis, employ a combination of SQL templates and potential Python evidence tools to interpret index performance, sector changes, and swing trading opportunities. Base summaries on research-only insights."
+sql_templates:
+  -
+    description: "Calculate broad market index returns over the last 3 months."
+    sql: "SELECT index_symbol, AVG(change_pct) AS avg_change_pct FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 months') GROUP BY index_symbol;"
+  -
+    description: "Identify leading sectors for the period."
+    sql: "SELECT sector, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector ORDER BY count DESC LIMIT 5;"
+  -
+    description: "Select primary swing trading candidates based on VCP picks."
+    sql: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "date_validation"
+  - "symbol_validation"
+  - "performance_metrics"
+synthesis_guidance: "{'summary_style': 'Ensure all outputs provide research-only insights without forecasting. Critically evaluate sector and candidate selections.', 'sector_analysis': 'Focus on the shift in sectors leading to potential rotations seen in the market.', 'risk_assessment': 'Document perceived market risks and their impact on swing trading candidates.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:26:46"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_change_pct is not approved"

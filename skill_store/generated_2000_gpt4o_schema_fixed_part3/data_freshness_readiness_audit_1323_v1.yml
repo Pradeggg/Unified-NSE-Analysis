@@ -1,0 +1,75 @@
+id: "data_freshness_readiness_audit_1323_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1323"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for last 5 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as exceptions and gaps first"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    name: "Check Data Freshness"
+    steps:
+      - "Verify latest available data date for each table is within the last 5 sessions."
+      - "List any tables where data is not fresh."
+      - "Identify any missing data history as exceptions."
+sql_templates:
+  -
+    name: "Freshness Check"
+    description: "Check for data freshness in the last 5 sessions."
+    sql: "SELECT table_name, MAX(trade_date) AS last_trade_date FROM ({subqueries}) AS all_dates WHERE last_trade_date < CURRENT_DATE - INTERVAL '5 days';"
+    parameters:
+      subqueries:
+        - "SELECT 'market.index_eod' AS table_name, trade_date FROM market.index_eod"
+        - "SELECT 'market.equity_eod' AS table_name, trade_date FROM market.equity_eod"
+        - "SELECT 'scores.stage_snapshots' AS table_name, snapshot_date AS trade_date FROM scores.stage_snapshots"
+        - "SELECT 'breadth.market_daily' AS table_name, trade_date FROM breadth.market_daily"
+        - "SELECT 'breadth.ma_pct_above' AS table_name, snapshot_date AS trade_date FROM breadth.ma_pct_above"
+        - "SELECT 'report.enhanced_runs' AS table_name, analysis_date AS trade_date FROM report.enhanced_runs"
+    read_only: true
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure data freshness is validated for each evidence table."
+  - "Identify and list any tables with data older than 5 days."
+synthesis_guidance: "['Highlight exceptions and gaps prominently.', 'Provide a readiness assessment with action recommendations for stale data.', 'Ensure verification queries reflect identified evidence gaps.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:31"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.table_name is not approved"
+  - "breadth.ma_pct_above.trade_date is not approved"
+  - "breadth.market_daily.table_name is not approved"
+  - "market.equity_eod.table_name is not approved"
+  - "market.index_eod.table_name is not approved"
+  - "report.enhanced_runs.table_name is not approved"
+  - "report.enhanced_runs.trade_date is not approved"
+  - "scores.stage_snapshots.table_name is not approved"
+  - "scores.stage_snapshots.trade_date is not approved"

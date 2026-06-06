@@ -1,0 +1,57 @@
+id: "report_link_data_validation_1012_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Validate Enhanced Report Data"
+description: "This skill focuses on validating enhanced report run metadata, filtered stock rows, and source trails in the context of the Indian market. It provides deep institutional review for the latest End of Day (EOD) data."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for latest EOD: review report links not working"
+  - "validate generated report links and missing data as concise table"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "latest_EOD"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  selection_strategy: "based on evidence tables and column_details"
+  output_interface: "tabular"
+  planned_steps:
+    - "Identify the latest enhanced report run using approved_schema._global_rules."
+    - "Validate report links and ensure data is populated."
+    - "Check for any missing or erroneous data in the report."
+sql_templates:
+  -
+    name: "latest_report_analysis"
+    query: "SELECT er.run_id, er.run_ts, er.universe_size, ef.symbol, ef.score FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id WHERE er.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all report links point to existing HTML files with data."
+  - "Check whether all filtered stocks are included with valid scores."
+  - "Report any discrepancies or anomalies in data presentation or structure."
+synthesis_guidance: "['Provide a concise table summarizing findings, such as missing data or broken links.', 'Highlight any critical remediation steps necessary to resolve identified issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:15"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,59 @@
+id: "sector_breadth_rotation_watchlist_1147_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1147"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for last 3 months: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as narrative plus evidence"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Identify sectors with improving breadth using the following query."
+  - "Match those sectors with stocks in STAGE_2 and STRONG_BUY trading signals."
+  - "Generate watchlist entries with narrative insights based on sector-relative performance."
+sql_templates:
+  -
+    template: "SELECT s.sector, AVG(pct_above_50dma) AS avg_pct_above_50dma, AVG(stage2_pct) AS avg_stage2_pct FROM breadth.sector_daily s JOIN breadth.ma_pct_above m ON s.snapshot_date = m.snapshot_date WHERE s.snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY s.sector ORDER BY avg_stage2_pct DESC LIMIT 5"
+    description: "Retrieve top 5 sectors by average Stage 2 participation in the last 3 months."
+  -
+    template: "SELECT sector, symbol, company_name, price, stage, trading_signal FROM scores.stage_snapshots WHERE stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND sector IN ({sector_list})"
+    description: "List stocks in top sectors that are in Stage 2 with a strong buy signal."
+  -
+    template: "SELECT e.symbol, e.price_date, e.close, s.stage_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol AND e.trade_date = s.snapshot_date WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.sector IN ({sector_list}) AND s.trading_signal IN ('BUY', 'STRONG_BUY')"
+    description: "Provide price and stage score data for candidate stocks in top sectors."
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sectors have calculations for breadth and stage participation."
+  - "Verify stocks are in Stage 2 with buy signals for commitment."
+  - "Validate narrative aligns with the sector and market conditions."
+synthesis_guidance: "['Construct narrative explaining sector movements and stock selections.', 'Emphasize sector-relative performance improvements.', 'Align with previous trends and indicators to suggest actionable insights.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:55:53"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.price_date is not approved"

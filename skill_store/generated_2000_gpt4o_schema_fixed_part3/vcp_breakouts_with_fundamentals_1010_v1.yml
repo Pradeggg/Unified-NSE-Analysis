@@ -1,0 +1,53 @@
+id: "vcp_breakouts_with_fundamentals_1010_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1010"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: today; response style: concise table."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Fetch latest VCP picks and fundamentals then filter by stage and trading signals."
+sql_templates:
+  -
+    template: "WITH latest_vcp AS (\n    SELECT *\n    FROM scores.stage2_vcp_picks\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)\n), \nlatest_stage AS (\n    SELECT *\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n)\nSELECT v.symbol, v.company_name, v.sector, v.price, s.enhanced_fund_score, s.trading_signal\nFROM latest_vcp v\nJOIN latest_stage s ON v.symbol = s.symbol\nWHERE s.stage = 'STAGE_2' AND s.trading_signal IN ('BUY', 'STRONG_BUY')\nORDER BY v.investment_score DESC\nLIMIT 10;\n"
+    description: "Fetch top 10 VCP stocks with strong fundamentals and buy signals."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure results are capped at 10 entries."
+  - "Verify trading signals are either BUY or STRONG_BUY."
+  - "Ensure stage is STAGE_2."
+synthesis_guidance: "Summarize strongest candidates; include trading symbols and scores."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:53:59"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

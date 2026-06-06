@@ -1,0 +1,51 @@
+id: "signal_outcome_feedback_review_0753_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0753"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: QA checklist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for quarter to date: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as QA checklist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Assess past signal performance; focus on instances where targets or stops were hit."
+sql_templates:
+  - "SELECT symbol, date_issued, signal, target_1, target_2, stop_loss, price_at_issue, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= (CURRENT_DATE - INTERVAL '3 months') AND (hit_target OR hit_stop)"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all signals have valid targets or stop levels."
+  - "Verify outcome fields are correctly captured."
+  - "Check data alignment with current market context."
+synthesis_guidance: "['Identify successful signals and failed ones.', 'Analyze return percentages and hit ratios.', 'Recommend route improvements and next steps.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:32"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

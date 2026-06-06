@@ -1,0 +1,58 @@
+id: "market_3m_rotation_swing_0369_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0369"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: post results; response style: exceptions and gaps first."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as exceptions and gaps first"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "post_results"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze market rotation over the last 3 months to identify sector leadership, stage 2 stocks, and potential swing candidates. Validate sources post results."
+sql_templates:
+  -
+    description: "Fetch the closing prices and percentage changes of indices over the last 3 months."
+    query: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= DATEADD(month, -3, CURRENT_DATE);"
+  -
+    description: "Identify stage 2 leadership sectors."
+    query: "WITH recent_stages AS (SELECT sector, stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date >= DATEADD(month, -3, CURRENT_DATE) AND stage = 2 GROUP BY sector, stage) SELECT sector FROM recent_stages ORDER BY count DESC;"
+  -
+    description: "Identify swing trading candidates."
+    query: "SELECT symbol, company_name, price, trend_signal FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATEADD(month, -3, CURRENT_DATE) AND trend_signal = 'Bullish' ORDER BY relative_strength DESC;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure data freshness: All dates should be within the last 3 months."
+  - "Confirm output contract variables are populated with validated data."
+synthesis_guidance: "Focus on source-trail validation; highlight exceptions and missing data where market regime shifts or swing candidates are unclear."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:46:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.dateadd is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage2_vcp_picks.dateadd is not approved"
+  - "scores.stage2_vcp_picks.month is not approved"

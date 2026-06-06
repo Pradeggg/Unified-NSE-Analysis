@@ -1,0 +1,48 @@
+id: "signal_outcome_feedback_review_1215_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Risk-First Signal Outcome Analysis"
+description: "Analyze trading signals with a focus on risk management by examining past signal performance at the latest EOD. Identify high-impact success and failure patterns."
+input_patterns:
+  - "Review success and failure of prior signals at latest EOD"
+  - "Identify risk-first patterns in signal outcomes at latest EOD"
+tags:
+  - "outcome_analysis"
+  - "risk_management"
+  - "signal_evaluation"
+  - "EOD"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review signals for risk-first insights using optimal signal patterns from latest EOD data."
+sql_templates:
+  -
+    description: "Fetch latest resolved signals with outcomes."
+    query: "SELECT id, date_issued, symbol, signal, price_at_issue, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log) AND date_resolved IS NOT NULL;"
+  -
+    description: "Get stage and scores for the latest signals."
+    query: "SELECT s.id, ss.stage, ss.technical_score, ss.investment_score FROM signals.signal_log s JOIN scores.stage_snapshots ss ON s.symbol = ss.symbol AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) WHERE s.date_issued = (SELECT MAX(date_issued) FROM signals.signal_log) AND s.date_resolved IS NOT NULL;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "risk_insight_patterns"
+  - "successful_signal_patterns"
+  - "failed_signal_patterns"
+  - "recommendations"
+validation_rules:
+  - "Ensure data consistency and accuracy in resolved signals and scores."
+  - "Validate the completeness of risk insights for decision-making."
+synthesis_guidance: "Prioritize risk patterns, objective assessment of signal successes, and failures for the latest EOD, ensuring actionable insights in risk management."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:41"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

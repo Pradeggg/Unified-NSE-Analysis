@@ -1,0 +1,62 @@
+id: "sector_breadth_rotation_watchlist_1427_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1427"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for last 5 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as portfolio-aware output"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    tool_id: "sector_breadth_rotation_watchlist_1427_tool"
+    description: "Fetch sector improvement trends and potential stock candidates for a TradingView watchlist."
+    evidence_labels:
+      - "sector_ranks"
+      - "improving_sectors"
+      - "candidate_symbols"
+      - "tradingview_symbols"
+      - "evidence"
+sql_templates:
+  -
+    name: "sector_breadth_sql"
+    template: "WITH latest_breadth AS (SELECT * FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)), latest_stage AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT sector, pct_above_50dma, change_5d, breadth_signal FROM latest_breadth WHERE breadth_signal = 'POSITIVE' ORDER BY change_5d DESC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure the SQL results provide at least 5 improving sectors."
+  - "Check that candidate symbols match the latest stage 2 stocks with BUY signals."
+synthesis_guidance: "['Highlight sectors with increasing breadth and momentum.', 'Filter stocks in stage 2 with positive trend signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:31"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

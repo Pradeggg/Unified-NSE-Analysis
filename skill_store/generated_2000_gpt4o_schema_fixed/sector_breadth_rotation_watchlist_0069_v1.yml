@@ -1,0 +1,69 @@
+id: "sector_breadth_rotation_watchlist_0069_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0069"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: post results; response style: concise table."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for post results: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as concise table"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "post_results"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "1. Use SQL to select sectors with strong breadth and Stage 2 participation."
+  - "2. Generate concise table rankings for sector improvement and candidate symbols."
+  - "3. Validate using source-trail constraints and rules."
+sql_templates:
+  -
+    title: "Sector Breadth and Stage 2 Participation"
+    description: "Ranks sectors by breadth and Stage 2 participation."
+    sql: "SELECT s.sector, sd.breadth_signal, ma.stage2_pct FROM breadth.sector_daily sd JOIN breadth.ma_pct_above ma ON sd.snapshot_date = ma.snapshot_date JOIN scores.stage_snapshots s ON sd.sector = s.sector WHERE sd.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.stage = 'STAGE_2' ORDER BY sd.breadth_signal DESC, ma.stage2_pct DESC LIMIT 10;"
+python_tools:
+  -
+    id: "validate_sector_improvements"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_ranks"
+    outputs:
+      - "validation_errors"
+    approved_tables:
+      - "breadth.sector_daily"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Example validation logic\n    validation_errors = []\n    for rank in context['sector_ranks']:\n        if rank['breadth_signal'] <= 0:\n            validation_errors.append(f\"Invalid breadth signal for sector {rank['sector']}\")\n    return validation_errors"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Verify sector ranking accuracy and adherence to breadth conditions."
+  - "Ensure alignment with trading signal validity."
+synthesis_guidance: "['Synthesize sector ranking data into a well-organized and concise format for TradingView updates.', 'Emphasize accurate sector improvements and participation levels.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "validate_sector_improvements: execution failed: KeyError: 'sector_ranks'"
+review:
+  status: "needs_heal"
+  findings:
+    - "validate_sector_improvements: execution failed: KeyError: 'sector_ranks'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

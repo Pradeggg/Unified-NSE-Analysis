@@ -1,0 +1,52 @@
+id: "corporate_events_results_watchlist_0037_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0037"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: concise table."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for last 20 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as concise table"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Using approved tables, identify upcoming or recent corporate events, compile a sector-relative comparison for the last 20 sessions, and present findings in a concise table format."
+sql_templates:
+  -
+    description: "Fetch recent corporate events and results"
+    sql: "WITH event_data AS (SELECT symbol, event_type, event_date FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '20 days'), results_data AS (SELECT symbol, company_name, industry, growth_yoy_revenue_pct FROM scores.results_analysis WHERE filing_date >= CURRENT_DATE - INTERVAL '20 days') SELECT ed.symbol, ed.event_type, ed.event_date, rd.company_name, rd.industry, rd.growth_yoy_revenue_pct FROM event_data ed JOIN results_data rd ON ed.symbol = rd.symbol;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure the data is sourced only from approved tables."
+  - "The SQL queries must be read-only and should only include 'SELECT' statements."
+  - "The tables and columns used must match those listed in the approved schema."
+synthesis_guidance: "{'sector_comparison': 'Ensure to highlight any significant sector-relative movements or anomalies in the data.', 'concise_table': 'Format the output in a concise and easy-to-understand tabular format that communicates key insights efficiently.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,55 @@
+id: "sector_breadth_rotation_watchlist_1399_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1399"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for weekly review: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as exceptions and gaps first"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Using approved tables, create a sector watchlist displaying sectors with improving breadth indicators and stocks in Stage 2. Identify exceptions and missing data."
+sql_templates:
+  sector_rank_sql: "SELECT sector, breadth_signal, divergence_alert FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) AND breadth_signal = 'POSITIVE' ORDER BY pct_above_50dma DESC LIMIT 10;"
+  stage_2_sql: "SELECT symbol, company_name, sector FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure breadth_signal and sector coordination for sector_ranks."
+  - "Check if candidate_symbols have Stage 2 confirmation."
+  - "Validate timestamp alignment across tables."
+synthesis_guidance: "Focus on sector breadth indicators, stage migration, and enhancing the TradingView watchlist with actionable symbols. Highlight any missing data trends."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:40"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

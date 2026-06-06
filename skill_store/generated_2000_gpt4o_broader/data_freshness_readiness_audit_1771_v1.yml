@@ -1,0 +1,61 @@
+id: "data_freshness_readiness_audit_1771_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1771"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: pre market; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for pre market: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "pre_market"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Ensure readiness by auditing data freshness across all evidence tables for pre-market use. Generate a QA checklist to verify data sources and identify any missing components."
+sql_templates:
+  -
+    template_id: "check_index_eod_freshness"
+    query: "SELECT MAX(trade_date) AS last_trade_date FROM market.index_eod;"
+  -
+    template_id: "check_equity_eod_freshness"
+    query: "SELECT MAX(trade_date) AS last_trade_date FROM market.equity_eod;"
+  -
+    template_id: "check_stage_snapshots_freshness"
+    query: "SELECT MAX(snapshot_date) AS last_snapshot_date FROM scores.stage_snapshots;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all queries return recent dates relative to today's date."
+  - "Ensure all required freshness checks are included."
+  - "Identify missing data sources or outdated data."
+  - "Provide QA checklist actions based on findings."
+synthesis_guidance: "['Analyze freshness matrix results to provide actionable insights.', 'Identify any evidence gaps in data where SQL was not feasible.', 'Guide next steps based on data readiness results.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:51"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.last_trade_date is not approved"
+  - "market.index_eod.last_trade_date is not approved"
+  - "scores.stage_snapshots.last_snapshot_date is not approved"

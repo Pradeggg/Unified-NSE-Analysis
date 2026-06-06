@@ -1,0 +1,56 @@
+id: "portfolio_lab_paper_trading_review_1986_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1986"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for intraday context: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as comparison matrix"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  strategy_state: "Analyze the current status of trading strategies using signals.signal_log and scores.stage_snapshots."
+  open_trades: "List all current open trades from portfolio.holdings."
+  entry_exit_rules: "Detail entry and exit rules from signals.signal_log."
+  exposure: "Calculate exposure using current holdings from portfolio.holdings."
+  exceptions: "Identify any discrepancies or anomalies in trade execution."
+sql_templates:
+  strategy_state: "SELECT symbol, signal, setup_class, investment_score, technical_score, regime_at_issue FROM signals.signal_log WHERE date_resolved IS NULL;"
+  open_trades: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings WHERE qty > 0;"
+  entry_exit_rules: "SELECT symbol, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_resolved IS NULL;"
+  exposure: "SELECT symbol, (qty * avg_cost) AS exposure FROM portfolio.holdings WHERE qty > 0;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "status"
+  - "sql_templates_read_only"
+  - "no_synthetic_tables_or_columns"
+synthesis_guidance: "Formulate responses in a comparative matrix format, focusing on the separation of paper trading and actual portfolio data."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:58"
+generation_model: "gpt-4o"
+validation_errors:
+  - "portfolio.holdings.exposure is not approved"

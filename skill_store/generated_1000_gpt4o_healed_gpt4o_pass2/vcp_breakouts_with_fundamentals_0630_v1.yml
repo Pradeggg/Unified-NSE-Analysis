@@ -1,0 +1,159 @@
+created_at: "2026-06-06T12:50:15"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 5 sessions; response style: debug trace."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0630_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    code: "# Sample code to filter breakout stocks with required fundamentals\n\ndef run(context):\n    breakout_stocks = []  # This will hold the filtered breakout stock details as a list\n    # Pseudocode for extracting data from the approved tables and filtering breakouts\n    # Ensure context is a list input\n    # No actual database connection or execution is performed, it's a design outline\n    return breakout_stocks"
+    id: "run"
+    inputs:
+      context:
+        - "List of stock data contexts"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      breakout_stocks:
+        - "List of breakout stocks with details"
+review:
+  attempts: 3
+  findings:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+
+status: "test_failed"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "debug_trace"
+title: "VCP Breakouts With Fundamentals Variant 0630"
+tool_plan_template:
+
+validation_errors:
+  - "description is required"
+  - "domain is required"
+  - "evidence_required is required"
+  - "id is required"
+  - "input_patterns is required"
+  - "output_contract is required"
+  - "tags is required"
+  - "title is required"
+  - "validation_rules is required"
+  - "version is required"
+  - "version must be a positive integer"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+version: 1
+card:
+  created_at: "2026-06-06T12:50:15"
+  created_by: "llm_generated"
+  description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 5 sessions; response style: debug trace."
+  domain: "screening"
+  evidence_required:
+    tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "vcp_breakouts_with_fundamentals_0630_v1"
+  input_patterns:
+    - "stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "VCP breakout stocks for TradingView"
+    - "quality breakouts with strong fundamentals"
+    - "TradingView export for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "quality breakouts with strong fundamentals as debug trace"
+  output_contract:
+    - "filters"
+    - "candidates"
+    - "tradingview_symbols"
+    - "evidence"
+    - "risks"
+  python_tools:
+    -
+      approved_tables:
+        - "market.equity_eod"
+        - "scores.stage_snapshots"
+        - "scores.stage2_vcp_picks"
+      code: "# Sample code to filter breakout stocks with required fundamentals\n\ndef run(context):\n    if not isinstance(context, list):\n        return []\n    breakout_stocks = []  # This will hold the filtered breakout stock details as a list\n    # Pseudocode for extracting data from the approved tables and filtering breakouts\n    # Ensure context is a list input\n    # No actual database connection or execution is performed, it's a design outline\n    return breakout_stocks if breakout_stocks else ['No breakout stocks found']"
+      id: "run"
+      inputs:
+        context:
+          - "List of stock data contexts"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        breakout_stocks:
+          - "List of breakout stocks with details"
+  review:
+    attempts: 3
+    findings:
+      - "run: inputs must be a list"
+      - "run: outputs must be a non-empty list"
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "needs_heal"
+  sql_templates:
+
+  status: "generated"
+  synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+  tags:
+    - "vcp"
+    - "breakout"
+    - "new_high"
+    - "fundamentals"
+    - "tradingview"
+    - "TradingView_export"
+    - "last_5_sessions"
+    - "debug_trace"
+  title: "VCP Breakouts With Fundamentals Variant 0630"
+  tool_plan_template:
+
+  validation_errors:
+    - "run: inputs must be a list"
+    - "run: outputs must be a non-empty list"
+  validation_rules:
+    - "required_tables_exist"
+    - "sql_is_read_only"
+    - "output_contract_present"
+  version: 1

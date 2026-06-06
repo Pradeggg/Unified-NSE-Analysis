@@ -1,0 +1,64 @@
+id: "portfolio_incremental_add_trim_0479_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0479"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: pre market; response style: portfolio-aware output."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for pre market: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "pre_market"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  python_tools:
+    -
+      id: "calculate_risk_flags"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "sector_exposure"
+        - "portfolio_state"
+      outputs:
+        - "risk_flags"
+      approved_tables:
+        - "portfolio.holdings"
+      code: "def run(context):\n    # Placeholder for calculating risk flags\n    return []"
+sql_templates:
+  add_candidates: "SELECT ph.symbol, ss.company_name, ss.sector, ss.trading_signal, ss.change_1w_pct, ss.change_1m_pct\nFROM portfolio.holdings ph\nJOIN scores.stage_snapshots ss ON ph.symbol = ss.symbol\nWHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nAND ss.trading_signal IN ('BUY', 'STRONG_BUY')\nLIMIT 10;"
+  trim_candidates: "SELECT ph.symbol, ss.company_name, ss.sector, ss.trading_signal, ss.change_1w_pct, ss.change_1m_pct\nFROM portfolio.holdings ph\nJOIN scores.stage_snapshots ss ON ph.symbol = ss.symbol\nWHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nAND ss.trading_signal = 'SELL'\nLIMIT 10;"
+  portfolio_state: "SELECT ph.symbol, ph.qty, ph.avg_cost, ss.price, ss.change_1d_pct\nFROM portfolio.holdings ph\nJOIN scores.stage_snapshots ss ON ph.symbol = ss.symbol\nWHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  sector_exposure: "SELECT ss.sector, SUM(ph.qty * ss.price) as total_value\nFROM portfolio.holdings ph\nJOIN scores.stage_snapshots ss ON ph.symbol = ss.symbol\nWHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nGROUP BY ss.sector;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure that all SQL queries are using the latest snapshot_date."
+  - "Verify that no INSERT, UPDATE, DELETE operations are present."
+synthesis_guidance: "['Focus on portfolio position recommendations based on trading signals and sector exposure.', 'Highlight potential risks identified through the python tool.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:03"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

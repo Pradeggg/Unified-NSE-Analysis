@@ -1,0 +1,56 @@
+id: "market_3m_rotation_swing_1037_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1037"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: concise table."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for last 20 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  function: "assess_market_rotation"
+  inputs:
+    - "evidence_required"
+  outputs:
+    - "output_contract"
+sql_templates:
+  - "WITH IndexSummary AS (SELECT index_symbol, AVG(change_pct) AS avg_return FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol), StageDistribution AS (SELECT stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL '20 days' GROUP BY stage) SELECT * FROM IndexSummary; SELECT * FROM StageDistribution;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "unique_output_keys"
+  - "date_format"
+synthesis_guidance: "['Focus on recent sector rotations and market regime shifts', 'Highlight leading sectors and potential swing trading candidates']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

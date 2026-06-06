@@ -1,0 +1,63 @@
+created_at: "2026-06-06T12:48:50"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: research-only summary."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0534_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  selection:
+    -
+      description: "Select VCP breakout stocks with strong fundamental scores"
+      query: "SELECT eod.symbol, eod.trade_date, eod.close, vcp.vcp_score, snapshot.enhanced_fund_score FROM scores.stage2_vcp_picks vcp JOIN scores.stage_snapshots snapshot ON vcp.symbol = snapshot.symbol AND vcp.snapshot_date = snapshot.snapshot_date JOIN market.equity_eod eod ON vcp.symbol = eod.symbol WHERE eod.trade_date >= CURRENT_DATE - INTERVAL '20 days' AND vcp.vcp_score IS NOT NULL AND snapshot.enhanced_fund_score > threshold"
+status: "validated"
+synthesis_guidance: "Focus on high-quality VCP breakouts with robust fundamentals"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "research-only_summary"
+title: "VCP Breakouts With Fundamentals Variant 0534"
+tool_plan_template:
+  candidates:
+    duration: "20 sessions"
+    task: "Filter potential candidates over the last 20 sessions"
+  filters:
+    tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    task: "Identify stocks creating new highs or exhibiting VCP patterns with strong fundamentals"
+validation_rules:
+  - "filters"
+  - "candidates"
+  - "evidence"
+version: 1

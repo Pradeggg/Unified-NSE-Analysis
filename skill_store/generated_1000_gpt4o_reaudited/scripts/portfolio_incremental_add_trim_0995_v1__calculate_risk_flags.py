@@ -1,0 +1,1 @@
+def run(context): return [{'symbol': row['symbol'], 'risk_metric': row['technical_score'] * row['change_1w_pct']} for row in context if row['technical_score'] > threshold]

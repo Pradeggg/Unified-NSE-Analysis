@@ -1,0 +1,50 @@
+id: "report_link_data_validation_1810_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1810"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for today: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "Validate Enhanced Report Links and Data"
+    query: "SELECT er.run_id, er.run_ts, efs.symbol, efs.current_price, efs.recommendation FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id WHERE er.run_ts::date = CURRENT_DATE;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "{'schema_join_rules': [{'left_table': 'report.enhanced_runs', 'left_column': 'run_id', 'right_table': 'report.enhanced_filtered_stocks', 'right_column': 'run_id', 'condition': 'report.enhanced_runs.run_id = report.enhanced_filtered_stocks.run_id', 'notes': 'Use for report QA and broken/missing enhanced-report stock data checks.'}], 'global_sql_rules': [\"Use PostgreSQL syntax, not SQLite syntax. Prefer CURRENT_DATE - INTERVAL '3 months' over date('now', '-3 months').\", \"Stage values are text labels. Use stage = 'STAGE_2'; never use stage = 2 or stage = 'VCP'.\", 'Keep result sets bounded with LIMIT when producing candidate lists.']}"
+synthesis_guidance: "Focus on detecting breakages in report links and missing stock data relevant to today's TradingView export. Compile an action watchlist including remediation steps."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,1 @@
+def run(events): return [e for e in events if 'AGM' in e['event_type'] or 'Dividend' in e['purpose_raw']];

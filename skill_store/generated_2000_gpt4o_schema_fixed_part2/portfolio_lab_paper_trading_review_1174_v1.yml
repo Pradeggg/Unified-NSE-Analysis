@@ -1,0 +1,58 @@
+id: "portfolio_lab_paper_trading_review_1174_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1174"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: pre market; response style: narrative plus evidence."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for pre market: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "pre_market"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Identify paper trading strategies from signals.signal_log."
+  - "Review entries, exits, and targets without mixing with real holdings from portfolio.holdings."
+  - "Create pre-market watchlist based on criteria from scores.stage_snapshots and market.equity_eod."
+sql_templates:
+  -
+    query: "SELECT symbol, date_issued, signal, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE signal IN ('BUY', 'WATCH') AND date_resolved IS NULL;"
+    description: "Fetch open paper trading strategies."
+  -
+    query: "SELECT holdings.symbol, holdings.qty, holdings.avg_cost, market.close FROM portfolio.holdings AS holdings INNER JOIN market.equity_eod AS market ON holdings.symbol = market.symbol WHERE market.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+    description: "Analyze portfolio holdings with the latest market data."
+  -
+    query: "SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY');"
+    description: "Create a watchlist with strong buy signals in the latest stage."
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Check if open trades match current strategy state in entry/exit rules."
+  - "Verify exposure calculations using latest market data."
+synthesis_guidance: "['Combo analysis of strategies and holdings kept separate.', 'Focus on narrative delivery with supporting evidence.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:41:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.equity_eod is not approved"

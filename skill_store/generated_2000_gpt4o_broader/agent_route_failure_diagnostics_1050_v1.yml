@@ -1,0 +1,46 @@
+id: "agent_route_failure_diagnostics_1050_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1050"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: last 3 months; response style: concise table."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for last 3 months: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as concise table"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "last_3_months"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Diagnose failures by analyzing TradingView exports and identifying tool gaps, symbol resolution issues, and feedback loops."
+sql_templates:
+  - "SELECT run_id, analysis_date, market_sentiment, notes FROM report.enhanced_runs WHERE analysis_date > date('now', '-3 months');"
+  - "WITH stock_changes AS (SELECT symbol, day_change_pct, rsi FROM report.enhanced_filtered_stocks WHERE above_50dma = 1) SELECT symbol, AVG(day_change_pct) as avg_change, AVG(rsi) as avg_rsi FROM stock_changes GROUP BY symbol;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure concise representation of diagnostics."
+  - "Validate periods of route failures and mismatches from past three months."
+synthesis_guidance: "Summarize findings in a table layout, emphasizing gaps, tool availability, and resolution paths."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:46"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.date is not approved"

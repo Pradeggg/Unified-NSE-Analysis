@@ -1,0 +1,70 @@
+id: "fii_dii_regime_breadth_review_0330_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0330"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for last 5 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as exceptions and gaps first"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Combine regime, flow, breadth, and index evidence for the past 5 sessions using stated TradingView export format."
+sql_templates:
+  -
+    template_name: "recent_market_data"
+    sql: "WITH latest_dates AS (SELECT MAX(trade_date) AS last_date FROM signals.fii_dii_flows), last_5_sessions AS (SELECT trade_date FROM signals.fii_dii_flows WHERE trade_date >= (SELECT last_date FROM latest_dates) - INTERVAL '4 days') SELECT f.trade_date, f.fii_net_5d, f.dii_net_5d, r.regime, r.confidence, b.ad_signal, b.bearish_pct, m.index_symbol, m.close FROM last_5_sessions s JOIN signals.fii_dii_flows f ON s.trade_date = f.trade_date JOIN signals.regime_history r ON f.trade_date = r.trade_date JOIN breadth.market_daily b ON f.trade_date = b.trade_date JOIN market.index_eod m ON f.trade_date = m.trade_date WHERE m.index_symbol = 'Nifty 50';"
+python_tools:
+  -
+    id: "run_context"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      session_data: "recent_market_data"
+    outputs:
+      analysis: "Comprehensive review of market context based on FII/DII flows, regime, breadth, and index signals."
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context): return analyze(context['session_data'])"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data is within the last 5 trading sessions"
+  - "Validate positive/negative flows and breadth"
+  - "Identify potential discrepancies in regime classifications"
+synthesis_guidance: "['Highlight discrepancies and gaps first', 'Summarize the impact of flow and breadth on market direction', 'Provide TradingView friendly insights']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:03"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_context: inputs must be a list"
+  - "run_context: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_context: inputs must be a list"
+    - "run_context: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

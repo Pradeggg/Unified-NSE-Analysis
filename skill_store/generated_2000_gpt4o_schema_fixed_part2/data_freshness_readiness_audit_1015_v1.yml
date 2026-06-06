@@ -1,0 +1,66 @@
+id: "data_freshness_readiness_audit_1015_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1015"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: risk-first review; timeframe: latest EOD; response style: concise table."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "risk-first review for latest EOD: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as concise table"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "risk-first_review"
+  - "latest_EOD"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Audit data freshness for latest EOD using specified evidence tables."
+sql_templates:
+  - "SELECT trade_date, index_symbol, close FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+  - "SELECT trade_date, symbol, close FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+python_tools:
+  -
+    id: "select_latest_equity_data"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "latest_equity_data"
+    approved_tables:
+      - "market.equity_eod"
+    code: "def run(context):\n    return context.sql(\"SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)\")"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure latest EOD data is available for critical tables."
+  - "Validate completeness of data, ensuring no gaps for required metrics."
+synthesis_guidance: "['Focus on synthesizing a concise summary table highlighting any data freshness risks.', 'Identify any missing sources critical to data workflows.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:18"
+generation_model: "gpt-4o"
+validation_errors:
+  - "select_latest_equity_data: execution failed: AttributeError: 'dict' object has no attribute 'sql'"
+review:
+  status: "needs_heal"
+  findings:
+    - "select_latest_equity_data: execution failed: AttributeError: 'dict' object has no attribute 'sql'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

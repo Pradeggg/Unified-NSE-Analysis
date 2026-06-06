@@ -1,0 +1,60 @@
+created_at: "2026-06-06T12:44:19"
+created_by: "llm_generated"
+description: "Validate today's enhanced report run metadata, filtered stock rows, and source trails, focusing on watchlist creation with exceptions and gaps highlighted."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_card_001_0304_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for today: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Fetch today's report run metadata with filtered stocks count."
+    template: "SELECT run_id, run_ts, stocks_filtered FROM report.enhanced_runs WHERE run_ts = CURRENT_DATE;"
+  -
+    description: "Get today's filtered stocks data for a specific run."
+    template: "SELECT symbol, recommendation, current_price FROM report.enhanced_filtered_stocks WHERE run_id = :run_id;"
+status: "validated"
+synthesis_guidance: "['Synthesize data validation focused on exceptions.', 'Ensure gaps are clearly identified and communicated.', 'Recommend actions for any identified gaps or issues.']"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "today"
+  - "exceptions_and_gaps_first"
+title: "Enhanced Report Data Validation for Today"
+tool_plan_template:
+  steps:
+    - "Analyze evidence from enhanced report tables"
+    - "Identify missing data and broken report links"
+    - "Focus analysis on today's data related to watchlist creation"
+    - "Summarize findings as exceptions and gaps"
+  type: "systematic"
+validation_rules:
+  - "All SQL queries should use only approved tables and columns."
+  - "No modifications to data can be made; read-only access is enforced."
+  - "Highlight missing data and broken links as primary concerns."
+version: 1

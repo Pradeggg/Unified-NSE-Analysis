@@ -1,0 +1,56 @@
+id: "vcp_breakouts_with_fundamentals_0010_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0010"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: today; response style: concise table."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "use_read_only_templates"
+sql_templates:
+  -
+    template: "SELECT ee.symbol, ee.close, ss.enhanced_fund_score, sv.vcp_score FROM market.equity_eod ee JOIN scores.stage_snapshots ss ON ee.symbol = ss.symbol JOIN scores.stage2_vcp_picks sv ON ee.symbol = sv.symbol WHERE ee.trade_date = CURRENT_DATE AND (ee.close = ee.week52_high OR sv.vcp_breakout_pct > 0) AND ss.enhanced_fund_score > 0.8"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:40:54"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table ee.close"
+  - "unknown table ee.symbol"
+  - "unknown table ee.trade_date"
+  - "unknown table ee.week52_high"
+  - "unknown table ss.enhanced_fund_score"
+  - "unknown table ss.symbol"
+  - "unknown table sv.symbol"
+  - "unknown table sv.vcp_breakout_pct"
+  - "unknown table sv.vcp_score"

@@ -1,0 +1,45 @@
+id: "data_freshness_readiness_audit_1239_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit"
+description: "Validate data source freshness over the last 20 sessions for Agent Adda workflows. Audit focuses on source-trail validation. Responses are delivered as ranked candidates."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "source-trail validation for last 20 sessions"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "source-trail_validation"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "scores.stage_snapshots"
+tool_plan_template: "Generate a ranked list of data sources based on freshness scores over the last 20 sessions. Prioritize sources with the highest freshness scores."
+sql_templates:
+  -
+    type: "SELECT"
+    description: "Fetch latest 20 session data from market.index_eod and stage_snapshots tables."
+    template: "SELECT trade_date, index_symbol, close FROM market.index_eod WHERE trade_date IN (SELECT DISTINCT trade_date FROM market.index_eod ORDER BY trade_date DESC LIMIT 20);"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "rules"
+synthesis_guidance: "Ensure queries are optimized for freshness retrieval and that evidence tables provide a full trail of data freshness for the required sessions."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:56"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

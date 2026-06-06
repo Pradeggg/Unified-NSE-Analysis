@@ -1,0 +1,54 @@
+id: "portfolio_incremental_add_trim_1501_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1501"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: today; response style: research-only summary."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for today: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as research-only summary"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "today"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  - "Analyze the current holdings in the portfolio to determine potential add or trim actions."
+  - "Review sector exposure based on current holdings."
+  - "Identify risk flags associated with specific holdings."
+sql_templates:
+  sector_exposure: "SELECT sector, SUM(qty * live_price) AS total_value FROM scores.stage_snapshots JOIN portfolio.holdings ON scores.stage_snapshots.symbol = portfolio.holdings.symbol WHERE snapshot_date = CURRENT_DATE GROUP BY sector ORDER BY total_value DESC;"
+  add_candidates: "SELECT symbol, company_name FROM scores.stage_snapshots WHERE stage = 'Accumulation' AND rsi < 30 AND snapshot_date = CURRENT_DATE AND symbol IN (SELECT symbol FROM portfolio.holdings);"
+  trim_candidates: "SELECT symbol, company_name FROM scores.stage_snapshots WHERE stage = 'Distribution' AND rsi > 70 AND snapshot_date = CURRENT_DATE AND symbol IN (SELECT symbol FROM portfolio.holdings);"
+  risk_flags: "SELECT symbol, company_name, trend_signal FROM scores.stage_snapshots WHERE trend_signal = 'Negative' AND snapshot_date = CURRENT_DATE AND symbol IN (SELECT symbol FROM portfolio.holdings);"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure no write operations are performed."
+  - "Use provided SQL templates as read-only queries."
+synthesis_guidance: "['Provide a summary of potential portfolio adjustments focusing on Indian market conditions.', 'Highlight sectors with significant exposure.', 'Identify key add/trim opportunities and risk flags for today.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:09:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

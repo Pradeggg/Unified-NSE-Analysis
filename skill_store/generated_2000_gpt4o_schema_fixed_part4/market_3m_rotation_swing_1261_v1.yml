@@ -1,0 +1,66 @@
+id: "market_3m_rotation_swing_1261_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1261"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: post results; response style: ranked candidates."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    description: "Conduct a comprehensive overview of the market using the last 3 months of data and rank leading sectors and potential swing candidates. Ensure a refined focus on Stage 2 stocks based on their score and potential for performance."
+sql_templates:
+  index_returns:
+    template: "SELECT index_symbol, AVG(close / prev_close - 1) * 100 AS avg_return FROM market.index_eod WHERE trade_date > (SELECT MAX(trade_date) - INTERVAL '3 months' FROM market.index_eod) GROUP BY index_symbol;"
+    description: "Calculate average returns for indexes over the last 3 months."
+  stage_distribution_change:
+    template: "SELECT stage, COUNT(*) FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY stage;"
+    description: "Distribution of current market stages."
+  leading_sectors:
+    template: "SELECT sector, AVG(stage_score) AS avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector ORDER BY avg_stage_score DESC LIMIT 5;"
+    description: "Identify top sectors based on average stage score."
+  primary_candidates:
+    template: "SELECT symbol, company_name, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' ORDER BY stage_score DESC LIMIT 10;"
+    description: "Top 10 Stage 2 equity candidates by stage score."
+  risks:
+    template: "SELECT symbol, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal = 'SELL';"
+    description: "Stocks flagged as SELL to assess risk."
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "{'as_of_date': {'type': 'date', 'description': 'The reference date for the analysis.'}, 'index_returns': {'type': 'list', 'description': 'Average returns of indexes over the period.'}, 'stage_distribution_change': {'type': 'dict', 'description': 'Current distribution of market stages.'}, 'leading_sectors': {'type': 'list', 'description': 'Top sectors based on stage scores.'}, 'primary_candidates': {'type': 'list', 'description': 'Ranked list of primary candidates for swing trading.'}, 'risks': {'type': 'list', 'description': 'Identified risks based on sell signals.'}}"
+synthesis_guidance: "Provide an easy-to-understand summary of market conditions and highlight potential swing trade candidates. Emphasize sector trends and outline potential risks for the proposed candidates."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:32"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

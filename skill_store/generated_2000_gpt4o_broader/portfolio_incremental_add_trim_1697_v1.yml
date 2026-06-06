@@ -1,0 +1,51 @@
+id: "portfolio_incremental_add_trim_1697_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1697"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: weekly review; response style: debug trace."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  language: "SQL"
+  mode: "read-only"
+sql_templates:
+  -
+    template: "WITH recent_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), portfolio_data AS (SELECT * FROM portfolio.holdings) SELECT s.sector, h.symbol, s.company_name, s.price, s.change_1w_pct, s.stage, s.stage_score FROM recent_snapshots s JOIN portfolio_data h ON s.symbol = h.symbol WHERE s.stage_score > 70 ORDER BY s.stage_score DESC;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data freshness"
+  - "Sector exposure balance"
+synthesis_guidance: "['Focus on sector-relative comparison', 'Consider weekly trends']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:13"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

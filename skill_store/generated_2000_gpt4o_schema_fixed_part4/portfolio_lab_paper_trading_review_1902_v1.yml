@@ -1,0 +1,75 @@
+id: "portfolio_lab_paper_trading_review_1902_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1902"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: today; response style: comparison matrix."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for today: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as comparison matrix"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "today"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Review and compare paper trading strategies with a focus on deep institutional metrics. Extract data from approved tables and derive insights into strategy performance."
+sql_templates:
+  -
+    query: "SELECT h.symbol, h.qty, h.avg_cost, s.signal, s.price_at_issue, s.target_1, s.stop_loss FROM portfolio.holdings h JOIN signals.signal_log s ON h.symbol = s.symbol WHERE s.date_issued = (SELECT MAX(date_issued) FROM signals.signal_log) LIMIT 10;"
+    description: "Retrieve paper trading holdings with latest issued signals."
+  -
+    query: "SELECT e.symbol, e.trade_date, e.close, ss.stage FROM market.equity_eod e JOIN scores.stage_snapshots ss ON e.symbol = ss.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) LIMIT 10;"
+    description: "Get latest EOD close and stage for held symbols."
+python_tools:
+  -
+    id: "calculate_exposure"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "qty"
+      - "avg_cost"
+      - "current_price"
+    outputs:
+      - "exposure"
+    approved_tables:
+      - "portfolio.holdings"
+      - "market.equity_eod"
+    code: "def run(context):\n    exposure = context['qty'] * (context['current_price'] - context['avg_cost'])\n    return {'exposure': exposure}"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure correct joins between holdings and signal logs using symbol."
+  - "Verify the latest date usage in queries to maintain currency."
+  - "Keep result sets bounded with LIMIT to ensure performance."
+synthesis_guidance: "['Provide insights into strategy effectiveness by comparing targets with actual market stages.', \"Highlight any discrepancies or notable patterns in the portfolio lab's entries and exits.\"]"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:30"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_exposure: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_exposure: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

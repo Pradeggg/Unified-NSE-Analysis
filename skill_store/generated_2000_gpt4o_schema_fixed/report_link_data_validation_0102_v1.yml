@@ -1,0 +1,68 @@
+id: "report_link_data_validation_0102_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0102"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: today; response style: narrative plus evidence."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for today: review report links not working"
+  - "validate generated report links and missing data as narrative plus evidence"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "today"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  python_tools:
+    -
+      required_function: "run(context)"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "run_id"
+      outputs:
+        - "broken_links"
+        - "missing_data"
+      approved_tables:
+        - "report.enhanced_runs"
+        - "report.enhanced_filtered_stocks"
+      code: "def run(context):\n    runs = context['report.enhanced_runs']\n    stocks = context['report.enhanced_filtered_stocks']\n    broken_links = []\n    missing_data = []\n    # Add logic to identify broken links and missing data based on the context data\n    return broken_links, missing_data"
+sql_templates:
+  -
+    purpose: "Retrieve latest enhanced report runs for validation"
+    template: "SELECT * FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '1 day'"
+  -
+    purpose: "Validate presence of filtered stocks in latest report run"
+    template: "SELECT * FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '1 day')"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure SQL templates use correct table and column names"
+  - "Ensure that outputs align with the response style: narrative plus evidence"
+  - "Ensure broken_links and missing_data logic is read-only and within constraints"
+synthesis_guidance: "['Integrate SQL results and Python tool findings into a narrative report', 'Focus on key insights and actionable improvements regarding data validation and report link integrity', 'Maintain clarity on which data points were validated and which gaps were identified']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

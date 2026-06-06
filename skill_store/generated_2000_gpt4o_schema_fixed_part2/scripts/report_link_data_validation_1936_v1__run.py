@@ -1,0 +1,1 @@
+def run(context): return validate_reports(context['run_ids'], context['symbols'])

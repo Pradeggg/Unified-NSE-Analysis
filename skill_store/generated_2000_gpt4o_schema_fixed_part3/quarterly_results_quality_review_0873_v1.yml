@@ -1,0 +1,70 @@
+id: "quarterly_results_quality_review_0873_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0873"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: daily refresh follow-up; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "daily refresh follow-up for pre market: latest quarterly results analysis"
+  - "which companies had strong quarterly results as action watchlist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Assess latest quarterly results, focusing on revenue, PAT growth, and margin movement. Review the most recent analysis and compile an action watchlist."
+sql_templates:
+  -
+    description: "Fetch latest quarterly results with performance analysis."
+    template: "WITH latest_results AS (SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.period_label, ra.verdict, ra.growth_yoy_revenue_pct, ra.growth_qoq_revenue_pct, ra.growth_yoy_pat_pct, ra.growth_qoq_pat_pct, qr.opm_pct, qr.pat FROM scores.quarterly_results qr JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end WHERE ra.verdict IN ('beat', 'inline') ORDER BY qr.symbol, qr.period_end DESC NULLS LAST, ra.updated_at DESC) SELECT lr.symbol, lr.period_label, lr.verdict, lr.growth_yoy_revenue_pct, lr.growth_qoq_revenue_pct, lr.growth_yoy_pat_pct, lr.growth_qoq_pat_pct, lr.opm_pct, lr.pat FROM latest_results lr;"
+python_tools:
+  -
+    id: "analysis_summary_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "lr.symbol"
+      - "lr.verdict"
+      - "lr.growth_yoy_revenue_pct"
+      - "lr.growth_qoq_revenue_pct"
+      - "lr.growth_yoy_pat_pct"
+      - "lr.growth_qoq_pat_pct"
+      - "lr.opm_pct"
+    outputs:
+      - "summary"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+    code: "def run(context):\n    summary = {}\n    for row in context.inputs:\n        symbol = row['lr.symbol']\n        summary[symbol] = {\n            'verdict': row['lr.verdict'],\n            'growth_yoy_revenue_pct': row['lr.growth_yoy_revenue_pct'],\n            'growth_qoq_revenue_pct': row['lr.growth_qoq_revenue_pct'],\n            'growth_yoy_pat_pct': row['lr.growth_yoy_pat_pct'],\n            'growth_qoq_pat_pct': row['lr.growth_qoq_pat_pct'],\n            'opm_pct': row['lr.opm_pct']\n        }\n    return summary"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Output must contain companies with 'beat' or 'inline' verdicts."
+  - "Validate margins showing an improvement trend."
+synthesis_guidance: "['Focus on top performers and margin improvements.', 'Summarize key drivers and risks from results trends.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:20"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analysis_summary_tool: execution failed: AttributeError: 'dict' object has no attribute 'inputs'"
+review:
+  status: "needs_heal"
+  findings:
+    - "analysis_summary_tool: execution failed: AttributeError: 'dict' object has no attribute 'inputs'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

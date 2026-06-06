@@ -1,0 +1,69 @@
+id: "report_link_data_validation_0018_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0018"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: latest EOD; response style: concise table."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for latest EOD: review report links not working"
+  - "validate generated report links and missing data as concise table"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Analyze report link issues leveraging enhanced report metadata, focus on position-sizing and identify data gaps."
+sql_templates:
+  -
+    template_name: "fetch_report_run_metadata"
+    template_sql: "SELECT run_id, run_ts, universe_size, stocks_filtered FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 5;"
+  -
+    template_name: "fetch_filtered_stocks"
+    template_sql: "SELECT symbol, recommendation, current_price, daily_signal FROM report.enhanced_filtered_stocks WHERE run_id = '{{ latest_run_id }}' AND daily_signal IS NOT NULL;"
+python_tools:
+  -
+    id: "generate_position_sizing_context"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+      - "stocks_filtered"
+    outputs:
+      - "position_sizing_report"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    filtered_data = context['stocks_filtered']\n    # Example logic for position sizing\n    return [{'symbol': stock['symbol'], 'size': stock['score'] * 100} for stock in filtered_data]"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Verify report links are functioning."
+  - "Ensure data is present in stock HTML files."
+  - "Cross-verify generated report links against metadata."
+  - "Validate position-sizing data context for latest EOD."
+synthesis_guidance: "Compile results into a concise report table, highlighting errors and suggested remedies."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "generate_position_sizing_context: execution failed: KeyError: 'stocks_filtered'"
+review:
+  status: "needs_heal"
+  findings:
+    - "generate_position_sizing_context: execution failed: KeyError: 'stocks_filtered'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

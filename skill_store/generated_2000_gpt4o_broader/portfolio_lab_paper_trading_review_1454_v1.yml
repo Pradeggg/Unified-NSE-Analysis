@@ -1,0 +1,54 @@
+id: "portfolio_lab_paper_trading_review_1454_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1454"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for quarter to date: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze the paper trading signals against market conditions and generate a portfolio-aware output for the current quarter. Ensure separation from real holdings."
+sql_templates:
+  -
+    name: "current_paper_trades"
+    type: "SELECT"
+    template: "SELECT s.symbol, s.date_issued, s.signal, s.entry_low, s.entry_high, s.stop_loss, s.target_1, s.target_2, m.close FROM signals.signal_log s JOIN market.equity_eod m ON s.symbol = m.symbol WHERE s.date_issued >= '2023-01-01' AND m.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND s.action_bucket IS NULL OR s.action_bucket = 'Open';"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Check that all generated signals are current and unresolved."
+  - "Ensure separation of paper trading data from real holdings."
+synthesis_guidance: "Develop a structured review of open paper trades focusing on entry, exit conditions, and current market exposure. Avoid mixing analysis with actual portfolio holdings."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:15"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

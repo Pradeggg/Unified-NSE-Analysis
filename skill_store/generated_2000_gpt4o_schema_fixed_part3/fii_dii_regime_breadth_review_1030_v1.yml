@@ -1,0 +1,54 @@
+id: "fii_dii_regime_breadth_review_1030_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1030"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: last 5 sessions; response style: concise table."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for last 5 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as concise table"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  language: "SQL"
+  mode: "read_only"
+  query_template: "SELECT flows.trade_date, flows.fii_net_today, flows.dii_net_today, flows.flow_signal, regime.regime, breadth.ad_signal, index_eod.close FROM signals.fii_dii_flows flows INNER JOIN signals.regime_history regime ON flows.trade_date = regime.trade_date INNER JOIN breadth.market_daily breadth ON flows.trade_date = breadth.trade_date INNER JOIN market.index_eod index_eod ON flows.trade_date = index_eod.trade_date WHERE flows.trade_date >= CURRENT_DATE - INTERVAL '5 days' AND index_eod.index_symbol = 'NIFTY 50' ORDER BY flows.trade_date DESC;"
+  parameters:
+
+sql_templates:
+  -
+    template_id: "recent_regime_flow_breadth_index_5d"
+    template: "SELECT flows.trade_date, flows.fii_net_today, flows.dii_net_today, flows.flow_signal, regime.regime, breadth.ad_signal, index_eod.close FROM signals.fii_dii_flows flows INNER JOIN signals.regime_history regime ON flows.trade_date = regime.trade_date INNER JOIN breadth.market_daily breadth ON flows.trade_date = breadth.trade_date INNER JOIN market.index_eod index_eod ON flows.trade_date = index_eod.trade_date WHERE flows.trade_date >= CURRENT_DATE - INTERVAL '5 days' AND index_eod.index_symbol = 'NIFTY 50' ORDER BY flows.trade_date DESC;"
+    notes: "Aggregates FII/DII flow, market regime, and breadth data with NIFTY 50 index levels over the last 5 days."
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "output_format"
+  - "required_columns"
+synthesis_guidance: "Provide a concise summary table of the last 5 trading sessions, highlighting FII/DII flows, market regime, breadth signals, and NIFTY 50 closing values to assess the market's risk context."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:13"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.market_daily is not approved"

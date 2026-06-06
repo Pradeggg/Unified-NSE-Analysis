@@ -1,0 +1,54 @@
+id: "report_link_data_validation_0536_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation - Freshness Audit"
+description: "Conduct a thorough validation of enhanced report run metadata with a focus on identifying broken links and unpopulated data fields for the past 20 sessions."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  steps:
+    - "Extract the last 20 sessions from 'report.enhanced_runs' based on 'run_ts'."
+    - "Check for any 'notes' indicating link issues in the selected sessions."
+    - "Identify any missing data in 'report.enhanced_filtered_stocks' linked to the identified sessions."
+    - "Compile findings into a research-only summary."
+sql_templates:
+  - "WITH recent_enhanced_runs AS (SELECT run_id, run_ts FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 20), issues AS (SELECT run_id, notes FROM report.enhanced_runs WHERE run_id IN (SELECT run_id FROM recent_enhanced_runs) AND notes LIKE '%link issues%') SELECT * FROM issues;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all findings are compiled from approved tables."
+  - "Summary must focus on the last 20 sessions."
+  - "Only SELECT/WITH SQL templates are utilized."
+synthesis_guidance: "Summarize findings focusing on broken links, unpopulated data fields, and verify against list of known issues in reports."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:48:17"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

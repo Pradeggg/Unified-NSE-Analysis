@@ -1,0 +1,59 @@
+id: "quarterly_results_quality_review_0271_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0271"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: pre market; response style: ranked candidates."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for pre market: latest quarterly results analysis"
+  - "which companies had strong quarterly results as ranked candidates"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  tool_name: "Quarterly Results Assessment Tool"
+  steps:
+    - "Extract relevant quarterly results data."
+    - "Analyze revenue and PAT growth."
+    - "Evaluate OPM and margin movements."
+    - "Summarize filing freshness and narrative insights."
+    - "Rank companies based on assessment scores."
+sql_templates:
+  quarterly_results_analysis:
+    query: "SELECT symbol, period_end, company_name, growth_yoy_revenue_pct, growth_yoy_pat_pct, opm_delta_pp FROM scores.results_analysis WHERE period_label = 'latest' AND audited = true ORDER BY growth_yoy_revenue_pct DESC;"
+    description: "Fetch latest audited quarterly results with revenue, PAT growth, and OPM changes, ordered by revenue growth."
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "ensure_audited_data"
+  - "focus_on_growth_metrics"
+  - "pre_market_scan"
+synthesis_guidance: "{'emphasize_growth_trends': True, 'target_ranking_clarity': True}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,1 @@
+def run(context): latest_dates = context['latest_dates']; today = '2023-10-10'; freshness_summary = {table: ('Fresh' if latest_date >= today else 'Stale') for table, latest_date in latest_dates.items()}; return freshness_summary

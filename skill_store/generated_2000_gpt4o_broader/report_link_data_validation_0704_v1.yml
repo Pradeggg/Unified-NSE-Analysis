@@ -1,0 +1,60 @@
+id: "report_link_data_validation_0704_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0704"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: today; response style: QA checklist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for today: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "today"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  steps:
+    - "Extract run metadata for today's reports."
+    - "Identify and summarize missing stock data."
+    - "Compile a list of broken links in the report."
+    - "Generate remediation steps for any issues identified."
+    - "Verify and validate the completeness and accuracy of the data."
+sql_templates:
+  -
+    description: "Select today's report runs and analyze metadata."
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE analysis_date = CURRENT_DATE;"
+  -
+    description: "Extract filtered stock information for current reports."
+    template: "SELECT run_id, symbol, recommendation, current_price FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE analysis_date = CURRENT_DATE);"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all run metadata for the current date is collected."
+  - "Cross-verify stock symbols between enhanced_filtered_stocks and enhanced_runs."
+  - "Identify any discrepancies in reported stock data."
+synthesis_guidance: "{'focus': 'Detail the process of validation and highlight any potential data integrity issues.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

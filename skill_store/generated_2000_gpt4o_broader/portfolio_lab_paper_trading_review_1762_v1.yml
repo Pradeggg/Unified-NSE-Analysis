@@ -1,0 +1,48 @@
+id: "portfolio_lab_paper_trading_review_1762_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Agent Adda Strategy Review Card"
+description: "Review paper trading strategies separately from real holdings with a focus on Q&A checklist for Indian market."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "deep_institutional_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Tool: {python_tool} | SQL Template: {sql_template}"
+sql_templates:
+  -
+    description: "Fetch trading signals with entries, stops, targets, and resolved status for review."
+    template: "SELECT symbol, date_issued, signal, entry_low, entry_high, stop_loss, target_1, target_2, date_resolved, price_at_resolution, return_pct FROM signals.signal_log WHERE date_resolved IS NOT NULL;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates must remain read-only."
+synthesis_guidance: "Use evidence and research framing to detail strategy review. Ensure separation of paper trading from real holdings."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,60 @@
+id: "portfolio_lab_paper_trading_review_1454_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1454"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for quarter to date: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Extract relevant paper trading data and generate a strategy review. Identify specific entries, exits, targets, and stops for analysis."
+sql_templates:
+  latest_holding_info:
+    description: "Fetch latest holding info for portfolio analysis"
+    template: "SELECT ph.symbol, ph.qty, ph.avg_cost, s.stage, s.trading_signal FROM portfolio.holdings ph JOIN scores.stage_snapshots s ON ph.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+  signal_log_review:
+    description: "Fetch signals and their resolved state for analysis"
+    template: "SELECT sl.symbol, sl.signal, sl.entry_low, sl.entry_high, sl.stop_loss, sl.target_1, sl.target_2 FROM signals.signal_log sl WHERE sl.date_issued >= (CURRENT_DATE - INTERVAL '3 months')"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure returned data aligns with provided timeframes and approved schema conditions."
+  - "Results should only include symbols with supported signals."
+synthesis_guidance: "Compile the extracted data into a cohesive portfolio review report that highlights key trade activities and recommendations."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:54"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.sl is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "signals.signal_log.sl is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

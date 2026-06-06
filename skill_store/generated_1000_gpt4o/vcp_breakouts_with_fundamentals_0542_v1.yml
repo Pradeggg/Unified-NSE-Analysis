@@ -1,0 +1,63 @@
+id: "vcp_breakouts_with_fundamentals_0542_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0542"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 3 months; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  evidence_required:
+    tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  python_tools:
+
+sql_templates:
+  -
+    template: "WITH recent_vcp AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' AND vcp_score > 70) SELECT e.symbol, e.close, e.volume, s.fundamental_score FROM market.equity_eod e JOIN recent_vcp v ON e.symbol = v.symbol JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date = CURRENT_DATE AND e.close >= e.week52_high * 0.9;"
+    description: "Fetch stocks meeting VCP criteria with strong fundamentals and recent highs."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure status is generated"
+  - "SQL must be read-only with SELECT/WITH clauses"
+  - "Use only approved tables and columns"
+synthesis_guidance: "['Integrate data into a cohesive summary', 'Highlight VCP breakout potential', 'Emphasize strong fundamentals and institutional interest']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:49:03"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table e.close"
+  - "unknown table e.symbol"
+  - "unknown table e.trade_date"
+  - "unknown table e.volume"
+  - "unknown table e.week52_high"
+  - "unknown table s.fundamental_score"
+  - "unknown table s.symbol"
+  - "unknown table v.symbol"

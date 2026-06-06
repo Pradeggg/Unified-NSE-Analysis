@@ -1,0 +1,70 @@
+id: "company_360_research_report_0482_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0482"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: deep institutional review; timeframe: intraday context; response style: portfolio-aware output."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "deep institutional review for intraday context: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as portfolio-aware output"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  tools:
+    -
+      tool_name: "generate_financial_summary"
+      description: "Generate summary of financial results using available evidence."
+      inputs:
+        - "symbol"
+      outputs:
+        - "company_snapshot"
+        - "financial_trends"
+        - "technical_setup"
+      tool_type: "sql"
+      status: "generated"
+sql_templates:
+  financial_summary:
+    sql: "SELECT s.symbol, s.company_name, s.price, s.change_1d_pct, a.revenue, a.pat FROM scores.stage_snapshots s JOIN scores.annual_results a ON s.symbol = a.symbol WHERE s.symbol = 'RELIANCE';"
+    description: "Fetch company overview with price changes and financial performance."
+    status: "generated"
+  technical_summary:
+    sql: "SELECT m.trade_date, m.close, m.volume FROM market.equity_eod m WHERE m.symbol = 'RELIANCE';"
+    description: "Fetch recent technical trading data."
+    status: "generated"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure data consistency between financial and technical summaries."
+  - "Verify complete timeframe coverage for requested intraday context."
+synthesis_guidance: "{'steps': ['Integrate financial and technical summaries to offer a cohesive narrative.', 'Highlight key valuation gaps and institutional influences.'], 'status': 'generated'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:48"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.m is not approved"

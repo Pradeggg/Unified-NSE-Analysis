@@ -1,0 +1,56 @@
+id: "report_link_data_validation_1194_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Validation - Weekly Review"
+description: "Validate the structure and data of generated enhanced reports, focusing on watchlist creation and weekly review processes."
+input_patterns:
+  - "Check report links functionality"
+  - "Validate data in stock HTML files"
+  - "Generate watchlist for weekly review"
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "weekly_review"
+  - "watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+  join_rules:
+    -
+      left_table: "report.enhanced_runs"
+      left_column: "run_id"
+      right_table: "report.enhanced_filtered_stocks"
+      right_column: "run_id"
+      condition: "report.enhanced_runs.run_id = report.enhanced_filtered_stocks.run_id"
+  sql_templates:
+    -
+      query: "WITH latest_runs AS (SELECT * FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '1 week') SELECT er.run_id, ef.symbol, ef.recommendation FROM report.enhanced_filtered_stocks ef JOIN latest_runs er ON er.run_id = ef.run_id WHERE ef.weekly_signal = 'BUY';"
+      description: "Fetch recommended stocks from the latest enhanced runs for watchlist creation."
+tool_plan_template:
+
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure that 'run_id' in both tables is used for joins as per '_join_rules'."
+  - "Filters should apply only to the last week using PostgreSQL syntax."
+  - "Daily and weekly signals should be reviewed for 'BUY' recommendations for watchlist."
+synthesis_guidance: "Present findings in a narrative form, ensuring clarity and focus on actionable insights and validation evidence. Include associated outputs like broken links, missing data, and remediation strategies within the context of weekly reviews."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:56:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

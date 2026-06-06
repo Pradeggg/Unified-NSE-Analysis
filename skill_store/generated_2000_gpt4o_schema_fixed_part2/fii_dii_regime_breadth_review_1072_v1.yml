@@ -1,0 +1,57 @@
+id: "fii_dii_regime_breadth_review_1072_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1072"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: pre market; response style: concise table."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for pre market: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as concise table"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  inputs:
+    - "{{latest date}}"
+  outputs:
+    - "regime"
+    - "flow_context"
+    - "breadth_context"
+    - "index_confirmation"
+    - "risk_flags"
+sql_templates:
+  -
+    name: "combined_market_review"
+    description: "Retrieve latest FII/DII flows, market regime, breadth, and index data."
+    sql: "WITH latest_data AS (\n    SELECT MAX(trade_date) AS max_date FROM signals.fii_dii_flows\n)\nSELECT \n    flow.trade_date, \n    flow.fii_net_today, \n    flow.dii_net_today, \n    flow.flow_signal, \n    reg.regime, \n    reg.confidence, \n    breadth.advances, \n    breadth.declines, \n    breadth.ad_signal, \n    index_data.close, \n    index_data.trend_signal\nFROM signals.fii_dii_flows AS flow\nJOIN signals.regime_history AS reg ON flow.trade_date = reg.trade_date\nJOIN breadth.market_daily AS breadth ON flow.trade_date = breadth.trade_date\nJOIN market.index_eod AS index_data ON flow.trade_date = index_data.trade_date\nAND index_data.index_symbol = 'Nifty 50'\nWHERE flow.trade_date = (SELECT max_date FROM latest_data);"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Check if results align with recent market trends."
+  - "Ensure no NULL values in key columns like trade_date, regime."
+synthesis_guidance: "['Summarize market context using regime, flow, breadth, and index information.', 'Focus on identifying if the market is in a risk-on or risk-off state.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:49"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.market_daily is not approved"

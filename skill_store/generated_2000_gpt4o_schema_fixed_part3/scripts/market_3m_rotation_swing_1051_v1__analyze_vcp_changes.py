@@ -1,0 +1,1 @@
+def run(context): sectors = context['sector']; scores = context['vcp_score']; return { 'sector_trend_analysis': analyze_sectors(sectors, scores) }

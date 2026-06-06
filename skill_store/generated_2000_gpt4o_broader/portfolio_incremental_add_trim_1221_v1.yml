@@ -1,0 +1,54 @@
+id: "portfolio_incremental_add_trim_1221_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1221"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: last 5 sessions; response style: ranked candidates."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for last 5 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "last_5_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  step_1: "Retrieve current holdings from portfolio.holdings"
+  step_2: "Match holdings with scores.stage_snapshots for the last 5 sessions"
+  step_3: "Evaluate add/trim candidates based on technical scores and trend signals"
+  step_4: "Rank candidates for add/trim actions"
+sql_templates:
+  -
+    description: "Retrieve and join portfolio holdings with recent score snapshots"
+    sql: "WITH recent_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '5 days') SELECT h.symbol, h.qty, h.avg_cost, h.buy_date, s.sector, s.stage_score, s.trend_signal FROM portfolio.holdings h JOIN recent_snapshots s ON h.symbol = s.symbol"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure symbols in holdings match those in stage_snapshots"
+  - "Rank add/trim candidates by stage_score and trend_signal"
+synthesis_guidance: "{'sector_impact': 'Consider sector balance when recommending actions', 'risk_assessment': 'Highlight any significant risk flags', 'action_ranking': 'Rank by best potential improvement in portfolio performance'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

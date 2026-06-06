@@ -1,0 +1,50 @@
+id: "portfolio_incremental_add_trim_1697_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1697"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: weekly review; response style: debug trace."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Evaluate portfolio holdings against sector performance using latest stage snapshots to determine incremental add or trim actions."
+sql_templates:
+  -
+    template: "WITH latest_stages AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT p.symbol, p.qty, s.sector, s.trading_signal, s.relative_strength FROM portfolio.holdings p JOIN latest_stages s ON p.symbol = s.symbol WHERE s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY s.relative_strength DESC LIMIT 10;"
+    description: "Retrieve top 10 holdings with strong buy signals and highest relative strength."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure at least one add or trim candidate is suggested based on data."
+  - "Discard signals if no corresponding sector-relative data is found."
+synthesis_guidance: "['Prioritize high relative strength within target sectors.', 'Consider current stage and market signals before add/trim decisions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

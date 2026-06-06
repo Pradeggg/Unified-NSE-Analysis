@@ -1,0 +1,70 @@
+id: "data_freshness_readiness_audit_0973_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0973"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: pre market; response style: comparison matrix."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for pre market: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as comparison matrix"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  description: "Generate statements to check data freshness across relevant tables using the latest available date:"
+  steps:
+    - "Fetch latest trade_date from market.index_eod and market.equity_eod for data freshness."
+    - "Verify latest snapshot_date from scores.stage_snapshots for stage context."
+    - "Check generated_at from breadth.market_daily for market sentiment."
+    - "Audit any discrepancies in report.enhanced_runs to ensure completeness."
+sql_templates:
+  check_index_freshness:
+    template: "SELECT MAX(trade_date) FROM market.index_eod;"
+    description: "Retrieve the freshest trade date to assess index data readiness."
+  check_equity_freshness:
+    template: "SELECT MAX(trade_date) FROM market.equity_eod WHERE series = 'EQ';"
+    description: "Retrieve the freshest trade date for equities to check data readiness."
+  check_stage_snapshot_freshness:
+    template: "SELECT MAX(snapshot_date) FROM scores.stage_snapshots;"
+    description: "Fetch the latest snapshot date for stage context readiness."
+  check_breadth_freshness:
+    template: "SELECT MAX(generated_at) FROM breadth.market_daily;"
+    description: "Ensure market sentiment is up-to-date by checking the latest generated timestamp."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "required_columns"
+  - "latest_date_check"
+synthesis_guidance: "Summarize and align the latest data freshness states into a readiness matrix. Highlight discrepancies and suggest actions if any domains fall below freshness thresholds."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:46"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

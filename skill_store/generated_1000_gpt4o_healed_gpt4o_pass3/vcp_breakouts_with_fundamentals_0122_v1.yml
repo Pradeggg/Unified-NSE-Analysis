@@ -1,0 +1,142 @@
+card:
+  created_at: "2026-06-06T12:42:10"
+  created_by: "llm_generated"
+  description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: narrative plus evidence."
+  domain: "screening"
+  evidence_required:
+    tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+  generation_model: "gpt-4o"
+  id: "vcp_breakouts_with_fundamentals_0122_v1"
+  input_patterns:
+    - "stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "VCP breakout stocks for TradingView"
+    - "quality breakouts with strong fundamentals"
+    - "deep institutional review for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "quality breakouts with strong fundamentals as narrative plus evidence"
+  output_contract:
+    - "filters"
+    - "candidates"
+    - "tradingview_symbols"
+    - "evidence"
+    - "risks"
+  python_tools:
+
+  sql_templates:
+    fetch_candidates: "SELECT eod.symbol, eod.close, eod.volume FROM market.equity_eod AS eod JOIN scores.stage_snapshots AS scores ON eod.symbol = scores.symbol WHERE eod.trade_date > DATE_SUB(CURDATE(), INTERVAL 5 DAY) AND (scores.stage_score > 70 OR eod.high = eod.week52_high);"
+  status: "generated"
+  synthesis_guidance:
+    - "Synthesize narrative using market data and fundamental scores."
+    - "Highlight both opportunities and risks for investors."
+  tags:
+    - "vcp"
+    - "breakout"
+    - "new_high"
+    - "fundamentals"
+    - "tradingview"
+    - "deep_institutional_review"
+    - "last_5_sessions"
+    - "narrative_plus_evidence"
+  title: "VCP Breakouts With Fundamentals Variant 0122"
+  tool_plan_template:
+    candidates:
+      - "List of stock symbols matching VCP or breakout criteria with fundamental strength."
+    evidence:
+      - "Detailed evidence from market data and scores tables to support findings."
+    filters:
+      - "Identify stocks forming new highs or VCP patterns with strong fundamental support."
+      - "Select stocks with strong liquidity within the last 5 sessions."
+    risks:
+      - "Identify potential risks associated with breakout and VCP stocks."
+    tradingview_symbols:
+      - "Formatted symbols for TradingView display."
+  validation_errors:
+
+  validation_rules:
+    - "Ensure evidence aligns with provided schema."
+    - "All SQL queries must be read-only."
+  version: 1
+created_at: "2026-06-06T12:42:10"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: narrative plus evidence."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0122_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  status: "needs_heal"
+  findings:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  fetch_candidates: "SELECT eod.symbol, eod.close, eod.volume, scores.fundamental_score, scores.vcp_score FROM market.equity_eod AS eod JOIN scores.stage2_vcp_picks AS scores ON eod.symbol = scores.symbol WHERE eod.trade_date > DATE_SUB(CURDATE(), INTERVAL 5 DAY) AND (scores.vcp_score > 70 OR eod.high = eod.week52_high) AND scores.fundamental_score > 80;"
+status: "test_failed"
+synthesis_guidance: "['Synthesize narrative using market data and fundamental scores.', 'Highlight both opportunities and risks for investors.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "narrative_plus_evidence"
+title: "VCP Breakouts With Fundamentals Variant 0122"
+tool_plan_template:
+  candidates:
+    - "List of stock symbols matching VCP or breakout criteria with fundamental strength."
+  evidence:
+    - "Detailed evidence from market data and scores tables to support findings."
+  filters:
+    - "Identify stocks forming new highs or VCP patterns with strong fundamental support."
+    - "Select stocks with strong liquidity within the last 5 sessions."
+  risks:
+    - "Identify potential risks associated with breakout and VCP stocks."
+  tradingview_symbols:
+    - "Formatted symbols for TradingView display."
+validation_errors:
+  - "description is required"
+  - "domain is required"
+  - "evidence_required is required"
+  - "id is required"
+  - "input_patterns is required"
+  - "output_contract is required"
+  - "tags is required"
+  - "title is required"
+  - "validation_rules is required"
+  - "version is required"
+  - "version must be a positive integer"
+validation_rules:
+  - "Ensure evidence aligns with provided schema."
+  - "All SQL queries must be read-only."
+version: 1

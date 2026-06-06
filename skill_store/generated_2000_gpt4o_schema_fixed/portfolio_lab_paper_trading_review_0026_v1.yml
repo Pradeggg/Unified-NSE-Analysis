@@ -1,0 +1,53 @@
+id: "portfolio_lab_paper_trading_review_0026_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0026"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: last 5 sessions; response style: concise table."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for last 5 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as concise table"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Evaluate paper trading strategies for the last 5 sessions using approved tables. Present results in a concise table format."
+sql_templates:
+  -
+    description: "Retrieve paper trading analysis for the last 5 sessions."
+    template: "SELECT sl.date_issued, sl.symbol, sl.signal, sl.entry_low, sl.entry_high, sl.stop_loss, sl.target_1, sl.target_2, eod.close FROM signals.signal_log sl JOIN market.equity_eod eod ON sl.symbol = eod.symbol WHERE eod.trade_date > (SELECT MAX(trade_date) FROM market.equity_eod) - INTERVAL '5 sessions';"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Verify that the output table contains data for 5 sessions."
+  - "Ensure that entry, exit, stop loss, and target columns are populated correctly."
+synthesis_guidance: "['Present findings in a concise table format with emphasis on entry and exit strategies.', 'Highlight any discrepancies or unusual patterns in strategy performance.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:17:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,59 @@
+id: "fii_dii_regime_breadth_review_0302_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0302"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: today; response style: exceptions and gaps first."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for today: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as exceptions and gaps first"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "today"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  steps:
+    - "Retrieve latest FII/DII flows and trends, capturing exceptions first."
+    - "Get current market regime and any abrupt changes."
+    - "Analyze breadth data for anomalies in advances/declines."
+    - "Confirm index actions for the intended indices, noting discrepancies."
+sql_templates:
+  fii_dii_flow_analysis: "SELECT trade_date, fii_net_today, dii_net_today, fii_net_5d, dii_net_5d, flow_signal FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+  market_regime_analysis: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history);"
+  breadth_analysis: "SELECT trade_date, advances, declines, net_ad, ad_signal FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+  index_analysis: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND index_symbol = 'NIFTY';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Verify latest trade_date is consistent across all datasets."
+  - "Ensure flow signals and regime labels match expected formats."
+  - "Check index data aligns with breadth insights."
+synthesis_guidance: "['Emphasize any exceptions and gaps first.', 'Provide a coherent narrative around the market being risk-on or risk-off based on all evidence.', 'Highlight discrepancies in institutional flows and market indicators.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:56"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

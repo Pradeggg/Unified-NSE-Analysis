@@ -1,0 +1,59 @@
+id: "corporate_events_results_watchlist_1633_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1633"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for last 20 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as debug trace"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh-follow-up"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  language: "SQL"
+  goal: "Retrieve corporate events and results data for a 20-session timeframe analysis."
+  steps:
+    - "Query corporate events for specified timeframe."
+    - "Join analysis data to provide context."
+    - "Determine relevant watchlist actions."
+sql_templates:
+  -
+    template: "SELECT symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date >= NOW() - INTERVAL '20 days';"
+    description: "Retrieve corporate events from the last 20 sessions."
+  -
+    template: "SELECT symbol, period_end, growth_yoy_revenue_pct, growth_qoq_pat_pct FROM scores.results_analysis WHERE filing_date >= NOW() - INTERVAL '20 days';"
+    description: "Retrieve results analysis for a 20-session timeframe."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  -
+    rule: "Ensure all queries are SELECT statements."
+  -
+    rule: "Ensure data is limited to the last 20 sessions."
+synthesis_guidance: "Cross-reference events with analysis to determine watchlist priority."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:30"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.now is not approved"
+  - "signals.corporate_events.now is not approved"

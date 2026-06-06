@@ -1,0 +1,50 @@
+id: "quarterly_results_quality_review_0033_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0033"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: daily refresh follow-up; timeframe: last 20 sessions; response style: concise table."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "daily refresh follow-up for last 20 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as concise table"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "daily_refresh_follow-up"
+  - "last_20_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Assess and tabulate latest quarterly results for companies, focusing on revenue and PAT growth, margin movement, and latest filing analysis, refreshed daily for the last 20 sessions."
+sql_templates:
+  - "WITH latest_results AS (SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.period_label, ra.verdict, ra.growth_yoy_revenue_pct, ra.growth_qoq_revenue_pct, ra.growth_yoy_pat_pct, ra.growth_qoq_pat_pct, ss.stage FROM scores.quarterly_results qr JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end JOIN scores.stage_snapshots ss ON qr.symbol = ss.symbol WHERE qr.period_type = 'quarter' AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY qr.symbol, qr.period_end DESC NULLS LAST, ra.updated_at DESC) SELECT symbol, period_label, verdict, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct, stage FROM latest_results LIMIT 20;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Check that the results cover the latest 20 sessions based on unique symbol and period_label."
+  - "Ensure non-negative percentage growth values."
+  - "Verify that all symbols have a corresponding stage from stage_snapshots."
+synthesis_guidance: "Present a concise table covering key financial metrics such as revenue and PAT growth, and margin trends for Indian companies over their latest quarterly results, ranked by significance and stage."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

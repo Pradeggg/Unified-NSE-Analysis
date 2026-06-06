@@ -1,0 +1,1 @@
+def run(context): return calculate_vcp(context['filtered_data'])

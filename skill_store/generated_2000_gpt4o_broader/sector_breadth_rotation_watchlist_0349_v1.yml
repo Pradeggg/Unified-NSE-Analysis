@@ -1,0 +1,61 @@
+id: "sector_breadth_rotation_watchlist_0349_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0349"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: last 3 months; response style: exceptions and gaps first."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for last 3 months: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as exceptions and gaps first"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  description: "Plan to rank sectors by identifying improving trends and validate using different factors."
+  steps:
+    - "Identify sectors with the highest breadth change over the last 3 months."
+    - "Validate sectors showing improvements in Stage 2 participation."
+    - "Select stocks with high relative strength and price performance."
+sql_templates:
+  -
+    description: "Select sectors with the best breadth signal in the last 3 months."
+    template: "SELECT sector, MAX(breadth_signal) AS best_signal FROM breadth.sector_daily WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY best_signal DESC;"
+  -
+    description: "Identify stage 2 participation from sectors in last 3 months."
+    template: "SELECT sector, MAX(stage2_pct) AS max_stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY max_stage2_pct DESC;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  -
+    rule: "Check SQL syntax and ensure tables exist in approved schema."
+  -
+    rule: "Validate output against schema requirements before forwarding."
+synthesis_guidance: "{'focus': 'Validating sector trends through breadth and stage metrics; highlight gaps and exceptions in data.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:15"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.max_stage2_pct is not approved"
+  - "breadth.ma_pct_above.sector is not approved"
+  - "breadth.sector_daily.best_signal is not approved"

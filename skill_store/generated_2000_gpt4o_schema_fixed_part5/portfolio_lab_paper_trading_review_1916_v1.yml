@@ -1,0 +1,67 @@
+id: "portfolio_lab_paper_trading_review_1916_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1916"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for latest EOD: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as comparison matrix"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Execute a freshness audit of paper trading strategies with latest EOD data."
+sql_templates:
+  -
+    description: "Fetch latest stage data for paper trading review."
+    query: "WITH latest_stage AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT * FROM latest_stage WHERE symbol IN (SELECT symbol FROM portfolio.holdings);"
+python_tools:
+  -
+    id: "calculate_trading_metrics"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      eod_data: "SELECT symbol, close FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+    outputs:
+      - "calculated_metrics"
+    approved_tables:
+      - "market.equity_eod"
+    code: "def run(context):\n    eod_data = context.inputs['eod_data']\n    # Placeholder for metrics calculation logic\n    metrics = []  # Replace with actual calculated metrics\n    return metrics"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure data freshness using latest snapshot_date."
+  - "Compare paper trading entries to actual holdings without overlap."
+synthesis_guidance: "Focus on providing a comparison matrix that distinguishes between paper trading strategies and real portfolio holdings using up-to-date market data."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:15"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_trading_metrics: inputs must be a list"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_trading_metrics: inputs must be a list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

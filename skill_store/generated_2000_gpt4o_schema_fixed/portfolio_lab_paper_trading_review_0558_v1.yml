@@ -1,0 +1,65 @@
+id: "portfolio_lab_paper_trading_review_0558_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0558"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: position-sizing context; timeframe: quarter to date; response style: research-only summary."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "position-sizing context for quarter to date: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as research-only summary"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Research the provided paper trading portfolio and strategy efficacy using available data. Consider position-sizing, timing, and outcomes such as targets and stops. Include exposure and context analysis."
+sql_templates:
+  -
+    description: "Select latest trading signals for analysis."
+    sql: "SELECT symbol, signal, date_issued, entry_low, entry_high, stop_loss, target_1, return_pct FROM signals.signal_log WHERE date_issued > CURRENT_DATE - INTERVAL '3 months';"
+  -
+    description: "Join latest portfolio holdings with market EOD data for price history and return context."
+    sql: "WITH latest_holdings AS (SELECT symbol, qty, avg_cost FROM portfolio.holdings) SELECT latest_holdings.symbol, latest_holdings.qty, market.close - latest_holdings.avg_cost AS pnl FROM latest_holdings JOIN market.equity_eod market ON latest_holdings.symbol = market.symbol WHERE market.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+python_tools:
+  -
+    id: "calculate_exposure"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "holdings"
+      - "eod_prices"
+    outputs:
+      - "exposure_summary"
+    approved_tables:
+      - "portfolio.holdings"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Example only; calculates the exposure based on holdings and market prices\n    exposure = {}\n    for holding in context['holdings']:\n        symbol = holding['symbol']\n        qty = holding['qty']\n        price = next(item for item in context['eod_prices'] if item['symbol'] == symbol)['close']\n        exposure[symbol] = qty * price\n    return {'exposure_summary': exposure}"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure no mixing of paper trades with real holdings."
+  - "Check for consistent entry and exit strategies."
+  - "Validate position-sizing and exposure context; summarize without recommendations."
+synthesis_guidance: "Summarize strategy strengths and weaknesses based on recent data. Identify notable performance elements and contextually relevant patterns."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:25:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.equity_eod is not approved"

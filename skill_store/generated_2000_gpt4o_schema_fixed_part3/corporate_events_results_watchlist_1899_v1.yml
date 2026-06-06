@@ -1,0 +1,71 @@
+id: "corporate_events_results_watchlist_1899_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1899"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as action watchlist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  raw_template: "Extract corporate events and result announcements. Determine latest stage and provide a watchlist with actions."
+  template_tags:
+    - "source-trail_validation"
+    - "weekly_review"
+sql_templates:
+  -
+    name: "Fetch_Corporate_Events"
+    template: "SELECT symbol, event_type, event_date, detail FROM signals.corporate_events WHERE event_date >= CURRENT_DATE AND event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM') ORDER BY event_date ASC LIMIT 100;"
+  -
+    name: "Fetch_Latest_Stage_Snapshot"
+    template: "SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY');"
+python_tools:
+  -
+    id: "calculate_growth_metrics"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "growth_yoy_revenue_pct"
+      - "growth_qoq_revenue_pct"
+    outputs:
+      - "growth_analysis"
+    approved_tables:
+      - "scores.results_analysis"
+    code: "def run(context): return context['growth_yoy_revenue_pct'] > 0 and context['growth_qoq_revenue_pct'] > 0"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure events have valid symbols and future dates."
+  - "Verify stage and trading signals align with current data."
+synthesis_guidance: "Integrate latest corporate events with corresponding stage snapshots to generate a detailed action watchlist."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:55"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_growth_metrics: execution failed: KeyError: 'growth_yoy_revenue_pct'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_growth_metrics: execution failed: KeyError: 'growth_yoy_revenue_pct'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

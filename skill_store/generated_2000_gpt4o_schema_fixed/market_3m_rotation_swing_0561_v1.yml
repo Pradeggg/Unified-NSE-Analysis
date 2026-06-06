@@ -1,0 +1,54 @@
+id: "market_3m_rotation_swing_0561_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0561"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as research-only summary"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "{...}"
+sql_templates:
+  -
+    description: "Get index returns over the last 3 months"
+    query: "SELECT index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    description: "Identify stage distribution changes and leading sectors in Stage 2"
+    query: "SELECT sector, COUNT(*) AS num_stage_2 FROM scores.stage_snapshots WHERE stage = 'STAGE_2' GROUP BY sector ORDER BY num_stage_2 DESC LIMIT 5;"
+  -
+    description: "Fetch top primary candidates with buy signals from latest VCP picks"
+    query: "SELECT symbol, company_name, trading_signal FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY vcp_score DESC, rank ASC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "..."
+synthesis_guidance: "{'...': '...'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:25:18"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.num_stage_2 is not approved"

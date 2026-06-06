@@ -1,0 +1,61 @@
+id: "report_link_data_validation_0648_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0648"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for last 3 months: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "To analyze report links and data, track enhanced run metadata and stock filtering results."
+sql_templates:
+  enhanced_runs_analysis: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '3 months';"
+  filtered_stocks_analysis: "SELECT run_id, rank, symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE recommendation IS NOT NULL;"
+python_tools:
+  -
+    id: "validate_links"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "links"
+    outputs:
+      - "broken_links"
+    approved_tables:
+
+    code: "def run(context):\n    broken_links = []\n    for link in context['links']:\n        # Simulate link validation\n        if not link.startswith('http'):\n            broken_links.append(link)\n    return {'broken_links': broken_links}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Check for consistency in run timestamps against analysis context."
+  - "Ensure that all referenced links are reachable and contain expected stock data."
+synthesis_guidance: "Focus on unmasking anomalies in the link generation and data filtering processes."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "validate_links: execution failed: KeyError: 'links'"
+review:
+  status: "needs_heal"
+  findings:
+    - "validate_links: execution failed: KeyError: 'links'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

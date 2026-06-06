@@ -1,0 +1,68 @@
+id: "data_freshness_readiness_audit_1995_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1995"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: risk-first review; timeframe: weekly review; response style: comparison matrix."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "risk-first review for weekly review: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as comparison matrix"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "risk-first_review"
+  - "weekly_review"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Evaluate data freshness and readiness for the specified workflows using the evidence tables."
+sql_templates:
+  -
+    title: "Check Index EOD Freshness"
+    template: "SELECT MAX(trade_date) AS latest_date FROM market.index_eod;"
+  -
+    title: "Check Equity EOD Freshness"
+    template: "SELECT MAX(trade_date) AS latest_date FROM market.equity_eod;"
+python_tools:
+  -
+    id: "run_data_freshness_audit"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      latest_equity_date: "latest_date_from_equity_query"
+      latest_index_date: "latest_date_from_index_query"
+    outputs:
+      status: "freshness_status"
+      details: "freshness_details"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+    code: "def run(context):\n    today = context['current_date']\n    equity_freshness = (today - context['latest_equity_date']).days <= 1\n    index_freshness = (today - context['latest_index_date']).days <= 1\n    if equity_freshness and index_freshness:\n        status = 'All data sources are fresh.'\n    else:\n        status = 'Some data sources are stale.'\n    return {'status': status, 'details': {'equity_freshness': equity_freshness, 'index_freshness': index_freshness}}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "must_include_latest_date"
+  - "eod_data_threshold_days"
+synthesis_guidance: "If any data is out-of-date beyond the set thresholds, flag it in the freshness_matrix and document in missing_sources."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:59"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_date is not approved"
+  - "market.index_eod.latest_date is not approved"

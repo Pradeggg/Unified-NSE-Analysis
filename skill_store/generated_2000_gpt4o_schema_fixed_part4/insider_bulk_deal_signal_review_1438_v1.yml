@@ -1,0 +1,62 @@
+id: "insider_bulk_deal_signal_review_1438_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1438"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for last 20 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as portfolio-aware output"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    evidence_steps:
+      -
+        description: "Identify symbols with recent insider alerts or bulk deals within the last 20 sessions."
+        sql_template: "SELECT DISTINCT symbol FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '20 days' UNION SELECT DISTINCT symbol FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '20 days';"
+      -
+        description: "Retrieve latest technical scores and market cap category for these symbols."
+        sql_template: "WITH latest_scores AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT symbol, technical_score, stage, market_cap_cat FROM latest_scores WHERE symbol IN (%s);"
+      -
+        description: "Gather last EOD data for these symbols for delivery percentage and price data."
+        sql_template: "SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND symbol IN (%s) AND series = 'EQ';"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "{'steps': [{'description': 'Synthesize results into a portfolio-aware rank list considering technical scores and market cap categories.'}, {'description': 'Draft potential deal summaries and insider context based on alerts and deal data.'}, {'description': 'Outline risk notes based on recent market activity and stage information.'}]}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,57 @@
+id: "agent_route_failure_diagnostics_0910_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0910"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: today; response style: comparison matrix."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for today: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as comparison matrix"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "today"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Provide a detailed comparison matrix of agent route failures using TradingView export data for today. Ensure to highlight missing tools, wrong symbol resolutions, and any loops encountered."
+sql_templates:
+  -
+    template_id: "latest_runs"
+    template: "SELECT * FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+    description: "Fetch the latest enhanced run data."
+  -
+    template_id: "symbol_resolution_analysis"
+    template: "SELECT es.symbol, es.recommendation, ss.trading_signal FROM report.enhanced_filtered_stocks es JOIN scores.stage_snapshots ss ON es.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    description: "Analyze symbol resolution issues based on latest data."
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all joins follow approved_schema._join_rules."
+  - "Limit tables to those specified in evidence_required."
+  - "Use global_sql_rules for filtering latest dates."
+synthesis_guidance: "Summarize findings with structured outputs prioritizing the most critical diagnostics, and ensure clarity when identifying missing tools and resolution failures."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:33"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

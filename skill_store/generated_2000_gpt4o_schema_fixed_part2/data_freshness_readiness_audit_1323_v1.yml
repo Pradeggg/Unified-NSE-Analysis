@@ -1,0 +1,63 @@
+id: "data_freshness_readiness_audit_1323_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1323"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for last 5 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as exceptions and gaps first"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  steps:
+    - "Check the freshness of EOD data for 'market.index_eod' and 'market.equity_eod'."
+    - "Verify snapshot refresh in 'scores.stage_snapshots'."
+    - "Assess breadth indicators and check 'breadth.market_daily' for daily updates."
+    - "Confirm percentages in 'breadth.ma_pct_above' for the latest date."
+    - "Cross-verify with 'report.enhanced_runs' for any discrepancies in recent analyses."
+sql_templates:
+  freshness_check:
+    statement: "SELECT MAX(trade_date) FROM market.equity_eod"
+  stage_snapshot_check:
+    statement: "WITH latest_snapshot AS (SELECT MAX(snapshot_date) AS max_snapshot FROM scores.stage_snapshots) SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT max_snapshot FROM latest_snapshot)"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure SQL templates access only approved tables and columns."
+  - "Verify all dates are parameterized using the latest date rules."
+  - "Confirm Python tools adhere to read-only policy without network access."
+synthesis_guidance: "['Emphasize faults and missing data first.', 'Highlight evidence gaps impacting audits.', 'Structure results for quick alignment with operational thresholds.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:15"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

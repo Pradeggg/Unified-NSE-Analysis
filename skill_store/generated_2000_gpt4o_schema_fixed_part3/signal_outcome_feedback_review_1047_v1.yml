@@ -1,0 +1,67 @@
+id: "signal_outcome_feedback_review_1047_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1047"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: concise table."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for last 3 months: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as concise table"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Extract relevant signal outcomes from signals.signal_log for the last 3 months."
+    - "Perform sector-relative analysis using scores.stage_snapshots."
+    - "Combine with price history from market.equity_eod for complete context."
+sql_templates:
+  -
+    template_description: "Extract signals with outcomes and performance for the last 3 months."
+    sql: "SELECT s.id, s.symbol, s.sector, s.signal, s.target_1, s.target_2, s.stop_loss, s.return_pct, s.hit_target, s.hit_stop FROM signals.signal_log AS s WHERE s.date_issued >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    template_description: "Join signal outcomes with stage snapshots for sector-relative comparison."
+    sql: "SELECT sl.symbol, sl.sector, sl.signal, sl.return_pct, ss.stage FROM signals.signal_log AS sl INNER JOIN scores.stage_snapshots AS ss ON sl.symbol = ss.symbol WHERE sl.date_issued >= CURRENT_DATE - INTERVAL '3 months' AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+  -
+    id: "sector_relative_analysis_002"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_performance_data"
+    outputs:
+      - "sector_performance_summary"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    sector_data = context['sector_performance_data']\n    summary = summarize_sector_performance(sector_data)\n    return {'sector_performance_summary': summary}"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure outcome_summary includes both targets and stops hit."
+  - "Check winner_patterns for sector dominance."
+  - "Verify failure_patterns for significant stops."
+synthesis_guidance: "['Focus on concise sector-relative conclusions.', 'Highlight any disparity in signal effectiveness across sectors.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:28"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.s is not approved"

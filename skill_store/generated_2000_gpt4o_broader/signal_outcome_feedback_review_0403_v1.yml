@@ -1,0 +1,63 @@
+id: "signal_outcome_feedback_review_0403_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0403"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for today: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as portfolio-aware output"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Evaluate recent signals, focusing on hit targets or stops."
+sql_templates:
+  signals_evaluation: "SELECT id, symbol, date_issued, price_at_issue, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_resolved = CURRENT_DATE"
+python_tools:
+  -
+    id: "signal_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signal_log_data"
+    outputs:
+      - "analysis_summary"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context): return analyze_signals(context['signal_log_data'])"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all necessary tables are utilized."
+  - "Verify SQL queries adhere to SELECT/WITH only."
+  - "Status must be 'generated'."
+synthesis_guidance: "['Analyze trends in successful and failed signals.', 'Highlight patterns leading to wins or losses.', 'Provide actionable insights for future improvements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signal_analysis_tool: execution failed: NameError: name 'analyze_signals' is not defined"
+review:
+  status: "needs_heal"
+  findings:
+    - "signal_analysis_tool: execution failed: NameError: name 'analyze_signals' is not defined"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

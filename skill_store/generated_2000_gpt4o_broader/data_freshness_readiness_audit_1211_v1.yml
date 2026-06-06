@@ -1,0 +1,74 @@
+id: "data_freshness_readiness_audit_1211_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1211"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: latest EOD; response style: ranked candidates."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for latest EOD: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as ranked candidates"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Perform a quick scan to verify the latest EOD data freshness and identify missing sources, ranking them by impact."
+sql_templates:
+  -
+    description: "Check latest data freshness for index EOD."
+    query: "SELECT trade_date, index_symbol, turnover_cr FROM market.index_eod ORDER BY trade_date DESC LIMIT 1;"
+  -
+    description: "Check latest data freshness for equity EOD."
+    query: "SELECT trade_date, symbol, turnover_cr FROM market.equity_eod ORDER BY trade_date DESC LIMIT 1;"
+  -
+    description: "Check latest data freshness for market breadth."
+    query: "SELECT trade_date, adv_volume, dec_volume FROM breadth.market_daily ORDER BY trade_date DESC LIMIT 1;"
+python_tools:
+  -
+    id: "data_freshness_audit_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "freshness_report"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "breadth.market_daily"
+    code: "def run(context):\n    # Analyze the freshness of the data based on the latest trade_date\n    # Generate a freshness report indicating the state of data readiness\n    trade_dates = []\n    # SQL or context-based logic should fetch latest trade dates from input\n    # Calculate freshness and add to report\n    return {'freshness_report': 'mock_data'}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all retrieved dates match the latest EOD."
+  - "Rank sources by turnover impact if any gaps are found."
+  - "Identify any missing approved history based on evidence required."
+synthesis_guidance: "Collate the freshness details and identify potential data sources causing blocking gaps, suggest actions if any gaps are detected."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

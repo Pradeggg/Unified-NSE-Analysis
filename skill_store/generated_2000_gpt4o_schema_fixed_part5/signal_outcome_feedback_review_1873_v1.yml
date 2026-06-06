@@ -1,0 +1,59 @@
+id: "signal_outcome_feedback_review_1873_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1873"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for pre market: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as action watchlist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    evidence_gathering: "Use signal log and stage snapshot latest data for comprehensive signal review."
+    analysis: "Review signals hitting targets and stops from latest available logs and contexts."
+    output: "Actionable watchlist including winning and losing pattern insights."
+sql_templates:
+  -
+    description: "Retrieve resolved signals with outcome data"
+    template: "SELECT symbol, signal, date_issued, date_resolved, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_resolved IS NOT NULL AND (hit_target = true OR hit_stop = true) AND date_issued > CURRENT_DATE - INTERVAL '3 months';"
+  -
+    description: "Get latest stage snapshots for current context"
+    template: "SELECT symbol, stage, technical_score, investment_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all symbols have corresponding context in latest stage snapshots."
+  - "Verify no unresolved signals are included in outcome summaries."
+synthesis_guidance: "['Focus on summarizing key patterns from successful and failed signals.', 'Prioritize recent outcomes for actionable items.', 'Identify sectors or setups indicating consistent performance.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:45"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,57 @@
+id: "portfolio_incremental_add_trim_1739_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1739"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for last 20 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  - "Use SQL to pull latest stage snapshot data linked with current portfolio holdings."
+  - "Filter results for BUY/STRONG_BUY signals to identify add candidates."
+  - "Assess positions with weak technical scores for trim decisions."
+  - "Compile a checklist of findings for a QA review process."
+sql_templates:
+  -
+    statement: "WITH latest_stage_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT h.symbol, h.qty, h.avg_cost, h.buy_date, s.stage, s.trading_signal, s.technical_score, s.trend_signal FROM portfolio.holdings h JOIN latest_stage_snapshots s ON h.symbol = s.symbol WHERE s.trading_signal IN ('BUY', 'STRONG_BUY')"
+    description: "Select add candidates with BUY/STRONG_BUY signals."
+  -
+    statement: "WITH latest_stage_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT h.symbol, h.qty, h.avg_cost, h.buy_date, s.stage, s.trading_signal, s.technical_score, s.trend_signal FROM portfolio.holdings h JOIN latest_stage_snapshots s ON h.symbol = s.symbol WHERE s.technical_score < 50"
+    description: "Identify holdings with low technical scores for potential trimming."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data freshness by verifying snapshot_date aligns with latest available date."
+  - "Check for inconsistencies between technical_score and trading_signal."
+synthesis_guidance: "['Formulate a narrative by weighing the balance between add and trim candidates.', 'Highlight key sector exposures while aligning with current market trends.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:22"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,62 @@
+id: "company_360_research_report_1434_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1434"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "watchlist creation for last 20 sessions: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as portfolio-aware output"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template: "Generate research-driven insights using approved tables to build a detailed company profile and watchlist candidate."
+sql_templates:
+  -
+    name: "fetch_recent_performance"
+    description: "Fetch key performance metrics for last 20 sessions."
+    template: "SELECT trade_date, close, volume, change_pct FROM market.equity_eod WHERE symbol = 'RELIANCE' ORDER BY trade_date DESC LIMIT 20"
+  -
+    name: "fetch_financial_snapshot"
+    description: "Summarize latest quarterly and annual financial results."
+    template: "SELECT * FROM scores.quarterly_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL templates are read-only."
+  - "Verify output adherence to provided schemas."
+synthesis_guidance: "['Combine financial, technical, and narrative insights.', 'Maintain portfolio-aware focus in recommendations.', 'Highlight risks and opportunities based on recent data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:07"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

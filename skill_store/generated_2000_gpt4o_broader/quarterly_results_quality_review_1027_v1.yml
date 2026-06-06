@@ -1,0 +1,54 @@
+id: "quarterly_results_quality_review_1027_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1027"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: concise table."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "sector-relative comparison for last 5 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as concise table"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  python:
+
+sql_templates:
+  -
+    description: "Retrieve latest quarterly results for comparison."
+    query: "SELECT qr.symbol, ra.company_name, ra.industry, ra.growth_yoy_revenue_pct, ra.growth_qoq_revenue_pct, ra.growth_yoy_pat_pct, ra.opm_delta_pp FROM scores.quarterly_results qr JOIN scores.results_analysis ra ON qr.symbol = ra.symbol WHERE ra.period_end = (SELECT MAX(period_end) FROM scores.results_analysis) AND ra.industry IS NOT NULL ORDER BY ra.growth_yoy_revenue_pct DESC;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure results are filtered for the latest period."
+  - "Ensure industry information is not null."
+  - "Order results primarily by YoY revenue growth."
+synthesis_guidance: "['Focus on delivering insights via a concise table showing sector-relative performance.', 'Highlight companies with strong performance in rankings.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:32"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

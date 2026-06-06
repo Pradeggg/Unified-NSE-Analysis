@@ -1,0 +1,68 @@
+id: "portfolio_lab_paper_trading_review_2000_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 2000"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: TradingView export; timeframe: weekly review; response style: comparison matrix."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "TradingView export for weekly review: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as comparison matrix"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "TradingView_export"
+  - "weekly_review"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review paper trading strategies using data from approved tables. Compare strategy outcomes focusing on entries, exits, stops, and targets."
+sql_templates:
+  -
+    name: "strategy_comparison"
+    query: "SELECT ss.symbol, ss.company_name, ss.sector, sl.signal, sl.entry_low, sl.entry_high, sl.stop_loss, sl.target_1, sl.target_2, sl.price_at_issue, sl.price_at_resolution, sl.return_pct, me.close AS latest_close FROM signals.signal_log sl JOIN scores.stage_snapshots ss ON sl.symbol = ss.symbol JOIN market.equity_eod me ON sl.symbol = me.symbol WHERE sl.date_issued >= (CURRENT_DATE - INTERVAL '7 days') AND me.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+python_tools:
+  -
+    id: "strategy_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "strategy_data"
+    outputs:
+      - "strategy_insights"
+    approved_tables:
+      - "portfolio.holdings"
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Analyze strategy data and extract insights.\n    insights = []\n    for strategy in context['strategy_data']:\n        # Example analysis logic, simplified\n        insights.append({'symbol': strategy['symbol'], 'return': strategy['return_pct']})\n    return insights"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all required evidence is incorporated without unauthorized assumptions."
+  - "Check SQL syntax and logic matches schema."
+synthesis_guidance: "Generate a weekly comparison matrix summarizing trading strategies and their outcomes."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "strategy_analysis_tool: execution failed: KeyError: 'strategy_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "strategy_analysis_tool: execution failed: KeyError: 'strategy_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

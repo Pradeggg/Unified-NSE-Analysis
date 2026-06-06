@@ -1,0 +1,51 @@
+id: "agent_route_failure_diagnostics_1904_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1904"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: today; response style: comparison matrix."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for today: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as comparison matrix"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "today"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Diagnose issues using available evidence and research framing for the Indian market."
+sql_templates:
+  -
+    description: "Select latest enhanced runs and their stock details for diagnostics."
+    template: "WITH latest_runs AS (SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)) SELECT er.run_id, er.run_ts, er.analysis_date, efs.symbol, efs.score, efs.recommendation FROM latest_runs er JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure run_ts is the latest timestamp for enhanced runs."
+  - "Ensure valid joins between enhanced_runs and enhanced_filtered_stocks."
+synthesis_guidance: "Use the comparison matrix style to present diagnostics in a structured format."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:57"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,77 @@
+id: "corporate_events_results_watchlist_1535_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1535"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: risk-first review; timeframe: last 20 sessions; response style: research-only summary."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "risk-first review for last 20 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as research-only summary"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "risk-first_review"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "1. Select corporate events within the last 20 sessions."
+  - "2. Identify recent results and summarize key metrics."
+  - "3. Highlight event-driven stocks and their current Weinstein stage."
+sql_templates:
+  -
+    name: "select_recent_corporate_events"
+    template: "SELECT id, symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '20 days' LIMIT 50;"
+  -
+    name: "select_results_analysis"
+    template: "WITH latest_results AS (SELECT DISTINCT ON (symbol) symbol, period_end, company_name, verdict, score FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC) SELECT * FROM latest_results;"
+  -
+    name: "select_stage_snapshots"
+    template: "SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol IN (SELECT symbol FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '20 days') LIMIT 50;"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs: "context"
+    outputs: "summary"
+    approved_tables:
+      - "signals.corporate_events"
+      - "scores.results_analysis"
+      - "scores.stage_snapshots"
+    code: "# Define your read-only tool logic here."
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all selected events are within the last 20 sessions."
+  - "Verify results analysis includes the latest period for symbols."
+  - "Confirm stage snapshots match the latest snapshot date."
+synthesis_guidance: "['Use event evidence to identify key corporate actions.', 'Provide context on results analysis, focusing on verdict and score.', 'Summarize the current strategic stage of top symbols.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:13"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run: inputs must be a list"
+  - "run: must define run(context)"
+  - "run: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "run: inputs must be a list"
+    - "run: must define run(context)"
+    - "run: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

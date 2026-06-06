@@ -1,0 +1,1 @@
+def run(snapshot_data): return snapshot_data.groupby('sector').mean()

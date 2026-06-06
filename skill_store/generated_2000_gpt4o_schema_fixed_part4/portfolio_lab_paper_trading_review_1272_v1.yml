@@ -1,0 +1,76 @@
+id: "portfolio_lab_paper_trading_review_1272_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1272"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: pre market; response style: ranked candidates."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for pre market: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as ranked candidates"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "To perform a paper trading review, access the required tables, analyze recent entries and exits, calculate exposure, and ensure strategies are assessed pre-market. If complex calculations or data transformations are required, use quarantined Python tools."
+sql_templates:
+  -
+    operation: "Fetch Latest Signals"
+    template: "SELECT symbol, date_issued, signal, price_at_issue, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log);"
+  -
+    operation: "Current Holdings Context"
+    template: "SELECT h.symbol, h.qty, h.avg_cost, h.buy_date, s.trading_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    operation: "Latest EOD Prices"
+    template: "SELECT symbol, close, change_pct, volume FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+python_tools:
+  -
+    id: "calculate_exposure"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "holdings"
+      - "eod_prices"
+    outputs:
+      - "exposure_summary"
+    approved_tables:
+      - "portfolio.holdings"
+      - "market.equity_eod"
+    code: "def run(context):\n    holdings = context['holdings']\n    eod_prices = context['eod_prices']\n    exposure = {}\n\n    for symbol, holding in holdings.items():\n        if symbol in eod_prices:\n            market_value = holding['qty'] * eod_prices[symbol]['close']\n            exposure[symbol] = {\n                'market_value': market_value,\n                'change_pct': eod_prices[symbol]['change_pct']\n            }\n    return {'exposure_summary': exposure}"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure the latest signals align with the current market context."
+  - "Validate trading signals with current portfolio holdings."
+  - "Check that EOD prices are used for assessing current exposure and trade performance."
+synthesis_guidance: "Aggregate data from the selected tables to assess the performance of paper trading strategies. Present the analysis in ranked order, focusing on potential trade setups and risk exposure. If required information is unavailable in tables, flag it in evidence_gaps for further synthesis."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:34"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_exposure: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_exposure: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

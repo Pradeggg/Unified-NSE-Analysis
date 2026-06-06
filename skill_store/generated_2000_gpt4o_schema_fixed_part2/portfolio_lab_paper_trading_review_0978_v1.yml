@@ -1,0 +1,61 @@
+id: "portfolio_lab_paper_trading_review_0978_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0978"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: position-sizing context; timeframe: pre market; response style: comparison matrix."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "position-sizing context for pre market: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as comparison matrix"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "position-sizing_context"
+  - "pre_market"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  description: "To assess paper trading performance, focus on comparison of strategy-specific metrics without mixing with real holdings. Highlight entries, exits, stop-losses, and position sizes."
+  steps:
+    - "Select the latest stage snapshot data for each strategy using: snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)."
+    - "Retrieve paper trading signals and compare their outcomes."
+    - "Use portfolio.holdings table to analyze position sizes and cost bases."
+sql_templates:
+  -
+    template_name: "Select_Latest_Stage_Snapshot"
+    sql: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    template_name: "Compare_Signal_Outcomes"
+    sql: "SELECT signals.symbol, signals.date_issued, signals.signal, signals.price_at_issue, market.close, signals.return_pct FROM signals.signal_log AS signals JOIN market.equity_eod AS market ON signals.symbol = market.symbol AND market.trade_date = signals.date_resolved WHERE signals.signal = 'BUY' AND signals.date_resolved IS NOT NULL;"
+  -
+    template_name: "Analyze_Position_Sizes"
+    sql: "SELECT holdings.symbol, holdings.qty, holdings.avg_cost FROM portfolio.holdings AS holdings JOIN scores.stage_snapshots AS stages ON holdings.symbol = stages.symbol WHERE stages.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure that sql_templates use only approved columns and tables."
+  - "Check that SQL queries are read-only, using SELECT statements."
+synthesis_guidance: "{'approach': 'Map paper trading results to real portfolio metrics without conflation. Use comparison matrices to elucidate differences in strategy outcomes.', 'notes': 'Focus on weighing paper trading scenarios contextually within the Indian market.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:57"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.equity_eod is not approved"
+  - "signals.signal_log.signal_log is not approved"

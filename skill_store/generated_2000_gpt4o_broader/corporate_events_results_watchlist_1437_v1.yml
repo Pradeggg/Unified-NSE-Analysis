@@ -1,0 +1,60 @@
+id: "corporate_events_results_watchlist_1437_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1437"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for last 20 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  sql_templates:
+    -
+      template: "SELECT symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date >= NOW() - INTERVAL '20 days';"
+      description: "Retrieve upcoming or recent corporate events from the last 20 sessions."
+    -
+      template: "SELECT symbol, company_name, growth_yoy_revenue_pct, growth_qoq_revenue_pct, verdict FROM scores.results_analysis WHERE filing_date >= NOW() - INTERVAL '20 days';"
+      description: "Fetch results analysis for sector-relative comparison from recent filings."
+    -
+      template: "SELECT symbol, company_name, sector, change_1m_pct, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+      description: "Obtain the latest sector-relative performance metrics."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure the event dates are within the last 20 sessions."
+  - "Verify that results analysis includes sector-relative comparisons."
+  - "Confirm the output aligns with portfolio-aware strategies."
+synthesis_guidance: "Combine SQL results to provide an integrated view of corporate events and performance metrics, facilitating a sector-relative analysis."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

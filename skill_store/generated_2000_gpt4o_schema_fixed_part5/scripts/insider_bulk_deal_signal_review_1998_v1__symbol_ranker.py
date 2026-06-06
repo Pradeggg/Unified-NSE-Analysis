@@ -1,0 +1,1 @@
+def run(context): return sorted(context, key=lambda x: (x['insider_score'], x['stage_score']), reverse=True)

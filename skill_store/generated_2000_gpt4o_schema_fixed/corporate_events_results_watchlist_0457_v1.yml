@@ -1,0 +1,54 @@
+id: "corporate_events_results_watchlist_0457_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0457"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for quarter to date: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Generate a sector-relative corporate event and results watchlist for the current quarter. Highlight important changes or trends per sector."
+sql_templates:
+  -
+    name: "event_results_watchlist"
+    parameters:
+
+    query: "WITH latest_stage AS ( SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') ), recent_events AS ( SELECT ce.symbol, ce.event_type, ce.event_date FROM signals.corporate_events ce WHERE ce.event_date >= CURRENT_DATE - INTERVAL '3 months' ) SELECT le.symbol, le.event_type, le.event_date, rs.company_name, rs.growth_yoy_revenue_pct, rs.growth_qoq_revenue_pct, rs.verdict FROM recent_events le JOIN latest_stage ls ON le.symbol = ls.symbol JOIN scores.results_analysis rs ON le.symbol = rs.symbol WHERE rs.period_end = (SELECT MAX(period_end) FROM scores.results_analysis ra WHERE ra.symbol = rs.symbol) ORDER BY le.symbol, le.event_date DESC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Provide an overview of recent and upcoming corporate events, with a focus on strong sector performance indicators. Include key financial results and trends where applicable."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

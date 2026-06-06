@@ -1,0 +1,56 @@
+id: "corporate_events_results_watchlist_1451_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1451"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for quarter to date: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Extract and analyze recent corporate events and results impacting the watchlist based on the latest quarters. Focus on symbols with significant event-driven movements or results."
+sql_templates:
+  -
+    name: "quarter_to_date_events"
+    sql: "WITH recent_events AS (SELECT symbol, event_type, event_date, detail FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY event_date DESC) SELECT ce.symbol, ce.event_date, ce.event_type, ce.detail, ss.stage, ss.trading_signal FROM recent_events ce JOIN scores.stage_snapshots ss ON ce.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 50;"
+  -
+    name: "results_analysis_watchlist"
+    sql: "WITH latest_results AS (SELECT DISTINCT ON (symbol) symbol, company_name, verdict, growth_yoy_revenue_pct, growth_qoq_revenue_pct FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC) SELECT r.symbol, r.company_name, r.verdict, r.growth_yoy_revenue_pct, r.growth_qoq_revenue_pct, ss.trading_signal FROM latest_results r JOIN scores.stage_snapshots ss ON r.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event_date and snapshot_date are within the current quarter."
+  - "Check that trading signals align with expected stages."
+synthesis_guidance: "['Generate an output that specifies key upcoming events and recent results that could impact portfolio decisions.', 'Combine results from SQL queries to provide a holistic view of potential market movers.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

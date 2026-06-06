@@ -1,0 +1,1 @@
+def run(context): return f"Analyzing data integrity for runs: {context['run_id_list']}"

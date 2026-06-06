@@ -1,0 +1,60 @@
+id: "vcp_breakouts_with_fundamentals_0482_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0482"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: intraday context; response style: portfolio-aware output."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  - "Analyze VCP, breakout, and new-high stocks to identify candidates with strong fundamentals."
+  - "Use provided tables and columns to filter stocks based on market conditions and technical scores."
+sql_templates:
+  -
+    description: "Identify VCP breakout stocks with strong fundamentals."
+    query: "SELECT s.symbol, s.company_name, s.sector, s.live_price, s.change_1d_pct, s.stage_score, s.fundamental_score FROM scores.stage_snapshots s WHERE s.stage = 2 AND s.vcp_score IS NOT NULL AND s.fundamental_score > 70 ORDER BY s.change_1d_pct DESC"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure result includes stocks with high VCP scores and strong fundamentals."
+  - "Verify all used columns exist within the approved schema."
+synthesis_guidance: "['Focus on selecting stocks that align with institutional trading behaviors.', 'Consider liquidity and trading volume as potential additional filters.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:48:28"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.s is not approved"
+  - "scores.stage_snapshots.vcp_score is not approved"
+  - "unknown table s.change_1d_pct"
+  - "unknown table s.company_name"
+  - "unknown table s.fundamental_score"
+  - "unknown table s.live_price"
+  - "unknown table s.sector"
+  - "unknown table s.stage"
+  - "unknown table s.stage_score"
+  - "unknown table s.symbol"
+  - "unknown table s.vcp_score"

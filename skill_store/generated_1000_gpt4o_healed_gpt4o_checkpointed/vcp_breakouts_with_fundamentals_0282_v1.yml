@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:44:07"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: intraday context; response style: ranked candidates."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0282_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Selects VCP breakout candidates with buy signals and strong fundamentals, checking against 52-week highs."
+    template: "WITH breakout_candidates AS (SELECT symbol, company_name, sector, price, market_cap_cat, vcp_score, enhanced_fund_score, earnings_quality, trading_signal FROM scores.stage2_vcp_picks WHERE trading_signal = 'BUY' ORDER BY vcp_score DESC) SELECT bc.symbol, bc.company_name, bc.price, eod.high, eod.volume, eod.turnover_cr FROM breakout_candidates bc JOIN market.equity_eod eod ON bc.symbol = eod.symbol WHERE eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND eod.series = 'EQ' AND bc.price > eod.week52_high;"
+status: "validated"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "ranked_candidates"
+title: "VCP Breakouts With Fundamentals Variant 0282"
+tool_plan_template:
+
+validation_rules:
+  - "status"
+version: 1

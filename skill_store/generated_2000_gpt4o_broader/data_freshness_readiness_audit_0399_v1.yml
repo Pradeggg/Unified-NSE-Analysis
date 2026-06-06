@@ -1,0 +1,87 @@
+id: "data_freshness_readiness_audit_0399_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0399"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for weekly review: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as exceptions and gaps first"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Create a weekly audit report focusing on data freshness, highlighting exceptions and identifying missing sources."
+sql_templates:
+  -
+    query: "SELECT MAX(trade_date) AS last_index_date FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '7 days';"
+    description: "Check the most recent date for index EOD data to ensure freshness within a week."
+  -
+    query: "SELECT MAX(trade_date) AS last_equity_date FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '7 days';"
+    description: "Verify the most recent equity EOD data date to ensure it is updated weekly."
+  -
+    query: "SELECT MAX(snapshot_date) AS last_snapshot_date FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '7 days';"
+    description: "Ensure stage snapshot data is refreshed weekly."
+  -
+    query: "SELECT MAX(trade_date) AS last_breadth_date FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '7 days';"
+    description: "Validate freshness of market breadth data within the weekly timeframe."
+  -
+    query: "SELECT MAX(snapshot_date) AS last_ma_date FROM breadth.ma_pct_above WHERE snapshot_date >= CURRENT_DATE - INTERVAL '7 days';"
+    description: "Confirm the percentage of stocks above MAs is updated weekly."
+python_tools:
+  -
+    id: "date_check_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      last_dates:
+        - "last_index_date"
+        - "last_equity_date"
+        - "last_snapshot_date"
+        - "last_breadth_date"
+        - "last_ma_date"
+    outputs:
+      is_fresh: "boolean"
+      comments: "string"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "breadth.market_daily"
+      - "breadth.ma_pct_above"
+    code: "def run(context):\n    threshold_date = date.today() - timedelta(days=7)\n    freshness_results = {}\n    for key, last_date in context['last_dates'].items():\n        is_fresh = last_date >= threshold_date\n        freshness_results[key] = {\n            'is_fresh': is_fresh,\n            'comments': '' if is_fresh else f'{key} data is stale.'\n        }\n    return freshness_results"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure each table has valid weekly data."
+  - "Highlight tables with outdated or missing data."
+synthesis_guidance: "[\"Focus on identifying what's missing and the timeline of the missing data.\", 'Provide actionable loader improvements and verification checks.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:50"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.last_ma_date is not approved"
+  - "breadth.market_daily.last_breadth_date is not approved"
+  - "market.equity_eod.last_equity_date is not approved"
+  - "market.index_eod.last_index_date is not approved"
+  - "scores.stage_snapshots.last_snapshot_date is not approved"

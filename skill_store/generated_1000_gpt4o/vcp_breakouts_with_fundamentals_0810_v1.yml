@@ -1,0 +1,76 @@
+id: "vcp_breakouts_with_fundamentals_0810_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0810"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters:
+    - "new_highs"
+    - "vcp_breakouts"
+    - "strong_fundamentals"
+sql_templates:
+  -
+    template_name: "fetch_vcp_breakouts"
+    query: "SELECT symbol, company_name, price, trading_signal FROM scores.stage2_vcp_picks WHERE vcp_score > 70 AND enhanced_fund_score > 75 ORDER BY vcp_score DESC"
+  -
+    template_name: "fetch_new_highs"
+    query: "SELECT symbol, high, trade_date FROM market.equity_eod WHERE high = week52_high AND trade_date = CURRENT_DATE"
+  -
+    template_name: "fetch_strong_fundamentals"
+    query: "SELECT symbol, can_slim_score, fundamental_score FROM scores.stage_snapshots WHERE can_slim_score > 70 AND fundamental_score > 75"
+python_tools:
+  -
+    id: "run_performance_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "price"
+    outputs:
+      - "performance_metrics"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Assume context provides necessary data frames\n    return context"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "Do not exceed approved table columns."
+synthesis_guidance: "Provide a synthesis of VCP breakouts and new-high stocks with strong fundamentals for TradingView export. Ensure the timeframe is today's data for actionable insights."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:51:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_performance_analysis: missing output performance_metrics"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_performance_analysis: missing output performance_metrics"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

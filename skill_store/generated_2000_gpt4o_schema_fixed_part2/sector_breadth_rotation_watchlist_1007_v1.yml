@@ -1,0 +1,59 @@
+id: "sector_breadth_rotation_watchlist_1007_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1007"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: today; response style: concise table."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for today: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as concise table"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze today's sector breadth and identify which sectors are improving. Use factors like stage 2 participation in your concise list."
+sql_templates:
+  -
+    evidence_name: "sector_ranks"
+    template: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2'), latest_breadth AS (SELECT * FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)) SELECT sd.sector, sd.breadth_signal, ma.pct_above_50dma, ma.stage2_pct FROM latest_breadth sd JOIN latest_snapshots ls ON sd.sector = ls.sector JOIN breadth.ma_pct_above ma ON sd.snapshot_date = ma.snapshot_date ORDER BY ma.stage2_pct DESC LIMIT 10;"
+python_tools:
+  - "required_function"
+  - "language"
+  - "mode"
+  - "blocked_capabilities"
+  - "required_fields"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "sql_check"
+  - "consistency_check"
+synthesis_guidance: "Focus on sector-relative comparison for actionable insight today."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

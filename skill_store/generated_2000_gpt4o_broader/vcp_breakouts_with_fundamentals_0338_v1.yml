@@ -1,0 +1,51 @@
+id: "vcp_breakouts_with_fundamentals_0338_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0338"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "This skill runs analysis using approved tables to screen for stocks meeting VCP, breakout criteria, and strong fundamentals within the last 20 sessions. Address exceptions and gaps in evidence first."
+sql_templates:
+  - "WITH recent_trades AS (SELECT symbol, MAX(trade_date) as last_trade_date FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - interval '20 days' GROUP BY symbol), recent_vcp AS (SELECT symbol, vcp_breakout_pct FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)) SELECT eod.symbol, eod.close, eod.volume, ss.fundamental_score, ss.enhanced_fund_score FROM market.equity_eod eod JOIN scores.stage_snapshots ss ON eod.symbol = ss.symbol WHERE eod.trade_date = (SELECT last_trade_date FROM recent_trades WHERE symbol = eod.symbol) AND (eod.high = eod.week52_high OR eod.close > eod.prev_close) AND ss.fundamental_score > 80 ORDER BY ss.enhanced_fund_score DESC;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure data is from the last 20 trading sessions."
+  - "Verify all symbols are included in the approved tables."
+  - "Report first any missing data or inconsistencies in stocks' fundamental scores."
+synthesis_guidance: "Focus on stocks demonstrating high VCP scores and superior fundamental indicators. Emphasize liquidity and fundamental strength. Address missing data or anomalous patterns first."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

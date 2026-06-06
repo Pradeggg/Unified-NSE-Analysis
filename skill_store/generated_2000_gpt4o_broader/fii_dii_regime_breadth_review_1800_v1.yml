@@ -1,0 +1,63 @@
+id: "fii_dii_regime_breadth_review_1800_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1800"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "Fetch_FII_DII_Trend"
+    description: "Fetches the net FII/DII flows for the last 5 days and assigns a flow signal."
+    sql: "SELECT trade_date, fii_net_5d, dii_net_5d, flow_signal FROM signals.fii_dii_flows ORDER BY trade_date DESC LIMIT 5;"
+  -
+    name: "Fetch_Market_Regime"
+    description: "Fetches the current market regime and its confidence level."
+    sql: "SELECT trade_date, regime, confidence FROM signals.regime_history ORDER BY trade_date DESC LIMIT 1;"
+  -
+    name: "Fetch_Market_Breadth"
+    description: "Fetches the current market breadth statistics."
+    sql: "SELECT trade_date, adv_oscillator, market_sentiment FROM breadth.market_daily ORDER BY trade_date DESC LIMIT 1;"
+  -
+    name: "Fetch_Index_Confirmation"
+    description: "Fetches the index confirmation based on Nifty 500 closing and trend signals."
+    sql: "SELECT trade_date, close, trend_signal FROM market.index_eod WHERE index_symbol = 'NIFTY500' ORDER BY trade_date DESC LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Explain the current market context by interpreting FII/DII flows, market regime indicators, and breadth data. Provide a risk-on or risk-off assessment using all available evidence."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:03"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.adv_oscillator is not approved"

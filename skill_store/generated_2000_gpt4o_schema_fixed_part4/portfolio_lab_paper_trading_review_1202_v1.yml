@@ -1,0 +1,79 @@
+id: "portfolio_lab_paper_trading_review_1202_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1202"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: today; response style: ranked candidates."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for today: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as ranked candidates"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "today"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    status: "generated"
+    plan:
+      -
+        step: "Identify latest paper trading strategies"
+        action: "Query the signals table for today's issued signals related to paper trading."
+        example: "SELECT * FROM signals.signal_log WHERE date_issued = CURRENT_DATE;"
+      -
+        step: "Retrieve paper trading portfolio details"
+        action: "Retrieve holdings related to paper trading from the portfolio table."
+        example: "SELECT * FROM portfolio.holdings WHERE buy_date = CURRENT_DATE;"
+      -
+        step: "Analyze performance data"
+        action: "Join equity EOD data with signal data to assess market performance."
+        example: "SELECT * FROM market.equity_eod WHERE trade_date = CURRENT_DATE;"
+      -
+        step: "Rank strategies by performance"
+        action: "Apply ranking logic based on returns and stage scores from snapshots."
+        example: "SELECT symbol, return_pct FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE ORDER BY return_pct DESC;"
+sql_templates:
+  -
+    template_id: "latest_paper_trading_signals"
+    description: "Fetches the latest signals for paper trading."
+    query: "SELECT symbol, signal, date_issued, target_1, stop_loss FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log);"
+    type: "SELECT"
+  -
+    template_id: "portfolio_paper_trading_details"
+    description: "Retrieves details of paper trading from the portfolio."
+    query: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+    type: "SELECT"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all dates are properly formatted using PostgreSQL date syntax."
+  - "Verify that data joins respect the approved join rules."
+synthesis_guidance: "['Present results in a ranked format based on defined criteria such as returns.', 'Ensure that signals and portfolio details are clearly separated in the report.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

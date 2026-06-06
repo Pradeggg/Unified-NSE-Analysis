@@ -1,0 +1,102 @@
+id: "fii_dii_regime_breadth_review_1996_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1996"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: weekly review; response style: comparison matrix."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as comparison matrix"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "weekly_review"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    version: 1
+    plan:
+      -
+        task: "Extract FII DII flow trends."
+        action: "Use SQL to query FII DII flow for latest trends."
+        tool: "sql"
+        capability: "select"
+      -
+        task: "Assess market regime context."
+        action: "Use SQL to join regime history and flow data."
+        tool: "sql"
+        capability: "select"
+      -
+        task: "Analyze market breadth."
+        action: "Use SQL to extract breadth metrics."
+        tool: "sql"
+        capability: "select"
+      -
+        task: "Compare against index evidence."
+        action: "Use SQL to confirm index trends."
+        tool: "sql"
+        capability: "select"
+      -
+        task: "Generate comparison matrix."
+        action: "Synthesize using SQL output."
+        tool: "python"
+        capability: "read_only"
+sql_templates:
+  latest_flows:
+    sql: "SELECT trade_date, fii_net_today, dii_net_today, fii_net_5d, dii_net_5d, flow_signal, fii_trend, dii_trend FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+  regime_with_flow:
+    sql: "SELECT r.trade_date, r.regime, r.confidence, f.flow_signal FROM signals.regime_history r JOIN signals.fii_dii_flows f ON r.trade_date = f.trade_date WHERE r.trade_date = (SELECT MAX(trade_date) FROM signals.regime_history);"
+  market_breadth:
+    sql: "SELECT trade_date, advances, declines, adv_volume, dec_volume FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+  index_confirmation:
+    sql: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND index_symbol = 'Nifty 50';"
+python_tools:
+  -
+    id: "synthesize_comparison_matrix"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "regime_with_flow"
+      - "market_breadth"
+      - "index_confirmation"
+    outputs:
+      - "comparison_matrix"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context):\n    regime_data = context['regime_with_flow']\n    breadth_data = context['market_breadth']\n    index_data = context['index_confirmation']\n    # Synthesize comparison matrix\n    matrix = {}\n    matrix['regime'] = regime_data['regime']\n    matrix['flow_context'] = regime_data['flow_signal']\n    matrix['breadth_context'] = f\"A: {breadth_data['advances']}, D: {breadth_data['declines']}\"\n    matrix['index_confirmation'] = index_data['change_pct']\n    matrix['risk_flags'] = 'Risk-on' if regime_data['regime'] == 'BULL' else 'Risk-off'\n    return matrix"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all evidence is from the latest available date."
+  - "Confirm regime signals are consistent with flow and breadth."
+synthesis_guidance: "['Provide a weekly snapshot comparing FII/DII flows, regime signals, and market breadth.', 'Use outputs to highlight risk-on and risk-off states.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "synthesize_comparison_matrix: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "synthesize_comparison_matrix: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

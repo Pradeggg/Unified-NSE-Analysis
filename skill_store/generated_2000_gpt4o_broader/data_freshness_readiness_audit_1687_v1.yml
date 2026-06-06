@@ -1,0 +1,69 @@
+id: "data_freshness_readiness_audit_1687_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1687"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: intraday context; response style: debug trace."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for intraday context: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as debug trace"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Determine if market data freshness meets readiness thresholds and identify any missing data in approved sources."
+sql_templates:
+  -
+    name: "check_freshness_index_eod"
+    query: "SELECT MAX(trade_date) as last_trade_date FROM market.index_eod WHERE index_symbol = 'NIFTY 50';"
+  -
+    name: "check_freshness_equity_eod"
+    query: "SELECT MAX(trade_date) as last_trade_date FROM market.equity_eod WHERE series = 'EQ';"
+python_tools:
+  -
+    id: "run_freshness_check"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      context:
+        - "last_trade_date_index"
+        - "last_trade_date_equity"
+    outputs:
+      freshness_status: "dict"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+    code: "def run(context):\n    last_index_date = context['last_trade_date_index']\n    last_equity_date = context['last_trade_date_equity']\n    freshness_status = {}\n    if last_index_date != last_equity_date:\n        freshness_status['status'] = 'data mismatch'\n    else:\n        freshness_status['status'] = 'synced'\n    return freshness_status"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure SQL queries are read-only."
+  - "Ensure Python tools, if used, are read-only."
+  - "Check for any unapproved data access."
+synthesis_guidance: "Aggregate findings to deliver a sector-relative comparison for data freshness in an intraday context."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.last_trade_date is not approved"
+  - "market.index_eod.last_trade_date is not approved"

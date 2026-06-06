@@ -1,0 +1,72 @@
+id: "sector_breadth_rotation_watchlist_1497_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1497"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for weekly review: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as portfolio-aware output"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Identify sectors with improved breadth using moving averages."
+    - "Focus on sectors with Stage 2 participation."
+    - "Use RS and price momentum to validate candidate stocks."
+    - "Create a consolidated watchlist for TradingView."
+sql_templates:
+  sector_selection: "SELECT sector, avg(stage2_pct) as avg_stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.ma_pct_above) GROUP BY sector ORDER BY avg_stage2_pct DESC LIMIT 5;"
+  improving_sectors: "SELECT sector, breadth_signal, divergence_alert FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) AND pct_above_50dma > 50;"
+  candidate_stocks: "SELECT symbol, company_name, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY relative_strength DESC LIMIT 20;"
+python_tools:
+  -
+    id: "tool_analytics_147"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "avg_stage2_pct"
+      - "rs_momentum"
+    outputs:
+      - "suggested_watchlist"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    context['suggested_watchlist'] = context['avg_stage2_pct'] + context['rs_momentum']\n    return context"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure latest snapshot data is used."
+  - "Validate stage is 'STAGE_2' for candidate stocks."
+  - "Limit candidate list to top 20 by RS."
+synthesis_guidance: "['Use sector-relative comparisons to filter candidates.', 'Provide actionable insights for TradingView watchlist.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:48"
+generation_model: "gpt-4o"
+validation_errors:
+  - "tool_analytics_147: execution failed: KeyError: 'avg_stage2_pct'"
+review:
+  status: "needs_heal"
+  findings:
+    - "tool_analytics_147: execution failed: KeyError: 'avg_stage2_pct'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

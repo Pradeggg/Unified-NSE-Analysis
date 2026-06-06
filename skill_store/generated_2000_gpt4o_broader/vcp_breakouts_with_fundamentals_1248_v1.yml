@@ -1,0 +1,52 @@
+id: "vcp_breakouts_with_fundamentals_1248_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1248"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: last 3 months; response style: ranked candidates."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "last_3_months"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Run SQL queries to filter stocks based on VCP characteristics and fundamentals, fetch the latest price and rank them."
+sql_templates:
+  -
+    description: "Select stocks with new highs or VCP patterns and strong fundamentals."
+    template: "WITH latest_prices AS (SELECT symbol, MAX(trade_date) AS latest_date, close FROM market.equity_eod WHERE trade_date > DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY symbol), filtered_stocks AS (SELECT s.symbol, s.company_name, s.sector, s.rsi, s.trading_signal, s.fundamental_score FROM scores.stage_snapshots s JOIN latest_prices p ON s.symbol = p.symbol WHERE s.price_date = p.latest_date AND (s.stage = 'VCP' OR s.stage = 'Breakout') AND s.fundamental_score > 70) SELECT * FROM filtered_stocks ORDER BY fundamental_score DESC, rsi DESC;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure the filters are strictly based on market and score data."
+  - "Rank candidates by fundamental score and technical conditions."
+synthesis_guidance: "Focus on providing a list of quality breakout candidates with strong fundamentals, using both VCP and technical analysis scores."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

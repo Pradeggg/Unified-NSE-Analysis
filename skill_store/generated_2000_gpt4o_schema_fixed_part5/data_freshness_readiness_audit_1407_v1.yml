@@ -1,0 +1,63 @@
+id: "data_freshness_readiness_audit_1407_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1407"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for today: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as portfolio-aware output"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    sql_templates:
+      -
+        description: "Check latest trade_date from market index EOD data."
+        template: "SELECT MAX(trade_date) AS latest_date FROM market.index_eod;"
+      -
+        description: "Check latest trade_date from equity EOD data."
+        template: "SELECT MAX(trade_date) AS latest_date FROM market.equity_eod;"
+      -
+        description: "Check latest snapshot_date from stage snapshots."
+        template: "SELECT MAX(snapshot_date) AS latest_date FROM scores.stage_snapshots;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "{'status': 'generated', 'read_only': True, 'limited_scope': 'Indian market evidence and research-only framing'}"
+synthesis_guidance: "{'focus': \"Sector-relative comparison and portfolio-aware outputs for today's context.\"}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:39"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

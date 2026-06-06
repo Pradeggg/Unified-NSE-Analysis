@@ -1,0 +1,2 @@
+def run(context):
+    return f"Company {context['symbol']} reported a {context['growth_yoy_revenue_pct']}% YoY revenue growth and {context['growth_yoy_pat_pct']}% PAT growth for the period ending {context['period_end']} which indicates strong performance."

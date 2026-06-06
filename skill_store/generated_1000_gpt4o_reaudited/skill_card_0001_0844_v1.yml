@@ -1,0 +1,62 @@
+created_at: "2026-06-06T12:52:09"
+created_by: "llm_generated"
+description: "A skill for validating report run metadata and identifying missing data in Indian market reports."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "skill_card_0001_0844_v1"
+input_patterns:
+  - "review report links not working"
+  - "validate generated report links and missing data"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    broken_links = []\n    missing_data = []\n    # Simulate validation logic here for educational purpose.\n    return {'broken_links': broken_links, 'missing_data': missing_data}"
+    id: "validate_html_links"
+    inputs:
+      - "report_run_data"
+      - "filtered_stocks"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "broken_links"
+      - "missing_data"
+sql_templates:
+  filtered_stocks: "SELECT * FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTHS));"
+  report_run_data: "SELECT * FROM report.enhanced_runs WHERE run_ts >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTHS);"
+status: "test_failed"
+synthesis_guidance: "Synthesize the findings into actionable insights to help market analysts in India."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "last_3_months"
+title: "Agent Adda: Report Data Validation"
+tool_plan_template:
+  steps:
+    - "Gather report run data for the last 3 months."
+    - "Identify broken links and missing data in the HTML files."
+    - "Create a watchlist based on filtered stocks."
+  tools:
+    - "SQL"
+    - "Python (read-only)"
+validation_rules:
+  - "Ensure all HTML links are functional."
+  - "Check for missing data in stock reports for the last 3 months."
+version: 1
+validation_errors:
+  - "report.enhanced_runs.date_sub is not approved"
+  - "report.enhanced_runs.months is not approved"

@@ -1,0 +1,1 @@
+def run(context): return {symbol: 'analyzed' for symbol in context['symbol_list']}

@@ -1,0 +1,62 @@
+id: "market_3m_rotation_swing_0043_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0043"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: concise table."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  tasks:
+    - "Assess market index trends over the last 3 months."
+    - "Identify leading sectors with Stage 2 stocks."
+    - "Select swing trade candidates based on Stage 2 signals."
+    - "Compile concise table with analysis results."
+sql_templates:
+  -
+    name: "market_index_trend"
+    template: "SELECT index_symbol, AVG(change_pct) AS avg_return FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol"
+  -
+    name: "stage_2_leaders"
+    template: "SELECT symbol, sector, stage, stage_score FROM scores.stage_snapshots WHERE stage = 'STAGE_2' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+  -
+    name: "swing_candidates"
+    template: "SELECT symbol, trading_signal, relative_strength FROM scores.stage_snapshots WHERE stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 10"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  -
+    rule: "Ensure all date filters use CURRENT_DATE for 3-month calculations."
+  -
+    rule: "Verify stage filters use correct 'STAGE_2' text."
+synthesis_guidance: "[{'step': 'Summarize index trends and returns based on the avg_return output.'}, {'step': 'List leading sectors and corresponding Stage 2 stocks.'}, {'step': 'Highlight top swing candidates and their signals.'}]"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_return is not approved"

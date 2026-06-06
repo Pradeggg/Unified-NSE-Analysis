@@ -1,0 +1,62 @@
+id: "insider_bulk_deal_signal_review_0276_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0276"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: pre market; response style: ranked candidates."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for pre market: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as ranked candidates"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "1. Fetch recent alerts from insider_alerts and bulk_block_deals."
+  - "2. Confirm technical indicators from stage_snapshots and validate using equity_eod data."
+  - "3. Rank symbols based on insider scores, deal sizes, and technical confirmations."
+sql_templates:
+  -
+    template_name: "fetch_recent_insider_alerts"
+    sql: "SELECT symbol, alert_date, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date > CURRENT_DATE - INTERVAL '7 days' AND alert_type = 'Buying';"
+  -
+    template_name: "fetch_bulk_block_deals"
+    sql: "SELECT symbol, deal_date, entity, qty, price, side FROM signals.bulk_block_deals WHERE deal_date > CURRENT_DATE - INTERVAL '7 days';"
+  -
+    template_name: "fetch_technical_confirmations"
+    sql: "SELECT symbol, snapshot_date, stage, stage_score, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all data is from the last 7 days for freshness."
+  - "Rank symbols by insider_score and technical_score."
+  - "Check for consistency in symbol data across tables."
+synthesis_guidance: "['Prioritize symbols with high insider scores and recent positive technical indicators.', 'Include risk notes to highlight potential volatility.', 'Provide a concise summary for quick decision-making.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,79 @@
+id: "agent_route_failure_diagnostics_1540_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1540"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: last 20 sessions; response style: research-only summary."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as research-only summary"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    steps:
+      - "Review the report metadata in report.enhanced_runs for recent runs."
+      - "Identify filtered stocks and analyze patterns using report.enhanced_filtered_stocks for each run_id obtained."
+      - "Check stage snapshots in scores.stage_snapshots to see if any trends emerge concerning specific symbols."
+sql_templates:
+  -
+    step: "Fetch recent enhanced run data"
+    template: "SELECT run_id, run_ts, stocks_analyzed, stocks_filtered, market_sentiment FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '60 days';"
+  -
+    step: "Validate stock data and filter issues"
+    template: "SELECT r.run_id, r.run_ts, s.symbol, s.recommendation, s.score FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks s ON r.run_id = s.run_id WHERE r.run_ts >= CURRENT_DATE - INTERVAL '60 days';"
+  -
+    step: "Analyze stage snapshots for symbol trends"
+    template: "SELECT snapshot_date, symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 50;"
+python_tools:
+  -
+    id: "agent_route_failure_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    outputs:
+      - "analyzed_failures"
+      - "pattern_summary"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Implement analysis logic here\n    return {'analyzed_failures': [], 'pattern_summary': ''}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure that all required evidence tables are queried."
+  - "SQL queries must follow the column and filtering rules in approved_schema."
+synthesis_guidance: "{'notes': 'Combine findings from SQL outputs to identify patterns of failure and potential fixes.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:04"
+generation_model: "gpt-4o"
+validation_errors:
+  - "agent_route_failure_analysis: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "agent_route_failure_analysis: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

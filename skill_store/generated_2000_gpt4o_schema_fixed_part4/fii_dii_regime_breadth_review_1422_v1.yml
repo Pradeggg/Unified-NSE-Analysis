@@ -1,0 +1,54 @@
+id: "fii_dii_regime_breadth_review_1422_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1422"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for last 5 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as portfolio-aware output"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    description: "Conduct a detailed analysis of market regime, FII/DII flows, market breadth, and index performance for the last 5 trading sessions to determine the current market context."
+sql_templates:
+  -
+    name: "regime_flow_breadth_index_analysis"
+    template: "WITH latest_dates AS (SELECT MAX(trade_date) AS max_date FROM signals.fii_dii_flows) SELECT fi.trade_date, fi.fii_net_today, fi.dii_net_today, fi.flow_signal, re.regime, re.confidence, br.advances, br.declines, br.ad_signal, idx.index_symbol, idx.close, idx.change_pct FROM signals.fii_dii_flows fi JOIN signals.regime_history re ON fi.trade_date = re.trade_date JOIN breadth.market_daily br ON fi.trade_date = br.trade_date JOIN market.index_eod idx ON fi.trade_date = idx.trade_date AND idx.index_symbol = 'Nifty 50' WHERE fi.trade_date > latest_dates.max_date - INTERVAL '5 days';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Output must include regime context, flow directions, breadth signals, and index confirmation."
+  - "Ensure portfolio awareness by indicating dominant trends and potential risks."
+synthesis_guidance: "['Summarize FII/DII flows and signals for the last 5 sessions.', 'Identify the prevailing market regime and confidence levels.', 'Analyze breadth indicators like advances, declines, and signals.', 'Confirm trends with index performance and changes.', 'Highlight any risk flags or changes in the market environment.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,52 @@
+id: "agent_route_failure_diagnostics_1974_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1974"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: pre market; response style: comparison matrix."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for pre market: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as comparison matrix"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "pre_market"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Generate a watchlist comparison matrix detailing route diagnostics for pre-market failures using enhanced run evidence."
+sql_templates:
+  diagnostics_matrix:
+    query: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_runs AS (SELECT * FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)) SELECT ers.symbol, ers.score, ers.recommendation, snap.stage, snap.trading_signal FROM report.enhanced_filtered_stocks AS ers JOIN latest_runs AS lr ON ers.run_id = lr.run_id JOIN latest_snapshots AS snap ON ers.symbol = snap.symbol WHERE snap.stage = 'STAGE_2' AND snap.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY ers.score DESC LIMIT 10;"
+    description: "Generates a comparison matrix for watchlist creation based on the latest enhanced runs and stage snapshots."
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "{'checks': ['All symbols must have a corresponding entry in the latest_snapshots table.', 'Ensure all SQL operations use SELECT and WITH clauses only.']}"
+synthesis_guidance: "Collate failure modes and potential fixes into a matrix using the generated SQL output."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

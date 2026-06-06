@@ -1,0 +1,63 @@
+id: "agent_route_failure_diagnostics_0882_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0882"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for intraday context: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as action watchlist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Investigate route failures by examining recent enhanced reports, filtered stocks, and stage snapshots for inconsistencies or missing elements that may indicate a tool gap or symbol resolution issue."
+sql_templates:
+  -
+    template: "SELECT r.run_id, r.run_ts, r.universe_size, f.symbol, f.recommendation, s.stage\nFROM report.enhanced_runs r\nJOIN report.enhanced_filtered_stocks f ON r.run_id = f.run_id\nJOIN scores.stage_snapshots s ON f.symbol = s.symbol\nWHERE r.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)\nAND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nAND f.score IS NULL;"
+    description: "Identify symbols with missing scores to trace any potential tool gaps or symbol resolution issues."
+python_tools:
+  -
+    id: "symbol_resolution_checker"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol_list"
+    outputs:
+      - "resolved_symbols"
+    approved_tables:
+
+    code: "def run(context):\n    # Mock resolution check; actual function would resolve symbols\n    resolved_symbols = [symbol for symbol in context['symbol_list'] if symbol.startswith('NSE_')]\n    return {'resolved_symbols': resolved_symbols}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Verify tool gap elements through comparison of symbol resolution against known anomalies."
+  - "Ensure no direct data operations that could modify existing tables."
+synthesis_guidance: "Aggregate SQL findings and Python resolution checks to construct a comprehensive diagnostic report focusing on action watchlist items. Identify potential failures and recommend actionable route fixes, noting gaps for tool inclusion."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:57"
+generation_model: "gpt-4o"
+validation_errors:
+  - "symbol_resolution_checker: execution failed: KeyError: 'symbol_list'"
+review:
+  status: "needs_heal"
+  findings:
+    - "symbol_resolution_checker: execution failed: KeyError: 'symbol_list'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

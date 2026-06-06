@@ -1,0 +1,55 @@
+id: "corporate_events_results_watchlist_1423_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1423"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for last 5 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh-follow-up"
+  - "last_5_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  python_tools:
+
+  sql_templates:
+    -
+      description: "Retrieve recent corporate events and associate them with current technical stages."
+      sql: "WITH latest_stages AS (SELECT symbol, stage, snapshot_date FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_events AS (SELECT DISTINCT ON (symbol) id, symbol, event_type, event_date, purpose_raw, detail, source, created_at FROM signals.corporate_events ORDER BY symbol, event_date DESC) SELECT le.symbol, le.event_type, le.event_date, le.purpose_raw, le.detail, ls.stage FROM latest_events le INNER JOIN latest_stages ls ON le.symbol = ls.symbol WHERE le.event_date >= CURRENT_DATE - INTERVAL '5 days' ORDER BY le.event_date DESC LIMIT 100;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure that the result set includes event details for the last 5 trading sessions."
+  - "Verify stage labels align with the most recent snapshot data for each symbol."
+synthesis_guidance: "['Focus on creating a watchlist that highlights key upcoming or recent events in combination with current technical stages.', 'Ensure output is portfolio-aware and relevant to traders looking for event-driven opportunities.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

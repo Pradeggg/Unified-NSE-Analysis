@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:48:35"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: weekly review; response style: portfolio-aware output."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0498_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Fetch stocks creating new highs or VCP or breakouts with strong fundamentals."
+    query: "SELECT e.symbol, e.high, e.volume, s.enhanced_fund_score, s.stage_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.high >= s.price AND s.enhanced_fund_score > 75 AND s.stage_score > 3 ORDER BY e.high DESC;"
+status: "validated"
+synthesis_guidance: "Prioritize stocks with highest stage_score and enhanced_fund_score."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "portfolio-aware_output"
+title: "VCP Breakouts With Fundamentals Variant 0498"
+tool_plan_template: "Plan to identify VCP breakouts with strong fundamentals."
+validation_rules:
+  - "Ensure all candidates have enhanced_fund_score > 75."
+  - "Ensure high price matches the breakout criteria."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

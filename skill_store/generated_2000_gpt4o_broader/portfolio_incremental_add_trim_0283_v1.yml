@@ -1,0 +1,53 @@
+id: "portfolio_incremental_add_trim_0283_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0283"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for intraday context: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "To evaluate portfolio adjustments, utilize evidence from scores.stage_snapshots and portfolio.holdings tables. Focus on technical stages, recent performance changes, sector exposure, and portfolio balance."
+sql_templates:
+  -
+    description: "Identify top add candidates based on technical scores and recent positive performance."
+    template: "SELECT symbol, company_name, sector, stage_score, change_1d_pct, change_1w_pct FROM scores.stage_snapshots WHERE stage_score > 0.7 AND change_1d_pct > 1.0 ORDER BY stage_score DESC;"
+  -
+    description: "Identify top trim candidates based on declining performance or negative signals."
+    template: "SELECT symbol, company_name, sector, stage_score, change_1d_pct, change_1w_pct FROM scores.stage_snapshots WHERE stage_score < 0.3 AND change_1d_pct < -1.0 ORDER BY stage_score ASC;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure SQL templates are read-only SELECT queries."
+  - "Validate output_contract covers key portfolio decision areas."
+synthesis_guidance: "Combine SQL results to generate a cohesive portfolio action plan, highlighting recommended additions and reductions."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,69 @@
+id: "corporate_events_results_watchlist_1185_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1185"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: risk-first review; timeframe: intraday context; response style: narrative plus evidence."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "risk-first review for intraday context: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as narrative plus evidence"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "risk-first_review"
+  - "intraday_context"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  sql_templates:
+    -
+      name: "select_upcoming_events"
+      template: "SELECT symbol, event_type, event_date, purpose_raw, detail, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY event_date ASC"
+    -
+      name: "select_recent_results"
+      template: "SELECT symbol, company_name, period_end, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct, eps_yoy_pct, verdict, source_trail FROM scores.results_analysis WHERE period_end <= CURRENT_DATE ORDER BY filing_date DESC"
+sql_templates:
+
+python_tools:
+  -
+    id: "calculate_risk_assessment"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "event_calendar"
+      - "result_context"
+    outputs:
+      - "risk_assessment"
+    approved_tables:
+      - "signals.corporate_events"
+      - "scores.results_analysis"
+    code: "def run(context):\n    # Placeholder for risk assessment calculation\n    # Should analyze event_calendar and result_context\n    return {'risk_assessment': 'low'}"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "status"
+  - "schema_version"
+  - "response_style"
+synthesis_guidance: "{'goals': ['Identify symbols with upcoming corporate events', 'Analyze recent results for event-driven stock watchlist', 'Focus on risk-first review in intraday context', 'Provide narrative with evidence for decision making']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

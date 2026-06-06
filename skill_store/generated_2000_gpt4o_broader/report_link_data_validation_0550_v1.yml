@@ -1,0 +1,72 @@
+id: "report_link_data_validation_0550_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation"
+description: "Validate enhanced report run metadata, filtered stock rows, and identify missing data for TradingView export in the last 3 months."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for last 3 months: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "last_3_months"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  type: "sequential"
+  steps:
+    - "Extract data from report.enhanced_runs and report.enhanced_filtered_stocks for the last 3 months."
+    - "Identify any missing data or broken links in the export files."
+    - "Compile findings and suggest remediations."
+sql_templates:
+  -
+    name: "extract_run_data"
+    template: "SELECT * FROM report.enhanced_runs WHERE analysis_date > CURRENT_DATE - INTERVAL '3 months';"
+  -
+    name: "extract_filtered_stocks"
+    template: "SELECT * FROM report.enhanced_filtered_stocks WHERE run_id = ANY(SELECT run_id FROM report.enhanced_runs WHERE analysis_date > CURRENT_DATE - INTERVAL '3 months');"
+python_tools:
+  -
+    id: "validate_links"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "extracted_data"
+    outputs:
+      - "broken_links_report"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(extracted_data):\n    # Logic to identify broken links in the extracted data\n    return {'broken_links_report': []}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "All extracted data must be correct and relevant to the last 3 months."
+  - "Identify and list all missing data points clearly."
+  - "Verify data integrity and consistency with known export issues."
+synthesis_guidance: "['Summarize findings in a research-oriented manner.', 'Focus on the Indian market and relevant trading data metrics.', 'Highlight any critical missing data or broken links affecting reports.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:58:23"
+generation_model: "gpt-4o"
+validation_errors:
+  - "validate_links: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "validate_links: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

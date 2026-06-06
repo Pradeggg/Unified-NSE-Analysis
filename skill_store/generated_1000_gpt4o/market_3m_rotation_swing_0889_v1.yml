@@ -1,0 +1,61 @@
+id: "market_3m_rotation_swing_0889_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0889"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  - "Analyze index and equity EOD for volume surges and technical shifts."
+  - "Evaluate stage snapshots for sector and leadership changes."
+  - "Identify Stage 2 VCP picks with favorable technicals and fundamentals."
+sql_templates:
+  -
+    template_id: "index_analysis"
+    query: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND trend_signal = 'Bullish'"
+  -
+    template_id: "equity_analysis"
+    query: "SELECT trade_date, symbol, close, volume, change_pct FROM market.equity_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND change_pct > 2 ORDER BY volume DESC"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure date range covers the last three months."
+  - "Monitor for substantial volume increases and technical signals."
+  - "Validate sector leadership against stage snapshots."
+synthesis_guidance: "['Highlight sectors showing leadership in Stage 2.', 'Focus on equities with strong VCP patterns in the last three months.', 'Consider market regime shifts in sector analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:52:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.curdate is not approved"
+  - "market.equity_eod.date_sub is not approved"
+  - "market.equity_eod.month is not approved"
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"

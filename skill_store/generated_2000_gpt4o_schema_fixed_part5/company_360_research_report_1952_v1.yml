@@ -1,0 +1,60 @@
+id: "company_360_research_report_1952_v1"
+version: 1
+status: "review_pending"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1952"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: deep institutional review; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "deep institutional review for quarter to date: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as comparison matrix"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Create the research report using SQL to collect evidence about the company's overview, financial trends, technical setup, valuation gaps, thesis, and risks. Include a synthesis of narrative insights from the results analysis while ensuring all queries are SELECT only."
+sql_templates:
+  -
+    description: "Fetch latest company stage and market cap."
+    template: "SELECT company_name, sector, market_cap_cat, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol = %(symbol)s;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL templates use only SELECT statements."
+  - "Check if all required evidence tables are queried."
+  - "Confirm that output synthesis aligns with the comparison matrix format."
+synthesis_guidance: "[\"Utilize a comparison matrix style to present the company's overview, financials, and technical aspects.\", 'Focus on quarter-to-date data for a deep institutional review.', 'Integrate narrative insights from the results analysis consistently across the report.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:48"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

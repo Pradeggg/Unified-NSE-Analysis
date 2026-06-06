@@ -1,0 +1,57 @@
+created_at: "2026-06-06T12:51:26"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: pre market; response style: QA checklist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0777_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  index_returns: "SELECT index_symbol, change_pct FROM market.index_eod WHERE trade_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE GROUP BY index_symbol"
+  leading_sectors: "SELECT sector, relative_strength FROM scores.stage_snapshots WHERE snapshot_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE GROUP BY sector ORDER BY relative_strength DESC"
+  primary_candidates: "SELECT company_name, sector, price, relative_strength FROM scores.stage2_vcp_picks WHERE snapshot_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE AND trading_signal='BUY' ORDER BY relative_strength DESC"
+  stage_distribution_change: "SELECT sector, stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE GROUP BY sector, stage"
+status: "validated"
+synthesis_guidance: "Cross-verify index and equity information to ensure consistent findings across market trends. Emphasize sectors with high relative strength and consider liquidity in swing candidate recommendations."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "QA_checklist"
+title: "3M Market Rotation Swing Assessment Variant 0777"
+tool_plan_template: "Analyze sector rotation using both index and equity data to determine leading sectors and potential swing trading candidates. Cross-reference stage snapshots for a detailed stage analysis. Summarize findings as a QA checklist."
+validation_errors:
+
+validation_rules:
+  - "Ensure data is no older than 3 months."
+  - "Confirm sector analysis includes all applicable sectors with relative strength data."
+  - "Verify swing candidate selection aligns with stage 2 trading signals."
+version: 1
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"

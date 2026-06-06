@@ -1,0 +1,61 @@
+id: "market_3m_rotation_swing_1933_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1933"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for last 20 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    description: "Analyze the market using the approved evidence tables, following the global and join rules."
+sql_templates:
+  -
+    name: "3_month_sector_leadership"
+    template: "SELECT sector, AVG(change_1m_pct) as avg_change FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_change DESC LIMIT 5;"
+  -
+    name: "swing_candidates"
+    template: "SELECT symbol, company_name, trading_signal FROM scores.stage_snapshots WHERE stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY stage_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure the evidence is fetched only from approved tables."
+  - "Use latest snapshot date for current analysis."
+  - "Apply stage filters correctly."
+synthesis_guidance: "Assemble results to show market regime changes, sector leadership shifts, and identify top swing trading candidates."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:56"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.avg_change is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "scores.stage_snapshots.avg_change is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,69 @@
+created_at: "2026-06-06T12:40:55"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: today; response style: concise table."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0007_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for today: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as concise table"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+
+status: "validated"
+synthesis_guidance: "['Combine sector trends and current holdings information to provide concrete add/trim advice.']"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "today"
+  - "concise_table"
+title: "Portfolio Incremental Add Trim Review Variant 0007"
+tool_plan_template:
+  python_tools:
+    -
+      approved_tables:
+        - "scores.stage_snapshots"
+        - "portfolio.holdings"
+      code: "def run(context):\n    data = context['holdings_data']\n    add_candidates = []\n    trim_candidates = []\n    sector_exposure = {}\n    risk_flags = []\n    # Placeholder for logic to calculate add/trim based on stage, trend, etc.\n    # Update add_candidates, trim_candidates, sector_exposure, risk_flags accordingly\n    return {'add_candidates': add_candidates, 'trim_candidates': trim_candidates, 'sector_exposure': sector_exposure, 'risk_flags': risk_flags}"
+      id: "calculate_add_trim"
+      inputs:
+        - "holdings_data"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "add_candidates"
+        - "trim_candidates"
+        - "sector_exposure"
+        - "risk_flags"
+  sql_templates:
+    -
+      description: "Retrieve current holdings and their stage information for today."
+      name: "get_holdings_and_stage_information"
+      template: "SELECT h.symbol, h.qty, h.avg_cost, s.sector, s.stage_score, s.trend_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE;"
+validation_rules:
+  - "Ensure that the SQL query does not modify any data."
+  - "The Python script should only process data rather than alter it."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

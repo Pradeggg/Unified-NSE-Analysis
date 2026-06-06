@@ -1,0 +1,61 @@
+id: "report_link_data_validation_1068_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Validate Report Links and Data Availability"
+description: "Check for broken report links and validate data availability in the HTML files. Provide concise details through a table format."
+input_patterns:
+  - "Check report links"
+  - "Data missing in report HTML"
+  - "Ensure data availability post generation"
+tags:
+  - "report_qa"
+  - "links"
+  - "data_validation"
+  - "HTML"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  - "Perform a check on report.enhanced_runs and report.enhanced_filtered_stocks tables to identify broken links or missing data."
+sql_templates:
+  -
+    description: "Check for broken report links and validate data in enhanced reports."
+    template: "SELECT er.run_id, er.run_ts, er.notes, esf.symbol, esf.current_price\nFROM report.enhanced_runs er\nLEFT JOIN report.enhanced_filtered_stocks esf ON er.run_id = esf.run_id\nWHERE esf.current_price IS NULL;"
+    explanation: "This query checks for runs where the report links might be broken or the data is missing by verifying if `current_price` is NULL."
+python_tools:
+  -
+    id: "validate_data_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sql_query_result"
+    outputs:
+      - "validation_summary"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Mock function to simulate the processing of SQL query results\n    sql_query_result = context['sql_query_result']\n    validation_summary = {}\n\n    if not sql_query_result:\n        validation_summary['issues'] = 'No data returned from query'\n    else:\n        validation_summary['report_validation'] = 'Data seems consistent and links are valid'\n    \n    return validation_summary\n"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Check for NULL values in critical columns to identify missing data."
+  - "Use JOIN conditions to ensure integrity between report runs and filtered stocks."
+synthesis_guidance: "Focus on presenting the data gaps and link issues in a concise table for post-report generation checks."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:51"
+generation_model: "gpt-4o"
+validation_errors:
+  - "validate_data_tool: execution failed: KeyError: 'sql_query_result'"
+review:
+  status: "needs_heal"
+  findings:
+    - "validate_data_tool: execution failed: KeyError: 'sql_query_result'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

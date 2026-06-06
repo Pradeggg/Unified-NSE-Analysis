@@ -1,0 +1,68 @@
+created_at: "2026-06-06T12:41:37"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: post results; response style: concise table."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0067_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for post results: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as concise table"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    risk_flags = []\n    avg_relative_strength = context.get('avg_relative_strength', None)\n    num_holdings = context.get('num_holdings', 0)\n    if avg_relative_strength is not None and avg_relative_strength < 0.5 and num_holdings > 10:\n        risk_flags.append('High exposure to underperforming sector')\n    return {'risk_flags': risk_flags}"
+    id: "calculate_risk_flags"
+    inputs:
+      - "avg_relative_strength"
+      - "num_holdings"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "risk_flags"
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Retrieve sector and stage information for portfolio holdings."
+    template: "WITH holding_info AS (SELECT ph.symbol, ph.qty, ph.avg_cost, sh.stage, sh.sector, sh.relative_strength FROM portfolio.holdings ph JOIN scores.stage_snapshots sh ON ph.symbol = sh.symbol WHERE sh.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT sector, AVG(relative_strength) AS avg_relative_strength, COUNT(symbol) AS num_holdings FROM holding_info GROUP BY sector;"
+status: "validated"
+synthesis_guidance:
+  - "Sector-relative performance should guide add or trim decisions."
+  - "Identify signals pointing to potential risk areas for current portfolio."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "concise_table"
+title: "Portfolio Incremental Add Trim Review Variant 0067"
+tool_plan_template:
+  analysis_methods: "Compare sector performance and identify candidates for adding or trimming positions."
+  evidence_gathering: "Assess portfolio holdings, stage scores, and market signals for sector-relative comparison."
+  output_formatting: "Summarize findings in a table format with sections for add, trim candidates and any risk flags."
+validation_errors:
+
+validation_rules:
+  - "Ensure holdings are up to date through cross-verification with score snapshots."
+  - "Verify that sector averages reflect current market conditions."
+version: 1

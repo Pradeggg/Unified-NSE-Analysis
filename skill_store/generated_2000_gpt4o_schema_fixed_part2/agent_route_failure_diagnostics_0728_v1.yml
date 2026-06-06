@@ -1,0 +1,63 @@
+id: "agent_route_failure_diagnostics_0728_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0728"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for last 5 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as QA checklist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  text: "Check for route failures and missing tools using report and snapshot data."
+sql_templates:
+  default: "SELECT DISTINCT es.run_id, es.symbol, ss.stage, er.market_sentiment FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks es ON er.run_id = es.run_id JOIN scores.stage_snapshots ss ON es.symbol = ss.symbol WHERE er.run_ts > CURRENT_DATE - INTERVAL '5 sessions';"
+python_tools:
+  -
+    id: "symbol_resolution_diagnostic"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol_data"
+    outputs:
+      - "diagnostic_report"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    diagnostic_report = {}\n    # Example logic to synthesize diagnostics\n    for symbol in context['symbol_data']:\n        diagnostic_report[symbol] = 'Check symbol resolution path'\n    return diagnostic_report"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure result set is within last 5 sessions."
+  - "Check for presence of symbols in both runs and snapshots."
+synthesis_guidance: "Focus on last 5 sessions to identify recurring patterns of route failures and symbol resolution loops."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:00"
+generation_model: "gpt-4o"
+validation_errors:
+  - "symbol_resolution_diagnostic: execution failed: KeyError: 'symbol_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "symbol_resolution_diagnostic: execution failed: KeyError: 'symbol_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

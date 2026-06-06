@@ -1,0 +1,56 @@
+id: "sector_breadth_rotation_watchlist_1147_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1147"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for last 3 months: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as narrative plus evidence"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Identify sectors with increasing breadth and Stage 2 stocks using JOINs across breadth tables."
+    - "Calculate sector-relative strength and participation percentages."
+    - "List top candidate symbols with strong buy signals."
+sql_templates:
+  -
+    template: "SELECT sd.sector, sd.breadth_signal, sd.pct_above_50dma, ss.stage, ss.trading_signal\nFROM breadth.sector_daily sd\nJOIN scores.stage_snapshots ss ON sd.sector = ss.sector\nWHERE sd.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)\nAND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nAND ss.stage = 'STAGE_2'\nAND ss.trading_signal IN ('BUY', 'STRONG_BUY')\nORDER BY sd.pct_above_50dma DESC\nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sector ranks are ordered by increasing breadth."
+  - "Validate all candidate symbols have buy signals."
+synthesis_guidance: "['Provide narrative describing top sector movements.', 'Summarize symbols to consider for TradingView watchlist.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

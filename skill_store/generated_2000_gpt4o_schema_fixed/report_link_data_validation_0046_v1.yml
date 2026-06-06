@@ -1,0 +1,47 @@
+id: "report_link_data_validation_0046_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Freshness Audit"
+description: "Perform a freshness audit of enhanced report runs within the last 3 months, focusing on integrity of report links and stock data."
+input_patterns:
+  - "check report link integrity"
+  - "validate stock data for the last 3 months"
+  - "verify enhanced report freshness"
+tags:
+  - "report_qa"
+  - "freshness_audit"
+  - "link_integrity"
+  - "data_validation"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+
+sql_templates:
+  -
+    template_name: "report_freshness_audit"
+    query: "SELECT r.run_id, r.run_ts, r.universe_size, r.stocks_filtered, s.symbol, s.current_price, s.volume FROM report.enhanced_runs AS r JOIN report.enhanced_filtered_stocks AS s ON r.run_id = s.run_id WHERE r.run_ts > CURRENT_DATE - INTERVAL '3 months' ORDER BY r.run_ts DESC;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all report links are valid and accessible."
+  - "Check for completeness of stock data for each run."
+  - "Highlight any missing or inconsistent data points."
+synthesis_guidance: "['Summarize findings in a concise table format.', 'Provide recommendations for addressing any identified issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

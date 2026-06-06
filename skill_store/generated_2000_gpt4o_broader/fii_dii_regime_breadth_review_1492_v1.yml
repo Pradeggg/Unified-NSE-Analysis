@@ -1,0 +1,77 @@
+id: "fii_dii_regime_breadth_review_1492_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1492"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as portfolio-aware output"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+  columns_used:
+    signals.fii_dii_flows:
+      - "trade_date"
+      - "fii_net_today"
+      - "dii_net_today"
+      - "fii_trend"
+      - "dii_trend"
+      - "flow_signal"
+    signals.regime_history:
+      - "trade_date"
+      - "regime"
+      - "confidence"
+    breadth.market_daily:
+      - "trade_date"
+      - "advances"
+      - "declines"
+      - "ad_oscillator"
+      - "market_sentiment"
+    market.index_eod:
+      - "trade_date"
+      - "index_symbol"
+      - "close"
+      - "change_pct"
+      - "trend_signal"
+tool_plan_template:
+
+sql_templates:
+  -
+    template: "WITH latest_flows AS (SELECT * FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL '7 days'), latest_regime AS (SELECT * FROM signals.regime_history WHERE trade_date >= CURRENT_DATE - INTERVAL '7 days'), latest_breadth AS (SELECT * FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '7 days'), latest_index AS (SELECT * FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '7 days') SELECT latest_flows.trade_date, latest_flows.fii_net_today, latest_flows.dii_net_today, latest_flows.flow_signal, latest_regime.regime, latest_regime.confidence, latest_breadth.advances, latest_breadth.declines, latest_breadth.ad_oscillator, latest_breadth.market_sentiment, latest_index.index_symbol, latest_index.close, latest_index.change_pct, latest_index.trend_signal FROM latest_flows JOIN latest_regime ON latest_flows.trade_date = latest_regime.trade_date JOIN latest_breadth ON latest_flows.trade_date = latest_breadth.trade_date JOIN latest_index ON latest_flows.trade_date = latest_index.trade_date;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data is sourced from the last 7 days."
+  - "Validate that all joins are correctly aligned with trade dates."
+  - "Check for completeness of data fields."
+synthesis_guidance: "Integrate evidence from FII/DII flows, market regime, breadth, and index data to provide a comprehensive market risk analysis with a focus on Indian FII/DII influences."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:09:17"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

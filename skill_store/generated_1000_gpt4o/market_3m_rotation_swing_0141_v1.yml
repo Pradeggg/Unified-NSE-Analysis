@@ -1,0 +1,57 @@
+id: "market_3m_rotation_swing_0141_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0141"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as narrative plus evidence"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  python_tools:
+
+  sql_templates:
+    - "SELECT index_symbol, AVG(change_pct) as avg_return FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol"
+    - "SELECT sector, COUNT(*) as count FROM scores.stage_snapshots WHERE stage='Stage 2' AND snapshot_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY sector"
+    - "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE vcp_score > 75 AND snapshot_date > CURRENT_DATE - INTERVAL '3 months'"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure output aligns with as_of_date."
+  - "Check index_returns reflects accurate calculation from index_eod."
+  - "Ensure leading_sectors are derived from stage_snapshots."
+synthesis_guidance: "['Combine narratives from SQL results to summarize market regimes and sector rotation.', 'Identify top candidates based on VCP scores and highlight any potential risks.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:42:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

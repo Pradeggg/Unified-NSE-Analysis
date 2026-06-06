@@ -1,0 +1,55 @@
+id: "company_360_research_report_0006_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Comprehensive Company Research Report"
+description: "Generate a complete research report including overview, financials, fundamental analysis, technical context, and narratives specifically for the Indian market."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "freshness_audit"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template: "Pull structured tables for high level analysis using given approved schema."
+sql_templates:
+  company_overview: "SELECT company_name, sector, market_cap_cat, price, stage FROM scores.stage_snapshots WHERE symbol = '{{symbol}}' AND snapshot_date = CURRENT_DATE;"
+  financial_trends: "SELECT period_label, revenue, expenses, pat, eps FROM scores.annual_results WHERE symbol = '{{symbol}}' ORDER BY period_end DESC LIMIT 3;"
+  technical_setup: "SELECT trend_signal, rsi, supertrend_state FROM scores.stage_snapshots WHERE symbol = '{{symbol}}' AND snapshot_date = CURRENT_DATE;"
+  valuation_gaps: "SELECT change_1d_pct, change_1w_pct, change_1m_pct FROM scores.stage_snapshots WHERE symbol = '{{symbol}}' AND snapshot_date = CURRENT_DATE;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all inputs follow the schema."
+  - "Check all financial metrics for consistency."
+synthesis_guidance: "Compile insights into a concise table format, ensuring all components are up-to-date and linked to evidence."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:50:49"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: weekly review; response style: debug trace."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0695_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Retrieve current holdings details from portfolio."
+    sql: "SELECT symbol, qty, avg_cost FROM portfolio.holdings;"
+    template_name: "get_current_holdings"
+  -
+    description: "Retrieve stage and related scores for symbols held in portfolio."
+    sql: "SELECT s.symbol, s.stage, s.stage_score, s.technical_score, s.rsi, s.trend_signal, s.trading_signal FROM scores.stage_snapshots s JOIN portfolio.holdings p ON s.symbol = p.symbol WHERE s.snapshot_date = CURRENT_DATE;"
+    template_name: "get_stage_scores"
+status: "validated"
+synthesis_guidance: "Conduct a detailed analysis of current holdings, focusing on risk indicators and potential candidates for incremental addition or trimming. Highlight sectors with high exposure and evaluate based on technical and fundamental signals."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "weekly_review"
+  - "debug_trace"
+title: "Portfolio Incremental Add Trim Review Variant 0695"
+tool_plan_template:
+
+validation_rules:
+  - "Ensure all portfolio symbols have corresponding stage scores."
+  - "Verify that each holding's exposure is calculated accurately."
+version: 1

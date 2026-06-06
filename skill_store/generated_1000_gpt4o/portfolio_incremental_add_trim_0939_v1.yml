@@ -1,0 +1,59 @@
+id: "portfolio_incremental_add_trim_0939_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0939"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for last 20 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "JSON must contain schema-safe read-only actions."
+sql_templates:
+  -
+    name: "sector_exposure"
+    description: "Evaluate exposure by sector in portfolio holdings."
+    template: "SELECT h.symbol, s.sector, SUM(h.qty * s.live_price) AS total_value FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date IN (SELECT DISTINCT snapshot_date FROM scores.stage_snapshots ORDER BY snapshot_date DESC LIMIT 20) GROUP BY s.sector"
+  -
+    name: "add_candidates"
+    description: "Identify potential stocks to add based on stage and trend signals."
+    template: "WITH recent_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date IN (SELECT DISTINCT snapshot_date FROM scores.stage_snapshots ORDER BY snapshot_date DESC LIMIT 20)) SELECT symbol FROM recent_snapshots WHERE stage_score > 7 AND trend_signal = 'UP'"
+  -
+    name: "trim_candidates"
+    description: "Identify stocks for potential trimming based on negative trends or scores."
+    template: "WITH recent_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date IN (SELECT DISTINCT snapshot_date FROM scores.stage_snapshots ORDER BY snapshot_date DESC LIMIT 20)) SELECT symbol FROM recent_snapshots WHERE stage_score < 4 OR trend_signal = 'DOWN'"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "outputs"
+synthesis_guidance: "Create a comparison matrix based on sector exposure and add/trim candidates."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:52:59"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table h.qty"
+  - "unknown table h.symbol"
+  - "unknown table s.live_price"
+  - "unknown table s.sector"
+  - "unknown table s.snapshot_date"
+  - "unknown table s.symbol"

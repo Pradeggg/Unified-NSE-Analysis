@@ -1,0 +1,57 @@
+id: "data_freshness_readiness_audit_1547_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1547"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: research-only summary."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for last 3 months: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as research-only summary"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Research the data freshness status by aggregating by sector and timeframe. Present findings on DB loader performance and highlight any significant freshness lags or gaps."
+sql_templates:
+  -
+    description: "Aggregate EOD data freshness by index over the last 3 months."
+    query: "SELECT index_symbol, MAX(trade_date) AS latest_trade_date FROM market.index_eod WHERE trade_date >= NOW() - INTERVAL '3 months' GROUP BY index_symbol;"
+  -
+    description: "Check equity EOD data freshness over the last 3 months."
+    query: "SELECT symbol, MAX(trade_date) AS latest_trade_date FROM market.equity_eod WHERE trade_date >= NOW() - INTERVAL '3 months' GROUP BY symbol;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure SQL queries are selecting data only; no modifications allowed."
+  - "Summarize findings in a research-oriented manner for Indian market focus."
+synthesis_guidance: "Compare sectors for gaps in data freshness and identify patterns or common issues impacting data readiness."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:51"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_trade_date is not approved"
+  - "market.equity_eod.now is not approved"
+  - "market.index_eod.latest_trade_date is not approved"
+  - "market.index_eod.now is not approved"

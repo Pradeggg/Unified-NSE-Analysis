@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:52:04"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 5 sessions; response style: action watchlist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0830_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Select stocks with recent new highs or VCP patterns and strong fundamentals."
+    query: "WITH recent_highs AS (SELECT symbol, close, market_cap_cr FROM market.equity_eod WHERE trade_date BETWEEN DATE_SUB(CURRENT_DATE, INTERVAL 5 DAY) AND CURRENT_DATE AND close = week52_high), recent_vcp AS (SELECT symbol, vcp_score, vcp_breakout_pct FROM scores.stage2_vcp_picks WHERE snapshot_date BETWEEN DATE_SUB(CURRENT_DATE, INTERVAL 5 DAY) AND CURRENT_DATE AND vcp_score > 0.5), strong_fundamentals AS (SELECT symbol, fundamental_score FROM scores.stage_snapshots WHERE snapshot_date BETWEEN DATE_SUB(CURRENT_DATE, INTERVAL 5 DAY) AND CURRENT_DATE AND fundamental_score > 75) SELECT DISTINCT r.symbol FROM recent_highs r JOIN recent_vcp v ON r.symbol = v.symbol JOIN strong_fundamentals f ON r.symbol = f.symbol;"
+status: "validated"
+synthesis_guidance: "Focus on stocks showing recent volume-driven price action supported by sound financial health, capturing them effectively for TradingView analysis."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "action_watchlist"
+title: "VCP Breakouts With Fundamentals Variant 0830"
+tool_plan_template: "To gather data, use a combination of SQL templates and, if necessary, Python evidence tools under strict read-only conditions to filter for the desired stock characteristics."
+validation_rules:
+  - "Ensure all SQL queries are read-only and do not modify the database."
+  - "Python evidence tools, if used, must comply with the read-only restriction and avoid unauthorized access."
+  - "All concepts must align with approved schema and evidence_required.tables."
+version: 1

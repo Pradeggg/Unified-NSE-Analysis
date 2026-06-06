@@ -1,0 +1,48 @@
+id: "report_link_data_validation_1698_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Report Link and Data Validation"
+description: "Validates report links and checks for missing data with a focus on position-sizing context during a weekly review."
+input_patterns:
+  - "review report links not working"
+  - "validate generated report links and missing data"
+  - "position-sizing context for weekly review: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "{evidence_tables} WHERE join_condition AND filters"
+sql_templates:
+  -
+    query: "SELECT r.run_id, r.run_ts, f.symbol, f.weekly_signal FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks f ON r.run_id = f.run_id WHERE r.run_ts >= CURRENT_DATE - INTERVAL '7 days' AND f.weekly_signal IS NULL"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure run_ts is within the last week."
+  - "Check for null weekly_signal."
+synthesis_guidance: "Collect data on broken links and missing stock entries for enhanced reports using weekly context."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:59"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

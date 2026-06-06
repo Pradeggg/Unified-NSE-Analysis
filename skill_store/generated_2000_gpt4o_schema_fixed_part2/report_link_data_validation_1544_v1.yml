@@ -1,0 +1,57 @@
+id: "report_link_data_validation_1544_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation"
+description: "Validate report metadata, filtered stocks, and source trails. Focus: watchlist creation within the last 3 months. Deliver findings as a research-only summary."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for last 3 months: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  steps:
+    - "Extract report metadata from `report.enhanced_runs`."
+    - "Identify filtered stock rows from `report.enhanced_filtered_stocks`."
+    - "Join tables using approved join rules."
+    - "Analyze watchlist creation for last 3 months."
+    - "Summarize findings with research-only insights."
+sql_templates:
+  -
+    template: "SELECT r.run_id, r.analysis_date, r.universe_size, f.symbol, f.score FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks f ON r.run_id = f.run_id WHERE r.run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+    description: "Retrieve report metadata and filtered stock information for the last 3 months."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure run timestamps adhere to filter constraints."
+  - "Verify stock data presence in filtered outputs."
+  - "Confirm integrity of watchlist creation steps."
+synthesis_guidance: "Focus on the latest trends and anomalies reported in the last 3 months. Analyze the data cohesively, addressing potential gaps using approved schema and research framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

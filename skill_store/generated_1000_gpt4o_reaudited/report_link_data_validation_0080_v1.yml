@@ -1,0 +1,51 @@
+created_at: "2026-06-06T12:41:43"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: pre market; response style: concise table."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0080_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for pre market: review report links not working"
+  - "validate generated report links and missing data as concise table"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    name: "Fetch recent buy recommendations in enhanced filtered stocks."
+    template: "WITH filtered AS (SELECT run_id, symbol, recommendation FROM report.enhanced_filtered_stocks WHERE recommendation = 'Buy') SELECT r.run_id, r.run_ts, r.notes, COUNT(f.symbol) as buy_recommendations FROM report.enhanced_runs r LEFT JOIN filtered f ON r.run_id = f.run_id WHERE r.run_ts BETWEEN CURRENT_DATE - INTERVAL '1 DAY' AND CURRENT_DATE + INTERVAL '1 DAY' GROUP BY r.run_id;"
+status: "validated"
+synthesis_guidance: "Present findings in a concise table format emphasizing usability, operational status, and data completeness."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "pre_market"
+  - "concise_table"
+title: "Enhanced Report Data Validation Variant 0080"
+tool_plan_template: "Evaluate pre-market TradingView export issues by examining report links, metadata, and stock rows."
+validation_rules:
+  - "Ensure all links are operational."
+  - "Check for missing data in 'underlying stock html files.'"
+  - "Confirm recommendations match TradingView pre-market data."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

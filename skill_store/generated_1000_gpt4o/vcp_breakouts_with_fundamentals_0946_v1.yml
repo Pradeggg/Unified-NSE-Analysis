@@ -1,0 +1,76 @@
+id: "vcp_breakouts_with_fundamentals_0946_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0946"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  evidence_gaps:
+    - "Liquidity assessment"
+    - "Full freshness audit"
+  python_tools:
+    -
+      id: "calculate_freshness_audit"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "latest_trade_date"
+        - "symbol_list"
+      outputs:
+        - "freshness_score"
+      approved_tables:
+        - "market.equity_eod"
+      code: "def run(context):\n    # Calculate freshness based on trade dates\n    return {symbol: max(trade_dates) for symbol, trade_dates in context['symbol_list'].items()}"
+sql_templates:
+  - "WITH latest_prices AS (\n    SELECT symbol, max(trade_date) as latest_trade_date\n    FROM market.equity_eod\n    WHERE close = week52_high\n    GROUP BY symbol\n),\nselected_snapshots AS (\n    SELECT s.symbol, s.company_name, s.market_cap_cat, e.market_cap_cr, s.can_slim_score, s.minervini_score, s.fundamental_score, s.enhanced_fund_score\n    FROM scores.stage_snapshots s\n    JOIN latest_prices p ON s.symbol = p.symbol\n    JOIN market.equity_eod e ON e.symbol = s.symbol AND e.trade_date = p.latest_trade_date\n    WHERE s.stage = 'Stage 2' AND e.close > e.week52_high * 0.95\n)\nSELECT * FROM selected_snapshots ORDER BY enhanced_fund_score DESC"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure symbols have valid market data"
+  - "Check alignment with reported VCP patterns"
+synthesis_guidance: "{'emphasis': 'Focus on stocks with the strongest fundamental scores and recent VCP breakouts.', 'direction': 'Create a comparison matrix highlighting the relative strengths based on selected metrics.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:53:06"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table e.close"
+  - "unknown table e.market_cap_cr"
+  - "unknown table e.symbol"
+  - "unknown table e.trade_date"
+  - "unknown table e.week52_high"
+  - "unknown table p.latest_trade_date"
+  - "unknown table p.symbol"
+  - "unknown table s.can_slim_score"
+  - "unknown table s.company_name"
+  - "unknown table s.enhanced_fund_score"
+  - "unknown table s.fundamental_score"
+  - "unknown table s.market_cap_cat"
+  - "unknown table s.minervini_score"
+  - "unknown table s.stage"
+  - "unknown table s.symbol"

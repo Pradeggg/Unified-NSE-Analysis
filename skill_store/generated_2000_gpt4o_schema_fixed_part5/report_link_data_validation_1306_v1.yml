@@ -1,0 +1,67 @@
+id: "report_link_data_validation_1306_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Report Link Validation Audit"
+description: "This skill card performs a validation audit on enhanced report links and the freshness of data for today, focusing on exceptions and data gaps."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for today: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "today"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    python_tools:
+      -
+        id: "validate_links_today"
+        language: "python"
+        mode: "read_only"
+        inputs:
+          run_date: "CURRENT_DATE"
+        outputs:
+          broken_links: "list of strings containing broken report links"
+          missing_data: "list of symbols with missing data"
+        approved_tables:
+          - "report.enhanced_runs"
+          - "report.enhanced_filtered_stocks"
+        code: "def run(context):\n    broken_links = []\n    missing_data = []\n    # Read runs for today\n    runs_today = context.get_table('report.enhanced_runs', filters={'run_ts': context.inputs['run_date']})\n    # Iterate through runs\n    for run in runs_today:\n        # Check if there are any filtered stocks for the run\n        stocks = context.get_table('report.enhanced_filtered_stocks', filters={'run_id': run['run_id']})\n        if not stocks:\n            missing_data.append(run['run_id'])\n        # If there are any links invalid, add to broken_links\n        # This is a placeholder for actual logic\n        if run['notes'] == 'Link broken':\n            broken_links.append(run['run_id'])\n\n    return {'broken_links': broken_links, 'missing_data': missing_data}"
+    sql_templates:
+      -
+        template_id: "fetch_latest_runs"
+        sql: "SELECT run_id, run_ts FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE ORDER BY run_ts DESC LIMIT 10;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure data is from the current day only"
+  - "Identify both broken links and data gaps"
+synthesis_guidance: "Focus on highlighting gaps and exceptions first"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:36"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

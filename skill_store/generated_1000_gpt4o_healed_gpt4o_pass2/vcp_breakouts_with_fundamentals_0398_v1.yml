@@ -1,0 +1,142 @@
+card:
+  created_at: "2026-06-06T12:46:13"
+  created_by: "llm_generated"
+  description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: weekly review; response style: exceptions and gaps first."
+  domain: "screening"
+  evidence_required:
+    tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "vcp_breakouts_with_fundamentals_0398_v1"
+  input_patterns:
+    - "stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "VCP breakout stocks for TradingView"
+    - "quality breakouts with strong fundamentals"
+    - "position-sizing context for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "quality breakouts with strong fundamentals as exceptions and gaps first"
+  output_contract:
+    - "filters"
+    - "candidates"
+    - "tradingview_symbols"
+    - "evidence"
+    - "risks"
+  python_tools:
+    -
+      description: "A read-only tool for executing queries and data analysis."
+      methods:
+        run:
+          description: "Execute the data analysis context with given parameters."
+          parameters:
+            - "context"
+      name: "read_only_tool"
+      type: "object"
+  review:
+    attempts: 1
+    findings:
+
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "generated"
+  sql_templates:
+    -
+      description: "Select stocks with VCP or making new highs with strong fundamentals."
+      template: "SELECT s.symbol, s.company_name, s.sector, s.price, s.trading_signal, s.rsi, s.enhanced_fund_score, s.investment_score FROM scores.stage2_vcp_picks s JOIN market.equity_eod e ON s.symbol = e.symbol WHERE s.trading_signal = 'breakout' AND s.enhanced_fund_score > 70 AND (e.high >= e.week52_high OR s.vcp_score > 70) AND e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+  status: "generated"
+  synthesis_guidance:
+    - "Identify stocks with breakout signals and strong fundamentals."
+    - "Focus on weekly performance and exceptions."
+    - "Consider liquidity and market capitalization in analysis."
+  tags:
+    - "vcp"
+    - "breakout"
+    - "new_high"
+    - "fundamentals"
+    - "tradingview"
+    - "position-sizing_context"
+    - "weekly_review"
+    - "exceptions_and_gaps_first"
+  title: "VCP Breakouts With Fundamentals Variant 0398"
+  tool_plan_template:
+
+  validation_errors:
+
+  validation_rules:
+    - "Status must be generated."
+    - "SQL templates must be read-only SELECT/WITH templates."
+  version: 1
+created_at: "2026-06-06T12:46:13"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: weekly review; response style: exceptions and gaps first."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0398_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  - "read_only_tool"
+review:
+  attempts: 3
+  findings:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    description: "Select stocks with VCP or making new highs with strong fundamentals."
+    template: "SELECT s.symbol, s.company_name, s.sector, s.price, s.trading_signal, s.rsi, s.enhanced_fund_score, s.investment_score FROM scores.stage2_vcp_picks s JOIN market.equity_eod e ON s.symbol = e.symbol WHERE s.trading_signal = 'breakout' AND s.enhanced_fund_score > 70 AND (e.high >= e.week52_high OR s.vcp_score > 70) AND e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+status: "test_failed"
+synthesis_guidance: "['Identify stocks with breakout signals and strong fundamentals.', 'Focus on weekly performance and exceptions.', 'Consider liquidity and market capitalization in analysis.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+title: "VCP Breakouts With Fundamentals Variant 0398"
+tool_plan_template:
+
+validation_errors:
+  - "description is required"
+  - "domain is required"
+  - "evidence_required is required"
+  - "id is required"
+  - "input_patterns is required"
+  - "output_contract is required"
+  - "tags is required"
+  - "title is required"
+  - "validation_rules is required"
+  - "version is required"
+  - "version must be a positive integer"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates must be read-only SELECT/WITH templates."
+version: 1

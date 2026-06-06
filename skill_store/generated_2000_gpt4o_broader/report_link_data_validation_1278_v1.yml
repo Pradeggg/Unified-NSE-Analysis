@@ -1,0 +1,69 @@
+id: "report_link_data_validation_1278_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation"
+description: "Validate enhanced report run metadata, focusing on position-sizing context and pre market criteria."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for pre market: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  content: "Execute SQL templates to retrieve and validate data from required tables. Use Python tools if SQL complexity is high. Generate ranked findings."
+sql_templates:
+  -
+    status: "generated"
+    template: "SELECT run_id, run_ts, universe_size, stocks_filtered FROM report.enhanced_runs WHERE analysis_date = CURRENT_DATE;"
+  -
+    status: "generated"
+    template: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = ? ORDER BY score DESC LIMIT 10;"
+python_tools:
+  -
+    id: "validate_links_and_data"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+      - "links"
+    outputs:
+      - "broken_links"
+      - "validation_report"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # This is a placeholder for link and data validation logic\n    pass"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Verify data presence and consistency in report links."
+  - "Validate score and recommendation alignment with run metadata."
+synthesis_guidance: "Interpret SQL data with focus on pre-market position-sizing context and identify gaps for further investigation."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:32"
+generation_model: "gpt-4o"
+validation_errors:
+  - "validate_links_and_data: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "validate_links_and_data: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:51:12"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 3 months; response style: QA checklist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0742_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Select stocks that have met the VCP breakout criteria with high fundamentals over the past 3 months."
+    template: "WITH breakout_candidates AS (SELECT s.symbol, s.company_name, s.sector, s.enhanced_fund_score, s.investment_score, v.vcp_score, v.vcp_breakout_pct FROM scores.stage_snapshots s JOIN scores.stage2_vcp_picks v ON s.symbol = v.symbol WHERE s.snapshot_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE AND (v.vcp_score > 80 AND s.enhanced_fund_score > 70)), final_selection AS (SELECT b.symbol, b.company_name, b.sector, b.enhanced_fund_score FROM breakout_candidates b JOIN market.equity_eod e ON b.symbol = e.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND e.volume > 1000000 AND e.delivery_pct > 50) SELECT * FROM final_selection;"
+status: "validated"
+synthesis_guidance: "['Prioritize candidates with the strongest combination of VCP metrics and fundamental scores.', 'Include evidence references and clear QA checklist points for institutional review.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "QA_checklist"
+title: "VCP Breakouts With Fundamentals Variant 0742"
+tool_plan_template: "Execute a SQL query to extract VCP breakout stocks with strong fundamentals and liquidity from the past 3 months."
+validation_rules:
+  - "Ensure filters match the three-month timeframe."
+  - "Confirm candidates have a high breakout and fundamental score."
+  - "Validate tradingview_symbols are correctly formatted."
+version: 1

@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:43:20"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: today; response style: ranked candidates."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0206_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select stocks with VCP and breakout patterns with strong fundamentals."
+    query: "SELECT sp.symbol, sp.company_name, sp.sector, sp.price, sp.vcp_score, sp.enhanced_fund_score FROM scores.stage2_vcp_picks sp WHERE sp.enhanced_fund_score > 80 AND sp.vcp_score > 70 ORDER BY sp.vcp_score DESC;"
+  -
+    description: "Select stocks hitting new 52-week highs."
+    query: "SELECT eod.symbol, eod.high FROM market.equity_eod eod WHERE eod.high = eod.week52_high AND eod.trade_date = CURRENT_DATE ORDER BY eod.volume DESC;"
+status: "test_failed"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "today"
+  - "ranked_candidates"
+title: "VCP Breakouts With Fundamentals Variant 0206"
+tool_plan_template:
+
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+version: 1
+validation_errors:
+  - "market.equity_eod.eod is not approved"
+  - "scores.stage2_vcp_picks.sp is not approved"

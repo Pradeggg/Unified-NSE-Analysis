@@ -1,0 +1,56 @@
+id: "vcp_breakouts_with_fundamentals_0466_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0466"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  sql_templates:
+    -
+      task: "Select VCP Breakout Stocks"
+      template: "SELECT v.symbol, v.company_name, v.price_date, v.price, v.vcp_score, v.enhanced_fund_score FROM scores.stage2_vcp_picks v WHERE v.vcp_score > 0.8 AND v.enhanced_fund_score > 0.7 AND v.price_date > NOW() - INTERVAL '7 DAYS';"
+      description: "Select VCP breakout stocks with high VCP and fundamental scores, filtered by recent price activity."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure no write operations in SQL templates."
+  - "Use approved schema columns only."
+  - "Avoid unauthorized use of primary or required table concepts."
+synthesis_guidance: "Combine VCP and breakout candidates with strong fundamentals to propose actionable insights for TradingView."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:48:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

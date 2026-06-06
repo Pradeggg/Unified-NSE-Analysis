@@ -1,0 +1,77 @@
+id: "corporate_events_results_watchlist_0611_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0611"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: latest EOD; response style: debug trace."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for latest EOD: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as debug trace"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "latest_EOD"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  status: "generated"
+  steps:
+    -
+      step: "Identify recent or upcoming corporate events."
+      sql_template:
+        template: "SELECT id, symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY event_date;"
+        tables:
+          - "signals.corporate_events"
+    -
+      step: "Analyze event-driven stock performance after results."
+      sql_template:
+        template: "SELECT symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct, eps_yoy_pct FROM scores.results_analysis WHERE filing_date = CURRENT_DATE OR filing_date = (CURRENT_DATE - INTERVAL '1 DAY');"
+        tables:
+          - "scores.results_analysis"
+    -
+      step: "Evaluate point-in-time technical and fundamental scores."
+      sql_template:
+        template: "SELECT symbol, stage_score, technical_score FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+        tables:
+          - "scores.stage_snapshots"
+sql_templates:
+  -
+    name: "fetch_upcoming_events"
+    template: "SELECT id, symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY event_date;"
+  -
+    name: "analyze_stock_performance"
+    template: "SELECT symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct, eps_yoy_pct FROM scores.results_analysis WHERE filing_date = CURRENT_DATE OR filing_date = (CURRENT_DATE - INTERVAL '1 DAY');"
+  -
+    name: "evaluate_technical_fundamental_scores"
+    template: "SELECT symbol, stage_score, technical_score FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure only approved tables and columns are used."
+  - "SQL queries must be read-only."
+synthesis_guidance: "Combine insights from recent events, performance metrics, and technical scores to generate an actionable watchlist."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:58:55"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:41:26"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: quarter to date; response style: concise table."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0054_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Query to select stocks with new highs or VCP breakouts and strong fundamentals."
+    template: "SELECT DISTINCT a.symbol, a.trade_date, a.close AS last_close, a.volume, b.enhanced_fund_score, c.vcp_score FROM market.equity_eod a INNER JOIN scores.stage_snapshots b ON a.symbol = b.symbol INNER JOIN scores.stage2_vcp_picks c ON a.symbol = c.symbol WHERE a.close = a.week52_high OR c.trading_signal = 'BUY' AND b.enhanced_fund_score > 70 ORDER BY a.trade_date DESC;"
+status: "validated"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "concise_table"
+title: "VCP Breakouts With Fundamentals Variant 0054"
+tool_plan_template:
+
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

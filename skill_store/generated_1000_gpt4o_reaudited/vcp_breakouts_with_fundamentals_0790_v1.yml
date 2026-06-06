@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:51:33"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: intraday context; response style: QA checklist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0790_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select potential breakout stocks with significant VCP and strong fundamentals."
+    query: "WITH recent_highs AS (SELECT symbol, MAX(high) AS max_high FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '30 days' GROUP BY symbol), quality_stocks AS (SELECT p.symbol, p.company_name, p.sector, p.vcp_score, e.high FROM scores.stage2_vcp_picks p JOIN market.equity_eod e ON p.symbol = e.symbol WHERE e.high = recent_highs.max_high AND p.enhanced_fund_score > 80 AND p.vcp_score > 70) SELECT * FROM quality_stocks ORDER BY vcp_score DESC, enhanced_fund_score DESC;"
+status: "validated"
+synthesis_guidance: "Focus on high VCP scores combined with enhanced fundamental scores, ensuring liquidity and fundamental stability."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "intraday_context"
+  - "QA_checklist"
+title: "VCP Breakouts With Fundamentals Variant 0790"
+tool_plan_template: "Identify stocks that have achieved new highs or have VCP or breakout patterns with strong fundamentals."
+validation_rules:
+  - "Ensure SQL templates are read-only."
+  - "Do not use non-approved tables or columns."
+  - "Maintain status as generated."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,70 @@
+id: "sector_breadth_rotation_watchlist_1483_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1483"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: portfolio-aware output."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for intraday context: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as portfolio-aware output"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Find improving sectors with high stage 2 participation."
+    sql: "SELECT b.sector, b.breadth_signal, b.change_5d, ma.stage2_pct FROM breadth.sector_daily b JOIN breadth.ma_pct_above ma ON b.snapshot_date = ma.snapshot_date WHERE b.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) AND ma.stage2_pct > 50 ORDER BY ma.stage2_pct DESC LIMIT 10;"
+  -
+    description: "Retrieve top candidate symbols with strong buy signals."
+    sql: "SELECT s.symbol, s.company_name, s.stage, s.price FROM scores.stage_snapshots s JOIN market.equity_eod e ON s.symbol = e.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY s.relative_strength DESC LIMIT 10;"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+
+    outputs:
+
+    approved_tables:
+
+    code: ""
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "{'rules': ['Ensure the sector_ranks list includes sector names and metrics.', 'improving_sectors must reference sectors with positive breadth dynamics.', 'candidate_symbols should consist of actively traded symbols with strong positive signals.', 'tradingview_symbols should align with candidate_symbols formatted for TradingView.']}"
+synthesis_guidance: "{'guidance': ['Align watchlist output with daily refreshed breadth metrics.', 'Prioritize sectors demonstrating increased participation in Stage 2.', 'Present results in a TradingView-friendly format.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:31"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run: code is required"
+  - "run: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "run: code is required"
+    - "run: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,61 @@
+id: "portfolio_incremental_add_trim_0199_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0199"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: weekly review; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  status: "generated"
+  sql_templates:
+    -
+      title: "Get Latest Holdings with Stage Data"
+      description: "Retrieve current holdings with latest stage scores for add/trim analysis."
+      template: "WITH latest_stage_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT portfolio.holdings.symbol, portfolio.holdings.qty, portfolio.holdings.avg_cost, scores.stage_snapshots.price, scores.stage_snapshots.stage, scores.stage_snapshots.trading_signal FROM portfolio.holdings INNER JOIN latest_stage_snapshots ON portfolio.holdings.symbol = latest_stage_snapshots.symbol;"
+    -
+      title: "Candidates for Addition"
+      description: "Identify stocks with a strong buy or buy signal for potential additions."
+      template: "SELECT symbol, company_name, sector, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+    -
+      title: "Candidates for Trimming"
+      description: "Identify stocks with a sell signal for potential trimming."
+      template: "SELECT symbol, company_name, sector, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal = 'SELL' LIMIT 10;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "latest_data_checks"
+synthesis_guidance: "{'type': 'narrative', 'focus': 'Provide a structured textual synthesis from add and trim candidates, tying them back to sector exposure and risk flags.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:14"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

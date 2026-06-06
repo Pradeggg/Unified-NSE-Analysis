@@ -1,0 +1,56 @@
+id: "corporate_events_results_watchlist_0793_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0793"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as QA checklist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Create a SQL-based analysis for monitoring corporate events results and watchlist generation. Use proper table joins and filters based on the latest data, respecting Indian market norms."
+sql_templates:
+  -
+    purpose: "Fetch latest corporate event details."
+    template: "SELECT id, symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '1 week';"
+    evidence: "Lists recent and upcoming events."
+  -
+    purpose: "Join latest corporate event with stage snapshot for symbol analysis."
+    template: "WITH latest_stage AS (SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT e.symbol, e.event_type, s.stage, s.trading_signal FROM signals.corporate_events e JOIN latest_stage s ON e.symbol = s.symbol WHERE e.event_date >= CURRENT_DATE - INTERVAL '1 week';"
+    evidence: "Provides event and technical analysis combined."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "ensure_latency"
+  - "check_valid_stages"
+synthesis_guidance: "Integrate event types with trading signals to assess action buckets on a weekly basis."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:55"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

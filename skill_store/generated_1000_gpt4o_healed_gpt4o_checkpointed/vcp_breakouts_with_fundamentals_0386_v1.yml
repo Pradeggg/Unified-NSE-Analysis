@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:46:06"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: intraday context; response style: exceptions and gaps first."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0386_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Selects high performers based on VCP score and fundamentals."
+    template: "WITH recent_vcp AS (SELECT symbol, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE vcp_score > 70 AND enhanced_fund_score > 50 ORDER BY vcp_score DESC), high_performers AS (SELECT a.symbol, a.close, a.change_abs, a.volume FROM market.equity_eod a JOIN recent_vcp b ON a.symbol = b.symbol WHERE a.trade_date = CURRENT_DATE AND a.change_abs > 0) SELECT symbol, close AS price, change_abs, volume FROM high_performers ORDER BY change_abs DESC;"
+status: "validated"
+synthesis_guidance: "Focus on filtering stocks with high VCP and fundamental scores. Prioritize recent activity and breakout potential."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "intraday_context"
+  - "exceptions_and_gaps_first"
+title: "VCP Breakouts With Fundamentals Variant 0386"
+tool_plan_template:
+
+validation_errors:
+
+validation_rules:
+  - "Ensure symbols have valid trading status."
+  - "Check data freshness for intraday context."
+version: 1
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"

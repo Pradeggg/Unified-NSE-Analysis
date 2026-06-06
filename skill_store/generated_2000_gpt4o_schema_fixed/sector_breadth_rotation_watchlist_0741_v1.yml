@@ -1,0 +1,56 @@
+id: "sector_breadth_rotation_watchlist_0741_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0741"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: last 3 months; response style: QA checklist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for last 3 months: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as QA checklist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "last_3_months"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Identify leading sectors based on recent improvements in breadth metrics and compile a quick watchlist with relevant stocks using approved evidence sources."
+sql_templates:
+  -
+    id: "sector_breadth_analysis_last_3_months"
+    template: "WITH recent_sector_data AS (\n    SELECT sector, AVG(pct_above_50dma::NUMERIC) AS avg_pct_above_50dma, AVG(change_5d::NUMERIC) AS avg_change_5d\n    FROM breadth.sector_daily\n    WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months'\n    GROUP BY sector\n),\nlatest_stage AS (\n    SELECT sector, COUNT(*) FILTER (WHERE stage = 'STAGE_2') AS stage_2_count\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n    GROUP BY sector\n)\nSELECT r.sector, r.avg_pct_above_50dma, r.avg_change_5d, l.stage_2_count\nFROM recent_sector_data r\nJOIN latest_stage l ON r.sector = l.sector\nORDER BY l.stage_2_count DESC, r.avg_change_5d DESC\nLIMIT 10;"
+  -
+    id: "candidate_stocks_stage2"
+    template: "SELECT symbol, company_name, change_1m_pct, stage\nFROM scores.stage_snapshots\nWHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n  AND stage = 'STAGE_2'\n  AND trading_signal IN ('BUY', 'STRONG_BUY')\nORDER BY change_1m_pct DESC\nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Check if sectors with increasing stage 2 participation are prioritized."
+  - "Ensure stock candidates have constructive buy signals."
+synthesis_guidance: "Compile a QA checklist emphasizing sectors and stocks demonstrating significant improvements with respect to breadth and stage analysis."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,56 @@
+id: "signal_outcome_feedback_review_1705_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1705"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: today; response style: QA checklist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for today: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as QA checklist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "today"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Retrieve latest signals from signals.signal_log for today."
+    - "Join signals with current stage and score from scores.stage_snapshots."
+    - "Analyze outcomes from signals; focus on targets hit or stops activated."
+sql_templates:
+  latest_signals: "SELECT * FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log) AND (hit_target = TRUE OR hit_stop = TRUE);"
+  current_stage_and_score: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol = ?;"
+  outcome_analysis: "WITH signal_outcomes AS (SELECT signal, company, sector, hit_target, hit_stop FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log)) SELECT * FROM signal_outcomes WHERE hit_target = TRUE OR hit_stop = TRUE;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "must_contain_targets"
+  - "risk_assessment"
+synthesis_guidance: "{'step1': 'Summarize signal outcomes focusing on risk factors.', 'step2': 'Identify patterns among successful targets and harmful stops.', 'step3': 'Extract actionable improvements for future signals.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:04"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

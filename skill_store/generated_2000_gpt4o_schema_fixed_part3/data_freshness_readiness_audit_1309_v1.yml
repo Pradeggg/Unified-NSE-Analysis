@@ -1,0 +1,62 @@
+id: "data_freshness_readiness_audit_1309_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1309"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: today; response style: exceptions and gaps first."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for today: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as exceptions and gaps first"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "today"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    name: "freshness_check"
+    description: "Check data freshness against current date."
+    execution_sequence: 1
+sql_templates:
+  freshness_check: "SELECT symbol, MAX(trade_date) AS last_trade_date FROM market.equity_eod GROUP BY symbol HAVING MAX(trade_date) < CURRENT_DATE;"
+python_tools:
+  -
+    id: "freshness_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "last_trade_date"
+    outputs:
+      - "is_fresh"
+    approved_tables:
+      - "market.equity_eod"
+    code: "def run(context):\n    last_trade_date = context['last_trade_date']\n    if last_trade_date >= context['today']:\n        return {'is_fresh': True}\n    else:\n        return {'is_fresh': False}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure MAX(trade_date) is within an acceptable range of CURRENT_DATE."
+synthesis_guidance: "['Highlight exceptions and data sources that are lagging behind the expected freshness threshold.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.last_trade_date is not approved"

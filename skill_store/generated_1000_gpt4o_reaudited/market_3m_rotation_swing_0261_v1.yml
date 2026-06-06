@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:43:58"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: post results; response style: ranked candidates."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0261_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Calculate index returns over the last 3 months."
+    template: "SELECT index_symbol, SUM(change_pct) as total_return FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol ORDER BY total_return DESC;"
+  -
+    description: "Identify changes in stage distribution over the last 3 months."
+    template: "SELECT sector, COUNT(CASE WHEN stage='Stage 2' THEN 1 END) as stage_2_count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector;"
+status: "test_failed"
+synthesis_guidance: "Synthesize data focusing on leadership trends and potential swing candidates. Highlight changes in stage distribution and rank based on market indicators."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "post_results"
+  - "ranked_candidates"
+title: "3M Market Rotation Swing Assessment Variant 0261"
+tool_plan_template: "Analyze market data for regime and sector leadership. Identify candidates using stage 2 leadership. Rank and present based on strength and risk."
+validation_rules:
+  - "Ensure evidence_required.tables are only selected."
+  - "Do not modify original data."
+  - "Rank candidates based on provided metrics."
+version: 1
+validation_errors:
+  - "market.index_eod.total_return is not approved"
+  - "scores.stage_snapshots.stage_2_count is not approved"

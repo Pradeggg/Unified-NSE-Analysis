@@ -1,0 +1,1 @@
+def run(context): return context['fundamental_score'] * 1.2 if context['market_cap_cr'] > 500 else context['fundamental_score']

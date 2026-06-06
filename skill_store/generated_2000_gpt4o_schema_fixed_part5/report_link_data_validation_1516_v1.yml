@@ -1,0 +1,56 @@
+id: "report_link_data_validation_1516_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Enhanced Report Data Validation"
+description: "Verify the integrity of reports' metadata and stock data. Focus on freshness audit for the latest EOD."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for latest EOD: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "latest_EOD"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    tools:
+      -
+        type: "sql_query"
+        tables:
+          - "report.enhanced_runs"
+          - "report.enhanced_filtered_stocks"
+        select_statement: "SELECT r.run_id, r.run_ts, r.analysis_date, f.symbol, f.current_price, f.volume FROM report.enhanced_runs AS r JOIN report.enhanced_filtered_stocks AS f ON r.run_id = f.run_id WHERE r.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)"
+        notes: "This query validates report metadata and filtered stock data for the latest EOD."
+sql_templates:
+  - "SELECT r.run_id, r.run_ts, r.analysis_date, f.symbol, f.current_price, f.volume FROM report.enhanced_runs AS r JOIN report.enhanced_filtered_stocks AS f ON r.run_id = f.run_id WHERE r.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "{'status': 'generated'}"
+synthesis_guidance: "Ensure investigation focuses on the EOD freshness with a thorough validation of metadata and stock data. Use SQL templates to check the latest reports and identify any discrepancies in links or missing data. Return findings as a research-only summary."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:56"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,72 @@
+id: "company_360_research_report_1350_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1350"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: TradingView export; timeframe: last 3 months; response style: exceptions and gaps first."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "TradingView export for last 3 months: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as exceptions and gaps first"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "TradingView_export"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  - "1. Fetch latest price and stage snapshot for the given company (symbol)."
+  - "2. Retrieve quarterly financial results and analyze trends."
+  - "3. Gather annual financial details for comprehensive overview."
+  - "4. Construct narrative by comparing structured data against analytical insights."
+sql_templates:
+  -
+    name: "Latest_Price_And_Stage"
+    query: "SELECT s.symbol, s.company_name, s.price, s.stage, s.trading_signal FROM scores.stage_snapshots s WHERE s.symbol = 'RELIANCE' AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots WHERE symbol = 'RELIANCE')"
+  -
+    name: "Recent_Quarterly_Results"
+    query: "SELECT q.symbol, q.period_label, q.revenue, q.pat, q.eps FROM scores.quarterly_results q WHERE q.symbol = 'RELIANCE' AND period_end = (SELECT MAX(period_end) FROM scores.quarterly_results WHERE symbol = 'RELIANCE' AND period_type = 'quarter')"
+  -
+    name: "Annual_Financial_Details"
+    query: "SELECT a.symbol, a.revenue, a.pat, a.eps, a.period_label FROM scores.annual_results a WHERE a.symbol = 'RELIANCE' AND period_end = (SELECT MAX(period_end) FROM scores.annual_results WHERE symbol = 'RELIANCE' AND period_type = 'annual')"
+  -
+    name: "EOD_Prices_Last_3_Months"
+    query: "SELECT e.trade_date, e.open, e.high, e.low, e.close FROM market.equity_eod e WHERE e.symbol = 'RELIANCE' AND e.trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY e.trade_date DESC"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Check if latest trading signal is provided."
+  - "Ensure quarterly results have consistent period labels."
+synthesis_guidance: "['Highlight exceptions and gaps before standard summaries.', 'Focus on juxtaposing technical setups against fundamental backdrops.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:06"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.e is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "market.equity_eod.e is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,54 @@
+id: "report_link_data_validation_1614_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1614"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: latest EOD; response style: debug trace."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for latest EOD: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "QUERY_BASED"
+sql_templates:
+  validate_report_runs:
+    template: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE universe_size IS NOT NULL;"
+    description: "Validate universe size for report runs."
+  check_filtered_stocks:
+    template: "SELECT run_id, symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE score IS NOT NULL;"
+    description: "Check for missing scores in filtered stocks."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates must be read-only SELECT/WITH templates."
+  - "Use evidence_required.tables exactly; do not use primary_tables or required_tables."
+synthesis_guidance: "Analyze the data to identify broken links and missing data trends. Ensure adherence to read-only policies and debug trace style."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:21"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

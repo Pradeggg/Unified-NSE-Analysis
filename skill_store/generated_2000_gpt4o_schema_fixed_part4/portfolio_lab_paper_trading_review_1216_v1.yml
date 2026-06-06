@@ -1,0 +1,65 @@
+id: "portfolio_lab_paper_trading_review_1216_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1216"
+description: "Review paper trading strategies separately from real holdings, focusing on entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: latest EOD; response style: ranked candidates."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for latest EOD: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as ranked candidates"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    template_id: "tool_plan_portfolio_1216"
+    description: "Plan to analyze paper trading strategies using latest EOD data, keeping analysis separate from real holdings."
+    input_variables:
+      - "strategy_portfolios"
+      - "paper_trading_entries"
+      - "real_time_price_updates"
+    output_variables:
+      - "strategy_state"
+      - "open_trades"
+      - "entry_exit_rules"
+      - "exposure"
+      - "exceptions"
+sql_templates:
+  -
+    description: "Fetch latest stage snapshots for symbols in signal_log with fresh scores."
+    query: "\nWITH latest_stage AS (\n  SELECT *\n  FROM scores.stage_snapshots\n  WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n)\nSELECT sl.symbol, sl.date_issued, sl.signal, ls.stage, ls.technical_score\nFROM signals.signal_log sl\nJOIN latest_stage ls ON sl.symbol = ls.symbol\nORDER BY ls.technical_score DESC\nLIMIT 50;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "{'rules': ['Ensure all strategies are assessed against the latest EOD data.', 'Check for the separation of paper trades from real holdings in the analysis.', 'Validate freshness of data using snapshot_date and trade_date maximum filters.']}"
+synthesis_guidance: "{'guidance': ['Rank strategies by latest technical score and present top candidates.', 'Highlight discrepancies between strategy intention and actual execution.', 'Ensure outputs are aligned with Indian market context and approved schema data rules.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:55"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

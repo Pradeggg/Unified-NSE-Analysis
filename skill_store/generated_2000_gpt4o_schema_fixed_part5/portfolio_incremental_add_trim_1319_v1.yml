@@ -1,0 +1,79 @@
+id: "portfolio_incremental_add_trim_1319_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1319"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: latest EOD; response style: exceptions and gaps first."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for latest EOD: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  -
+    steps:
+      -
+        description: "Retrieve the latest stage snapshot and holdings data."
+        sql: "SELECT s.symbol, s.stage, s.trading_signal, s.stage_score, s.price, h.qty, h.avg_cost FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+sql_templates:
+  default:
+    template: "SELECT s.symbol, s.stage, s.trading_signal, s.stage_score, s.price, h.qty, h.avg_cost FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+    description: "Fetches current holdings data with latest stage and trading signals."
+python_tools:
+  -
+    run(context):
+      id: "evidence_analysis"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "evidence_data"
+      outputs:
+        - "analysis_overview"
+      approved_tables:
+        - "scores.stage_snapshots"
+        - "portfolio.holdings"
+      code: "def run(context): return {'analysis_overview': 'Analysis performed with latest snapshot data'}"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all required fields are returned."
+  - "Check if data correctly reflects the latest EOD snapshot."
+synthesis_guidance: "['Focus on identifying exceptions and potential gaps first.', 'Summarize the sector exposure and suggest portfolio actions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:38"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: language must be python"
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: code is required"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: language must be python"
+    - "<missing-id>: mode must be read_only"
+    - "<missing-id>: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

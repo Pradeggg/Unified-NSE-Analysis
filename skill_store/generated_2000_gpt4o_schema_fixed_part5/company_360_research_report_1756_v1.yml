@@ -1,0 +1,71 @@
+id: "company_360_research_report_1756_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1756"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: freshness audit; timeframe: quarter to date; response style: QA checklist."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "freshness audit for quarter to date: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as QA checklist"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Generate a comprehensive research report for {symbol} using the latest data across financials, fundamentals, technical scores, and narratives. Ensure data freshness with a quarter-to-date focus and present findings in a QA checklist format."
+sql_templates:
+  overview: "SELECT * FROM scores.stage_snapshots WHERE symbol = '{symbol}' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 1;"
+  financial_trends: "SELECT * FROM scores.quarterly_results WHERE symbol = '{symbol}' AND period_type = 'quarter' AND period_end = (SELECT MAX(period_end) FROM scores.quarterly_results WHERE symbol = '{symbol}');"
+python_tools:
+  -
+    id: "run_freshness_audit"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+    outputs:
+      - "freshness_score"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    latest_quarter = max(context['scores.quarterly_results']['period_end'])\n    latest_snapshot = max(context['scores.stage_snapshots']['snapshot_date'])\n    freshness_score = 0\n    if latest_quarter > (latest_snapshot - pd.DateOffset(months=3)):\n        freshness_score = 1\n    return {'freshness_score': freshness_score}"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Data must be from the latest available quarter."
+  - "Ensure all sections of the report are populated."
+synthesis_guidance: "['Highlight differences between the latest quarter and previous periods.', 'Focus on significant technical indicators related to stage identification.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:38"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_freshness_audit: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_freshness_audit: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

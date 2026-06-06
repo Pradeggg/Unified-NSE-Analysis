@@ -1,0 +1,63 @@
+id: "data_freshness_readiness_audit_0231_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0231"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for last 20 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as ranked candidates"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Perform a quick scan using evidence sources for data freshness over the last 20 sessions. Use provided evidence tables and return ranked candidates for freshness readiness."
+sql_templates:
+  -
+    description: "Check latest available trading date for index EOD data."
+    template: "SELECT MAX(trade_date) as latest_date FROM market.index_eod;"
+  -
+    description: "Check latest available trading date for equity EOD data."
+    template: "SELECT MAX(trade_date) as latest_date FROM market.equity_eod WHERE series = 'EQ';"
+  -
+    description: "Check latest snapshot date for stage snapshots."
+    template: "SELECT MAX(snapshot_date) as latest_date FROM scores.stage_snapshots;"
+  -
+    description: "Verify synchronization between daily market breadth and index EOD data."
+    template: "SELECT MAX(md.trade_date) as latest_market_daily, MAX(ieod.trade_date) as latest_index_eod FROM breadth.market_daily md JOIN market.index_eod ieod ON md.trade_date = ieod.trade_date;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all SQL templates are SELECT-only for read-only tasks."
+  - "Verify synchronization check templates follow necessary join rules."
+  - "Check the latest date retrievals use correct constraints and filters."
+synthesis_guidance: "['Synthesize outcomes by ranking evidence sources based on freshness data.', 'Identify any critical gaps or blocks in data readiness.', 'Provide actionable loader steps if discrepancies are found.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_date is not approved"
+  - "market.index_eod.latest_date is not approved"
+  - "scores.stage_snapshots.latest_date is not approved"

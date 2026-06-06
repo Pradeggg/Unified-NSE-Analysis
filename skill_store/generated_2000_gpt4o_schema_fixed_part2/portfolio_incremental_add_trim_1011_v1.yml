@@ -1,0 +1,61 @@
+id: "portfolio_incremental_add_trim_1011_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1011"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: latest EOD; response style: concise table."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for latest EOD: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as concise table"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "latest_EOD"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  steps:
+    -
+      id: "fetch_latest_stage_snapshots"
+      description: "Retrieve latest stage snapshot data for current holdings."
+      sql: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    -
+      id: "portfolio_analysis"
+      description: "Join portfolio holdings with latest stage snapshot data for analysis."
+      sql: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT * FROM portfolio.holdings JOIN latest_snapshots ON portfolio.holdings.symbol = latest_snapshots.symbol;"
+sql_templates:
+  -
+    id: "candidate_selection"
+    description: "Select candidates for adding or trimming based on signals."
+    sql: "SELECT symbol, trading_signal, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure MAX(snapshot_date) logic is applied for latest snapshots."
+  - "Use JOIN conditions strictly as documented in _join_rules."
+  - "Respect value label constraints like trading_signal text labels."
+synthesis_guidance: "['Frame outputs as a concise table suitable for quick decision-making.', 'Highlight sectors with significant exposure or risk.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:15"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

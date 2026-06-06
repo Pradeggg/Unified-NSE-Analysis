@@ -1,0 +1,1 @@
+def run(context): risk_level = 'Medium' # Placeholder; implement risk logic return {'risk_level': risk_level}

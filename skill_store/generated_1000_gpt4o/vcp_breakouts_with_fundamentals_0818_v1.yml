@@ -1,0 +1,59 @@
+id: "vcp_breakouts_with_fundamentals_0818_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0818"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  python_tools:
+
+sql_templates:
+  -
+    id: "find_quality_breakouts"
+    template: "WITH latest_vcp AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)), latest_eod AS (SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)) SELECT e.symbol, e.company_name, e.sector FROM latest_vcp e INNER JOIN latest_eod m ON e.symbol = m.symbol WHERE e.vcp_score > 70 AND e.enhanced_fund_score > 80 AND m.close > m.week52_high * 0.9;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates, if any, must be read-only SELECT/WITH templates."
+  - "Python evidence tools are allowed only when SQL would become complex; keep them read-only and quarantined."
+  - "Use only these approved tables and columns; do not invent tables, aliases, or columns."
+synthesis_guidance: "{'focus_on': ['Indian market', 'Actionable insights based on the latest data', 'Integration into TradingView']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:51:57"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table e.company_name"
+  - "unknown table e.enhanced_fund_score"
+  - "unknown table e.sector"
+  - "unknown table e.symbol"
+  - "unknown table e.vcp_score"
+  - "unknown table m.close"
+  - "unknown table m.symbol"
+  - "unknown table m.week52_high"

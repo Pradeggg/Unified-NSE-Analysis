@@ -1,0 +1,55 @@
+id: "corporate_events_results_watchlist_1577_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1577"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for pre market: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as research-only summary"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+  columns:
+
+tool_plan_template:
+
+sql_templates:
+  -
+    template: "SELECT ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, ce.detail, ra.verdict, ra.growth_qoq_pat_pct, ra.growth_yoy_revenue_pct, ss.stage, ss.trading_signal FROM signals.corporate_events ce JOIN scores.results_analysis ra ON ce.symbol = ra.symbol JOIN scores.stage_snapshots ss ON ce.symbol = ss.symbol WHERE ce.event_date >= CURRENT_DATE AND ce.event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM') AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY ce.event_date LIMIT 50;"
+    description: "Fetch upcoming corporate events and their result analysis with the latest stage and trading signal."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:03"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

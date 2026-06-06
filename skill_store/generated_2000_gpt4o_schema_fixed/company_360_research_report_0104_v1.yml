@@ -1,0 +1,60 @@
+id: "company_360_research_report_0104_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Agent Adda Skill Card for Comprehensive Company Research"
+description: "This card provides a detailed overview of a company's financials, fundamentals, and technical context for watchlist creation as of today. It includes narrative evidence for the Indian market."
+input_patterns:
+  - "/research {symbol} comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "watchlist creation for today: /research {symbol} comprehensive report"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "watchlist_creation"
+  - "today"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "market.equity_eod"
+tool_plan_template: "Generate a report integrating the latest financial, technical, and narrative insights for a specified company symbol."
+sql_templates:
+  -
+    id: "fetch_latest_stage_snapshot"
+    description: "Retrieve the latest stage snapshot for the given symbol."
+    template: "SELECT * FROM scores.stage_snapshots WHERE symbol = '{symbol}' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 1;"
+  -
+    id: "fetch_latest_quarterly_results"
+    description: "Fetch the latest quarterly financial results for the given symbol."
+    template: "SELECT * FROM scores.quarterly_results WHERE symbol = '{symbol}' AND period_end = (SELECT MAX(period_end) FROM scores.quarterly_results WHERE symbol = '{symbol}' AND period_type = 'quarter') LIMIT 1;"
+  -
+    id: "fetch_latest_eod"
+    description: "Retrieve the latest end-of-day price information for the given symbol."
+    template: "SELECT * FROM market.equity_eod WHERE symbol = '{symbol}' AND trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure the symbol is specified and valid."
+  - "Check data availability and freshness for latest reports."
+synthesis_guidance: "Combine financial data, technical signals, and narrative evidence into a coherent report. Highlight key strengths and risks."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

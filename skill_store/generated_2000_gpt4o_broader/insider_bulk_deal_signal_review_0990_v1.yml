@@ -1,0 +1,64 @@
+id: "insider_bulk_deal_signal_review_0990_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0990"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for intraday context: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as comparison matrix"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Use SQL to extract and correlate insights from insider alerts and bulk deals using technical scores for comparative analysis."
+sql_templates:
+  -
+    description: "Select recent insider alerts with high insider scores."
+    query: "SELECT ia.symbol, ia.alert_date, ia.entity, ia.qty, ia.value_cr, ia.insider_score FROM signals.insider_alerts AS ia WHERE ia.alert_date >= current_date - interval '7 days' AND ia.insider_score > 70 ORDER BY ia.alert_date DESC;"
+  -
+    description: "Select bulk deals with positive price action over the last week."
+    query: "SELECT bd.symbol, bd.deal_date, bd.entity, bd.side, bd.qty, bd.price FROM signals.bulk_block_deals AS bd WHERE bd.deal_date >= current_date - interval '7 days' AND bd.side = 'BUY' ORDER BY bd.deal_date DESC;"
+python_tools:
+  -
+    id: "technicals_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbols"
+      - "snapshot_dates"
+    outputs:
+      - "technical_scores"
+      - "trend_signals"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Example code to fetch and analyze technical scores\n    selected_data = []\n    for symbol, date in zip(context['symbols'], context['snapshot_dates']):\n        # Simulate fetching related data\n        data = fetch_technical_data(symbol, date)\n        selected_data.append(data)\n    return selected_data"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure data freshness by verifying source dates are within the last 7 days."
+  - "Confirm insider scores are above 70 for highlighted alerts."
+synthesis_guidance: "Create a comparison matrix based on technical confirmation scores, highlighting symbols with high insider buying and bulk deal activities."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:03"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.bulk_block_deals.bd is not approved"
+  - "signals.insider_alerts.ia is not approved"

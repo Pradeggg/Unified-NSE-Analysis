@@ -1,0 +1,69 @@
+id: "market_3m_rotation_swing_0953_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0953"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  - "Analyze the last 3 months for market regimes, sector leadership, and potential swing candidates."
+sql_templates:
+  -
+    name: "index_performance"
+    query: "SELECT index_symbol, AVG(change_pct) AS avg_change FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol;"
+  -
+    name: "stage_2_leadership"
+    query: "SELECT sector, COUNT(*) AS num_stocks FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector ORDER BY num_stocks DESC LIMIT 5;"
+  -
+    name: "vcp_candidates"
+    query: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC, rank ASC LIMIT 10;"
+python_tools:
+  -
+    id: "calculate_risk_summary"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "index_returns"
+      - "stage_distribution_change"
+    outputs:
+      - "risks"
+    approved_tables:
+      - "market.index_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Simple risk calculation based on index volatility\n    index_volatility = max(context['index_returns']) - min(context['index_returns'])\n    stage_dynamics = len(set(context['stage_distribution_change'])) / len(context['stage_distribution_change'])\n    risks = {\"volatility\": index_volatility, \"stage_variance\": stage_dynamics}\n    return risks"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all evidence dates match the latest available data"
+  - "Confirm stage labels are correctly applied"
+  - "Limit VCP candidates by score"
+synthesis_guidance: "['Summarize index performance with emphasis on sector trends', 'Highlight leading sectors in a 3-month view', 'Select top VCP candidates for swing trading recommendations']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:41"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_change is not approved"

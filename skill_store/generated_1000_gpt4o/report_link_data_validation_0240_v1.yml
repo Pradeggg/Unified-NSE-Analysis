@@ -1,0 +1,77 @@
+id: "report_link_data_validation_0240_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0240"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  steps:
+    - "1. Fetch last 20 sessions of enhanced report runs from the report.enhanced_runs table."
+    - "2. Retrieve corresponding filtered stock data using run IDs from report.enhanced_filtered_stocks."
+    - "3. Analyze and identify missing data or broken links within the retrieved data."
+    - "4. Rank the findings for reporting with prioritization criteria."
+sql_templates:
+  -
+    name: "fetch_last_20_sessions"
+    type: "SQL"
+    status: "generated"
+    template: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 20"
+  -
+    name: "fetch_filtered_stock_data"
+    type: "SQL"
+    status: "generated"
+    template: "SELECT * FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 20)"
+python_tools:
+  -
+    id: "discrepancy_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    outputs:
+      - "findings"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Python logic for identifying discrepancies\n    pass"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all gathered data adhere to expected schema."
+  - "Check for any run ID mismatches between tables."
+  - "Look for null or malformed data fields."
+synthesis_guidance: "Compile the candidates by examining discrepancies in data consistency and completeness, focusing on the generated report links and any data that may be missing from expected TradingView exports for the last 20 sessions."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:43:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "discrepancy_analysis_tool: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "discrepancy_analysis_tool: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

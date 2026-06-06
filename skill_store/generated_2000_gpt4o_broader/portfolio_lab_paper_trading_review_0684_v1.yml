@@ -1,0 +1,74 @@
+id: "portfolio_lab_paper_trading_review_0684_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0684"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: intraday context; response style: debug trace."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for intraday context: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as debug trace"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  strategy_state: "Monitor open positions and alignment with strategy objectives based on predefined rules."
+  open_trades: "Identify open trades and analyze corresponding market data."
+  entry_exit_rules: "Define entry and exit rules based on signal logs."
+  exposure: "Assess current market exposure for potential risks and returns."
+  exceptions: "Identify any potential deviations or anomalies during strategy execution."
+sql_templates:
+  open_trades: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings WHERE qty > 0;"
+  strategy_signals: "SELECT * FROM signals.signal_log WHERE date_issued > (SELECT MAX(date_issued) FROM signals.signal_log WHERE date_resolved IS NOT NULL);"
+  entry_exit_rules: "SELECT date_issued, symbol, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE setup_class = 'entry';"
+  exposure_calculation: "SELECT symbol, market_cap_cr FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+python_tools:
+  -
+    id: "calculate_trading_exposure"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "market_cap_cr"
+      - "trade_date"
+    outputs:
+      - "exposure_percentage"
+    approved_tables:
+      - "market.equity_eod"
+    code: "def run(context):\n    total_market_cap = sum(context.market_cap_cr)\n    exposure = [(symbol, (market_cap / total_market_cap) * 100) for symbol, market_cap in zip(context.symbol, context.market_cap_cr)]\n    return exposure"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "check_symbol_existence"
+  - "validate_strategy_alignment"
+  - "confirm_exposure_limits"
+synthesis_guidance: "{'context_analysis': 'Combine data from signals and historical market data for comprehensive strategy review.', 'exposure_monitoring': 'Regularly assess sector and account-specific exposure for potential risk adjustments.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_trading_exposure: execution failed: AttributeError: 'dict' object has no attribute 'market_cap_cr'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_trading_exposure: execution failed: AttributeError: 'dict' object has no attribute 'market_cap_cr'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

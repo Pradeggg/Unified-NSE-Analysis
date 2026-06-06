@@ -1,0 +1,62 @@
+id: "fii_dii_regime_breadth_review_1898_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1898"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as action watchlist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Combine evidence from specified tables to analyze FII/DII trends, market regimes, and breadth for market risk assessment."
+sql_templates:
+  -
+    description: "Select recent FII/DII net flows and trends."
+    template: "SELECT trade_date, fii_net_today, dii_net_today, fii_trend, dii_trend, flow_signal FROM signals.fii_dii_flows ORDER BY trade_date DESC LIMIT 5;"
+  -
+    description: "Retrieve current market regime and confidence."
+    template: "SELECT trade_date, regime, confidence, days_in_regime FROM signals.regime_history ORDER BY trade_date DESC LIMIT 1;"
+  -
+    description: "Access recent market breadth indicators."
+    template: "SELECT trade_date, advances, declines, adv_volume, dec_volume, ad_signal, market_sentiment FROM breadth.market_daily ORDER BY trade_date DESC LIMIT 5;"
+  -
+    description: "Get latest index data for analysis."
+    template: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE index_symbol = 'NIFTY' ORDER BY trade_date DESC LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "SQL queries must remain read-only."
+  - "Python tools must adhere to the read-only policy."
+  - "Use only approved tables and columns."
+synthesis_guidance: "Synthesize evidence to provide a coherent market action watchlist that considers FII/DII flow trends, current market regime, and breadth indicators to determine risk-on or risk-off positions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,49 @@
+id: "fii_dii_regime_breadth_review_0694_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0694"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: weekly review; response style: debug trace."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as debug trace"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "{}"
+sql_templates:
+  -
+    description: "Get latest market regime with FII/DII flows, breadth, and index confirmation."
+    template: "SELECT fii.trade_date, fii.fii_net_today, fii.dii_net_today, fii.fii_trend, fii.dii_trend, reg.regime, reg.confidence, breadth.market_sentiment, indexeod.index_symbol, indexeod.trend_signal FROM signals.fii_dii_flows AS fii INNER JOIN signals.regime_history AS reg ON fii.trade_date = reg.trade_date INNER JOIN breadth.market_daily AS breadth ON fii.trade_date = breadth.trade_date INNER JOIN market.index_eod AS indexeod ON fii.trade_date = indexeod.trade_date WHERE fii.trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows) AND indexeod.index_symbol = 'Nifty 50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Must use approved schema tables and columns only."
+  - "Status must be generated."
+  - "Output must match the output contract."
+synthesis_guidance: "['Include debug trace in output.', 'Focus on weekly review insights.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:35:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.market_daily is not approved"

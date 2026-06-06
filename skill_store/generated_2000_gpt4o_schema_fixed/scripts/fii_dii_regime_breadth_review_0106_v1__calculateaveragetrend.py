@@ -1,0 +1,1 @@
+def run(context): return {'average_trend': context['flow_data']['fii_net_5d'].mean()}

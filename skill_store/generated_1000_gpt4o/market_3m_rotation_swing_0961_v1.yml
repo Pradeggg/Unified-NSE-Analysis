@@ -1,0 +1,96 @@
+id: "market_3m_rotation_swing_0961_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0961"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: post results; response style: comparison matrix."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "post_results"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  id: "tool_plan_market_rotation"
+  steps:
+    -
+      tool: "sql-query"
+      description: "Gather index and sector performance metrics over the last three months."
+      inputs:
+        - "trade_date"
+        - "index_symbol"
+        - "change_pct"
+      outputs:
+        - "index_returns"
+        - "leading_sectors"
+      sql_template: "SELECT index_symbol, SUM(change_pct) as total_change FROM market.index_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY index_symbol ORDER BY total_change DESC;"
+    -
+      tool: "sql-query"
+      description: "Identify stage changes and leading sectors."
+      inputs:
+        - "snapshot_date"
+        - "sector"
+        - "stage"
+      outputs:
+        - "stage_distribution_change"
+      sql_template: "SELECT sector, COUNT(DISTINCT stage) as count_stages FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY sector ORDER BY count_stages DESC;"
+    -
+      tool: "sql-query"
+      description: "Determine primary swing candidates."
+      inputs:
+        - "snapshot_date"
+        - "symbol"
+        - "vcp_score"
+      outputs:
+        - "primary_candidates"
+      sql_template: "SELECT symbol, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND vcp_score > 80 ORDER BY vcp_score DESC;"
+sql_templates:
+  - "SELECT index_symbol, SUM(change_pct) as total_change FROM market.index_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY index_symbol"
+  - "SELECT sector, COUNT(DISTINCT stage) as count_stages FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY sector"
+  - "SELECT symbol, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND vcp_score > 80"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+synthesis_guidance: "{'contextualize': 'Interpret index and sector data in context of broader market.', 'compare': 'Utilize comparison matrix to highlight stage changes and sector leadership.', 'highlight': 'Emphasize high VCP score candidates and associated risks.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:53:16"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "market.index_eod.total_change is not approved"
+  - "scores.stage2_vcp_picks.curdate is not approved"
+  - "scores.stage2_vcp_picks.date_sub is not approved"
+  - "scores.stage2_vcp_picks.month is not approved"
+  - "scores.stage_snapshots.count_stages is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"

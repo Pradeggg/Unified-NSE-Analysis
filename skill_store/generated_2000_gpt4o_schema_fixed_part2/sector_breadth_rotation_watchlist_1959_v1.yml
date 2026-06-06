@@ -1,0 +1,54 @@
+id: "sector_breadth_rotation_watchlist_1959_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1959"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for quarter to date: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as comparison matrix"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Select improving sectors with significant stage 2 participation and construct a comparison matrix to identify potential candidates for TradingView watchlists."
+sql_templates:
+  -
+    description: "Identify improving sectors by measuring change in breadth and Stage 2 participation."
+    sql: "WITH latest_snapshots AS (SELECT * FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)), \nlatest_ma AS (SELECT * FROM breadth.ma_pct_above WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.ma_pct_above)), \nlatest_stages AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) \nSELECT sd.sector, sd.breadth_signal, ma.stage2_pct \nFROM latest_snapshots sd \nJOIN latest_ma ma ON sd.snapshot_date = ma.snapshot_date \nWHERE sd.breadth_signal = 'positive' \nAND ma.stage2_pct > 20;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "sector_ranks must include rankings based on breadth and stage 2 participation."
+  - "improving_sectors must have positive breadth signals."
+  - "Limit candidate lists to sectors showing improvement in the current quarter."
+synthesis_guidance: "Utilize retrieved data to form a comparison matrix, identifying top-performing sectors and associated stocks suitable for TradingView watchlists. Ensure the matrix includes sector rankings, breadth signals, and stage 2 participation metrics."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:03"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

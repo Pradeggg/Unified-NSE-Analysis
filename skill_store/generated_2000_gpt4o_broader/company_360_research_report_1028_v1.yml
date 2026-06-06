@@ -1,0 +1,87 @@
+id: "company_360_research_report_1028_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1028"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: position-sizing context; timeframe: last 5 sessions; response style: concise table."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "position-sizing context for last 5 sessions: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as concise table"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  context: "Agent Adda research-only framing"
+  python_tools:
+    -
+      id: "run(context)"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "symbol"
+        - "timeframe"
+      outputs:
+        - "company_snapshot"
+        - "financial_trends"
+        - "technical_setup"
+        - "valuation_gaps"
+        - "thesis"
+        - "risks"
+      approved_tables:
+        - "scores.stage_snapshots"
+        - "scores.quarterly_results"
+        - "scores.annual_results"
+        - "scores.balance_sheet"
+        - "scores.cash_flow"
+        - "scores.results_analysis"
+        - "market.equity_eod"
+sql_templates:
+  -
+    template: "SELECT symbol, period_end, revenue, operating_profit, pat FROM scores.annual_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 5;"
+    description: "Retrieve latest annual results for company's financial performance."
+  -
+    template: "SELECT snapshot_date, stage_score, technical_score, fundamental_score, rsi FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' ORDER BY snapshot_date DESC LIMIT 5;"
+    description: "Extract technical and stage scores for recent sessions."
+  -
+    template: "SELECT trade_date, open, high, low, close, volume FROM market.equity_eod WHERE symbol = 'RELIANCE' ORDER BY trade_date DESC LIMIT 5;"
+    description: "Gather recent EOD market data for technical analysis."
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "status"
+  - "sql_security"
+synthesis_guidance: "{'instructions': 'Integrate SQL and narrative insights to form a concise research report with a focus on position-sizing context over the last 5 sessions.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

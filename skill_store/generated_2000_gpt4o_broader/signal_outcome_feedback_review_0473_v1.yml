@@ -1,0 +1,71 @@
+id: "signal_outcome_feedback_review_0473_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0473"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: pre market; response style: portfolio-aware output."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for pre market: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as portfolio-aware output"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+    -
+      id: "run_outcome_analysis"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "signals.signal_log"
+        - "scores.stage_snapshots"
+        - "market.equity_eod"
+      outputs:
+        - "outcome_summary"
+        - "winner_patterns"
+        - "failure_patterns"
+        - "route_improvements"
+        - "next_checks"
+      approved_tables:
+        - "signals.signal_log"
+        - "scores.stage_snapshots"
+      code: "def run(context): pass # placeholder"
+sql_templates:
+  -
+    template: "SELECT id, date_issued, symbol, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_resolved IS NOT NULL;"
+    description: "Fetch resolved signals, their outcomes, and returns for analysis."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure only approved tables and columns are used."
+  - "Maintain read-only mode for SQL operations."
+synthesis_guidance: "['Focus on detecting patterns of success and failure.', 'Consider potential improvements in signal processing.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

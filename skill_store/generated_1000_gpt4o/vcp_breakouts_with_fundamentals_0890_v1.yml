@@ -1,0 +1,82 @@
+id: "vcp_breakouts_with_fundamentals_0890_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0890"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  evidence_gaps:
+    - "intraday_volume"
+  python_tools:
+    -
+      id: "enhance_candlestick_patterns"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "trade_date"
+        - "symbol"
+        - "open"
+        - "high"
+        - "low"
+        - "close"
+        - "volume"
+      outputs:
+        - "candlestick_patterns"
+        - "support_resistance_levels"
+      approved_tables:
+        - "market.equity_eod"
+      code: "def run(context):\n    # Implement pattern detection\n    pass"
+  sql_templates:
+    -
+      name: "select_vcp_breakouts"
+      template: "SELECT e.symbol, e.trade_date, e.close, e.high, e.volume, s.fundamental_score, s.enhanced_fund_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.high = e.week52_high AND s.enhanced_fund_score > 80 AND e.volume > 1000000"
+  output_contract:
+    - "filters"
+    - "candidates"
+    - "tradingview_symbols"
+    - "evidence"
+    - "risks"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:52:35"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

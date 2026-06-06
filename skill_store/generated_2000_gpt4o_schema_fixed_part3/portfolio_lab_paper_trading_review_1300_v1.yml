@@ -1,0 +1,66 @@
+id: "portfolio_lab_paper_trading_review_1300_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1300"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: TradingView export; timeframe: weekly review; response style: ranked candidates."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "TradingView export for weekly review: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as ranked candidates"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "TradingView_export"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    name: "Paper Trading Strategy Review"
+    description: "Analyze paper trades using entry, exit, stop, and target data."
+    steps:
+      - "Fetch the latest portfolio holdings and associated scores or signals."
+      - "Review entry and exit signals with respect to current market conditions."
+    evidence_gaps:
+      - "Missing concepts around historical exposure limits and adaptive risk metrics."
+sql_templates:
+  -
+    name: "Fetch Latest Market Data"
+    description: "Retrieve latest market data for symbols present in the portfolio holdings."
+    sql: "\nSELECT h.symbol, e.close, e.volume, s.stage, s.technical_score\nFROM portfolio.holdings AS h\nJOIN market.equity_eod AS e ON h.symbol = e.symbol\nJOIN scores.stage_snapshots AS s ON h.symbol = s.symbol\nWHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)\nAND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    name: "Evaluate Signal Outcomes"
+    description: "Analyze outcomes of prior signals for paper trading."
+    sql: "\nSELECT sg.symbol, sg.signal, sg.date_issued, sg.entry_low, sg.entry_high, sg.stop_loss, sg.target_1, sg.target_2, sg.return_pct\nFROM signals.signal_log AS sg\nJOIN portfolio.holdings AS h ON sg.symbol = h.symbol\nWHERE sg.date_issued >= CURRENT_DATE - INTERVAL '1 week'\nAND sg.date_resolved IS NOT NULL;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure the latest market data is retrieved."
+  - "Validate the signal outcomes against historical price data."
+synthesis_guidance: "['Focus on separating paper trading reviews from actual portfolio holdings.', 'Provide recommendations based on a comprehensive review of trading signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

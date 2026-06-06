@@ -1,0 +1,59 @@
+id: "market_3m_rotation_swing_0289_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0289"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze sector rotations and candidate selection for swing trades using market stage data and VCP picks."
+sql_templates:
+  -
+    description: "Get index performance over the last 3 months by calculating change_pct and relative_strength."
+    template: "SELECT trade_date, index_symbol, change_pct, relative_strength FROM market.index_eod WHERE trade_date >= (SELECT MAX(trade_date) FROM market.index_eod) - INTERVAL '3 months';"
+  -
+    description: "Select top performing sectors based on stage data and enhanced fund score."
+    template: "SELECT sector, AVG(enhanced_fund_score) AS avg_fund_score FROM scores.stage_snapshots WHERE snapshot_date >= (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) - INTERVAL '3 months' GROUP BY sector ORDER BY avg_fund_score DESC LIMIT 5;"
+  -
+    description: "Fetch Stage 2 VCP candidate picks from the last 3 months."
+    template: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) - INTERVAL '3 months' AND stage = 2 ORDER BY vcp_score DESC;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all index symbols and sectors are known."
+  - "Cross-verify VCP candidates with live price data."
+synthesis_guidance: "Summarize market regime changes, sector leadership, and present swing candidates with clear risk identification."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:44:14"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

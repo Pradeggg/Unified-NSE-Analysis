@@ -1,0 +1,71 @@
+created_at: "2026-06-06T12:51:36"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: intraday context; response style: QA checklist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0782_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "Select VCP Breakouts"
+    template: "SELECT symbol, company_name, price, vcp_breakout_pct, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE vcp_breakout_pct > ? AND enhanced_fund_score > ?;"
+status: "validated"
+synthesis_guidance:
+  - "Use evidence from approved tables to support claims."
+  - "Identify any evidence_gaps if the required concept is missing from approved tables."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "QA_checklist"
+title: "VCP Breakouts With Fundamentals Variant 0782"
+tool_plan_template:
+  approved_tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+  code: "def run(context):\n    # Python code to process context and extract required outputs\n    pass"
+  inputs: "context"
+  language: "python"
+  mode: "read_only"
+  outputs:
+    - "filters"
+    - "candidates"
+    - "tradingview_symbols"
+    - "evidence"
+    - "risks"
+  required_function: "run(context)"
+validation_errors:
+
+validation_rules:
+  - "Output must not include new tables or columns."
+  - "Ensure all SQL is read-only and complies with approved schema."
+version: 1

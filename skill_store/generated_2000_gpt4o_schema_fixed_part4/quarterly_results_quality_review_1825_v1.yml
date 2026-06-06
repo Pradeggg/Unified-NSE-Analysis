@@ -1,0 +1,58 @@
+id: "quarterly_results_quality_review_1825_v1"
+version: 1
+status: "review_pending"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1825"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: risk-first review; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "risk-first review for last 5 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as action watchlist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "risk-first_review"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    task: "Generate structured overview of latest quarterly results, highlighting revenue and earnings growth, margin trends, and associated risks."
+    context: "5-session risk-first review"
+    response_style: "Action watchlist format for quick decision-making"
+sql_templates:
+  -
+    template_name: "fetch_latest_quarterly_data"
+    sql_code: "WITH latest_quarters AS (SELECT DISTINCT ON (symbol) * FROM scores.quarterly_results WHERE period_type = 'quarter' ORDER BY symbol, period_end DESC, fetched_at DESC) SELECT symbol, period_label, revenue, pat, opm_pct FROM latest_quarters LIMIT 10;"
+  -
+    template_name: "fetch_analysis_verdict"
+    sql_code: "SELECT symbol, verdict, pl_commentary, key_risks FROM scores.results_analysis WHERE period_end = (SELECT MAX(period_end) FROM scores.results_analysis) AND verdict IS NOT NULL LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Validate that symbols from fetch_latest_quarterly_data match those in fetch_analysis_verdict."
+  - "Ensure margin trends and verdicts are correctly labeled with appropriate symbols."
+synthesis_guidance: "['Highlight key movers and risks based on earnings and revenue data.', 'Frame findings in the broader market context with considerations for potential opportunities and risks.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:30"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

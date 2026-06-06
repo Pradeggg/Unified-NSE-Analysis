@@ -1,0 +1,79 @@
+id: "insider_bulk_deal_signal_review_1592_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1592"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for weekly review: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as research-only summary"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    evidence_tables:
+      - "signals.insider_alerts"
+      - "signals.bulk_block_deals"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    output_contract:
+      - "deal_summary"
+      - "insider_context"
+      - "technical_confirmation"
+      - "ranked_symbols"
+      - "risk_notes"
+sql_templates:
+  -
+    template: "SELECT I.symbol, I.alert_date, I.entity, I.qty, I.value_cr, B.deal_date, B.qty as deal_qty, B.price, B.deal_type, S.stage, S.technical_score FROM signals.insider_alerts I LEFT JOIN signals.bulk_block_deals B ON I.symbol = B.symbol LEFT JOIN scores.stage_snapshots S ON I.symbol = S.symbol WHERE I.alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts) AND S.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 10;"
+    description: "Fetch latest insider alerts with corresponding bulk deals and stage score."
+python_tools:
+  -
+    id: "process_insider_deals"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      evidence: "pandas.DataFrame"
+    outputs:
+      summary: "str"
+    approved_tables:
+      - "signals.insider_alerts"
+      - "signals.bulk_block_deals"
+    code: "def run(context):\n    # Extract relevant columns\n    df = context['evidence']\n    grouped = df.groupby('symbol').agg({'qty': 'sum', 'value_cr': 'sum'})\n    top_insiders = grouped.sort_values(by='value_cr', ascending=False).head(5)\n    summary = f\"Top insiders by value: {top_insiders.to_dict()}\"\n    return summary"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure the SQL does not have any INSERT, UPDATE, or DELETE statements."
+  - "Check that joins are only using approved _join_rules."
+synthesis_guidance: "Summarize insights based on the latest signals from insider alerts and bulk deals with focus on accumulation patterns."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:44"
+generation_model: "gpt-4o"
+validation_errors:
+  - "process_insider_deals: inputs must be a list"
+  - "process_insider_deals: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "process_insider_deals: inputs must be a list"
+    - "process_insider_deals: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

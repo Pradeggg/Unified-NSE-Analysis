@@ -1,0 +1,71 @@
+id: "data_freshness_readiness_audit_1603_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1603"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: today; response style: debug trace."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for today: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as debug trace"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "For auditing data freshness readiness, ensure all sources are up-to-date as of today. Focus on daily refresh follow-ups and trace missing histories."
+sql_templates:
+  -
+    purpose: "Verify latest data availability"
+    query: "SELECT trade_date FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+  -
+    purpose: "Check missing approved history"
+    query: "SELECT * FROM market.index_eod WHERE trade_date IS NULL;"
+python_tools:
+  -
+    id: "analyze_data_gaps"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "data_source_statuses"
+    outputs:
+      - "gap_analysis_report"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Analyze data gaps for provided contexts\n    gap_report = {}\n    for source in context['data_source_statuses']:\n        # Check for missing data criteria\n        gap_report[source] = 'No gap' if source['status'] == 'fresh' else 'Gap found'\n    return gap_report"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all tables have entries for the latest expected date."
+  - "Identify any anomalies in data freshness or gaps in historical entries."
+synthesis_guidance: "Synthesize findings from data checks to provide comprehensive freshness status and required actions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:56"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analyze_data_gaps: execution failed: KeyError: 'data_source_statuses'"
+review:
+  status: "needs_heal"
+  findings:
+    - "analyze_data_gaps: execution failed: KeyError: 'data_source_statuses'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

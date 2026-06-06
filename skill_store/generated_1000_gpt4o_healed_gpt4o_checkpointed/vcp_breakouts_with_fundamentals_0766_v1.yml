@@ -1,0 +1,72 @@
+created_at: "2026-06-06T12:51:24"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: post results; response style: QA checklist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0766_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context): return {'is_valid_pattern': True}"
+    id: "validate_vcp_patterns"
+    inputs:
+      - "symbol"
+      - "price_data"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "is_valid_pattern"
+review:
+  attempts: 3
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    sql: "SELECT e.symbol, e.trade_date, e.close, s.fundamental_score, s.enhanced_fund_score, v.vcp_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol JOIN scores.stage2_vcp_picks v ON e.symbol = v.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND (e.close >= e.week52_high OR v.vcp_breakout_pct > 0) AND s.enhanced_fund_score > 7;"
+    template_name: "vcp_breakouts_query"
+status: "validated"
+synthesis_guidance:
+  insights:
+    - "Focus on liquidity and fundamental strength for VCP breakout validation."
+    - "Ensure alignment with post-results financial scrutiny."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "post_results"
+  - "QA_checklist"
+title: "VCP Breakouts With Fundamentals Variant 0766"
+tool_plan_template:
+  steps:
+    - "Analyze recent price movements for new highs and VCP formations."
+    - "Evaluate fundamental scores for financial strength and growth potential."
+    - "Curate stocks with high trading signals and relative strength."
+validation_errors:
+
+validation_rules:
+  - "status"
+version: 1

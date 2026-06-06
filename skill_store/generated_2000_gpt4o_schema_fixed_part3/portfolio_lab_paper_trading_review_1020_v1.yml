@@ -1,0 +1,59 @@
+id: "portfolio_lab_paper_trading_review_1020_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1020"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: TradingView export; timeframe: latest EOD; response style: concise table."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "TradingView export for latest EOD: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as concise table"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze paper trading strategies focusing on the latest EOD data. Use a concise table format to present entries, exits, stop losses, targets, and exposure, ensuring separation from real holdings."
+sql_templates:
+  -
+    description: "Get latest stage and score context for symbols in holdings."
+    sql: "SELECT h.symbol, s.stage, s.stage_score, s.technical_score FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    description: "Fetch the latest EOD prices for symbols in holdings."
+    sql: "SELECT e.symbol, e.close FROM market.equity_eod e WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND e.symbol IN (SELECT symbol FROM portfolio.holdings);"
+  -
+    description: "Retrieve latest signals for strategy assessment."
+    sql: "SELECT sl.symbol, sl.signal, sl.entry_low, sl.entry_high, sl.stop_loss, sl.target_1, sl.target_2 FROM signals.signal_log sl WHERE sl.date_issued = (SELECT MAX(date_issued) FROM signals.signal_log) ORDER BY sl.symbol;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "schema_validation"
+  - "result_size_limiter"
+synthesis_guidance: "Combine the insights from SQL queries to produce a consolidated summary table highlighting the overall strategy state, current open trades, key entry/exit rules, as well as possible exposure and exceptions, with a focus on paper trading contexts."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:13"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:52:57"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: comparison matrix."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0938_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  stocks_vcp_breakout:
+    query: "SELECT v.symbol, v.company_name, v.sector, v.price, v.vcp_score, s.enhanced_fund_score, s.change_1w_pct FROM scores.stage2_vcp_picks v JOIN scores.stage_snapshots s ON v.symbol = s.symbol WHERE v.vcp_score > 50 AND s.enhanced_fund_score > 70 AND s.change_1w_pct > 0 ORDER BY v.vcp_score DESC, s.enhanced_fund_score DESC"
+    type: "SELECT"
+status: "validated"
+synthesis_guidance: "Focus on providing a comparison matrix highlighting stocks with high VCP scores and fundamental strength over the last 20 sessions."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "comparison_matrix"
+title: "VCP Breakouts With Fundamentals Variant 0938"
+tool_plan_template:
+  filters: "Select stocks with positive VCP score, enhanced fund_score, and recent price change."
+  strategy: "Use the scores.stage2_vcp_picks table to identify VCP breakouts with strong fundamental scores and recent performance."
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+version: 1

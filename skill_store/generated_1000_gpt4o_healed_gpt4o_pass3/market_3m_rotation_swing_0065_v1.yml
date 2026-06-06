@@ -1,0 +1,72 @@
+created_at: "2026-06-06T12:41:36"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: post results; response style: concise table."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0065_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 2
+sql_templates:
+  -
+    description: "Assess index performance over the last 3 months."
+    query: "SELECT index_symbol, AVG(change_pct) FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol;"
+    template_name: "index_performance_analysis"
+  -
+    description: "Evaluate sector performance."
+    query: "SELECT sector, AVG(change_1m_pct) FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' AND change_1m_pct IS NOT NULL GROUP BY sector;"
+    template_name: "sector_performance"
+  -
+    description: "Identify Stage 2 candidates."
+    query: "SELECT symbol, stage_score FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= CURRENT_DATE - INTERVAL '3 months';"
+    template_name: "stage2_candidates"
+status: "validated"
+synthesis_guidance: "Focus on concise representation of market trends and leadership transitions. Prioritize actionable insights from data."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "post_results"
+  - "concise_table"
+title: "3M Market Rotation Swing Assessment Variant 0065"
+tool_plan_template:
+  description: "Identify market regimes, sector leadership, and stage 2 swing candidates with potential risks."
+  steps:
+    - "Analyze index performance over the last 3 months to determine regime shifts."
+    - "Identify sector rotations from index and equity data."
+    - "Evaluate Stage 2 leadership using approved scores tables."
+    - "Assess liquid swing candidates using VCP analysis."
+    - "Conduct a risk-first review post-earnings season."
+validation_errors:
+
+validation_rules:
+  - "Ensure all data is from the last 3 months."
+  - "Confirm swing candidates are in Stage 2."
+  - "Leading sectors must show significant rotation."
+version: 1

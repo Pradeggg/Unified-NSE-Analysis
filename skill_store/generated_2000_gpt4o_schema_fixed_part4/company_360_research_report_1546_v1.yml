@@ -1,0 +1,98 @@
+id: "company_360_research_report_1546_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1546"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: freshness audit; timeframe: last 3 months; response style: research-only summary."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "freshness audit for last 3 months: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as research-only summary"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "freshness_audit"
+  - "last_3_months"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    inputs:
+      symbol: "RELIANCE"
+      lookback_months: 3
+    steps:
+      - "Fetch the latest stage snapshots and scores for the symbol."
+      - "Retrieve quarterly and annual financials within the last 3 months."
+      - "Get technical context using EOD data and calculate any relevant metrics."
+      - "Synthesize fundamental scores and insights with risks and valuation gaps."
+    outputs:
+      - "assembled_research_card"
+sql_templates:
+  -
+    description: "Latest stage and technical scores for the provided symbol."
+    template: "SELECT * FROM scores.stage_snapshots WHERE symbol = '{{ symbol }}' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    description: "Latest quarterly financials."
+    template: "SELECT DISTINCT ON (symbol) * FROM scores.quarterly_results WHERE period_type = 'quarter' AND symbol = '{{ symbol }}' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC;"
+  -
+    description: "Latest annual financials."
+    template: "SELECT DISTINCT ON (symbol) * FROM scores.annual_results WHERE period_type = 'annual' AND symbol = '{{ symbol }}' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC;"
+  -
+    description: "Technical EOD data for the specified symbol."
+    template: "SELECT * FROM market.equity_eod WHERE symbol = '{{ symbol }}' AND trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+python_tools:
+  -
+    id: "run_context_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      symbol: "RELIANCE"
+      data: "assembled_research_card"
+    outputs:
+      analysis_summary: "Structured research summary"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "scores.quarterly_results"
+      - "scores.annual_results"
+      - "scores.balance_sheet"
+      - "scores.cash_flow"
+      - "scores.results_analysis"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Process the data and generate analysis summary\n    pass"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all evidence data is from the last 3 months."
+  - "Verify all SQL results match the inputs and constraints."
+synthesis_guidance: "['Combine financial, technical, and narrative data into cohesive insights.', 'Focus on recent performance and any emerging risks or opportunities.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_context_analysis: inputs must be a list"
+  - "run_context_analysis: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_context_analysis: inputs must be a list"
+    - "run_context_analysis: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

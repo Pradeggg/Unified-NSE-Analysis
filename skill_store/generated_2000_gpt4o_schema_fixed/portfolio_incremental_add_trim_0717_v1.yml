@@ -1,0 +1,70 @@
+id: "portfolio_incremental_add_trim_0717_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Focus: sector-relative comparison; timeframe: latest EOD; response style: QA checklist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for latest EOD: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Assess the portfolio for sectors and stocks needing add/trim actions by comparing current holdings, market signals, and sector exposure."
+sql_templates:
+  -
+    name: "latest_stage_snapshots"
+    template: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+  -
+    name: "join_holdings_with_stages"
+    template: "SELECT h.symbol, h.qty, h.avg_cost, s.change_1d_pct, s.change_1w_pct, s.change_1m_pct, s.trading_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+python_tools:
+  -
+    id: "run_portfolio_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "latest_stage_snapshots"
+      - "join_holdings_with_stages"
+    outputs:
+      - "portfolio_review_summary"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "# Function to evaluate portfolio for add/trim\n\nimport pandas as pd\n\ndef run(context):\n    snapshots = context.inputs['latest_stage_snapshots']\n    holdings = context.inputs['join_holdings_with_stages']\n\n    # Perform analysis\n    summary = {'add_candidates': [], 'trim_candidates': []}\n    for index, row in holdings.iterrows():\n        if row['trading_signal'] in ['BUY', 'STRONG_BUY']:\n            summary['add_candidates'].append(row['symbol'])\n        elif row['trading_signal'] == 'SELL':\n            summary['trim_candidates'].append(row['symbol'])\n\n    return {'portfolio_review_summary': summary}"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure portfolio_state reflects the latest holdings."
+  - "Check sector_exposure for significant disparities."
+  - "Verify add_candidates have constructive signals."
+  - "Identify trim_candidates with weakening signals."
+  - "Risk_flags must highlight high-risk stocks."
+synthesis_guidance: "['Summarize findings as a QA checklist.', 'Focus analysis on sector-relative performance.', 'Highlight decisive signals for add/trim actions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:00"
+generation_model: "gpt-4o"
+validation_errors:
+  - "import pandas is not allowed"
+review:
+  status: "needs_heal"
+  findings:
+    - "import pandas is not allowed"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

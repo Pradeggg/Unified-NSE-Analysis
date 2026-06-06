@@ -1,0 +1,68 @@
+id: "vcp_breakouts_with_fundamentals_1878_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1878"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    description: "Build a filtered list of stocks based on VCP breakout criteria and fundamental scores."
+sql_templates:
+  -
+    template: "WITH latest_eod AS (SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND series = 'EQ'), latest_vcp AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)), latest_stages AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT e.symbol, s.company_name, s.sector, e.close AS latest_close, s.fundamental_score FROM latest_eod e JOIN latest_stages s ON e.symbol = s.symbol JOIN latest_vcp v ON s.symbol = v.symbol WHERE v.trading_signal IN ('BUY', 'STRONG_BUY') AND s.stage = 'STAGE_2' AND e.close >= 0.9 * e.week52_high ORDER BY v.vcp_score DESC, s.fundamental_score DESC LIMIT 10;"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "filtered_results"
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    code: "def run(context): # Implement logic here based on constraints"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure symbols have valid stage 2 classification."
+  - "Confirm buy or strong-buy signals."
+  - "Check close prices are within 10% of 52-week highs."
+synthesis_guidance: "Focus on identifying candidates with strong VCP and fundamental signals. Prioritize symbols with strong trends and high scores."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:53"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: python syntax error: expected an indented block after function definition on line 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: python syntax error: expected an indented block after function definition on line 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

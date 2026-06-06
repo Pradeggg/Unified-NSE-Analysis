@@ -1,0 +1,64 @@
+id: "portfolio_lab_paper_trading_review_1314_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1314"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: latest EOD; response style: exceptions and gaps first."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for latest EOD: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    status: "generated"
+    steps:
+      - "Generate watchlist for paper trading strategies."
+      - "Filter by latest EOD entries, exits, and signals."
+sql_templates:
+  status: "generated"
+  templates:
+    -
+      description: "Select latest EOD data for paper trading watchlist."
+      template: "SELECT s.symbol, s.signal, s.date_issued, e.close FROM signals.signal_log s JOIN market.equity_eod e ON s.symbol = e.symbol WHERE s.date_issued = (SELECT MAX(date_issued) FROM signals.signal_log) AND e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND s.signal IN ('BUY', 'SELL') LIMIT 50;"
+  validation_rules:
+
+  synthesis_guidance:
+    status: "generated"
+    guidance: "Focus on identifying gaps in the strategy's setup or resolution."
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "{'status': 'generated', 'rules': ['Ensure latest data retrieval aligns with response expectation.']}"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,46 @@
+id: "agent_adda_skill_card_0345_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation"
+description: "Conduct a freshness audit and data validation for enhanced reports over the last 20 sessions."
+input_patterns:
+  - "review report links not working"
+  - "validate generated report links and missing data"
+  - "freshness audit for last 20 sessions"
+tags:
+  - "report_qa"
+  - "links"
+  - "data_validation"
+  - "freshness_audit"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Assess data validation and freshness by verifying report links and ensuring dataset completeness for the last 20 sessions."
+sql_templates:
+  -
+    query: "SELECT run_id, run_ts FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '20 days'"
+    description: "Retrieve recent report runs within the last 20 days."
+  -
+    query: "SELECT run_id, symbol, score FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM recent_runs)"
+    description: "Check stock data availability for recent report runs."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all reports are accessible."
+  - "Validate completeness of stock data for each report run."
+synthesis_guidance: "Compile findings into a concise QA checklist format, highlighting any broken links, missing data, and suggested remediation steps."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:51:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_filtered_stocks.recent_runs is not approved"
+  - "report.enhanced_runs.now is not approved"

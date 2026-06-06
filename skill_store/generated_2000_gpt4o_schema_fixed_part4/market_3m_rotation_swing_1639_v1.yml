@@ -1,0 +1,60 @@
+id: "market_3m_rotation_swing_1639_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1639"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for last 20 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    template_id: "index_returns_last_3_months"
+    sql: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 months') ORDER BY trade_date DESC;"
+  -
+    template_id: "stage2_leadership"
+    sql: "SELECT snapshot_date, symbol, sector, stage, relative_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' ORDER BY relative_strength DESC LIMIT 10;"
+  -
+    template_id: "vcp_candidates"
+    sql: "SELECT snapshot_date, symbol, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all retrieved dates are within the last 3 months."
+  - "Cross-verify sector leadership with relative strength data."
+synthesis_guidance: "['Aggregate data to highlight key sectors and indices showing the largest changes.', 'Identify primary swing trade candidates from Stage 2 stocks and VCP picks.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:35"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

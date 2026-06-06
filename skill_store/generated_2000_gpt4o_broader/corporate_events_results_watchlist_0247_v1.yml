@@ -1,0 +1,60 @@
+id: "corporate_events_results_watchlist_0247_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0247"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: ranked candidates."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for last 3 months: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as ranked candidates"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Query evidence tables for recent corporate events and results, analyze relative sector performance over the last 3 months, and rank stocks for watchlisting."
+sql_templates:
+  -
+    type: "events_query"
+    purpose: "Retrieve recent and upcoming corporate events."
+    query: "SELECT id, symbol, event_type, event_date, purpose_raw, detail, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    type: "results_analysis"
+    purpose: "Analyze quarterly results for revenue and profit growth."
+    query: "SELECT symbol, growth_yoy_revenue_pct, growth_yoy_pat_pct, score, created_at FROM scores.results_analysis WHERE created_at >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    type: "sector_performance"
+    purpose: "Evaluate sector-relative performance for stocks."
+    query: "SELECT symbol, sector, stage_score FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "ensure_date_format"
+  - "sector_alignment"
+synthesis_guidance: "Focus on generating a ranked list of stocks by evaluating their event participation and results-driven performance. Highlight those with standout relative sector performance."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:04"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

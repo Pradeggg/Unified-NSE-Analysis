@@ -1,0 +1,57 @@
+id: "portfolio_lab_paper_trading_review_0236_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0236"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for last 20 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as ranked candidates"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  strategy_state: "Assess the current state of strategies based on recent signals."
+  open_trades: "Identify open trades and their characteristics."
+  entry_exit_rules: "Evaluate the effectiveness of entry and exit rules."
+  exposure: "Determine current exposure and alignment with market trends."
+  exceptions: "Highlight any deviations in expected strategy performance."
+sql_templates:
+  fetch_recent_signals: "SELECT * FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '20 days';"
+  fetch_holdings: "SELECT * FROM portfolio.holdings;"
+  market_snapshot: "SELECT * FROM market.equity_eod WHERE trade_date = CURRENT_DATE - INTERVAL '20 days';"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "ensure_recent_data"
+synthesis_guidance: "Convert fetched signals and market data into actionable insights for portfolio adjustment."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:57"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

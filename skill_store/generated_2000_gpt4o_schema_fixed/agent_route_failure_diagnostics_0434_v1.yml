@@ -1,0 +1,51 @@
+id: "agent_route_failure_diagnostics_0434_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0434"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as portfolio-aware output"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  -
+    template_name: "latest_sessions"
+    statement: "SELECT r.run_id, r.run_ts, s.symbol, s.score, s.recommendation \nFROM report.enhanced_runs r \nJOIN report.enhanced_filtered_stocks s \nON r.run_id = s.run_id \nORDER BY r.run_ts DESC \nLIMIT 20;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "use_cases"
+synthesis_guidance: "['Derive insights from the recent 20 sessions to identify Agent Adda route failures.', 'Focus on missing tool validation and symbol resolution problems.', 'Use portfolio-aware analysis to suggest improvements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:13"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

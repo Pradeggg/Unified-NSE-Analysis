@@ -1,0 +1,51 @@
+id: "corporate_events_results_watchlist_0919_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0919"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for latest EOD: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as comparison matrix"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "filtered-select-plan"
+sql_templates:
+  -
+    type: "event_calendar"
+    query: "WITH latest_stages AS (SELECT DISTINCT ON (symbol) symbol, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY symbol, snapshot_date DESC) SELECT ce.symbol, ce.event_date, ce.event_type, ce.purpose_raw, ce.source FROM signals.corporate_events ce JOIN latest_stages ls ON ce.symbol = ls.symbol WHERE ce.event_date >= CURRENT_DATE AND ls.stage = 'STAGE_2' ORDER BY ce.event_date LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Status must be generated."
+  - "Ensure that query semantics respect approved schema and joining rules."
+synthesis_guidance: "['Focus on time-relevant and stage-specific events.', 'Include source-trail for event verifications.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

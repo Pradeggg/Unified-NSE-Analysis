@@ -1,0 +1,59 @@
+id: "signal_outcome_feedback_review_1411_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1411"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: quick scan; timeframe: latest EOD; response style: portfolio-aware output."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for latest EOD: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as portfolio-aware output"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "latest_EOD"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "{}"
+sql_templates:
+  -
+    template_name: "signal_outcome_summary"
+    sql: "SELECT \n    symbol, \n    COUNT(CASE WHEN hit_target THEN 1 END) AS target_hits, \n    COUNT(CASE WHEN hit_stop THEN 1 END) AS stop_hits, \n    AVG(return_pct) AS avg_return_pct \nFROM \n    signals.signal_log \nWHERE \n    date_resolved IS NOT NULL \nGROUP BY \n    symbol \nORDER BY \n    target_hits DESC, \n    avg_return_pct DESC \nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all signal processing respects resolved states for accuracy."
+synthesis_guidance: "['Focus on actionable insights from past signal performance.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:20"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.avg_return_pct is not approved"
+  - "signals.signal_log.stop_hits is not approved"
+  - "signals.signal_log.target_hits is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "signals.signal_log.avg_return_pct is not approved"
+    - "signals.signal_log.stop_hits is not approved"
+    - "signals.signal_log.target_hits is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

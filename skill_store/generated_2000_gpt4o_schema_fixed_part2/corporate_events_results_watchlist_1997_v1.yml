@@ -1,0 +1,58 @@
+id: "corporate_events_results_watchlist_1997_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1997"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: weekly review; response style: comparison matrix."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as comparison matrix"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  type: "sql"
+  explanation: "Generate data for corporate events and results comparison matrix."
+  evidence_query:
+    -
+      query: "SELECT ce.symbol, ce.event_type, ce.event_date, ra.company_name, ra.industry, ra.verdict, ss.stage, ss.trading_signal FROM signals.corporate_events ce JOIN scores.results_analysis ra ON ce.symbol = ra.symbol JOIN scores.stage_snapshots ss ON ce.symbol = ss.symbol WHERE ce.event_date >= CURRENT_DATE - INTERVAL '1 week' ORDER BY ce.event_date DESC LIMIT 10;"
+      purpose: "Retrieve recent corporate events and align with results analysis and current stage."
+sql_templates:
+  -
+    template: "SELECT ce.symbol, ce.event_type, ce.event_date, ra.company_name, ra.industry, ra.verdict, ss.stage, ss.trading_signal FROM signals.corporate_events ce JOIN scores.results_analysis ra ON ce.symbol = ra.symbol JOIN scores.stage_snapshots ss ON ce.symbol = ss.symbol WHERE ce.event_date >= CURRENT_DATE - INTERVAL '1 week' ORDER BY ce.event_date DESC LIMIT 10;"
+    notes: "Fetch events and results for weekly review with sector-relative context."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure alignment of symbol across tables."
+  - "Limit to recent events from the past week."
+  - "Use the latest stage snapshots for current context."
+synthesis_guidance: "{'guidelines': ['Generate a comparison matrix capturing symbol, event type, and results analysis verdict.', 'Ensure sectors are appropriately compared with relevant insights.', 'Structure output to support watchlist decisions.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:40"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

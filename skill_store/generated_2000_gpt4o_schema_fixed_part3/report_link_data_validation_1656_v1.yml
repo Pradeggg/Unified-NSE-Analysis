@@ -1,0 +1,48 @@
+id: "report_link_data_validation_1656_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1656"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for quarter to date: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Perform a data validation check focusing on run metadata and freshness. Use SQL templates to identify broken or missing report links relying on latest quarter data."
+sql_templates:
+  - "WITH latest_runs AS (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months'), missing_data AS (SELECT f.run_id, f.symbol FROM report.enhanced_filtered_stocks f LEFT JOIN latest_runs r ON f.run_id = r.run_id WHERE r.run_id IS NULL) SELECT * FROM missing_data;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure run timestamps are within the last quarter."
+  - "Check for missing stock data in filtered results."
+synthesis_guidance: "Focus on the last quarter for validation checks and highlight any data discrepancies in enhanced reports."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

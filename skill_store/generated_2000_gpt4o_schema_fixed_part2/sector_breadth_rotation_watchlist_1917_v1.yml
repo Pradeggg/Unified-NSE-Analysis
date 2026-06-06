@@ -1,0 +1,56 @@
+id: "sector_breadth_rotation_watchlist_1917_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1917"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for latest EOD: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as comparison matrix"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+
+sql_templates:
+  -
+    name: "sector_breadth"
+    description: "Fetch latest sector breadth data with stage 2 participation."
+    sql: "WITH latest_sector_snap AS (SELECT MAX(snapshot_date) AS latest_date FROM breadth.sector_daily),\nlatest_stage_snap AS (SELECT MAX(snapshot_date) AS latest_date FROM scores.stage_snapshots)\nSELECT sd.sector, sd.pct_above_50dma, sd.change_5d, ma.stage2_pct\nFROM breadth.sector_daily sd\nJOIN latest_sector_snap lss ON sd.snapshot_date = lss.latest_date\nJOIN breadth.ma_pct_above ma ON sd.snapshot_date = ma.snapshot_date\nWHERE sd.snapshot_date = lss.latest_date\nORDER BY ma.stage2_pct DESC, sd.pct_above_50dma DESC\nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Check that the latest snapshot date matches for all required tables."
+  - "Ensure sectors with increasing stage 2 participation are highlighted."
+synthesis_guidance: "['Focus on providing sector-relative comparisons based on breadth and stage 2 participation.', 'Use a comparison matrix format to clearly present rankings and improving sectors.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

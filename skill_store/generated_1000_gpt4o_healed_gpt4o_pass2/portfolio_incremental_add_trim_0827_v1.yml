@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:52:01"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: action watchlist."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0827_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for last 5 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as action watchlist"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "retrieve_sector_data"
+    query: "SELECT symbol, sector, change_1w_pct, stage, stage_score, trend_signal FROM scores.stage_snapshots WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '5 days');"
+  -
+    name: "get_current_holdings"
+    query: "SELECT symbol, qty, avg_cost FROM portfolio.holdings;"
+status: "validated"
+synthesis_guidance: "['Assess current portfolio holdings against recent sector performance.', 'Identify symbols with positive trend signals as add candidates.', 'Identify symbols with declining stage scores as trim candidates.', 'Flag high volatility sectors for risk management.']"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "action_watchlist"
+title: "Portfolio Incremental Add Trim Review Variant 0827"
+tool_plan_template:
+
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+version: 1

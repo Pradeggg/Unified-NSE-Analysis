@@ -1,0 +1,68 @@
+id: "fii_dii_regime_breadth_review_1660_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1661"
+description: "Analyze FII/DII flow trend, market regime, and breadth to determine market risk context. Variant focus: TradingView export; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for quarter to date: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as debug trace"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    name: "Flow and Regime Analysis"
+    template: "Combine FII/DII flows with regime history to identify market conditions."
+  -
+    name: "Breadth Analysis"
+    template: "Integrate daily market breadth indicators for comprehensive analysis."
+sql_templates:
+  -
+    name: "FII DII Flows and Regime"
+    sql: "SELECT f.trade_date, f.flow_signal, r.regime, r.confidence FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date WHERE f.trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    name: "Market Breadth"
+    sql: "SELECT b.trade_date, b.ad_signal, b.trin_signal FROM breadth.market_daily b WHERE b.trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    name: "Index Confirmation"
+    sql: "SELECT i.trade_date, i.close, i.trend_signal FROM market.index_eod i WHERE i.index_symbol = 'NIFTY 50' AND i.trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all SQL statements use approved tables."
+  - "Check that the date range covers quarter to date."
+synthesis_guidance: "['Summarize flows, regime, and breadth for risk evaluation.', 'Highlight conflicting signals in debug trace.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.b is not approved"
+  - "market.index_eod.i is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "breadth.market_daily.b is not approved"
+    - "market.index_eod.i is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

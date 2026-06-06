@@ -1,0 +1,84 @@
+created_at: "2026-06-06T12:43:23"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: today; response style: ranked candidates."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0201_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    import pandas as pd\n    # Assume context['scores.stage_snapshots'] is a DataFrame\n    df = context['scores.stage_snapshots']\n    recent_df = df[df['snapshot_date'] >= (pd.Timestamp.now() - pd.Timedelta('90 days'))]\n    leading_sectors = (recent_df.groupby('sector')['stage_score']\n                       .mean()\n                       .sort_values(ascending=False)\n                       .head(5)\n                       .index\n                       .tolist())\n    return {'leading_sectors': leading_sectors}"
+    id: "calculate_leading_sectors"
+    inputs:
+      - "scores.stage_snapshots"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "leading_sectors"
+review:
+  attempts: 3
+  findings:
+    - "import pandas is not allowed"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    query: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 month')"
+    task: "Fetch index performance over the last 3 months."
+status: "test_failed"
+synthesis_guidance:
+  - "Synthesize index performance, sector dynamics, and candidate identification into actionable insights."
+  - "Ensure guidance reflects Indian market context and trends."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "today"
+  - "ranked_candidates"
+title: "3M Market Rotation Swing Assessment Variant 0201"
+tool_plan_template:
+  approved_tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+  python_tools:
+    -
+      approved_tables:
+        - "scores.stage_snapshots"
+      code: "def run(context):\n    import pandas as pd\n    # Assume context['scores.stage_snapshots'] is a DataFrame\n    df = context['scores.stage_snapshots']\n    recent_df = df[df['snapshot_date'] >= (pd.Timestamp.now() - pd.Timedelta('90 days'))]\n    leading_sectors = (recent_df.groupby('sector')['stage_score']\n                       .mean()\n                       .sort_values(ascending=False)\n                       .head(5)\n                       .index\n                       .tolist())\n    return {'leading_sectors': leading_sectors}"
+      id: "calculate_leading_sectors"
+      inputs:
+        - "scores.stage_snapshots"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "leading_sectors"
+validation_errors:
+  - "import pandas is not allowed"
+validation_rules:
+  - "Ensure leading sectors are derived within last 90 days."
+  - "Aggregate index returns correctly for the timeframe."
+version: 1

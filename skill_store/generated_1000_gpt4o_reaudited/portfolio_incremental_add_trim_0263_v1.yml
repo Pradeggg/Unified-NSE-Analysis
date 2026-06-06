@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:43:59"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: post results; response style: ranked candidates."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0263_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for post results: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+  -
+    name: "fetch_holdings_with_scores"
+    template: "WITH latest_scores AS (SELECT symbol, company_name, sector, stage, stage_score, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), holdings_data AS (SELECT h.symbol, h.qty, h.avg_cost, ls.company_name, ls.sector, ls.stage, ls.stage_score, ls.technical_score FROM portfolio.holdings h JOIN latest_scores ls ON h.symbol = ls.symbol) SELECT * FROM holdings_data;"
+    type: "SELECT"
+status: "validated"
+synthesis_guidance: "Prioritize holding candidates for addition with strong technical scores and holding candidates for trimming with declining stage scores."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "ranked_candidates"
+title: "Portfolio Incremental Add Trim Review Variant 0263"
+tool_plan_template: "Identify candidates for addition or trimming by analyzing current holdings against stage and technical scores."
+validation_rules:
+  - "Ensure all required keys are present."
+  - "SQL queries must be read-only."
+  - "Output must match the specified contract."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

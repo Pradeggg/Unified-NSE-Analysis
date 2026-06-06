@@ -1,0 +1,53 @@
+id: "portfolio_incremental_add_trim_1431_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1431"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for last 20 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  inputs:
+    - "current_portfolio"
+    - "market_conditions_last_20_sessions"
+  outputs:
+    - "portfolio_state"
+    - "sector_exposure"
+    - "add_candidates"
+    - "trim_candidates"
+    - "risk_flags"
+sql_templates:
+  - "WITH last_20_sessions AS (SELECT symbol, AVG(change_1d_pct) AS avg_change_1d_pct FROM scores.stage_snapshots WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '20 days') GROUP BY symbol), holdings_exposure AS (SELECT h.symbol, h.qty, s.sector FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY h.symbol, s.sector) SELECT h.symbol, h.qty, h.sector, l.avg_change_1d_pct FROM holdings_exposure h JOIN last_20_sessions l ON h.symbol = l.symbol"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all selected stocks exist in both evidence tables."
+  - "Use only approved columns for any selection criteria."
+synthesis_guidance: "['Focus on identifying high or low exposure based on sector performance.', 'Highlight stocks with notable signals for adding or trimming based on recent trends.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "portfolio.holdings.sector is not approved"

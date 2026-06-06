@@ -1,0 +1,71 @@
+id: "fii_dii_regime_breadth_review_1534_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1534"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: research-only summary."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as research-only summary"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  python_tools:
+
+sql_templates:
+  -
+    name: "fetch_fii_dii_flows"
+    query: "SELECT trade_date, fii_net_today, dii_net_today, flow_signal, fii_trend, dii_trend FROM signals.fii_dii_flows WHERE trade_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 20 DAY) AND CURDATE();"
+  -
+    name: "fetch_regime_history"
+    query: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 20 DAY) AND CURDATE();"
+  -
+    name: "fetch_market_breadth"
+    query: "SELECT trade_date, advances, declines, adv_volume, dec_volume, net_ad, ad_signal, trin, market_sentiment FROM breadth.market_daily WHERE trade_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 20 DAY) AND CURDATE();"
+  -
+    name: "fetch_index_eod"
+    query: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 20 DAY) AND CURDATE();"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data completeness for requested timeframe."
+  - "Validate flow trends and market sentiment alignment."
+  - "Correlate breadth signals with index trends."
+synthesis_guidance: "['Connect flow and regime insights to market sentiment.', 'Explain breadth indicators in the context of index movements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:09:46"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.curdate is not approved"
+  - "breadth.market_daily.date_sub is not approved"
+  - "breadth.market_daily.day is not approved"
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.day is not approved"
+  - "signals.fii_dii_flows.curdate is not approved"
+  - "signals.fii_dii_flows.date_sub is not approved"
+  - "signals.fii_dii_flows.day is not approved"
+  - "signals.regime_history.curdate is not approved"
+  - "signals.regime_history.date_sub is not approved"
+  - "signals.regime_history.day is not approved"

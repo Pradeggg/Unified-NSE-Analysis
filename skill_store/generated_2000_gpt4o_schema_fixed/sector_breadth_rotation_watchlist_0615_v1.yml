@@ -1,0 +1,67 @@
+id: "sector_breadth_rotation_watchlist_0615_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0615"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: risk-first review; timeframe: latest EOD; response style: debug trace."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "risk-first review for latest EOD: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as debug trace"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "risk-first_review"
+  - "latest_EOD"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Generate a watchlist by analyzing the latest sector breadth, stage migration metrics, relative strength, and price momentum. Use a risk-first approach to evaluate sectors and stocks for potential addition to TradingView."
+sql_templates:
+  -
+    name: "sector_breadth_analysis"
+    template: "SELECT b.sector, b.breadth_signal, ma.stage2_pct, s.stage, s.symbol, s.company_name, s.trading_signal, e.close \nFROM breadth.sector_daily b \nJOIN breadth.ma_pct_above ma ON b.snapshot_date = ma.snapshot_date \nJOIN scores.stage_snapshots s ON b.sector = s.sector \nJOIN market.equity_eod e ON s.symbol = e.symbol \nWHERE b.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) \nAND s.stage = 'STAGE_2' \nAND s.trading_signal IN ('BUY', 'STRONG_BUY') \nAND e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) \nORDER BY ma.stage2_pct DESC, b.breadth_signal DESC \nLIMIT 10;"
+python_tools:
+  -
+    id: "debug_trace_processor"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_ranks"
+      - "improving_sectors"
+    outputs:
+      - "debug_trace"
+    approved_tables:
+      - "breadth.sector_daily"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    debug_logs = []\n    for sector in context['improving_sectors']:\n        debug_logs.append(f\"Sector: {sector['name']}, Stage2%: {sector['stage2_pct']}\")\n    return {'debug_trace': debug_logs}"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all sector ranks and stage participation details are from the latest date."
+  - "Validate computation of stage2_pct by comparing values across sectors."
+synthesis_guidance: "['Emphasize risk-first review and provide debug traces for better insights.', 'Highlight sectors with high stage 2 participation and positive breadth signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:26:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "debug_trace_processor: execution failed: KeyError: 'improving_sectors'"
+review:
+  status: "needs_heal"
+  findings:
+    - "debug_trace_processor: execution failed: KeyError: 'improving_sectors'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

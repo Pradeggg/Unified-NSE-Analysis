@@ -1,0 +1,55 @@
+id: "quarterly_results_quality_review_0397_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0397"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: sector-relative comparison; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "sector-relative comparison for weekly review: latest quarterly results analysis"
+  - "which companies had strong quarterly results as exceptions and gaps first"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Assessing quarterly results with focus on exceptions and sector comparisons using predefined SQL."
+sql_templates:
+  -
+    purpose: "Retrieve latest quarterly results with exceptions and gaps"
+    template: "WITH latest_results AS (SELECT DISTINCT ON (symbol) symbol, period_end, revenue, pat, opm_pct, period_label FROM scores.quarterly_results WHERE period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC) SELECT symbol, period_label, revenue, pat, opm_pct FROM latest_results WHERE revenue IS NULL OR pat IS NULL OR opm_pct IS NULL;"
+  -
+    purpose: "Compare revenue and PAT growth for sector-relative analysis"
+    template: "WITH recent_analysis AS (SELECT DISTINCT ON (symbol) symbol, growth_yoy_revenue_pct, growth_yoy_pat_pct, verdict, period_end FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC) SELECT symbol, growth_yoy_revenue_pct, growth_yoy_pat_pct, verdict FROM recent_analysis ORDER BY growth_yoy_revenue_pct DESC, growth_yoy_pat_pct DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure that retrieved symbols match with evidence-required tables"
+  - "Check that growth percentages are calculated accurately"
+  - "Verify that missing fields are flagged in output"
+synthesis_guidance: "Focus on analyzing exceptions first, providing sector-relative insights and highlighting significant gaps in data."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:54"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

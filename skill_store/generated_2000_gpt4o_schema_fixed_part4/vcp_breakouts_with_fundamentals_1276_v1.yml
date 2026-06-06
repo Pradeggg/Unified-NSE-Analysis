@@ -1,0 +1,70 @@
+id: "vcp_breakouts_with_fundamentals_1276_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1276"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: pre market; response style: ranked candidates."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    python_tools:
+      required_function: "run(context)"
+      language: "python"
+      mode: "read_only"
+      blocked_capabilities:
+        - "network"
+        - "subprocess"
+        - "filesystem_write"
+        - "db_write"
+        - "broker_api"
+      required_fields:
+        - "id"
+        - "language"
+        - "mode"
+        - "inputs"
+        - "outputs"
+        - "approved_tables"
+        - "code"
+sql_templates:
+  -
+    name: "fetch_vcp_breakout_candidates"
+    template: "WITH latest_eod AS (SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)), latest_stages AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY')), latest_vcp AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)) SELECT s2.symbol, s2.company_name, s2.price, s2.rsi, s2.trading_signal, s2.enhanced_fund_score FROM latest_vcp s2 JOIN latest_stages ss ON s2.symbol = ss.symbol WHERE s2.vcp_score > 70 AND s2.enhanced_fund_score > 80 ORDER BY s2.vcp_score DESC, s2.rank ASC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "{'status': 'generated'}"
+synthesis_guidance: "{'status': 'guide'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:40"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

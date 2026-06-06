@@ -1,0 +1,58 @@
+id: "data_freshness_readiness_audit_0329_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0329"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for last 5 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as exceptions and gaps first"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Check data freshness using evidence tables within the last 5 sessions, focusing on missing or stale data sources that impact readiness."
+sql_templates:
+  -
+    template_name: "check_freshness"
+    sql: "SELECT table_name, MAX(trade_date) AS last_update FROM (SELECT 'market.index_eod' AS table_name, trade_date FROM market.index_eod UNION ALL SELECT 'market.equity_eod', trade_date FROM market.equity_eod UNION ALL SELECT 'scores.stage_snapshots', snapshot_date FROM scores.stage_snapshots UNION ALL SELECT 'breadth.market_daily', trade_date FROM breadth.market_daily UNION ALL SELECT 'breadth.ma_pct_above', snapshot_date FROM breadth.ma_pct_above) AS updates GROUP BY table_name;"
+  -
+    template_name: "find_gaps"
+    sql: "SELECT trade_date, COUNT(*) FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '7' DAY GROUP BY trade_date HAVING COUNT(*) < (SELECT COUNT(DISTINCT index_symbol) FROM market.index_eod);"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Confirm trade_date within accepted range for freshness."
+  - "All required tables updated in the last 5 sessions."
+synthesis_guidance: "Provide insights on ensuring data sources are refreshed consistently. Highlight any vital missing data impacting the robustness of reports or analysis."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:59"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

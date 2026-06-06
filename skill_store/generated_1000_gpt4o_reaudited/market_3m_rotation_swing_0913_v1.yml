@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:52:44"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: latest EOD; response style: comparison matrix."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0913_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  index_performance:
+    description: "Fetch index performance data."
+    query: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' AND index_symbol IN ('NIFTY 50', 'BSE SENSEX')"
+  sector_leadership:
+    description: "Identify leading sectors."
+    query: "SELECT snapshot_date, sector, COUNT(*) as leaders_count FROM scores.stage_snapshots WHERE stage = 'Stage 2' AND snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector, snapshot_date"
+  swing_candidates:
+    description: "Identify swing candidates based on VCP score."
+    query: "SELECT snapshot_date, symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY vcp_score DESC"
+status: "test_failed"
+synthesis_guidance: "Construct a comparison matrix summarizing market regime trends, sector leadership transitions, and top swing candidates based on available evidence."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "latest_EOD"
+  - "comparison_matrix"
+title: "3M Market Rotation Swing Assessment Variant 0913"
+tool_plan_template: "Generate a comparison matrix for the market regime and sector leadership over the past 3 months using SELECT statements from approved tables."
+validation_rules:
+  - "Ensure all temporal analyses consider a 3-month timeframe."
+  - "Limit index symbols to NIFTY 50 and BSE SENSEX."
+  - "Validate sector leadership through sector counts and stage."
+version: 1
+validation_errors:
+  - "scores.stage_snapshots.leaders_count is not approved"

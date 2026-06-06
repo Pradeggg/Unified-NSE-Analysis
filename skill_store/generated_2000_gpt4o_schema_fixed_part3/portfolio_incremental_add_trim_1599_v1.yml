@@ -1,0 +1,66 @@
+id: "portfolio_incremental_add_trim_1599_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1599"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as research-only summary"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Review the portfolio holdings and assess whether to add or trim positions based on the latest stage snapshots and scores. Provide a research-only summary with sector exposure and risk flags considered."
+sql_templates:
+  -
+    title: "Fetch Latest Holdings and Scores"
+    description: "Retrieve the current portfolio holdings with the latest stage snapshots for analysis."
+    template: "SELECT p.symbol, p.qty, p.avg_cost, s.sector, s.stage, s.trading_signal, s.stage_score, s.technical_score, s.fundamental_score FROM portfolio.holdings p INNER JOIN scores.stage_snapshots s ON p.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+  -
+    id: "calculate_risk_factors"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "sector"
+      - "stage_score"
+      - "technical_score"
+    outputs:
+      - "risk_flags"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context): risk_flags = []; for row in context['data']: if row['stage_score'] < 50: risk_flags.append({'symbol': row['symbol'], 'risk': 'high_stage_score_risk'}); elif row['technical_score'] < 50: risk_flags.append({'symbol': row['symbol'], 'risk': 'high_technical_score_risk'}); return {'risk_flags': risk_flags};"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "outputs"
+synthesis_guidance: "Provide a research-focused summary on incremental add/trim decisions supplemented with sector exposure and risk analysis. Frame the insights within the context of Indian market dynamics."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_risk_factors: python syntax error: invalid syntax"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_risk_factors: python syntax error: invalid syntax"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

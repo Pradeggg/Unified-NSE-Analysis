@@ -1,0 +1,54 @@
+id: "agent_route_failure_diagnostics_0462_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0462"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for post results: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as portfolio-aware output"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Review available data and identify discrepancies between expected and actual route execution based on enhanced runs and filtered stocks."
+sql_templates:
+  -
+    description: "Select recent enhanced run data for diagnostics."
+    template: "SELECT run_id, run_ts, universe_size, stocks_analyzed, stocks_filtered, market_composite_score, notes FROM report.enhanced_runs WHERE run_ts >= '2023-01-01';"
+  -
+    description: "Retrieve stock symbols and scores for recent filtered runs."
+    template: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= '2023-01-01');"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure SQL templates are read-only."
+  - "Verify all SQL queries use approved schema columns."
+synthesis_guidance: "['Aggregate findings across all data sources.', 'Identify any missing elements or tools in the current diagnostic approach.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:32"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

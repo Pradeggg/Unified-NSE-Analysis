@@ -1,0 +1,81 @@
+id: "portfolio_lab_paper_trading_review_1328_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1328"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: position-sizing context; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "position-sizing context for last 5 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    plan: "Identify exceptions in portfolio lab paper trading by filtering out relevant data for the last 5 sessions using approved tables and columns."
+sql_templates:
+  get_latest_trades: "SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND series = 'EQ';"
+  get_recent_portfolio: "SELECT * FROM portfolio.holdings WHERE symbol IN (SELECT symbol FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod));"
+  get_signals: "SELECT * FROM signals.signal_log WHERE date_issued >= (CURRENT_DATE - INTERVAL '5 days');"
+  get_stage_snapshots: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+  -
+    run:
+      id: "position_sizing_tool_01"
+      language: "python"
+      mode: "read_only"
+      inputs:
+
+      outputs:
+        position_sizing_report: "JSON"
+      approved_tables:
+        - "portfolio.holdings"
+        - "signals.signal_log"
+        - "scores.stage_snapshots"
+      code: "# Read-only Python tool for position sizing analysis\n# Ensure to follow restricted policies without network, subprocess, or filesystem_write capabilities"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all data is from the last 5 sessions."
+  - "Check for missing data in exceptions and gaps section."
+synthesis_guidance: "Synthesize insights by highlighting gaps and exceptions first, ensuring clarity in position-sizing context for the last 5 sessions."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:21"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: language must be python"
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: code is required"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: language must be python"
+    - "<missing-id>: mode must be read_only"
+    - "<missing-id>: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

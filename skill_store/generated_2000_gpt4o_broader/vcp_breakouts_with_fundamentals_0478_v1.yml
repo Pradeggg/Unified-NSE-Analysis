@@ -1,0 +1,53 @@
+id: "vcp_breakouts_with_fundamentals_0478_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0478"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: pre market; response style: portfolio-aware output."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "pre_market"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Review patterns of VCP and breakout stocks with strong fundamentals using provided tables."
+sql_templates:
+  -
+    query: "WITH relevant_stocks AS (SELECT symbol, max(high) as high FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '30 days' GROUP BY symbol HAVING max(high) >= week52_high) SELECT rs.symbol, rs.high FROM relevant_stocks rs JOIN scores.stage2_vcp_picks vp ON rs.symbol = vp.symbol WHERE vp.enhanced_fund_score > 75 AND vp.financial_strength = 'Strong';"
+    description: "Identify stocks reaching new highs with strong fundamentals."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "All symbols provided must appear in TradingView."
+  - "Output must provide portfolio-aware insights considering position-sizing."
+  - "Ensure VCP patterns are strictly validated against approved scores."
+synthesis_guidance: "Focus on capturing the momentum and risks of breakout patterns while emphasizing strong fundamental backings."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:40"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

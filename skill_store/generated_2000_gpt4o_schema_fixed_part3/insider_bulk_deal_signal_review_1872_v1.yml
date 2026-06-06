@@ -1,0 +1,74 @@
+id: "insider_bulk_deal_signal_review_1872_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1872"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for pre market: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as action watchlist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  header: "Generate an insider bulk deal signal review"
+  steps:
+    - "Step 1: Fetch recent insider alerts and bulk deals."
+    - "Step 2: Identify technical confirmation using stage snapshots."
+    - "Step 3: Synthesize data into an action watchlist."
+sql_templates:
+  -
+    header: "Retrieve recent insider alerts and bulk deals"
+    sql: "WITH insider_data AS (SELECT ia.alert_date, ia.symbol, ia.insider_score FROM signals.insider_alerts ia WHERE ia.alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts)), bulk_data AS (SELECT bd.deal_date, bd.symbol, bd.side FROM signals.bulk_block_deals bd WHERE bd.deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals)) SELECT i.symbol, i.insider_score, b.side FROM insider_data i JOIN bulk_data b ON i.symbol = b.symbol LIMIT 100;"
+  -
+    header: "Identify technical confirmation from stage snapshots"
+    sql: "SELECT s.symbol, s.stage, s.trading_signal FROM scores.stage_snapshots s WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 100;"
+python_tools:
+  -
+    id: "tech_conf_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+
+    outputs:
+
+    approved_tables:
+      - "signals.insider_alerts"
+      - "signals.bulk_block_deals"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    pass  # Placeholder for any complex technical analysis specific logic"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all symbols have technical confirmation."
+  - "Check for recent dates in alerts and deals."
+synthesis_guidance: "['Summarize key factors influencing accumulation or distribution.', 'Rank symbols by strength of insider actions and market conditions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:39"
+generation_model: "gpt-4o"
+validation_errors:
+  - "tech_conf_analysis: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "tech_conf_analysis: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

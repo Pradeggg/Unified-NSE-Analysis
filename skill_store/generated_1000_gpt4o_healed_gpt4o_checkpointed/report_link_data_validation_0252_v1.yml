@@ -1,0 +1,65 @@
+created_at: "2026-06-06T12:43:42"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: quarter to date; response style: ranked candidates."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0252_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for quarter to date: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Example function for context analysis\n    analysis_summary = 'No critical gaps found. Issue primarily with links.'\n    return {'analysis_summary': analysis_summary}"
+    id: "run_data_analysis"
+    inputs:
+      context: "list"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      analysis_summary: "str"
+review:
+  attempts: 3
+  findings:
+    - "run_data_analysis: inputs must be a list"
+    - "run_data_analysis: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  - "SELECT run_id, run_ts, universe_size, stocks_analyzed, market_composite_score FROM report.enhanced_runs WHERE run_ts >= '2023-01-01' AND run_ts <= '2023-03-31';"
+  - "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE score < 50 ORDER BY score ASC;"
+status: "test_failed"
+synthesis_guidance: "Focus on identifying gaps in the data and connectivity issues with report links. Rank issues by severity and impact."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "ranked_candidates"
+title: "Enhanced Report Data Validation Variant 0252"
+tool_plan_template: "Conduct a validation check on the report links and stock data for the specified quarter. Provide ranked candidates for issues found."
+validation_errors:
+  - "run_data_analysis: inputs must be a list"
+  - "run_data_analysis: outputs must be a non-empty list"
+validation_rules:
+  - "Check report links for functionality"
+  - "Ensure stock data is populated"
+  - "Review the consistency of report generation timestamps"
+version: 1

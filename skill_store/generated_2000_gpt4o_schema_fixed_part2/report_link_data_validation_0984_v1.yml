@@ -1,0 +1,49 @@
+id: "report_link_data_validation_0984_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Intraday Watchlist Report Validation"
+description: "Skill card to validate report generation metadata and filtered stocks for intraday watchlist in the Indian market."
+input_patterns:
+  - "Verify report link issues"
+  - "Check missing stock data in reports"
+  - "Validate report entries for intraday watchlist"
+tags:
+  - "report_qa"
+  - "watchlist"
+  - "intraday"
+  - "data_validation"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  steps:
+    - "Extract latest report metadata and filtered stock data."
+    - "Compare stock data entries against expected dataset size."
+    - "Identify missing or invalid report links."
+sql_templates:
+  metadata_extraction: "SELECT ER.run_id, ER.run_ts, ER.analysis_date, ER.stocks_filtered FROM report.enhanced_runs AS ER WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+  stocks_data_extraction: "SELECT EFS.run_id, EFS.symbol, EFS.current_price, EFS.daily_signal FROM report.enhanced_filtered_stocks AS EFS JOIN report.enhanced_runs AS ER ON ER.run_id = EFS.run_id WHERE ER.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+python_tools:
+  - "validation_tool"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+validation_rules:
+  - "Ensure all filtered stocks have current prices available."
+  - "Verify the number of stocks matches the metadata count."
+synthesis_guidance: "Focus on reconciling metadata entry discrepancies and stock data availability for intraday watchlist validation."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

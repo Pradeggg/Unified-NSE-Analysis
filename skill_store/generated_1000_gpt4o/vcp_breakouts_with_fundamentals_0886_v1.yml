@@ -1,0 +1,55 @@
+id: "vcp_breakouts_with_fundamentals_0886_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0886"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "{SQL/Python tools to be utilized will be outlined here}"
+sql_templates:
+  -
+    id: "select_vcp_breakout_stocks"
+    query: "SELECT s.symbol, s.company_name, s.sector, s.enhanced_fund_score, v.vcp_breakout_pct FROM scores.stage2_vcp_picks AS v JOIN scores.stage_snapshots AS s ON v.symbol = s.symbol WHERE v.trading_signal = 'BUY' AND v.vcp_breakout_pct > 5 AND s.enhanced_fund_score > 80 ORDER BY v.vcp_breakout_pct DESC;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all selected symbols have a trading signal of 'BUY'"
+  - "Verify the VCP breakout percentage is above 5%"
+  - "Ensure the fundamental score is above 80"
+synthesis_guidance: "Combine fundamental data and technical indicators to identify top VCP breakouts."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:52:37"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table s.company_name"
+  - "unknown table s.enhanced_fund_score"
+  - "unknown table s.sector"
+  - "unknown table s.symbol"
+  - "unknown table v.symbol"
+  - "unknown table v.trading_signal"
+  - "unknown table v.vcp_breakout_pct"

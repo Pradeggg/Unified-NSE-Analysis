@@ -1,0 +1,88 @@
+id: "fii_dii_regime_breadth_review_1142_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1142"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for last 3 months: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as narrative plus evidence"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Analyze and synthesize data from the approved tables to provide a narrative explanation along with appropriate evidence for the market's risk-on or risk-off context."
+sql_templates:
+  -
+    template_name: "FII_DII_Flows_Last_3_Months"
+    template: "SELECT trade_date, fii_net_5d, dii_net_5d, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= DATEADD(MONTH, -3, CURRENT_DATE) ORDER BY trade_date DESC;"
+  -
+    template_name: "Current_Regime"
+    template: "SELECT regime, confidence, days_in_regime FROM signals.regime_history ORDER BY trade_date DESC LIMIT 1;"
+  -
+    template_name: "Market_Breadth_Trend"
+    template: "SELECT trade_date, net_ad, ad_oscillator, market_sentiment FROM breadth.market_daily WHERE trade_date >= DATEADD(MONTH, -3, CURRENT_DATE) ORDER BY trade_date DESC;"
+  -
+    template_name: "Index_Confirmation"
+    template: "SELECT trade_date, close, change_pct, relative_strength FROM market.index_eod WHERE trade_date >= DATEADD(MONTH, -3, CURRENT_DATE) AND index_symbol = 'NIFTY 50' ORDER BY trade_date DESC;"
+python_tools:
+  -
+    id: "run_fii_dii_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      -
+        name: "fii_dii_data"
+        type: "DataFrame"
+      -
+        name: "regime_data"
+        type: "DataFrame"
+      -
+        name: "breadth_data"
+        type: "DataFrame"
+      -
+        name: "index_data"
+        type: "DataFrame"
+    outputs:
+      -
+        name: "analysis_report"
+        type: "str"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(fii_dii_data, regime_data, breadth_data, index_data):\n    # Analyze the data\n    # Return a narrative explaining market context\n    pass"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "The narrative must include references to available evidence."
+  - "Output must make clear connections between FII/DII flows, market regime, and breadth data."
+synthesis_guidance: "Craft a coherent narrative that integrates data insights from FIIs/DIIs flows, market breadth, and current regime evidence to explain if the market is in a risk-on or risk-off state."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:53"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.dateadd is not approved"
+  - "breadth.market_daily.month is not approved"
+  - "market.index_eod.dateadd is not approved"
+  - "market.index_eod.month is not approved"
+  - "signals.fii_dii_flows.dateadd is not approved"
+  - "signals.fii_dii_flows.month is not approved"

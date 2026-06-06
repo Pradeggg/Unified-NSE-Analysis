@@ -1,0 +1,63 @@
+created_at: "2026-06-06T12:40:58"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: today; response style: concise table."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0001_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Fetch last 3 months' index return data."
+    query: "WITH recent_index_data AS (SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 MONTHS') SELECT index_symbol, SUM(change_pct) AS index_returns FROM recent_index_data GROUP BY index_symbol;"
+  -
+    description: "Identify leading sectors based on recent stage snapshots."
+    query: "SELECT sector FROM (SELECT sector, COUNT(*) AS leading_count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 MONTHS' AND stage = 2 GROUP BY sector ORDER BY leading_count DESC LIMIT 5) AS sector_data;"
+  -
+    description: "Select primary swing candidates from Stage 2 VCP picks."
+    query: "SELECT symbol, company_name, sector, change_1d_pct, change_1w_pct FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE ORDER BY vcp_score DESC LIMIT 10;"
+status: "test_failed"
+synthesis_guidance:
+  - "Summarize index returns over the last three months."
+  - "Highlight sectors with high Stage 2 activity."
+  - "List top swing candidates with a brief performance summary."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "today"
+  - "concise_table"
+title: "3M Market Rotation Swing Assessment Variant 0001"
+tool_plan_template: "Analyze the market regime and sector rotations over the last three months to identify Stage 2 leadership sectors and potential swing trade candidates."
+validation_errors:
+  - "scores.stage_snapshots.leading_count is not approved"
+validation_rules:
+  - "Verify all fields in the output contract are provided."
+version: 1
+review:
+  attempts: 3
+  findings:
+    - "scores.stage_snapshots.leading_count is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"

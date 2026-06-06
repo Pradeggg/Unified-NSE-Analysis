@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:41:47"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: intraday context; response style: concise table."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0090_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  filters:
+    - "SELECT symbol, company_name, sector, price, rsi, relative_strength, trading_signal, fundamental_score, can_slim_score, minervini_score, market_cap_cat FROM scores.stage_snapshots WHERE fundamental_score > 7 AND (trading_signal = 'new_high' OR trading_signal = 'breakout')"
+    - "SELECT symbol, vcp_score, vcp_breakout_pct FROM scores.stage2_vcp_picks WHERE vcp_score > 70"
+status: "validated"
+synthesis_guidance: "['Emphasize strong fundamentals in filter criteria.', 'Provide clear symbols for TradingView visualization.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "intraday_context"
+  - "concise_table"
+title: "VCP Breakouts With Fundamentals Variant 0090"
+tool_plan_template:
+  steps:
+    - "Filter stocks with a new high or strong VCP breakout signal."
+    - "Ensure the stocks have good fundamental scores."
+    - "Export filtered stocks for TradingView visualization."
+validation_rules:
+  - "Ensure all required information is covered by evidence."
+  - "Validate trading signals against market context."
+version: 1

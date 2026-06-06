@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:51:40"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: weekly review; response style: QA checklist."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0796_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for weekly review: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Get the latest run metadata and ensure freshness within one week."
+    template: "SELECT run_ts FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 1;"
+  -
+    description: "Get stock symbols with missing data issues."
+    template: "SELECT symbol FROM report.enhanced_filtered_stocks WHERE current_price IS NULL OR volume IS NULL;"
+status: "validated"
+synthesis_guidance: "Create a QA checklist to ensure integrity and freshness of report data for Indian market review."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "weekly_review"
+  - "QA_checklist"
+title: "Enhanced Report Data Validation Variant 0796"
+tool_plan_template: "Use evidence to validate report links, metadata, and stock data."
+validation_rules:
+  - "Verify that report run timestamps are within one week."
+  - "Check for any missing data in stock listings."
+version: 1

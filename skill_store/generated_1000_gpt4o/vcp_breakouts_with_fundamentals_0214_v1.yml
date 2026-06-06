@@ -1,0 +1,67 @@
+id: "vcp_breakouts_with_fundamentals_0214_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0214"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: latest EOD; response style: ranked candidates."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Use the approved tables to fetch stocks that meet the criteria of VCP, breakouts, or new highs with strong fundamentals. Rank them by latest performance."
+sql_templates:
+  -
+    description: "Select stocks creating new highs or VCP breakouts with good fundamentals."
+    query: "WITH filtered_stocks AS (SELECT s.symbol, s.company_name, s.sector, s.price, s.live_price, s.price_date, s.relative_strength, s.trading_signal, s.rsi, s.investment_score, s.enhanced_fund_score FROM scores.stage2_vcp_picks s WHERE s.vcp_score > 80 AND s.enhanced_fund_score > 60) SELECT f.symbol, f.company_name, f.sector, f.live_price FROM filtered_stocks f JOIN market.equity_eod e ON f.symbol = e.symbol WHERE e.close = e.week52_high ORDER BY f.investment_score DESC;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure query uses read-only SELECT statements."
+  - "Cross-verify candidate ranking based on enhanced fundamentals."
+synthesis_guidance: "Focus on identifying stocks with the right technical patterns and robust fundamentals that indicate a strong breakout potential."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:43:29"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table e.close"
+  - "unknown table e.symbol"
+  - "unknown table e.week52_high"
+  - "unknown table f.company_name"
+  - "unknown table f.investment_score"
+  - "unknown table f.live_price"
+  - "unknown table f.sector"
+  - "unknown table f.symbol"
+  - "unknown table s.company_name"
+  - "unknown table s.enhanced_fund_score"
+  - "unknown table s.investment_score"
+  - "unknown table s.live_price"
+  - "unknown table s.price"
+  - "unknown table s.price_date"
+  - "unknown table s.relative_strength"
+  - "unknown table s.rsi"
+  - "unknown table s.sector"
+  - "unknown table s.symbol"
+  - "unknown table s.trading_signal"
+  - "unknown table s.vcp_score"

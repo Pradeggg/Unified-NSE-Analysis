@@ -1,0 +1,54 @@
+id: "corporate_events_results_watchlist_1409_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1409"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for today: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Generate a report describing key corporate events and associated stock performance. Use the provided SQL templates to extract data and the Python tool for any complex analysis required."
+sql_templates:
+  -
+    description: "Fetch upcoming and recent corporate events for today"
+    template: "SELECT id, symbol, event_type, event_date, detail, source FROM signals.corporate_events WHERE event_date = CURRENT_DATE AND event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM') ORDER BY event_date LIMIT 100"
+  -
+    description: "Fetch latest results analysis for symbols with recent events"
+    template: "WITH latest_result AS (SELECT DISTINCT ON (symbol) symbol, period_end, company_name, verdict FROM scores.results_analysis ORDER BY symbol, period_end DESC, updated_at DESC) SELECT symbol, period_end, company_name, verdict FROM latest_result WHERE symbol IN (SELECT symbol FROM signals.corporate_events WHERE event_date = CURRENT_DATE) LIMIT 100"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "task_success_conditions"
+  - "task_failure_conditions"
+synthesis_guidance: "{'additional_formatting': 'Ensure output is human-readable with clear labeling for events and results.', 'highlight_key_points': 'Focus on significant upcoming results and high-impact events.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

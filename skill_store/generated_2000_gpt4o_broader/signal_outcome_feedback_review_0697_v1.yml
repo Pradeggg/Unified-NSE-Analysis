@@ -1,0 +1,50 @@
+id: "signal_outcome_feedback_review_0697_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0697"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: weekly review; response style: debug trace."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for weekly review: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as debug trace"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze prior signals using a sector-relative approach to identify strengths and opportunities for improvement."
+sql_templates:
+  -
+    name: "calculate_signal_outcomes"
+    template: "SELECT sector, COUNT(*) AS total_signals, SUM(CASE WHEN hit_target = 1 THEN 1 ELSE 0 END) AS successful_signals, SUM(CASE WHEN hit_stop = 1 THEN 1 ELSE 0 END) AS failed_signals FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '7 days' GROUP BY sector;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure sector comparisons are clear and actionable."
+  - "Check that outcomes align with current market conditions."
+synthesis_guidance: "Combine signal outcomes with stage snapshots and EOD data to inform route adjustments."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:40"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.failed_signals is not approved"
+  - "signals.signal_log.successful_signals is not approved"
+  - "signals.signal_log.total_signals is not approved"

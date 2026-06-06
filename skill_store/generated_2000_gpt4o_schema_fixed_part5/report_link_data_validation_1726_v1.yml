@@ -1,0 +1,51 @@
+id: "report_link_data_validation_1726_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Enhanced Report Freshness Audit"
+description: "Evaluate the freshness of reports over the last 5 sessions and verify data integrity."
+input_patterns:
+  - "freshness audit for last 5 sessions"
+  - "validate report links and missing data"
+  - "check data integrity in generated reports"
+tags:
+  - "report_audit"
+  - "data_integrity"
+  - "quality_assurance"
+  - "session_analysis"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    description: "{}"
+sql_templates:
+  -
+    name: "fetch_recent_runs"
+    sql: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_filtered, market_composite_score FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '5 days';"
+  -
+    name: "fetch_filtered_stock_data"
+    sql: "SELECT efs.run_id, efs.symbol, efs.score, efs.recommendation FROM report.enhanced_filtered_stocks efs JOIN report.enhanced_runs er ON efs.run_id = er.run_id WHERE er.run_ts >= CURRENT_DATE - INTERVAL '5 days';"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Provide clear QA insights on report freshness and data validation across the last 5 sessions, addressing broken links and missing data."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

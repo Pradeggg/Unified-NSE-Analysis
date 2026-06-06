@@ -1,0 +1,1 @@
+# Add Python code here to process sector_ranks and generate improving_sectors and candidate_symbols.

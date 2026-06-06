@@ -1,0 +1,61 @@
+id: "portfolio_lab_paper_trading_review_2000_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Agent Adda Paper Trading Strategy Review"
+description: "This skill reviews paper trading strategies separately from real holdings, providing insights into entries, exits, stops, targets, and exposure."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Analyze paper trading strategies using signal logs and current stage snapshots for separate evaluation."
+sql_templates:
+  get_latest_stage_snapshots: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  get_signal_log: "SELECT * FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '1 week';"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "strategy_snapshot_data"
+      - "signal_logs"
+    outputs:
+      - "comparison_matrix"
+    approved_tables:
+      - "portfolio.holdings"
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Example pseudocode: this function should compute a comparison matrix of strategies\n    # Each strategy's performance and corresponding signals are evaluated\n    return {'comparison_matrix': 'sample_data'}"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+validation_rules:
+  - "Ensure that all output contract keys have corresponding data."
+  - "Validate that returns and calculations use the correct snapshot_date."
+synthesis_guidance: "['Combine signal outcomes with stage context for a holistic strategy review.', 'Emphasize comparisons by portraying results in a matrix format.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:23"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

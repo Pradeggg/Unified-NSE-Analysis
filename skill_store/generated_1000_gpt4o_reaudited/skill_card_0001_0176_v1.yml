@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:42:37"
+created_by: "llm_generated"
+description: "This skill card focuses on validating enhanced report run metadata with an emphasis on freshness audits for pre-market analysis in the Indian market. The process involves reviewing report links, identifying missing data from stock HTML files, and narrating findings with evidence."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "skill_card_0001_0176_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for pre market: review report links not working"
+  - "validate generated report links and missing data as narrative plus evidence"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  freshness_check: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '1 day';"
+  validate_links: "SELECT run_id, symbol, current_price FROM report.enhanced_filtered_stocks WHERE current_price IS NULL OR current_price <= 0;"
+status: "validated"
+synthesis_guidance: "Construct a narrative that highlights any discrepancies found during the validation process, providing context and evidence for each area of concern."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "pre_market"
+  - "narrative_plus_evidence"
+title: "Enhanced Report Data Validation for Pre-Market Analysis"
+tool_plan_template:
+  overview: "Ensure the integrity and currency of report links and data prior to market open. Verify that HTML files contain updated stock information and links are functional."
+  steps:
+    - "Check the timestamp of the latest enhanced report run."
+    - "Identify broken or outdated links from report metadata."
+    - "Examine filtered stock data for any missing or outdated entries."
+    - "Compile results into a narrative with evidence."
+validation_rules:
+  - "ensure_links_are_fresh"
+  - "validate_data_integrity"
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

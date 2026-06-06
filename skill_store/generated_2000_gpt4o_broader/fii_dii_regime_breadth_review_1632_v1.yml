@@ -1,0 +1,70 @@
+id: "fii_dii_regime_breadth_review_1632_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1632"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as debug trace"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Combine SQL and Python evidence gathering to provide a detailed analysis of the last 20 sessions."
+sql_templates:
+  fii_dii_flows: "SELECT trade_date, fii_net_today, dii_net_today, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days';"
+  regime_history: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days';"
+  market_breadth: "SELECT trade_date, adv_volume, dec_volume, ad_signal, trx_signal, bullish_pct, bearish_pct FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days';"
+  index_eod: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days' AND index_symbol = 'NIFTY';"
+python_tools:
+  -
+    id: "market_risk_analysis_v1"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "fii_dii_data"
+      - "regime_data"
+      - "breadth_data"
+      - "index_data"
+    outputs:
+      - "regime"
+      - "flow_context"
+      - "breadth_context"
+      - "index_confirmation"
+      - "risk_flags"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context):\n    # Process FII/DII flows\n    # Analyze market breadth\n    # Determine regime confidence\n    return {\n        'regime': 'bullish',\n        'flow_context': 'strong inflows',\n        'breadth_context': 'advancing',\n        'index_confirmation': 'price trend positive',\n        'risk_flags': 'low risk'\n    }"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure dates align across all evidence sources"
+  - "Cross-verify regime signals with breadth data"
+  - "Confirm index trend with FII/DII flow signals"
+synthesis_guidance: "Analysis combines real-time data extraction with historical pattern review to define regime context."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:37"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.trx_signal is not approved"

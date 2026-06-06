@@ -1,0 +1,52 @@
+id: "report_link_data_validation_1558_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1558"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: quarter to date; response style: research-only summary."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for quarter to date: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    description: "This skill card focuses on validating the enhanced report run metadata and checking for missing data in the filtered stock rows. Use a research-only approach to summarize the findings."
+sql_templates:
+  -
+    description: "Fetch report metadata and filtered stock details."
+    template: "WITH latest_runs AS (SELECT * FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '3 months') SELECT er.run_id, er.analysis_date, er.universe_size, er.stocks_analyzed, er.stocks_filtered, fs.symbol, fs.rank, fs.score FROM latest_runs er JOIN report.enhanced_filtered_stocks fs ON er.run_id = fs.run_id WHERE fs.volume IS NULL;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all report links are accessible and resolve to valid data."
+  - "Check for missing data in filtered stock rows; all required fields should be populated."
+synthesis_guidance: "Summarize the validation findings with a focus on position-sizing context, and ensure quarterly-to-date integrity."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:19"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

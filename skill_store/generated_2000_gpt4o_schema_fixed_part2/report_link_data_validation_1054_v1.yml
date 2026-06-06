@@ -1,0 +1,51 @@
+id: "report_link_data_validation_1054_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1054"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: quarter to date; response style: concise table."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for quarter to date: review report links not working"
+  - "validate generated report links and missing data as concise table"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  - "Tool will validate report links by checking the latest enhanced report runs in the database for missing links or data issues. It will join the `enhanced_runs` and `enhanced_filtered_stocks` tables and verify rows based on the latest run timestamp."
+sql_templates:
+  -
+    template: "SELECT er.run_id, er.run_ts, count(efs.symbol) as filtered_stocks_count FROM report.enhanced_runs er LEFT JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id WHERE er.run_ts >= (CURRENT_DATE - INTERVAL '3 months') GROUP BY er.run_id ORDER BY er.run_ts DESC LIMIT 10;"
+    description: "Retrieve the latest 10 enhanced report runs from the last quarter with their stock counts for validation."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Verify that each run has corresponding stocks in `enhanced_filtered_stocks`."
+  - "Check for any discrepancies in expected and actual stock counts."
+synthesis_guidance: "['Report synthesis should focus on discrepancies between expected and actual data, highlighting potential root causes and recommended next steps.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

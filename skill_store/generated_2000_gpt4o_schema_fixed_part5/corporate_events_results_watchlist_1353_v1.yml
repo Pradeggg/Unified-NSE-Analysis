@@ -1,0 +1,93 @@
+id: "corporate_events_results_watchlist_1353_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1353"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for quarter to date: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as exceptions and gaps first"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Identify corporate events and results-related actions based on incoming data. Highlight gaps and exceptions in the evidence"
+sql_templates:
+  -
+    name: "fetch_event_data"
+    description: "Fetch upcoming or recent corporate events"
+    select:
+      - "ce.symbol"
+      - "ce.event_type"
+      - "ce.event_date"
+      - "ce.purpose_raw"
+      - "ce.detail"
+      - "ce.source"
+    from: "signals.corporate_events ce"
+    where: "ce.event_date >= CURRENT_DATE - INTERVAL '3 months'"
+    orderby: "ce.event_date DESC"
+    limit: 100
+  -
+    name: "fetch_latest_results_analysis"
+    description: "Fetch latest results analysis for these symbols"
+    select:
+      - "ra.symbol"
+      - "ra.company_name"
+      - "ra.verdict"
+      - "ra.score"
+      - "ra.source_trail"
+    from: "scores.results_analysis ra"
+    where: "ra.created_at = (SELECT MAX(ra2.created_at) FROM scores.results_analysis ra2 WHERE ra2.symbol = ra.symbol)"
+    join:
+      table: "signals.corporate_events ce"
+      on: "ce.symbol = ra.symbol"
+    limit: 100
+  -
+    name: "fetch_stage_snapshots"
+    description: "Fetch stage and technical context"
+    select:
+      - "ss.symbol"
+      - "ss.stage"
+      - "ss.trend_signal"
+      - "ss.trading_signal"
+    from: "scores.stage_snapshots ss"
+    where: "ss.snapshot_date = (SELECT MAX(ss2.snapshot_date) FROM scores.stage_snapshots ss2 WHERE ss2.symbol = ss.symbol)"
+    join:
+      table: "signals.corporate_events ce"
+      on: "ce.symbol = ss.symbol"
+    limit: 100
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event_date and filing_date align where contextually relevant"
+  - "Confirm stage retrieval aligns with the latest available data"
+synthesis_guidance: "Report gaps and exceptions with first priority, providing data-driven recommendations for watchlist adjustments."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

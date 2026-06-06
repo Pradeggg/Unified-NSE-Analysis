@@ -1,0 +1,66 @@
+id: "insider_bulk_deal_signal_review_1424_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1424"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: last 5 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for last 5 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as portfolio-aware output"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "last_5_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    python_tools:
+
+    sql_templates:
+      -
+        name: "Recent_Insider_Alerts"
+        description: "Fetch recent insider alerts for the last 5 sessions."
+        sql: "SELECT symbol, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date >= (CURRENT_DATE - INTERVAL '5 days')"
+      -
+        name: "Recent_Bulk_Deals"
+        description: "Fetch recent bulk or block deals for the last 5 sessions."
+        sql: "SELECT symbol, entity, qty, price, deal_type FROM signals.bulk_block_deals WHERE deal_date >= (CURRENT_DATE - INTERVAL '5 days')"
+      -
+        name: "Technical_Confirmation"
+        description: "Fetch technical scores and signals for confirming setups."
+        sql: "WITH latest_snapshots AS (SELECT symbol, technical_score, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY')) SELECT symbol, technical_score, trading_signal FROM latest_snapshots"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure output includes all fields defined in output_contract."
+  - "Verify timeframes align with last 5 trading sessions."
+synthesis_guidance: "Focus on providing actionable insights and portfolio-aware recommendations based on the combined findings from recent alerts, deals, and technical confirmations."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

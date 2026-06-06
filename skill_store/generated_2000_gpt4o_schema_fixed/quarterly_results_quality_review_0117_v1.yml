@@ -1,0 +1,50 @@
+id: "quarterly_results_quality_review_0117_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0117"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: narrative plus evidence."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "sector-relative comparison for latest EOD: latest quarterly results analysis"
+  - "which companies had strong quarterly results as narrative plus evidence"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "{ evidence: { query: \"Fetch latest quarterly results and analysis for strong performing companies.\" }, strategy: \"Perform sector-relative comparison using the latest data to provide a comprehensive narrative.\" }"
+sql_templates:
+  - "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.revenue, ra.growth_yoy_revenue_pct, ra.growth_yoy_pat_pct, qr.opm_pct, ra.opm_delta_pp, ra.verdict FROM scores.quarterly_results qr JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end WHERE qr.period_type = 'quarter' ORDER BY qr.symbol, qr.period_end DESC NULLS LAST, ra.updated_at DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  -
+    rule: "symbols must exist in scores.quarterly_results and scores.results_analysis"
+    message: "Ensure symbols are consistent across datasets."
+synthesis_guidance: "Create narrative with evidence on sector-relative performance, emphasizing revenue and PAT growth, operating margin trends, and risks. Highlight standout companies and any notable sector dynamics."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:59"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

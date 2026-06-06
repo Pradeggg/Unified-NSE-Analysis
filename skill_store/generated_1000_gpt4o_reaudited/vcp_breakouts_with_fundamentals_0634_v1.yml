@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:50:24"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: debug trace."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0634_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select stocks creating new highs or VCP with strong fundamentals"
+    sql: "WITH vcp_candidates AS (SELECT symbol, score FROM scores.stage2_vcp_picks WHERE vcp_score > 75 AND date_part('day', now() - snapshot_date) <= 20), fundamentals AS (SELECT symbol, enhanced_fund_score FROM scores.stage_snapshots WHERE enhanced_fund_score > 70 AND date_part('day', now() - snapshot_date) <= 20) SELECT e.symbol, e.trade_date, e.close, e.volume FROM market.equity_eod e JOIN vcp_candidates v ON e.symbol = v.symbol JOIN fundamentals f ON e.symbol = f.symbol WHERE e.close >= e.week52_high;"
+status: "validated"
+synthesis_guidance: "Convey findings comprehensively using technical indicators and fundamental scores to ensure high-quality candidate selection."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "debug_trace"
+title: "VCP Breakouts With Fundamentals Variant 0634"
+tool_plan_template: "Generate a list of stocks that meet the criteria of new highs, VCP patterns, and strong fundamentals using available data and research."
+validation_rules:
+  - "Must only operate on approved schema fields."
+  - "Output must adhere to requested contract."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

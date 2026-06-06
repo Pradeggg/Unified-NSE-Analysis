@@ -1,0 +1,71 @@
+id: "portfolio_incremental_add_trim_1137_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1137"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for last 20 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  - "Fetch recent stock performances using 'scores.stage_snapshots'."
+  - "Compare portfolio holdings from 'portfolio.holdings' against market performances."
+  - "Identify potential add or trim candidates based on performance and exposure."
+sql_templates:
+  -
+    description: "Select recent stock performance for the last 20 sessions"
+    template: "SELECT symbol, sector, live_price, change_1d_pct, change_1w_pct, change_1m_pct, relative_strength, stage_score, trend_signal FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL '20 days';"
+  -
+    description: "Retrieve current holdings"
+    template: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+python_tools:
+  -
+    id: "sector_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "recent_performance_data"
+      - "current_holdings_data"
+    outputs:
+      - "analysis_summary"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    recent_performance = context['recent_performance_data']\n    current_holdings = context['current_holdings_data']\n    # Analyze and summarize trends, identifying potential add/trim candidates\n    analysis_summary = {'add_candidates': [], 'trim_candidates': [], 'sector_exposure': {}}\n    # Example logic...\n    return analysis_summary"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "Do not attempt to modify the database."
+  - "Queries must only use approved schema tables and columns."
+synthesis_guidance: "['Use fetched data to create a narrative describing portfolio health and suggested actions.', 'Focus on sector-relative performances and potential for incremental adjustments.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:41"
+generation_model: "gpt-4o"
+validation_errors:
+  - "sector_analysis_tool: execution failed: KeyError: 'recent_performance_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "sector_analysis_tool: execution failed: KeyError: 'recent_performance_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

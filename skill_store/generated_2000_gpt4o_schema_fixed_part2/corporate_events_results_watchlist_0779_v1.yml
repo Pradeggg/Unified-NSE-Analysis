@@ -1,0 +1,70 @@
+id: "corporate_events_results_watchlist_0779_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0779"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: pre market; response style: QA checklist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for pre market: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as QA checklist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "pre_market"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    name: "main"
+    description: "Generate stock watchlist for upcoming events."
+    input_fields:
+      - "event_date_threshold"
+sql_templates:
+  -
+    name: "fetch_event_driven_stocks"
+    description: "Fetch stocks with upcoming or recent corporate events."
+    template: "SELECT ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, ra.filing_date, ra.verdict FROM signals.corporate_events ce JOIN scores.results_analysis ra ON ce.symbol = ra.symbol WHERE ce.event_date >= CURRENT_DATE AND ra.verdict IN ('beat', 'miss', 'mixed') LIMIT 100;"
+python_tools:
+  -
+    id: "result_source_trail_validation"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol_list"
+    outputs:
+      - "validated_symbols"
+    approved_tables:
+      - "scores.results_analysis"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Placeholder for symbol validation logic\n    return [symbol for symbol in context['symbol_list'] if symbol.startswith('NSE_')]"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all symbols returned have recent event activity."
+  - "Cross-check results with current market stages for validation."
+synthesis_guidance: "[\"Prioritize events with clear outcomes such as 'beat' or 'miss'.\", 'Align stock picks based on event impact and market conditions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:26"
+generation_model: "gpt-4o"
+validation_errors:
+  - "result_source_trail_validation: execution failed: KeyError: 'symbol_list'"
+review:
+  status: "needs_heal"
+  findings:
+    - "result_source_trail_validation: execution failed: KeyError: 'symbol_list'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

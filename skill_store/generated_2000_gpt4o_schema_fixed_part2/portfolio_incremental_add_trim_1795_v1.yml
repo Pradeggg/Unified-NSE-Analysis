@@ -1,0 +1,56 @@
+id: "portfolio_incremental_add_trim_1795_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1795"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Review portfolio holdings and stages. Identify add or trim candidates based on stage and score."
+sql_templates:
+  -
+    name: "get_latest_holdings_with_stage"
+    sql: "SELECT ph.symbol, ph.qty, ph.avg_cost, ss.stage, ss.trading_signal, ss.sector FROM portfolio.holdings ph JOIN scores.stage_snapshots ss ON ph.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    name: "get_add_candidates"
+    sql: "SELECT ph.symbol, ss.trading_signal FROM portfolio.holdings ph JOIN scores.stage_snapshots ss ON ph.symbol = ss.symbol WHERE ss.trading_signal IN ('BUY', 'STRONG_BUY') AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    name: "get_trim_candidates"
+    sql: "SELECT ph.symbol, ss.trading_signal FROM portfolio.holdings ph JOIN scores.stage_snapshots ss ON ph.symbol = ss.symbol WHERE ss.trading_signal = 'SELL' AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure output matches expected contract format."
+  - "Validate that SQL responses align with schema constraints and join rules."
+synthesis_guidance: "Focus on creating a clear summary of portfolio adjustment actions with risk-first priorities."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

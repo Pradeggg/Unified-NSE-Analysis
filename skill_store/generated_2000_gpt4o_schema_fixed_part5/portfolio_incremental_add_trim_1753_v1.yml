@@ -1,0 +1,50 @@
+id: "portfolio_incremental_add_trim_1753_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1753"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: QA checklist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  -
+    description: "Utilize latest snapshots and portfolio holdings for assessing add/trim actions focusing on stage and signal trends."
+sql_templates:
+  - "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), portfolio_data AS (SELECT ph.symbol, ph.qty, ph.avg_cost, ss.stage, ss.trading_signal FROM portfolio.holdings ph JOIN latest_snapshots ss ON ph.symbol = ss.symbol) SELECT * FROM portfolio_data WHERE trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure trading signals have been received within quarter-to-date."
+  - "Validate that sector exposure aligns with company strategy."
+synthesis_guidance: "['Focus on identifying buy/trim candidates based on latest trading signals and stage data.', 'Consider risk flags such as high volatility or market cap categories.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

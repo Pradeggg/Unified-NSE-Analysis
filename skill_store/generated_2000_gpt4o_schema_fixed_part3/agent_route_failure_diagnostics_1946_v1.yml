@@ -1,0 +1,59 @@
+id: "agent_route_failure_diagnostics_1946_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1946"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for last 3 months: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as comparison matrix"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "Step 1: Extract report metadata for last 3 months."
+  - "Step 2: Identify missing tools and symbol resolution failures."
+  - "Step 3: Construct comparison matrix for diagnostics."
+sql_templates:
+  -
+    title: "Extract Report Metadata"
+    description: "Fetch metadata for reports generated in the last 3 months."
+    query: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    title: "Identify Missing Tools and Symbol Resolution Failures"
+    description: "Join reports and stocks data to identify diagnostics."
+    query: "SELECT ers.run_id, ers.symbol, esr.notes FROM report.enhanced_filtered_stocks ers JOIN report.enhanced_runs esr ON ers.run_id = esr.run_id WHERE esr.notes LIKE '%missing tool%' OR esr.notes LIKE '%symbol resolution failure%';"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure timeframes and conditions reflect the last 3 months."
+  - "Confirm diagnosis coverage includes tool gaps and symbol resolutions."
+synthesis_guidance: "{'type': 'comparison_matrix', 'orientation': 'effectiveness trend over last quarter'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

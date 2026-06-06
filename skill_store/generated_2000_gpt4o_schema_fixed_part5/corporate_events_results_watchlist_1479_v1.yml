@@ -1,0 +1,64 @@
+id: "corporate_events_results_watchlist_1479_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1479"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: pre market; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for pre market: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "pre_market"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    tasks:
+      - "Identify corporate events from signals.corporate_events with event types relevant to stocks, such as RESULTS, DIVIDEND, SPLIT, BONUS, and AGM."
+      - "Join scores.stage_snapshots to gather the latest stage and technical signals."
+      - "Validate results with scores.results_analysis for context and source-trail."
+    joins:
+      -
+        left_table: "signals.corporate_events"
+        right_table: "scores.stage_snapshots"
+        condition: "signals.corporate_events.symbol = scores.stage_snapshots.symbol"
+      -
+        left_table: "signals.corporate_events"
+        right_table: "scores.results_analysis"
+        condition: "signals.corporate_events.symbol = scores.results_analysis.symbol"
+sql_templates:
+  -
+    name: "GetEventDrivenStocks"
+    query: "WITH latest_stage AS (SELECT symbol, stage, trading_signal, snapshot_date FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY')) SELECT ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, ce.detail, ce.source, rs.company_name, ra.verdict FROM signals.corporate_events ce JOIN latest_stage ls ON ce.symbol = ls.symbol JOIN scores.results_analysis ra ON ce.symbol = ra.symbol WHERE ce.event_date >= CURRENT_DATE ORDER BY ce.event_date LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "{'rules': ['Verify event types include RESULTS, DIVIDEND, SPLIT, BONUS, and AGM.', 'Ensure stage snapshots are using the latest snapshot_date.', 'Validate results analysis against source trail for integrity.']}"
+synthesis_guidance: "{'focus': 'Generate a short report highlighting portfolio-relevant events with potential trading signals, leveraging the latest analyses and scores.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:30"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,68 @@
+created_at: "2026-06-06T12:51:41"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: today; response style: action watchlist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0805_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.index_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Placeholder for risk analysis based on context inputs\n    return {'risks': 'High volatility in tech sector'}"
+    id: "risk_assessment"
+    inputs:
+      - "index_returns"
+      - "leading_sectors"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "risks"
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  index_analysis: "SELECT trade_date, index_symbol, change_pct, rsi, momentum_50d FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'"
+  sector_leadership: "SELECT sector FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY AVG(change_1m_pct) DESC"
+  swing_candidates: "SELECT symbol, company_name, price, change_1w_pct FROM scores.stage2_vcp_picks WHERE change_1w_pct > 5 AND trend_signal = 'Strong' AND snapshot_date = CURRENT_DATE"
+status: "validated"
+synthesis_guidance: "Compile and analyze evidence to generate a synthesized action plan."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "today"
+  - "action_watchlist"
+title: "3M Market Rotation Swing Assessment Variant 0805"
+tool_plan_template: "Assess risk and identify leading sectors and candidates."
+validation_errors:
+
+validation_rules:
+  - "Ensure data spans the last 3 months."
+  - "Identify stage 2 stocks with positive momentum."
+  - "Risk analysis to consider RSI and volatility."
+version: 1

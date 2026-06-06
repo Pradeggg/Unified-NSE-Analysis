@@ -1,0 +1,62 @@
+id: "report_link_data_validation_0872_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0872"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for pre market: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  use_case: "Validate enhanced report data links for integrity and completeness"
+  tasks:
+    - "Extract report metadata from enhanced_runs"
+    - "Check for broken links in enhanced_filtered_stocks"
+    - "Detect missing data entries in underlying stock HTML"
+  sequence:
+    - "metadata_extraction"
+    - "link_validation"
+    - "missing_data_detection"
+sql_templates:
+  -
+    name: "extract_metadata"
+    template: "SELECT run_id, run_ts, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '3 months';"
+  -
+    name: "validate_links_and_data"
+    template: "SELECT rs.run_id, rs.symbol FROM report.enhanced_filtered_stocks rs LEFT JOIN report.enhanced_runs rr ON rs.run_id = rr.run_id WHERE rr.run_ts > CURRENT_DATE - INTERVAL '3 months' AND (rs.current_price IS NULL OR rs.volume IS NULL) LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "link_check"
+  - "data_completeness"
+synthesis_guidance: "{'focus': 'Synthesize findings into actionable insights for pre-market institutional review.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:21"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

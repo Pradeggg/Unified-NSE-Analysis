@@ -1,0 +1,61 @@
+id: "corporate_events_results_watchlist_1689_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1689"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: intraday context; response style: debug trace."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for intraday context: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as debug trace"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  language: "sql"
+  mode: "read_only"
+  approved_tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+sql_templates:
+  -
+    description: "Fetch upcoming corporate events with corresponding stage and technical context."
+    template: "SELECT ev.symbol, ev.event_type, ev.event_date, ev.purpose_raw, ev.detail, ev.source, st.stage, st.trading_signal\nFROM signals.corporate_events AS ev\nJOIN scores.stage_snapshots AS st ON ev.symbol = st.symbol\nWHERE ev.event_date >= CURRENT_DATE\nAND st.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nORDER BY ev.event_date\nLIMIT 50;"
+  -
+    description: "Retrieve recent results with analysis context."
+    template: "SELECT ra.symbol, ra.period_end, ra.verdict, ra.growth_yoy_revenue_pct, ra.growth_qoq_revenue_pct, ra.source_trail\nFROM scores.results_analysis AS ra\nWHERE ra.period_end = (SELECT MAX(period_end) FROM scores.results_analysis)\nAND ra.verdict IN ('beat', 'miss', 'inline')\nORDER BY ra.period_end DESC\nLIMIT 50;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event dates are future dates for upcoming context."
+  - "Verify that the stage's snapshot is the latest available."
+  - "Confirm verdict presence in recent results context."
+synthesis_guidance: "['Combine corporate event details with latest stage insights.', 'Align analysis context with latest results for debug tracing.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:49"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

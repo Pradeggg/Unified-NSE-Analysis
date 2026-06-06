@@ -1,0 +1,54 @@
+id: "market_3m_rotation_swing_1289_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1289"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze recent market indices and stage data to identify swing candidates within the last 3 months."
+sql_templates:
+  as_of_date: "SELECT MAX(trade_date) AS as_of_date FROM market.index_eod;"
+  index_returns: "SELECT index_symbol, AVG(change_pct) AS avg_change FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol;"
+  stage_distribution_change: "SELECT stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY stage;"
+  leading_sectors: "SELECT sector, AVG(change_1m_pct) AS avg_momentum FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY avg_momentum DESC LIMIT 5;"
+  primary_candidates: "SELECT symbol, company_name, investment_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY investment_score DESC LIMIT 10;"
+  risks: "SELECT symbol, relative_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND relative_strength < 0 ORDER BY relative_strength ASC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure as_of_date is a valid date."
+  - "Verify all averages and counts are non-negative."
+  - "Check that primary_candidates contain valid symbols with non-negative scores."
+synthesis_guidance: "{'language': 'natural_language', 'style': 'concise_summary', 'focus': 'Identify actionable insights and potential swing candidates emphasizing strong investment scores and momentum.', 'exclusions': ['Do not include symbols with negative relative strength in primary recommendations.', 'Exclude sectors with declining momentum from leading sector highlights.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.as_of_date is not approved"
+  - "market.index_eod.avg_change is not approved"

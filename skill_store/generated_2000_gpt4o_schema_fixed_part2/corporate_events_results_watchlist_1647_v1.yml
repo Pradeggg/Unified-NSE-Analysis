@@ -1,0 +1,51 @@
+id: "corporate_events_results_watchlist_1647_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1647"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for last 3 months: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as debug trace"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Event analysis cards for tracing the impact of corporate events on specific stocks over the last three months with sector-relative focus."
+sql_templates:
+  -
+    description: "Find upcoming or recent corporate events for each symbol with sector-relative comparison."
+    sql: "WITH latest_stage AS (SELECT symbol, sector, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT c.symbol, c.event_type, c.event_date, s.sector, s.stage FROM signals.corporate_events c JOIN latest_stage s ON c.symbol = s.symbol WHERE c.event_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY c.event_date DESC LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure valid NSE symbols."
+  - "Events must be within the last 3 months."
+synthesis_guidance: "Provide detailed debug information explaining the sector-relative impact of the events on the stocks."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:29"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

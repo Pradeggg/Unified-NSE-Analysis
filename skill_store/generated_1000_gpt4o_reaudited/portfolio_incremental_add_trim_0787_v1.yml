@@ -1,0 +1,66 @@
+created_at: "2026-06-06T12:51:35"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: intraday context; response style: QA checklist."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0787_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for intraday context: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    # Analyze risk based on exposure and provide evaluations\n    return {}"
+    id: "evaluate_exposure_risk"
+    inputs:
+      - "portfolio_state"
+      - "sector_exposure"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "risk_evaluation"
+sql_templates:
+  add_candidates: "SELECT ph.symbol FROM portfolio.holdings ph JOIN scores.stage_snapshots ss ON ph.symbol = ss.symbol WHERE ss.snapshot_date = CURRENT_DATE AND ss.stage = '2' AND ss.trend_signal = 'buy';"
+  portfolio_state: "SELECT ph.symbol, ph.qty, ph.avg_cost, ss.price, ss.change_1d_pct, ss.relative_strength, ss.stage_score FROM portfolio.holdings ph JOIN scores.stage_snapshots ss ON ph.symbol = ss.symbol WHERE ss.snapshot_date = CURRENT_DATE;"
+  risk_flags: "SELECT ph.symbol, ss.market_cap_cat FROM portfolio.holdings ph JOIN scores.stage_snapshots ss ON ph.symbol = ss.symbol WHERE ss.snapshot_date = CURRENT_DATE AND ss.change_1d_pct < -2;"
+  sector_exposure: "SELECT ss.sector, SUM(ph.qty * ss.price) AS total_value FROM portfolio.holdings ph JOIN scores.stage_snapshots ss ON ph.symbol = ss.symbol WHERE ss.snapshot_date = CURRENT_DATE GROUP BY ss.sector;"
+  trim_candidates: "SELECT ph.symbol FROM portfolio.holdings ph JOIN scores.stage_snapshots ss ON ph.symbol = ss.symbol WHERE ss.snapshot_date = CURRENT_DATE AND ss.stage = '4' AND ss.trend_signal = 'sell';"
+status: "test_failed"
+synthesis_guidance: "Provide analysis focused on sector-relative comparisons with a checklist approach."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "QA_checklist"
+title: "Portfolio Incremental Add Trim Review Variant 0787"
+tool_plan_template: "Review portfolio holdings against sector performance using approved data sources."
+validation_rules:
+  - "Ensure all SQL views are read-only."
+  - "Validate data mappings conform to approved schema."
+version: 1
+validation_errors:
+  - "evaluate_exposure_risk: missing output risk_evaluation"
+review:
+  status: "needs_heal"
+  findings:
+    - "evaluate_exposure_risk: missing output risk_evaluation"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

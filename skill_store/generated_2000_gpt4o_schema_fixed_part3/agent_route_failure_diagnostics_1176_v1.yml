@@ -1,0 +1,65 @@
+id: "agent_route_failure_diagnostics_1176_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1176"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: pre market; response style: narrative plus evidence."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for pre market: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as narrative plus evidence"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "pre_market"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  steps:
+    -
+      id: "step_1"
+      tool: "sql_query"
+      description: "Fetch latest enhanced report runs to assess freshness."
+      sql_template: "SELECT run_id, run_ts, notes FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+    -
+      id: "step_2"
+      tool: "sql_query"
+      description: "Check for missing symbol data in filtered stocks relevant to the latest run."
+      sql_template: "SELECT symbol, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = (SELECT run_id FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs));"
+    -
+      id: "step_3"
+      tool: "sql_query"
+      description: "Compare stage snapshots for consistency in technical indicators."
+      sql_template: "SELECT symbol, stage, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure run_ts is the latest timestamp in report.enhanced_runs."
+  - "Verify symbol exists in scores.stage_snapshots for route validation."
+synthesis_guidance: "Compile SQL query results into a consolidated diagnostic narrative, highlighting any route irregularities or data gaps identified."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:56:12"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

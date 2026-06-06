@@ -1,0 +1,51 @@
+id: "portfolio_incremental_add_trim_0955_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0955"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  objective: "Analyze portfolio for add/trim decisions considering risk and exposure."
+  steps:
+    - "Review current holdings from portfolio.holdings."
+    - "Analyze sector exposure and determine if adjustments are needed."
+    - "Use scores.stage_snapshots to evaluate stock performance based on risk factors."
+sql_templates:
+  get_holdings: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+  get_scores: "SELECT symbol, sector, stage, stage_score, risk_flags FROM scores.stage_snapshots WHERE snapshot_date >= current_date - INTERVAL '3 months';"
+  analyze_sector: "SELECT sector, SUM(qty * live_price) AS total_value FROM scores.stage_snapshots INNER JOIN portfolio.holdings ON scores.stage_snapshots.symbol = portfolio.holdings.symbol WHERE snapshot_date = current_date GROUP BY sector;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all symbols in add_candidates and trim_candidates are part of portfolio.holdings."
+  - "Verify risk_flags relate to the current quarter."
+synthesis_guidance: "Generate a comparison matrix showing sector exposure and identified actions for add/trim based on risk and performance scores."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:40"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.risk_flags is not approved"

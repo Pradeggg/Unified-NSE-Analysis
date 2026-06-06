@@ -1,0 +1,53 @@
+id: "corporate_events_results_watchlist_1283_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1283"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for intraday context: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as ranked candidates"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Use the SQL templates to retrieve relevant corporate events and result analysis, then synthesize into a ranked watchlist."
+sql_templates:
+  -
+    template: "SELECT ce.symbol, ce.event_type, ce.event_date, sa.stage, ra.verdict, ra.growth_yoy_revenue_pct, ra.growth_qoq_revenue_pct FROM signals.corporate_events AS ce JOIN scores.stage_snapshots AS sa ON ce.symbol = sa.symbol AND sa.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) JOIN scores.results_analysis AS ra ON ce.symbol = ra.symbol AND ra.period_end = (SELECT MAX(period_end) FROM scores.results_analysis WHERE symbol = ce.symbol) WHERE ce.event_date >= CURRENT_DATE AND sa.stage = 'STAGE_2' AND ce.event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM') ORDER BY ce.event_date, ra.verdict DESC NULLS LAST LIMIT 50;"
+    description: "Retrieve current stage and results context for upcoming corporate events."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure symbols have events within the next 30 days or within the last 3 months."
+  - "Verify joined tables are cross-referenced according to the schema join rules."
+synthesis_guidance: "Rank candidates based on event type urgency, recent performance, and technical stage alignment."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

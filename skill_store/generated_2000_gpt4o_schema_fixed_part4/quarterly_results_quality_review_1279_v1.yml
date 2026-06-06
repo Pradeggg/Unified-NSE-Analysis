@@ -1,0 +1,83 @@
+id: "quarterly_results_quality_review_1279_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1279"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: source-trail validation; timeframe: pre market; response style: ranked candidates."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "source-trail validation for pre market: latest quarterly results analysis"
+  - "which companies had strong quarterly results as ranked candidates"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "source-trail_validation"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    steps:
+      -
+        description: "Retrieve the latest quarterly results from relevant tables."
+        task_type: "SQL"
+        evidence_tables:
+          - "scores.quarterly_results"
+      -
+        description: "Analyze the results for revenue and PAT growth, and margin movements."
+        task_type: "SQL"
+        evidence_tables:
+          - "scores.results_analysis"
+      -
+        description: "Validate narrative quality and source-trail for each result."
+        task_type: "Python"
+        evidence_tables:
+          - "scores.results_analysis"
+sql_templates:
+  -
+    description: "Latest quarterly results"
+    template: "SELECT DISTINCT ON (symbol) symbol, period_end, revenue, pat, opm_pct FROM scores.quarterly_results WHERE period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC;"
+  -
+    description: "Results analysis for growth metrics"
+    template: "SELECT DISTINCT ON (symbol) symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct, opm_delta_pp FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC;"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "results_data"
+    outputs:
+      - "narrative_quality"
+    approved_tables:
+      - "scores.results_analysis"
+    code: "# This is a placeholder for narrative quality analysis\n# Ensure it remains read-only and quarantined\n\ndef run(context):\n    results_data = context['results_data']\n    # Process results_data for narrative quality\n    narrative_quality = []  # Example placeholder for processed output\n    return narrative_quality\n"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure input queries retrieve data only for the latest quarter."
+  - "Validate SQL against approved schema constraints."
+synthesis_guidance: "['Integrate results into ranked company candidates based on growth and margin metrics.', 'Highlight key narrative qualities and source-trail findings.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:41"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

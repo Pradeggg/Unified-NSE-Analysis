@@ -1,0 +1,62 @@
+id: "insider_bulk_deal_signal_review_1102_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1102"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: today; response style: narrative plus evidence."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for today: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as narrative plus evidence"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "today"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review today's data for insider alerts and bulk deals with technical confirmation. Provide a narrative and evidence summary."
+sql_templates:
+  -
+    name: "Fetch Insider Alerts"
+    template: "SELECT * FROM signals.insider_alerts WHERE alert_date = CURRENT_DATE"
+  -
+    name: "Fetch Bulk Deals"
+    template: "SELECT * FROM signals.bulk_block_deals WHERE deal_date = CURRENT_DATE"
+  -
+    name: "Fetch Technical Scores"
+    template: "SELECT symbol, stage, stage_score, technical_score, rsi, trend_signal FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE"
+  -
+    name: "Fetch Today's Equity EOD"
+    template: "SELECT * FROM market.equity_eod WHERE trade_date = CURRENT_DATE"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Combine insider alerts, bulk or block deals, and technical scores to provide a detailed narrative on institutional activities today."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:22"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

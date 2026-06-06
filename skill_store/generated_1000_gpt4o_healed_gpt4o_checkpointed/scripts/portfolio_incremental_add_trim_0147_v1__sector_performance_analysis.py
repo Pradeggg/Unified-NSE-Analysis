@@ -1,0 +1,1 @@
+def run(context): return context.groupby('sector').mean()

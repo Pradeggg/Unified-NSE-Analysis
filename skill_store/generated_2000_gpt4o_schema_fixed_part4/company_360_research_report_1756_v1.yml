@@ -1,0 +1,60 @@
+id: "company_360_research_report_1756_v1"
+version: 1
+status: "review_pending"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1756"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: freshness audit; timeframe: quarter to date; response style: QA checklist."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "freshness audit for quarter to date: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as QA checklist"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Python or SQL templates will retrieve and structure company data, focusing on latest quarterly results, recent stage snapshots, financial metrics and trends, technical setups, and narrative synthesis."
+sql_templates:
+  - "SELECT symbol, company_name, sector, market_cap_cat, price, stage, narrative FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol = 'RELIANCE';"
+  - "SELECT symbol, period_label, revenue, pat, eps FROM scores.quarterly_results WHERE symbol = 'RELIANCE' AND period_type = 'quarter' ORDER BY period_end DESC LIMIT 1;"
+  - "SELECT symbol, trade_date, close FROM market.equity_eod WHERE symbol = 'RELIANCE' ORDER BY trade_date DESC LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all data reflects the most recent quarter."
+  - "Verify data coherence across financial and technical sections."
+  - "Cross-check narrative insights with quantitative data."
+synthesis_guidance: "Summarize the company's recent performance focusing on financial health, market position, and short-term trends. Provide a structured narrative aligned with quantitative metrics."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:51"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

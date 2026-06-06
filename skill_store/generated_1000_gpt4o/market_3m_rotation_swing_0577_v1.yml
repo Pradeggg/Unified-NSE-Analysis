@@ -1,0 +1,60 @@
+id: "market_3m_rotation_swing_0577_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0577"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as research-only summary"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Assessing market regime, sector leadership, and swing candidates using Indian market data for past 3 months."
+sql_templates:
+  -
+    description: "Retrieve index performance data for the last 3 months."
+    template: "SELECT index_symbol, trade_date, close, change_pct FROM market.index_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH);"
+  -
+    description: "Identify leading sectors and stage 2 candidates."
+    template: "WITH sector_performance AS (SELECT sector, AVG(change_1m_pct) as avg_change FROM scores.stage_snapshots WHERE price_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY sector) SELECT s.symbol, s.company_name, s.sector, s.stage FROM scores.stage_snapshots s JOIN sector_performance p ON s.sector = p.sector WHERE s.stage = 2 ORDER BY p.avg_change DESC;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates should utilize only approved tables and columns."
+synthesis_guidance: "Provide a research-only summary focusing on sector-relative performance and swing trade opportunities. Avoid any direct trade recommendations."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:49:16"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "unknown table p.avg_change"
+  - "unknown table p.sector"
+  - "unknown table s.company_name"
+  - "unknown table s.sector"
+  - "unknown table s.stage"
+  - "unknown table s.symbol"

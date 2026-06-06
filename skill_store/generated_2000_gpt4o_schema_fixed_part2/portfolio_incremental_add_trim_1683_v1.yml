@@ -1,0 +1,51 @@
+id: "portfolio_incremental_add_trim_1683_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1683"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: debug trace."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for intraday context: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Review the current portfolio holdings and their exposure by sector and stock. Identify potential candidates for incremental addition or reduction based on the latest stage and score context."
+sql_templates:
+  -
+    description: "Fetch latest stage and score context for portfolio holdings."
+    template: "WITH latest_stage_data AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT h.symbol, h.qty, h.avg_cost, h.buy_date, s.stage, s.trading_signal, s.relative_strength FROM portfolio.holdings h JOIN latest_stage_data s ON h.symbol = s.symbol WHERE s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY s.relative_strength DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all SQL queries use approved schema and join rules."
+  - "Validate trading signal values are within the expected set."
+  - "Check alignment of symbol data across different stages."
+synthesis_guidance: "Use the provided SQL templates to fetch candidates for addition or trimming actions based on their latest stage and score context. Ensure recommendations align with current trading signals and relative strengths."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:55"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

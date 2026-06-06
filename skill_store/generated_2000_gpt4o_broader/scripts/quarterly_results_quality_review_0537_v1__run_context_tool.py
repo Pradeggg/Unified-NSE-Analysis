@@ -1,0 +1,1 @@
+def run(context): return f"Company: {context['symbol']} - Revenue: {context['revenue']} - PAT: {context['pat']} - OPM: {context['opm_pct']}%"

@@ -1,0 +1,58 @@
+id: "data_freshness_readiness_audit_0931_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Scan for Agent Adda"
+description: "Perform a quick scan to assess the data freshness of Agent Adda evidence sources for the last 20 sessions."
+input_patterns:
+  - "perform freshness scan for last 20 sessions"
+  - "check data readiness for report workflows"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "quick_scan"
+  - "last_20_sessions"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    task: "Verify data freshness"
+    action_items:
+      - "Check EOD data timeliness for indices"
+      - "Confirm equity market data is current"
+      - "Validate snapshot data availability for stages"
+sql_templates:
+  -
+    description: "Check latest trade_date for market.index_eod"
+    template: "SELECT MAX(trade_date) FROM market.index_eod"
+  -
+    description: "Check latest trade_date for market.equity_eod"
+    template: "SELECT MAX(trade_date) FROM market.equity_eod WHERE series = 'EQ'"
+  -
+    description: "Check latest snapshot_date for scores.stage_snapshots"
+    template: "SELECT MAX(snapshot_date) FROM scores.stage_snapshots"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure latest date checks are aligned"
+  - "Identify any missing data sources from tables"
+synthesis_guidance: "['Construct a comparison matrix highlighting freshness across evidence sources', 'Provide actionable insights for ensuring data readiness']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:03"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

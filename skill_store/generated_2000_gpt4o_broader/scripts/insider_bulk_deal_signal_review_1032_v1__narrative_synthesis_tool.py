@@ -1,0 +1,1 @@
+def run(context): return {'narrative': 'Generated narrative based on deal and insider data.'}

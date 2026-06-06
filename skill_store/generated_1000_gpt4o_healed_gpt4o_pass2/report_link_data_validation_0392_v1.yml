@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:46:12"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: weekly review; response style: exceptions and gaps first."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0392_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for weekly review: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Retrieve all report runs and their relevant metadata for the week."
+    sql: "SELECT * FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '7 days';"
+  -
+    description: "Identify missing or incorrect links in enhanced reports."
+    sql: "SELECT run_id, symbol FROM report.enhanced_filtered_stocks WHERE score IS NULL OR recommendation IS NULL;"
+status: "validated"
+synthesis_guidance: "Focus on identifying and reporting exceptions and missing data using a comprehensive weekly dataset review."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+title: "Enhanced Report Data Validation Variant 0392"
+tool_plan_template: "Perform a deep institutional review using the metadata from enhanced report runs and filter stock data with emphasis on identifying exceptions and gaps."
+validation_rules:
+  - "Check for missing scores and recommendations in filtered stocks."
+  - "Verify the completeness of report run metadata for the current week."
+version: 1

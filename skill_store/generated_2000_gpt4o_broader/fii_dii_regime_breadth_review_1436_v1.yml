@@ -1,0 +1,102 @@
+id: "fii_dii_regime_breadth_review_1436_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1436"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as portfolio-aware output"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  step_plans:
+    -
+      title: "Assess FII/DII Flow Context"
+      description: "Analyze the net FII/DII flows and trends over the last 20 sessions."
+      keys_checked:
+        - "fii_net_5d"
+        - "dii_net_5d"
+        - "fii_trend"
+        - "dii_trend"
+      tables:
+        - "signals.fii_dii_flows"
+    -
+      title: "Evaluate Market Breadth"
+      description: "Examine market advances, declines, and TRIN to assess breadth."
+      keys_checked:
+        - "net_ad"
+        - "ad_signal"
+        - "trin_signal"
+      tables:
+        - "breadth.market_daily"
+    -
+      title: "Identify Market Regime"
+      description: "Determine the current market regime and confidence level."
+      keys_checked:
+        - "regime"
+        - "confidence"
+      tables:
+        - "signals.regime_history"
+    -
+      title: "Confirm with Index Analysis"
+      description: "Verify insights using index EOD data for sentiment confirmation."
+      keys_checked:
+        - "trend_signal"
+        - "rsi"
+      tables:
+        - "market.index_eod"
+sql_templates:
+  -
+    title: "Get Recent FII/DII Flows"
+    description: "Fetch net flows and trend for the last 20 sessions."
+    template: "SELECT trade_date, fii_net_5d, dii_net_5d, fii_trend, dii_trend FROM signals.fii_dii_flows ORDER BY trade_date DESC LIMIT 20"
+  -
+    title: "Retrieve Market Breadth"
+    description: "Collect market breadth indicators over the last 20 sessions."
+    template: "SELECT trade_date, net_ad, ad_signal, trin_signal FROM breadth.market_daily ORDER BY trade_date DESC LIMIT 20"
+  -
+    title: "Fetch Regime History"
+    description: "Acquire recent market regimes and their confidence."
+    template: "SELECT trade_date, regime, confidence FROM signals.regime_history ORDER BY trade_date DESC LIMIT 20"
+  -
+    title: "Extract Index EOD Data"
+    description: "Extract the latest index EOD data for trend confirmation."
+    template: "SELECT trade_date, trend_signal, rsi FROM market.index_eod WHERE index_symbol = 'NIFTY500' ORDER BY trade_date DESC LIMIT 20"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data freshness by confirming all data is within the last 20 sessions."
+  - "Cross-verify regime confidence with flow trends and breadth signals."
+  - "Provide narrative synthesis projecting market risk-on or risk-off stance."
+synthesis_guidance: "{'overall_approach': 'Integrate flow, breadth, regime, and index insights to narrate an Indian market overview. Consider implications for a balanced portfolio strategy, emphasizing recent trends and signals.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

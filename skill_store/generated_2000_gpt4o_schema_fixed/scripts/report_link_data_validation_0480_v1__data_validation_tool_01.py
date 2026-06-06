@@ -1,0 +1,1 @@
+def run(context): missing_data_count = 0; for stock in context['stock_data']: if not stock['current_price']: missing_data_count += 1; return {'missing_data_count': missing_data_count}

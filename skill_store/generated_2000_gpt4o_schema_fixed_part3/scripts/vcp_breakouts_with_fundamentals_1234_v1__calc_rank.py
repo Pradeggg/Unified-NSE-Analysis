@@ -1,0 +1,1 @@
+def run(context): return sorted(context['candidates'], key=lambda x: (x['vcp_score'], x['enhanced_fund_score']), reverse=True)

@@ -1,0 +1,86 @@
+id: "data_freshness_readiness_audit_1925_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1925"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: risk-first review; timeframe: last 5 sessions; response style: comparison matrix."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "risk-first review for last 5 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as comparison matrix"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "risk-first_review"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  description: "Plan the audit of data freshness for risk-first review."
+  steps:
+    - "Identify the latest data from each evidence table for the last 5 sessions."
+    - "Compare the freshness against defined thresholds for live, EOD, report, and research workflows."
+    - "Determine any gaps in data freshness or missing approved history."
+sql_templates:
+  -
+    template_id: "latest_index_eod_check"
+    sql: "SELECT trade_date, index_symbol, close FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) LIMIT 5;"
+    description: "Fetch the latest EOD data for the last 5 sessions."
+  -
+    template_id: "latest_equity_eod_check"
+    sql: "SELECT trade_date, symbol, close FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) LIMIT 5;"
+    description: "Fetch the latest equity EOD data for the last 5 sessions."
+  -
+    template_id: "latest_stage_snapshot_check"
+    sql: "SELECT snapshot_date, symbol, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 5;"
+    description: "Fetch the latest stage snapshot data for the last 5 sessions."
+python_tools:
+  -
+    id: "data_freshness_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "freshness_matrix"
+    outputs:
+      - "analysis_report"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "breadth.market_daily"
+      - "breadth.ma_pct_above"
+      - "report.enhanced_runs"
+    code: "def run(context):\n    # Analyze the freshness matrix from SQL outputs\n    freshness_matrix = context.inputs['freshness_matrix']\n    # Perform analysis logic here\n    analysis_report = {'summary': 'Analysis complete', 'details': []}\n    return analysis_report"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all latest date queries conform to global_sql_rules."
+  - "Validate that all required tables provide output within the expected timeframe."
+synthesis_guidance: "['Synthesize the retrieved data into a matrix comparing freshness across different sources.', 'Highlight any data sources that appear stale or missing.', 'Identify actions needed to bring data sources up to required freshness standards.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:41"
+generation_model: "gpt-4o"
+validation_errors:
+  - "data_freshness_analysis: execution failed: AttributeError: 'dict' object has no attribute 'inputs'"
+review:
+  status: "needs_heal"
+  findings:
+    - "data_freshness_analysis: execution failed: AttributeError: 'dict' object has no attribute 'inputs'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

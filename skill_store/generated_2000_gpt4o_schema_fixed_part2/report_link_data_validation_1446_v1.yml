@@ -1,0 +1,59 @@
+id: "report_link_data_validation_1446_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Agent Adda: Report Link and Data Validation"
+description: "This skill validates the integrity of report links and data within a three-month audit period, focusing on freshness and portfolio-awareness."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for last 3 months: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  - "Use approved SQL templates and Python tools to analyze the data based on input patterns."
+sql_templates:
+  -
+    template_type: "read_only"
+    template: "SELECT er.run_id, er.run_ts, COUNT(efs.symbol) as missing_data_count FROM report.enhanced_runs er LEFT JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id WHERE er.run_ts >= CURRENT_DATE - INTERVAL '3 months' GROUP BY er.run_id, er.run_ts ORDER BY er.run_ts DESC;"
+python_tools:
+  - "required_function"
+  - "language"
+  - "mode"
+  - "inputs"
+  - "outputs"
+  - "approved_tables"
+  - "code"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "schema_join_rules"
+  - "global_sql_rules"
+synthesis_guidance: "{'approach': 'Combine SQL results with Python tools to ensure data coverage completeness and enhance report QA.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:22"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

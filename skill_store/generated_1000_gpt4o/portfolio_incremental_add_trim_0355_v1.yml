@@ -1,0 +1,53 @@
+id: "portfolio_incremental_add_trim_0355_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0355"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Evaluate holdings for quarterly review focusing on risk: identify stocks to potentially add or trim based on recent performance metrics and risk indicators, highlighting exceptions and gaps."
+sql_templates:
+  - "SELECT s.symbol, s.company_name, s.sector, s.stage, s.stage_score, s.technical_score, s.rsi, s.relative_strength FROM scores.stage_snapshots s JOIN portfolio.holdings p ON s.symbol = p.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND (s.stage_score < 50 OR s.rsi > 70 OR s.relative_strength < 40);"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all holdings are reviewed with respect to current stage scores and technical indicators."
+  - "Highlight and address any stocks with risk flags or significant deviations."
+synthesis_guidance: "Focus on identifying key risks in current holdings and provide actionable insights for incremental position adjustments."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:45:53"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table p.symbol"
+  - "unknown table s.company_name"
+  - "unknown table s.relative_strength"
+  - "unknown table s.rsi"
+  - "unknown table s.sector"
+  - "unknown table s.snapshot_date"
+  - "unknown table s.stage"
+  - "unknown table s.stage_score"
+  - "unknown table s.symbol"
+  - "unknown table s.technical_score"

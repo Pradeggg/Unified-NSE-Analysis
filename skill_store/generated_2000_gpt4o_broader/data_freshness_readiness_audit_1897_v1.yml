@@ -1,0 +1,77 @@
+id: "data_freshness_readiness_audit_1897_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1897"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for weekly review: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as action watchlist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  steps:
+    - "Gather data freshness metrics from all tables."
+    - "Analyze sector-relative freshness from market and scores tables."
+    - "Compile missing historical data into an action watchlist."
+sql_templates:
+  -
+    description: "Check data freshness for market index EOD."
+    template: "SELECT MAX(trade_date) AS last_update FROM market.index_eod;"
+  -
+    description: "Check data freshness for equity EOD."
+    template: "SELECT MAX(trade_date) AS last_update FROM market.equity_eod;"
+  -
+    description: "Analyze last stage snapshot data."
+    template: "SELECT MAX(snapshot_date) AS last_update FROM scores.stage_snapshots;"
+python_tools:
+  -
+    id: "calculate_freshness_deviation"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "freshness_dates"
+    outputs:
+      - "deviations"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "breadth.market_daily"
+      - "breadth.ma_pct_above"
+    code: "def run(context):\n    from datetime import datetime, timedelta\n    today = datetime.now()\n    return {table: (today - date).days for table, date in context['freshness_dates'].items()}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all data freshness results are recent within a week."
+  - "Identify any missing sources older than expected range."
+synthesis_guidance: "['Highlight the sectors with most delayed data.', 'Recommend loader updates where necessary.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:11"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.last_update is not approved"
+  - "market.index_eod.last_update is not approved"
+  - "scores.stage_snapshots.last_update is not approved"

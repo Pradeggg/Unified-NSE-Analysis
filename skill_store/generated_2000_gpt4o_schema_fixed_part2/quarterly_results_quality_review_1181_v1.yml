@@ -1,0 +1,70 @@
+id: "quarterly_results_quality_review_1181_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1181"
+description: "Assess latest quarterly results with a focus on quick scan for intraday context highlighting revenue and PAT growth, margin movement, filing freshness, and narrative quality."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for intraday context: latest quarterly results analysis"
+  - "which companies had strong quarterly results as narrative plus evidence"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "intraday_context"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  steps:
+    - "Select latest quarterly results from scores.quarterly_results for each symbol."
+    - "Join with scores.results_analysis on symbol and period_end for narrative context."
+    - "Include growth and margin changes from scores.results_analysis for deeper insights."
+    - "Join with scores.stage_snapshots on symbol for current technical context."
+    - "Rank companies based on PAT growth and margin improvements."
+sql_templates:
+  -
+    template: "WITH recent_results AS (SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.period_label, qr.revenue, qr.pat, ra.growth_yoy_revenue_pct, ra.growth_yoy_pat_pct, ra.opm_delta_pp, ra.verdict FROM scores.quarterly_results qr JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end WHERE qr.period_type = 'quarter' ORDER BY qr.symbol, qr.period_end DESC, qr.fetched_at DESC) SELECT rr.symbol, rr.period_label, rr.revenue, rr.pat, rr.growth_yoy_revenue_pct, rr.growth_yoy_pat_pct, rr.opm_delta_pp, ra.verdict FROM recent_results rr JOIN scores.stage_snapshots ss ON rr.symbol = ss.symbol AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 10;"
+python_tools:
+  -
+    id: "analyze_growth"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "growth_yoy_revenue_pct"
+      - "growth_yoy_pat_pct"
+    outputs:
+      - "growth_summary"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+    code: "def run(context):\n    growth_summary = {}\n    for entry in context['entries']:\n        revenue_growth = entry['growth_yoy_revenue_pct']\n        pat_growth = entry['growth_yoy_pat_pct']\n        if revenue_growth > 20 and pat_growth > 20:\n            growth_summary[entry['symbol']] = 'Strong Growth'\n        elif revenue_growth > 0 and pat_growth > 0:\n            growth_summary[entry['symbol']] = 'Moderate Growth'\n        else:\n            growth_summary[entry['symbol']] = 'Weak or Negative Growth'\n    return growth_summary"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure all symbols have corresponding entries in recent analysis."
+  - "Confirm growth metrics are appropriately matched between tables."
+synthesis_guidance: "{'filing_window': 'Identify filing dates and any delays.', 'beat_miss_summary': 'Summarize results as beat, miss, or inline.', 'margin_drivers': 'Highlight key drivers or detractors affecting margins.', 'ranked_companies': 'Rank based on growth metrics and verdict.', 'risks': 'Identify potential risks in narrative commentary.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:41:37"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analyze_growth: execution failed: KeyError: 'entries'"
+review:
+  status: "needs_heal"
+  findings:
+    - "analyze_growth: execution failed: KeyError: 'entries'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

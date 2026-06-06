@@ -1,0 +1,49 @@
+id: "report_link_data_validation_0144_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Report Link Data Validation for Last 3 Months"
+description: "Validates report link functionality and stock data accuracy within generated reports from the past three months in the Indian market context."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for last 3 months: review report links not working"
+  - "validate generated report links and missing data as narrative plus evidence"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+  description: "Requires enhanced report run metadata and filtered stock data."
+tool_plan_template: "Assess report generation for past 3 months. Identify broken links and missing stock data. Use join conditions effectively to correlate run metadata and stock vectors."
+sql_templates:
+  validate_reports:
+    template: "SELECT er.run_id, er.run_ts, er.universe_size, COALESCE(efs.stocks_filtered, 0) AS filtered_stocks FROM report.enhanced_runs er LEFT JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id WHERE er.run_ts > (CURRENT_DATE - INTERVAL '3 months') ORDER BY er.run_ts DESC;"
+    description: "Validates runs and filtered stock counts for reports generated in the last three months."
+    read_only: true
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all report links are functional and accurately reference the data."
+  - "Cross-verify stock data presence and correctness against report metadata."
+  - "All data results from SQL templates must be filtered accordingly and parameterized."
+synthesis_guidance: "Synthesize report data validation with a focus on narrative coherence. Translate technical evidence into actionable insights."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_filtered_stocks.stocks_filtered is not approved"

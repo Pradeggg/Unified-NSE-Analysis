@@ -1,0 +1,70 @@
+id: "market_3m_rotation_swing_0417_card_1_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0417"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: portfolio-aware output."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "query_and_analyze(data_sources=$evidence_required.tables, methodology='sector-relative analysis')"
+sql_templates:
+  -
+    name: "index_performance"
+    query: "SELECT trade_date, index_symbol, SUM(change_pct) AS total_change, AVG(volume) AS avg_volume FROM market.index_eod WHERE trade_date > NOW() - INTERVAL '3 months' GROUP BY trade_date, index_symbol ORDER BY trade_date DESC;"
+  -
+    name: "sector_leadership"
+    query: "SELECT sector, AVG(relative_strength) AS avg_relative_strength FROM scores.stage_snapshots WHERE snapshot_date > NOW() - INTERVAL '3 months' AND stage = 2 GROUP BY sector ORDER BY avg_relative_strength DESC LIMIT 5;"
+  -
+    name: "swing_candidates"
+    query: "SELECT symbol, company_name, sector, price, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND vcp_score > 80 ORDER BY vcp_score DESC LIMIT 10;"
+python_tools:
+  -
+    id: "equity_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "equity_data"
+    outputs:
+      - "analyzed_equities"
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    equities = context.inputs['equity_data']\n    analyzed = []\n    for equity in equities:\n        if equity['relative_strength'] > 70 and equity['trading_signal'] == 'buy':\n            analyzed.append(equity)\n    return {'analyzed_equities': analyzed}"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure output matches portfolio goals."
+  - "Prioritize sectors with high relative strength."
+synthesis_guidance: "Focus on interpreting data for portfolio-aligned decisions. Offer insights on regime shifts and sector dynamics."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:46:20"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_volume is not approved"
+  - "market.index_eod.now is not approved"
+  - "market.index_eod.total_change is not approved"
+  - "scores.stage_snapshots.avg_relative_strength is not approved"
+  - "scores.stage_snapshots.now is not approved"

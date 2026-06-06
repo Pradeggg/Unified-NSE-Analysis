@@ -1,0 +1,69 @@
+id: "insider_bulk_deal_signal_review_1088_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1088"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: intraday context; response style: concise table."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for intraday context: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as concise table"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  processing_strategy: "read_synthesize"
+  output_transformation: "summary_table"
+sql_templates:
+  -
+    query: "WITH latest_alerts AS (SELECT symbol, MAX(alert_date) AS alert_date FROM signals.insider_alerts GROUP BY symbol), latest_deals AS (SELECT symbol, MAX(deal_date) AS deal_date FROM signals.bulk_block_deals GROUP BY symbol) SELECT ia.symbol, ia.alert_date, ia.entity, ia.qty, ia.value_cr, ia.insider_score, bd.deal_date, bd.qty AS deal_qty, bd.price, ss.technical_score, ss.trend_signal FROM signals.insider_alerts AS ia JOIN latest_alerts ON ia.symbol = latest_alerts.symbol AND ia.alert_date = latest_alerts.alert_date JOIN signals.bulk_block_deals AS bd ON ia.symbol = bd.symbol JOIN latest_deals ON bd.symbol = latest_deals.symbol AND bd.deal_date = latest_deals.deal_date JOIN scores.stage_snapshots AS ss ON ia.symbol = ss.symbol WHERE ia.alert_type = 'Buy' AND bd.side = 'Buy' AND ss.trend_signal = 'Positive';"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "insider_alerts"
+      - "bulk_block_deals"
+      - "stage_snapshots"
+    outputs:
+      - "deal_summary_table"
+    approved_tables:
+      - "signals.insider_alerts"
+      - "signals.bulk_block_deals"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Extract and process data from the context for analysis\n    alerts = context['insider_alerts']\n    deals = context['bulk_block_deals']\n    snapshots = context['stage_snapshots']\n    # ... (additional processing and logic)\n    return deal_summary_table"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "symbol_consistency"
+  - "date_range"
+synthesis_guidance: "{'interpretation': 'Prioritize stocks with recent insider and bulk buying along with positive technical signals.', 'presentation': 'Format as a concise table with key insights for each symbol.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:13"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run: execution failed: KeyError: 'insider_alerts'"
+review:
+  status: "needs_heal"
+  findings:
+    - "run: execution failed: KeyError: 'insider_alerts'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

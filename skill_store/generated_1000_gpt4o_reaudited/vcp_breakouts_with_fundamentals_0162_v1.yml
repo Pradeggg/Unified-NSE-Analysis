@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:42:25"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: post results; response style: narrative plus evidence."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0162_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select top VCP breakout stocks with strong fundamentals"
+    sql: "SELECT v.symbol, v.company_name, v.price, v.vcp_breakout_pct, s.enhanced_fund_score FROM scores.stage2_vcp_picks v JOIN scores.stage_snapshots s ON v.symbol = s.symbol WHERE v.vcp_breakout_pct >= 5 AND s.enhanced_fund_score >= 80 ORDER BY v.vcp_breakout_pct DESC, s.enhanced_fund_score DESC;"
+    template_id: "select_top_vcp_breakouts"
+status: "validated"
+synthesis_guidance: "['Narrative should connect breakout candidates to current market context.', 'Highlight any significant institutional support or notable sales growth.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "post_results"
+  - "narrative_plus_evidence"
+title: "VCP Breakouts With Fundamentals Variant 0162"
+tool_plan_template:
+  tools:
+
+validation_rules:
+  - "Ensure at least 5 high-quality breakout candidates are included."
+  - "Verify all candidates have a minimum enhanced fundamental score of 80."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

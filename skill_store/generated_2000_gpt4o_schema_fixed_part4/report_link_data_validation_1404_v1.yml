@@ -1,0 +1,58 @@
+id: "report_link_data_validation_1404_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1404"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for today: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    missing_data: "Identify missing symbols or incomplete report sections using the join on run_id."
+    missing_links: "Cross-validate HTML file references in enhanced_filtered_stocks."
+    completeness_verification: "Ensure all expected symbols have records by checking universe_size against stocks_filtered."
+sql_templates:
+  -
+    name: "Check Missing Data"
+    template: "SELECT r.run_id, r.run_ts, r.universe_size, COUNT(f.symbol) as filtered_count FROM report.enhanced_runs r LEFT JOIN report.enhanced_filtered_stocks f ON r.run_id = f.run_id WHERE r.run_ts = CURRENT_DATE AND (f.symbol IS NULL OR f.symbol = '') GROUP BY r.run_id"
+  -
+    name: "Validate Links and Completions"
+    template: "SELECT e.run_id, e.symbol, e.current_price FROM report.enhanced_filtered_stocks e JOIN report.enhanced_runs r ON e.run_id = r.run_id WHERE r.run_ts = CURRENT_DATE AND (e.current_price IS NULL OR e.current_price = 0)"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Use PostgreSQL syntax."
+  - "Always apply latest-date filtering using run_ts."
+  - "Respect join conditions specified in _join_rules."
+synthesis_guidance: "['Prioritize comprehensive linking evidence for missing or problematic entries.', 'Provide actionable remediation advice based on findings.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:07"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

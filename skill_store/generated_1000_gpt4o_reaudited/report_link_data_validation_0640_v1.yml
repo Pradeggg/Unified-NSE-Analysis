@@ -1,0 +1,59 @@
+created_at: "2026-06-06T12:50:21"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: last 20 sessions; response style: debug trace."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0640_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    description: "Fetch metadata for the last 20 sessions."
+    name: "fetch_recent_runs"
+    query: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 20;"
+  -
+    description: "Fetch filtered stocks for a specific run."
+    name: "fetch_filtered_stocks"
+    query: "SELECT rank, symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = ?;"
+status: "validated"
+synthesis_guidance: "Focus on tracing missing data and broken links in the context of Indian market analysis."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "debug_trace"
+title: "Enhanced Report Data Validation Variant 0640"
+tool_plan_template:
+  steps:
+    - "Retrieve metadata for the last 20 sessions using approved tables."
+    - "Identify discrepancies in exported report links and stock data."
+    - "Provide debug trace for missing data identification."
+validation_rules:
+  - "Ensure report links are generated for each session."
+  - "Cross-check stock data to identify absent or erroneous entries."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

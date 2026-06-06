@@ -1,0 +1,149 @@
+card:
+  created_at: "2026-06-06T12:48:31"
+  created_by: "llm_generated"
+  description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: intraday context; response style: portfolio-aware output."
+  domain: "screening"
+  evidence_required:
+    tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "vcp_breakouts_with_fundamentals_0486_v1"
+  input_patterns:
+    - "stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "VCP breakout stocks for TradingView"
+    - "quality breakouts with strong fundamentals"
+    - "freshness audit for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "quality breakouts with strong fundamentals as portfolio-aware output"
+  output_contract:
+    - "filters"
+    - "candidates"
+    - "tradingview_symbols"
+    - "evidence"
+    - "risks"
+  python_tools:
+    -
+      approved_tables:
+        - "market.equity_eod"
+      code: "def run(context): return [{'symbol': symbol, 'change': compute_change(symbol)} for symbol in context['symbol_list']]"
+      id: "calculate_intraday_change"
+      inputs:
+        symbol_list: "list"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        intraday_changes: "list"
+  review:
+    attempts: 3
+    findings:
+
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "generated"
+  sql_templates:
+    -
+      description: "Fetch potential breakout stocks with strong fundamentals."
+      template: "SELECT symbol, company_name, sector, price, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE vcp_score > 80 AND enhanced_fund_score > 70;"
+  status: "generated"
+  synthesis_guidance: "Focus on intraday breakout opportunities with high VCP and robust fundamentals."
+  tags:
+    - "vcp"
+    - "breakout"
+    - "new_high"
+    - "fundamentals"
+    - "tradingview"
+    - "freshness_audit"
+    - "intraday_context"
+    - "portfolio-aware_output"
+  title: "VCP Breakouts With Fundamentals Variant 0486"
+  tool_plan_template: "Find candidates using SQL and support with Python if necessary."
+  validation_errors:
+
+  validation_rules:
+    - "Ensure symbols have high VCP and enhanced fund scores."
+    - "Check data freshness for intraday relevance."
+  version: 1
+created_at: "2026-06-06T12:48:31"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: intraday context; response style: portfolio-aware output."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0486_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.equity_eod"
+    code: "def run(context): return {symbol: compute_change(symbol) for symbol in context['symbol_list']}"
+    id: "calculate_intraday_change"
+    inputs:
+      symbol_list: "list"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      intraday_changes: "dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    description: "Fetch potential breakout stocks with strong fundamentals."
+    template: "SELECT symbol, company_name, sector, price, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE vcp_score > 80 AND enhanced_fund_score > 70;"
+status: "test_failed"
+synthesis_guidance: "Focus on intraday breakout opportunities with high VCP and robust fundamentals."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "intraday_context"
+  - "portfolio-aware_output"
+title: "VCP Breakouts With Fundamentals Variant 0486"
+tool_plan_template: "Find candidates using SQL and support with Python if necessary."
+validation_errors:
+  - "description is required"
+  - "domain is required"
+  - "evidence_required is required"
+  - "id is required"
+  - "input_patterns is required"
+  - "output_contract is required"
+  - "tags is required"
+  - "title is required"
+  - "validation_rules is required"
+  - "version is required"
+  - "version must be a positive integer"
+validation_rules:
+  - "Ensure symbols have high VCP and enhanced fund scores."
+  - "Check data freshness for intraday relevance."
+version: 1

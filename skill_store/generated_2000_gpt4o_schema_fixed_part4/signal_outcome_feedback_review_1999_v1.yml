@@ -1,0 +1,73 @@
+id: "signal_outcome_feedback_review_1999_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1999"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: weekly review; response style: comparison matrix."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for weekly review: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as comparison matrix"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Assess the performance of previous signals using a matrix to compare what worked and what didn't. Use evidence from signal logs, stage snapshots, and EOD data for a comprehensive review."
+sql_templates:
+  -
+    description: "Fetch signal outcomes with related stage data at issuance."
+    template: "SELECT s.symbol, s.date_issued, s.hit_target, s.hit_stop, ss.stage, ss.stage_score FROM signals.signal_log s INNER JOIN scores.stage_snapshots ss ON s.symbol = ss.symbol WHERE s.date_issued = ss.snapshot_date AND s.date_resolved <= CURRENT_DATE AND s.date_issued >= CURRENT_DATE - INTERVAL '7 days';"
+  -
+    description: "Retrieve the latest price data for resolved signals."
+    template: "SELECT e.symbol, e.trade_date, e.close FROM market.equity_eod e INNER JOIN signals.signal_log s ON e.symbol = s.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND s.date_resolved IS NOT NULL;"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+
+    outputs:
+
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "# The code is placeholder and assumes the context provided is correct. Implement relevant logic here.\n\nimport pandas as pd\n\n def run(context):\n     # Load and preprocess data from context\n     signal_log = pd.DataFrame(context['signals.signal_log'])\n     stage_snapshots = pd.DataFrame(context['scores.stage_snapshots'])\n     equity_eod = pd.DataFrame(context['market.equity_eod'])\n\n     # Implement logic to synthesize outcome reviews\n     results = 'Synthesis results placeholder'\n     return results"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "1. Ensure signal_log and stage_snapshots data align correctly by symbol and date_issued."
+  - "2. Verify resolved signals fall within the latest 7 days for relevant review."
+synthesis_guidance: "['Synthesize a comparison matrix that highlights successful signals versus those that hit stops. Provide insights on possible improvements and patterns.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: outputs must be a non-empty list"
+  - "<missing-id>: python syntax error: unexpected indent"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: outputs must be a non-empty list"
+    - "<missing-id>: python syntax error: unexpected indent"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

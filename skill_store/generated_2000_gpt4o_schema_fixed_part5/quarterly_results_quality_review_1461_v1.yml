@@ -1,0 +1,58 @@
+id: "quarterly_results_quality_review_1461_v1"
+version: 1
+status: "review_pending"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1461"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for post results: latest quarterly results analysis"
+  - "which companies had strong quarterly results as portfolio-aware output"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "Pull the latest quarterly results for each company."
+  - "Identify revenue and PAT growth trends."
+  - "Assess margin movement and filing freshness."
+  - "Compare results with narrative quality from internal analysis."
+sql_templates:
+  -
+    description: "Retrieve latest quarterly results with basic financial and margin details."
+    sql: "SELECT DISTINCT ON (q.symbol) q.symbol, q.revenue, q.pat, q.opm_pct, q.period_end, r.verdict FROM scores.quarterly_results q JOIN scores.results_analysis r ON q.symbol = r.symbol AND q.period_end = r.period_end WHERE q.period_type = 'quarter' ORDER BY q.symbol, q.period_end DESC, q.fetched_at DESC LIMIT 100;"
+  -
+    description: "Fetch the latest technical stage and trading signal."
+    sql: "SELECT s.symbol, s.stage, s.trading_signal, s.snapshot_date FROM scores.stage_snapshots s WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure the results are within the expected reporting period using the latest date column."
+  - "Validate revenue and PAT growth percentages using growth_yoy and growth_qoq fields."
+synthesis_guidance: "['Review revenue, PAT, and margin trends in context of latest stage snapshot and trading signals.', 'Focus on narratives aligning with internal analysis to identify key strengths and risks.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,81 @@
+id: "company_360_research_report_0706_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0706"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: freshness audit; timeframe: today; response style: QA checklist."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "freshness audit for today: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as QA checklist"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "freshness_audit"
+  - "today"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  tool_usage: "Generate fresh, aggregated, research data for RELIANCE using the approved evidence tables and schemas."
+sql_templates:
+  -
+    template_type: "Overview"
+    sql: "SELECT company_name, sector, market_cap_cat, price, live_price FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' ORDER BY snapshot_date DESC LIMIT 1;"
+  -
+    template_type: "Financial_Trends"
+    sql: "SELECT period_label, revenue, expenses, operating_profit, pat FROM scores.quarterly_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 4;"
+  -
+    template_type: "Technical_Setup"
+    sql: "SELECT close, volume, week52_high, week52_low FROM market.equity_eod WHERE symbol = 'RELIANCE' ORDER BY trade_date DESC LIMIT 1;"
+python_tools:
+  -
+    id: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "processed_data"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "scores.quarterly_results"
+      - "scores.annual_results"
+      - "scores.balance_sheet"
+      - "scores.cash_flow"
+      - "scores.results_analysis"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Placeholder for processing logic\n    return processed_data"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "consistency_checks"
+synthesis_guidance: "{'synthesize_points': ['Highlight latest financial trends with emphasis on quarterly results.', 'Provide a technical analysis overview with current market trends.', 'Narrate potential investment risks and strengths.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:50"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run(context): execution failed: NameError: name 'processed_data' is not defined"
+review:
+  status: "needs_heal"
+  findings:
+    - "run(context): execution failed: NameError: name 'processed_data' is not defined"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

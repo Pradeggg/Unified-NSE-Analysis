@@ -1,0 +1,55 @@
+id: "report_link_data_validation_1922_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1922"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: comparison matrix."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    task: "Validate metadata and data consistency across multiple report sessions."
+    steps:
+      - "Extract the latest 5 report sessions from report.enhanced_runs."
+      - "Join with report.enhanced_filtered_stocks using run_id."
+      - "Check for missing or inconsistent data points in joined results."
+sql_templates:
+  -
+    description: "Fetch recent 5 sessions of report metadata and stock data."
+    query: "WITH recent_sessions AS (SELECT run_id FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 5) SELECT er.run_id, er.universe_size, er.stocks_filtered, efs.rank, efs.symbol, efs.score FROM report.enhanced_runs er JOIN recent_sessions ON er.run_id = recent_sessions.run_id JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "{'rule_set': [{'name': 'Session Consistency', 'description': 'Ensure data integrity for the last 5 sessions.', 'steps': ['Compare stocks_analyzed with filtered stock records count for discrepancies.', 'Validate link consistency across sessions.']}]}"
+synthesis_guidance: "{'gaps_to_address': [{'gap': 'Inconsistent stock count in filtered results', 'approach': 'Enhance logging mechanisms within the data pipeline.'}]}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:50"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

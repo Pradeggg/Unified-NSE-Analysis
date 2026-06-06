@@ -1,0 +1,63 @@
+created_at: "2026-06-06T12:49:03"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 3 months; response style: research-only summary."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0550_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  select:
+    -
+      description: "Retrieve VCP and breakout stocks with relevant scores over the last 3 months."
+      query: "SELECT symbol, company_name, sector, price, change_1m_pct, rsi, relative_strength, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)"
+status: "test_failed"
+synthesis_guidance: "{'research_only': 'Focus on generating a summary for research purposes; avoid actionable advice.'}"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_3_months"
+  - "research-only_summary"
+title: "VCP Breakouts With Fundamentals Variant 0550"
+tool_plan_template:
+  candidates:
+    description: "List of stocks meeting the filter criteria with additional fundamental data."
+  evidence:
+    description: "Data collected and analyzed from specified tables."
+  filters:
+    description: "Identify stocks with new highs, VCP, or breakout patterns in the past 3 months with strong fundamentals."
+  risks:
+    description: "Market and model-specific risks associated with selections."
+  tradingview_symbols:
+    description: "Symbols formatted for TradingView integration."
+validation_rules:
+  - "no_data_invention"
+  - "status_check"
+  - "readonly_sql"
+version: 1
+validation_errors:
+  - "scores.stage2_vcp_picks.change_1m_pct is not approved"
+  - "scores.stage2_vcp_picks.curdate is not approved"
+  - "scores.stage2_vcp_picks.date_sub is not approved"
+  - "scores.stage2_vcp_picks.month is not approved"

@@ -1,0 +1,77 @@
+id: "data_freshness_readiness_audit_1463_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1463"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for post results: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as portfolio-aware output"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+
+sql_templates:
+  latest_market_dates:
+    query: "SELECT MAX(trade_date) AS max_trade_date FROM market.index_eod;"
+    type: "date_query"
+    description: "Retrieve the latest available trading date for market index data."
+  latest_equity_dates:
+    query: "SELECT MAX(trade_date) AS max_trade_date FROM market.equity_eod;"
+    type: "date_query"
+    description: "Retrieve the latest available trading date for equity EOD data."
+  latest_stage_snapshot:
+    query: "SELECT MAX(snapshot_date) AS max_snapshot_date FROM scores.stage_snapshots;"
+    type: "date_query"
+    description: "Retrieve the latest available snapshot date for stage data."
+python_tools:
+  -
+    id: "freshness_check_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "latest_market_dates"
+      - "latest_equity_dates"
+      - "latest_stage_snapshot"
+    outputs:
+      - "freshness_matrix"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "\n    def run(context):\n        current_date = context['current_system_date']\n        freshness_matrix = {\n            'market_index': current_date - context['latest_market_dates'],\n            'equity_eod': current_date - context['latest_equity_dates'],\n            'stage_snapshots': current_date - context['latest_stage_snapshot']\n        }\n        return freshness_matrix\n    "
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure evidence freshness by comparing current dates with the latest dates in each table."
+  - "Identify missing sources by checking null or outdated date entries in the freshness matrix."
+synthesis_guidance: "['Aggregate date freshness results to inform about data update schedule.', 'Include actions required by the data loader team based on discovered freshness issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:30"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.max_trade_date is not approved"
+  - "market.index_eod.max_trade_date is not approved"
+  - "scores.stage_snapshots.max_snapshot_date is not approved"

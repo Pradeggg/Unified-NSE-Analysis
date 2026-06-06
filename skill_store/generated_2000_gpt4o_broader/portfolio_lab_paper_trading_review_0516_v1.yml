@@ -1,0 +1,55 @@
+id: "portfolio_lab_paper_trading_review_0516_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0516"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: latest EOD; response style: research-only summary."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for latest EOD: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as research-only summary"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "latest_EOD"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "{title} involves a research-only review strategy. Evidence should be gathered as per Indian market data, and findings are presented in a statistical summary."
+sql_templates:
+  -
+    query: "WITH latest_prices AS (SELECT symbol, close, trade_date FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)) SELECT h.symbol, h.qty, h.avg_cost, h.buy_date, p.close FROM portfolio.holdings h JOIN latest_prices p ON h.symbol = p.symbol"
+    description: "Fetch the latest EOD prices for current holdings."
+  -
+    query: "SELECT * FROM signals.signal_log WHERE date_issued >= (SELECT MAX(trade_date) FROM market.equity_eod)"
+    description: "Fetch the latest signals issued for fresh trading insights."
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all SQL templates are SELECT queries."
+synthesis_guidance: "Focus on summarizing the strategy performance using gathered data. Consider aspects such as entry and exit efficiency, and the comparison of expected vs. actual performance."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:48:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

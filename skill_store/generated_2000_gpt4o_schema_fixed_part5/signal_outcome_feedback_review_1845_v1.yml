@@ -1,0 +1,56 @@
+id: "signal_outcome_feedback_review_1845_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1845"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: last 3 months; response style: action watchlist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for last 3 months: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as action watchlist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "last_3_months"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Analyze signal outcomes over the past 3 months focusing on risk assessment. Create action watchlist based on findings."
+sql_templates:
+  -
+    template_id: "signal_outcomes_last_3_months"
+    template: "SELECT symbol, date_issued, date_resolved, signal, price_at_issue, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months' AND (hit_target OR hit_stop);"
+    description: "Fetch signals issued in the last 3 months that hit targets or stops."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure date ranges are correctly applied for the last 3 months."
+  - "Verify the columns included in SQL align with approved schema."
+  - "Confirm output aligns with the prescribed output contract."
+synthesis_guidance: "['Focus on extracting insights useful for creating an action watchlist.', 'Highlight patterns in targets hit and stops hit to inform future signal strategies.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:33"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

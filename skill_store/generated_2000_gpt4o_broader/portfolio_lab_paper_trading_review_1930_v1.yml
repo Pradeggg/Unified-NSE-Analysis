@@ -1,0 +1,59 @@
+id: "portfolio_lab_paper_trading_review_1930_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1930"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: TradingView export; timeframe: last 5 sessions; response style: comparison matrix."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "TradingView export for last 5 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as comparison matrix"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Review and compare paper trading strategies focusing on entries, exits, stop loss, and targets."
+  - "Ensure the comparison uses separate data from real holdings."
+  - "Use TradingView export data for the analysis over the last 5 sessions."
+sql_templates:
+  -
+    template_name: "latest_signals_last_5_sessions"
+    template_body: "WITH recent_sessions AS (SELECT DISTINCT date_issued FROM signals.signal_log ORDER BY date_issued DESC LIMIT 5) SELECT * FROM signals.signal_log WHERE date_issued IN (SELECT date_issued FROM recent_sessions);"
+  -
+    template_name: "portfolio_holdings_snapshot"
+    template_body: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all data retrieved relates to the last 5 trading sessions."
+  - "Cross-verify if strategies are separately reviewed from actual holdings."
+synthesis_guidance: "['Compile a comparison matrix highlighting the differences in paper trading strategies.', 'Focus on how the strategies performed using simulation versus real market scenarios.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

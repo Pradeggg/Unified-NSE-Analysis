@@ -1,0 +1,52 @@
+id: "vcp_breakouts_with_fundamentals_0058_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0058"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: quarter to date; response style: concise table."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Find stocks that meet VCP, breakout, or new-high criteria with strong fundamentals and liquidity using the approved schema."
+sql_templates:
+  -
+    description: "Select breakouts and VCP candidates with strong fundamentals."
+    sql: "SELECT vcp.symbol, vcp.company_name, vcp.price, vcp.trading_signal, vcp.relative_strength, snapshot.enhanced_fund_score FROM scores.stage2_vcp_picks vcp INNER JOIN scores.stage_snapshots snapshot ON vcp.symbol = snapshot.symbol WHERE vcp.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND snapshot.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND snapshot.stage = 'STAGE_2' AND vcp.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY vcp.vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure outputs adhere to concise table format."
+  - "Validate the latest data usage with correct PostgreSQL date syntax."
+synthesis_guidance: "['Ensure the clarity of the response with accurate VCP and breakout categorizations.', 'Verify the correct use of trading signals and fundamental scores.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:07"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

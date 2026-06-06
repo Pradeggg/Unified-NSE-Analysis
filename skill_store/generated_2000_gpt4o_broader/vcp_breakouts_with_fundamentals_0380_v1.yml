@@ -1,0 +1,66 @@
+id: "vcp_breakouts_with_fundamentals_0380_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0380"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: pre market; response style: exceptions and gaps first."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  evidence:
+    - "Use the approved tables to identify stocks showing VCP patterns, new highs, or breakouts with strong fundamentals."
+  risks:
+    - "Market fluctuations affecting stock prices."
+    - "Data latency impacting decision-making."
+sql_templates:
+  -
+    name: "select_vcp_breakouts"
+    type: "read-only"
+    select:
+      - "s.symbol"
+      - "s.company_name"
+      - "s.sector"
+      - "s.price"
+      - "s.enhanced_fund_score"
+      - "s.vcp_score"
+    from: "scores.stage2_vcp_picks AS s"
+    where: "s.vcp_score > 80 AND s.enhanced_fund_score >= 70"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all filters align with the approved schema."
+  - "Verify no unauthorized data manipulation occurs."
+synthesis_guidance: "['Prioritize stocks with strong fundamentals and high VCP scores.', 'Highlight any evidence gaps clearly within the response.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

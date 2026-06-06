@@ -1,0 +1,51 @@
+id: "agent_route_failure_diagnostics_0826_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0826"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for last 5 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as action watchlist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Use approved evidence tables for diagnostics. If SQL complexity arises, utilize Python for data processing while adhering to read-only policies."
+sql_templates:
+  -
+    description: "Identify the latest 5 sessions where issues might have occurred."
+    sql: "SELECT run_id, run_ts, universe_size, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= (CURRENT_DATE - INTERVAL '5 days') ORDER BY run_ts DESC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure only latest sessions are analyzed."
+  - "Check for missing tools and symbol resolution issues."
+synthesis_guidance: "Collate identified issues into an action watchlist for review."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:24"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

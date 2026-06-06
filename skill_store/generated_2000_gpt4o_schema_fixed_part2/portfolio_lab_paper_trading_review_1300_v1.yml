@@ -1,0 +1,50 @@
+id: "portfolio_lab_paper_trading_review_1300_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1301"
+description: "Analyze paper trading strategies using TradingView exports. Focus: Weekly review of entry/exit rules, stop-losses, and trading signals."
+input_patterns:
+  - "Export TradingView data for paper trading review"
+  - "Analyze paper trading entries using TradingView data"
+  - "Weekly TradingView review: paper trading strategies"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "TradingView"
+  - "weekly_review"
+  - "signals"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Use available evidence to assess and rank paper trading strategies."
+sql_templates:
+  -
+    id: "open_trades_review"
+    description: "Find current open trades using live TradingView data."
+    sql: "SELECT ph.symbol, ph.qty, ss.stage, ss.technical_score, ss.investment_score \n                FROM portfolio.holdings ph \n                JOIN scores.stage_snapshots ss ON ph.symbol = ss.symbol\n                WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n                AND EXISTS (\n                    SELECT 1 FROM signals.signal_log sl \n                    WHERE sl.symbol = ph.symbol AND sl.signal = 'BUY' AND sl.date_resolved IS NULL\n                )\n                LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  -
+    rule: "Ensure all TradingView exports are used for analysis."
+    severity: "error"
+synthesis_guidance: "[{'rule': 'Prioritize high-scoring strategies.', 'context': 'Use stages and scores from stage_snapshots to rank strategies.'}]"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

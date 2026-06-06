@@ -1,0 +1,58 @@
+id: "sector_breadth_rotation_watchlist_0545_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0545"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: risk-first review; timeframe: last 3 months; response style: research-only summary."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "risk-first review for last 3 months: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as research-only summary"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "risk-first_review"
+  - "last_3_months"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  evidence:
+    - "Gather data from approved tables for last 3 months."
+    - "Calculate sector ranks based on breadth signals and stage participation."
+    - "Identify improving sectors and candidate symbols for TradingView."
+sql_templates:
+  -
+    template: "SELECT sector, AVG(pct_above_50dma) AS average_pct_above, AVG(change_5d) AS average_change_5d FROM breadth.sector_daily WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector;"
+    description: "Calculate average % above 50 DMA and 5-day change for each sector in the last 3 months."
+  -
+    template: "WITH recent_stage_data AS (SELECT sector, symbol, stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' AND stage = '2' GROUP BY sector, symbol, stage) SELECT sector, COUNT(symbol) AS stage2_count FROM recent_stage_data GROUP BY sector ORDER BY stage2_count DESC;"
+    description: "Count the number of stocks in Stage 2 for each sector in the last 3 months."
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sectors are ranked by their breadth and Stage 2 participation."
+  - "Identify improvements in sectors based on average metrics."
+  - "Generate list of candidate symbols for TradingView."
+synthesis_guidance: "['Focus on indicating which sectors show strong breadth and stage improvements.', 'Suggest sectors and stocks that align with risk-first analysis within the Indian market.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:48:21"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.sector_daily.average_change_5d is not approved"
+  - "breadth.sector_daily.average_pct_above is not approved"

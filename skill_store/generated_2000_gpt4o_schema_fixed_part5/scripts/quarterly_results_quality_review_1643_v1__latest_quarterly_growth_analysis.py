@@ -1,0 +1,1 @@
+# Extract growth metrics and apply relevant scoring logic. def run(context): return growth_assessment

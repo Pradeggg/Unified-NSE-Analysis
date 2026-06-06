@@ -1,0 +1,80 @@
+id: "company_360_research_report_1700_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report"
+description: "Generate a comprehensive research report with company overview, financials, fundamentals, technical context, and narrative evidence."
+input_patterns:
+  - "/research <SYMBOL> comprehensive report"
+  - "full research report with fundamentals technical charts narrative for <SYMBOL>"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "TradingView_export"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    steps:
+      - "Gather latest stage snapshot data."
+      - "Fetch the latest financial results."
+      - "Analyze the technical setup using EOD data."
+      - "Compile findings into a comprehensive report."
+sql_templates:
+  -
+    explain: "Fetch the latest stage snapshot for the given symbol."
+    query: "SELECT * FROM scores.stage_snapshots WHERE symbol = $1 AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 1;"
+  -
+    explain: "Fetch latest financial results for the given symbol."
+    query: "WITH latest_quarterly AS (SELECT DISTINCT ON (symbol) * FROM scores.quarterly_results WHERE symbol = $1 ORDER BY period_end DESC NULLS LAST, fetched_at DESC), latest_annual AS (SELECT DISTINCT ON (symbol) * FROM scores.annual_results WHERE symbol = $1 ORDER BY period_end DESC NULLS LAST, fetched_at DESC) SELECT * FROM latest_quarterly UNION ALL SELECT * FROM latest_annual;"
+  -
+    explain: "Fetch the latest technical setup from EOD data for the given symbol."
+    query: "SELECT * FROM market.equity_eod WHERE symbol = $1 AND trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) LIMIT 1;"
+python_tools:
+  -
+    id: "run_financial_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "financial_data"
+    outputs:
+      - "financial_summary"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.annual_results"
+    code: "# Perform financial analysis\n# Return computed financial summary"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL queries are scoped with LIMIT and parameterized inputs."
+  - "Adhere to schema constraints and join rules."
+  - "Verify that all data mappings conform to the table's column_details."
+synthesis_guidance: "['Compile evidence sections into a narrative report.', 'Prioritize clarity and fact-based insight.', 'Label findings with appropriate tags and context indicators.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:18"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_financial_analysis: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_financial_analysis: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

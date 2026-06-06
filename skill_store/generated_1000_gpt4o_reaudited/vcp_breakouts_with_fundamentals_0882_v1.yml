@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:52:27"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: intraday context; response style: action watchlist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0882_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Find VCP breakout stocks with high fundamental scores and liquidity."
+    query: "SELECT v.symbol, v.company_name, v.price, v.live_price, v.vcp_score, v.enhanced_fund_score, v.earnings_quality, v.sales_growth, v.financial_strength, v.relative_strength FROM scores.stage2_vcp_picks v JOIN scores.stage_snapshots s ON v.symbol = s.symbol WHERE v.vcp_score > 80 AND v.enhanced_fund_score > 70 AND v.financial_strength > 75 AND s.stage = 'Stage 2' AND s.fundamental_score > 70 ORDER BY v.relative_strength DESC;"
+status: "validated"
+synthesis_guidance: "Consider combining technical VCP scores with strong fundamental indicators to identify breakout opportunities. Pay attention to liquidity indicators and institutional backing as part of the action watchlist."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "action_watchlist"
+title: "VCP Breakouts With Fundamentals Variant 0882"
+tool_plan_template: "Search for stocks hitting new highs, VCP patterns, or breakouts with strong fundamental scores and liquidity using evidence from approved tables. Create a shortlist for potential trading opportunities."
+validation_rules:
+  - "Ensure the query filters by VCP score, enhanced fund score, and financial strength."
+  - "Resulting symbols must connect to TradingView format."
+  - "Liquids stocks with high relative strength are prioritized."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

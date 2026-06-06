@@ -1,0 +1,71 @@
+id: "data_freshness_readiness_audit_1799_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Checker"
+description: "Validate whether the data in the Agent Adda evidence sources is fresh enough for various workflows such as live trading, end-of-day operations, reporting, and research. This skill card focuses on source-trail validation with a weekly review timeframe."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for weekly review: data freshness readiness thresholds"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "source-trail_validation"
+  - "weekly_review"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Data freshness should be checked weekly using provided thresholds against key data tables and columns across Agent Adda. Source-trail log and freshness matrix should be updated regularly."
+sql_templates:
+  -
+    description: "Check latest EOD data freshness for index data."
+    template: "SELECT trade_date, index_symbol, close FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) LIMIT 5;"
+    type: "SELECT"
+  -
+    description: "Check latest EOD data freshness for equity data."
+    template: "SELECT trade_date, symbol, close FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) LIMIT 5;"
+    type: "SELECT"
+python_tools:
+  -
+    id: "data_freshness_checker"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "eod_dates_index"
+      - "eod_dates_equity"
+    outputs:
+      - "freshness_matrix"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Placeholder for Python tool implementation\n    eod_dates_index = context.inputs['eod_dates_index']\n    eod_dates_equity = context.inputs['eod_dates_equity']\n    freshness_matrix = {'index': eod_dates_index, 'equity': eod_dates_equity}\n    return freshness_matrix"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure queries are returning data for the latest available dates."
+  - "Check if any sources are missing for required date range."
+  - "Verify all columns are being utilized as per the latest schema."
+synthesis_guidance: "Provide a daily summary of data freshness across relevant tables. Highlight any missing data sources or stale data points."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:47"
+generation_model: "gpt-4o"
+validation_errors:
+  - "data_freshness_checker: execution failed: AttributeError: 'dict' object has no attribute 'inputs'"
+review:
+  status: "needs_heal"
+  findings:
+    - "data_freshness_checker: execution failed: AttributeError: 'dict' object has no attribute 'inputs'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

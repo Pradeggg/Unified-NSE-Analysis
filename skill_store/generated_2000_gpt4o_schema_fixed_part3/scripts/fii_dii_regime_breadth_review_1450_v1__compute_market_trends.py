@@ -1,0 +1,1 @@
+def run(context):\n    # Analyze interactions among trends\n    risk_categorization = []\n    for row in context:\n        if row['regime'] == 'BULL' and row['flow_signal'] == 'STRONG_BUY':\n            risk_categorization.append('Risk-On')\n        else:\n            risk_categorization.append('Risk-Off')\n    return risk_categorization

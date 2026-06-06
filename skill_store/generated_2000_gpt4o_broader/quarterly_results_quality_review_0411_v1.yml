@@ -1,0 +1,92 @@
+id: "quarterly_results_quality_review_0411_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0411"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: latest EOD; response style: portfolio-aware output."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for latest EOD: latest quarterly results analysis"
+  - "which companies had strong quarterly results as portfolio-aware output"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "latest_EOD"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  steps:
+    -
+      title: "Fetch Latest Quarterly Results"
+      task: "Gather the most recent quarterly results for companies."
+      evidence_tables:
+        - "scores.quarterly_results"
+    -
+      title: "Analyze Revenue and PAT Growth"
+      task: "Evaluate year-over-year and quarter-over-quarter revenue and PAT growth."
+      evidence_tables:
+        - "scores.results_analysis"
+    -
+      title: "Assess Margin Movement"
+      task: "Analyze changes in operating profit margins."
+      evidence_tables:
+        - "scores.results_analysis"
+    -
+      title: "Determine Filing Freshness"
+      task: "Check the recency of filings and audit status."
+      evidence_tables:
+        - "scores.results_analysis"
+    -
+      title: "Synthesize Narrative Quality"
+      task: "Review narratives for business performance insights."
+      evidence_tables:
+        - "scores.results_analysis"
+sql_templates:
+  -
+    description: "Fetch companies with recent quarterly results."
+    sql: "SELECT symbol, period_end, revenue, pat, opm_pct FROM scores.quarterly_results WHERE period_end = (SELECT MAX(period_end) FROM scores.quarterly_results)"
+python_tools:
+  -
+    id: "analyze_growth_trends"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "revenue_data"
+      - "pat_data"
+    outputs:
+      - "growth_summary"
+    approved_tables:
+      - "scores.quarterly_results"
+    code: "def run(context):\n    revenue_data = context['revenue_data']\n    pat_data = context['pat_data']\n    # Logic to analyze growth trends...\n    return {'growth_summary': 'result'}"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "The results should be from the latest period."
+  - "Revenue and PAT growth calculations must align with industry benchmarks."
+  - "Analysis must account for fresh filings only."
+  - "Narrative quality should include comprehensive business insights."
+synthesis_guidance: "['Ensure portfolio-awareness by ranking companies based on performance and potential.', 'Highlight companies with exceptional revenue or PAT growth.', 'Include narrative that provides context to the quantitative results.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:00"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analyze_growth_trends: execution failed: KeyError: 'revenue_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "analyze_growth_trends: execution failed: KeyError: 'revenue_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

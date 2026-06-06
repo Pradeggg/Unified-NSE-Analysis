@@ -1,0 +1,61 @@
+id: "agent_route_failure_diagnostics_1176_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1176"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: pre market; response style: narrative plus evidence."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for pre market: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as narrative plus evidence"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "pre_market"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "Overall Approach: Begin with diagnosing common data quality issues for Agent Adda route failures, focusing on freshness, missing tools, and symbol resolution."
+  - "Start by inspecting the latest data using approved PostgreSQL filters."
+  - "Determine if any tools or symbols are missing, causing route failures."
+  - "Use approved schema join rules to correlate between enhanced runs and filtered stocks, looking for discrepancies."
+  - "Focus the analysis on Indian market pre-market scenarios, especially before trading begins."
+sql_templates:
+  -
+    description: "Latest enhanced report runs with freshness details."
+    template: "SELECT run_id, run_ts, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+  -
+    description: "Linking enhanced runs and filtered stocks for potential data gaps."
+    template: "SELECT er.run_id, ef.symbol, ef.recommendation FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id WHERE er.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure SQL uses PostgreSQL syntax."
+  - "Check if the JOIN condition is correctly using the approved schema join rules."
+  - "Validation against the latest run timestamps is required for freshness determination."
+  - "Use parameterized templates for user-provided inputs where applicable."
+synthesis_guidance: "['Returns diagnostic outcomes on route failures through an integration of narrative and evidence.', 'Highlight any identified tool gaps and suggest potential fixes.', 'Provide a regression test framework for future diagnostics improvements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:41:36"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,67 @@
+id: "portfolio_incremental_add_trim_0423_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0423"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for last 5 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "last_5_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Evaluate portfolio exposure and scoring over the last 5 sessions to recommend incremental add/trim actions."
+sql_templates:
+  -
+    name: "Fetch_scenario_data"
+    sql: "SELECT snapshot_date, symbol, sector, change_1d_pct, change_1w_pct, stage_score FROM scores.stage_snapshots WHERE snapshot_date >= (SELECT MAX(snapshot_date) - INTERVAL '5 days' FROM scores.stage_snapshots);"
+  -
+    name: "Fetch_holdings_data"
+    sql: "SELECT symbol, qty, avg_cost FROM portfolio.holdings;"
+python_tools:
+  -
+    id: "evaluate_risk_flags"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_exposure_data"
+      - "holdings_data"
+    outputs:
+      - "risk_flags"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    sector_exposure = context['sector_exposure_data']\n    holdings = context['holdings_data']\n    risk_flags = []\n    # Evaluate sector risk based on holdings and historical data\n    for sector_data in sector_exposure:\n        if sector_data['exposure_pct'] > context['risk_threshold']:\n            risk_flags.append({'sector': sector_data['sector'], 'flag': 'High Exposure'})\n    return {'risk_flags': risk_flags}"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure results are based on the latest 5 business sessions."
+  - "Verify that sector exposure does not exceed set risk thresholds."
+synthesis_guidance: "['Integrate scoring and holdings data to evaluate position decisions.', 'Consider current stage scores and recent price changes for recommendations.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:18"
+generation_model: "gpt-4o"
+validation_errors:
+  - "evaluate_risk_flags: execution failed: KeyError: 'sector_exposure_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "evaluate_risk_flags: execution failed: KeyError: 'sector_exposure_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,53 @@
+id: "market_3m_rotation_swing_1737_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1737"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for last 20 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Examine market trends, sector leaders, stage distribution, and swing candidates by comparing scores and signals over recent sessions."
+sql_templates:
+  index_returns: "SELECT index_symbol, AVG(change_pct) as avg_return FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol;"
+  stage_distribution_change: "SELECT sector, COUNT(stage) as count, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector, stage;"
+  leading_sectors: "SELECT sector, AVG(change_1m_pct) as avg_change FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector;"
+  primary_candidates: "SELECT symbol, trading_signal, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+  risks: "SELECT symbol, relative_strength, rsi FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND relative_strength < 50;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all symbols belong to approved NSE listings."
+  - "Ensure trading signals and stage labels match approved text values."
+  - "Verify date boundaries used in SQL comply with approved global rules."
+synthesis_guidance: "['Summarize market regime trends over 3 months with emphasis on sector rotation.', 'Identify and list top sectors contributing to stage 2 leadership.', 'Highlight liquid swing candidates with potential buy signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_return is not approved"
+  - "scores.stage_snapshots.avg_change is not approved"

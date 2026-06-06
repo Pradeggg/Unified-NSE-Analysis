@@ -1,0 +1,67 @@
+id: "report_link_data_validation_1208_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Report Link Validation"
+description: "Check enhanced report links, metadata validation, and missing stock data in the context of Indian market reports."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for today: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "today"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  summary: "The tool validates report links and associated data."
+  steps:
+    - "Extract recent enhanced report metadata."
+    - "Identify broken or missing links in the stock data."
+sql_templates:
+  check_links_and_data: "SELECT r.run_id, r.run_ts, r.notes FROM report.enhanced_runs r LEFT JOIN report.enhanced_filtered_stocks s ON r.run_id = s.run_id WHERE s.run_id IS NULL AND r.run_ts >= CURRENT_DATE - INTERVAL '1 day' LIMIT 50;"
+python_tools:
+  -
+    id: "link_validator_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+      - "run_ts"
+    outputs:
+      - "broken_links"
+      - "missing_data"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Placeholder for link validation logic\n    report_links = context['run_id']\n    broken_links = []\n    for link in report_links:\n        if not is_link_valid(link):  # is_link_valid is a hypothetical function\n            broken_links.append(link)\n    return {'broken_links': broken_links, 'missing_data': []}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure timestamps are recent for valid context."
+  - "Verify joined data integrity between enhanced_runs and enhanced_filtered_stocks."
+synthesis_guidance: "Focus on validating that all report links resolve and that stock data is complete for the given day."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:41:53"
+generation_model: "gpt-4o"
+validation_errors:
+  - "link_validator_tool: execution failed: KeyError: 'run_id'"
+review:
+  status: "needs_heal"
+  findings:
+    - "link_validator_tool: execution failed: KeyError: 'run_id'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

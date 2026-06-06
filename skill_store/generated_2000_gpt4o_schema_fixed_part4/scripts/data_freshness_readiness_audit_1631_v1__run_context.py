@@ -1,0 +1,1 @@
+['# Read-only Python tool to further analyze data freshness.', 'def run(context):', '    # Placeholder Python method', '    # Process the context to generate a freshness analysis.', '    freshness_analysis = {...}  # Example structure', '    return freshness_analysis']

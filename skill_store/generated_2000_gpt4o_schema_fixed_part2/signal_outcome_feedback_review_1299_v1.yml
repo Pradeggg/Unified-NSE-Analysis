@@ -1,0 +1,57 @@
+id: "signal_outcome_feedback_review_1299_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Review Signal Outcomes and Improve Skills"
+description: "Evaluate historical trading signals to learn from outcomes and optimize future recommendations."
+input_patterns:
+  - "Review prior signals that hit targets or stops"
+  - "Analyze successful and failed recommendations"
+  - "Incorporate learnings into skill enhancement"
+  - "Conduct weekly reviews for source-trail validation"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Gather all prior signals from signals.signal_log with outcomes associated."
+    - "Review scores and contexts from scores.stage_snapshots for each signal."
+    - "Analyze the market context from market.equity_eod to understand price movements."
+    - "Rank recommendations based on success or failure patterns."
+sql_templates:
+  -
+    template: "SELECT s.id, s.symbol, s.date_issued, s.signal, s.price_at_issue, s.price_at_resolution, s.hit_target, s.hit_stop, s.return_pct, st.stage FROM signals.signal_log s JOIN scores.stage_snapshots st ON s.symbol = st.symbol WHERE s.hit_target = TRUE OR s.hit_stop = TRUE ORDER BY s.date_issued DESC LIMIT 50;"
+    read_only: true
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure only signals with resolved outcomes are considered."
+  - "Validate market context alignment with latest prices."
+  - "Check for latest stage data during analysis."
+synthesis_guidance: "['Highlight successful signal patterns for retention.', 'Identify failure patterns for elimination.', 'Suggest route improvements based on analytic insights.', 'Outline next review steps and checks.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,73 @@
+id: "vcp_breakouts_with_fundamentals_0582_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0582"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: intraday context; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters:
+    - "Identify stocks creating new highs or VCP patterns with strong fundamentals."
+    - "Use stage snapshots for deep institutional review in an intraday context."
+  candidates_expression: "{SELECTED_SYMBOLS}"
+  evidence_expression: "{MARKET_EQUITY_EOD_RESULTS | JOINED_STAGE_SNAPSHOTS}"
+sql_templates:
+  -
+    type: "SELECT"
+    description: "Get VCP breakout candidates with strong fundamentals."
+    query: "SELECT v.symbol, v.company_name, v.price, v.rsi, v.relative_strength, v.enhanced_fund_score, v.vcp_score FROM scores.stage2_vcp_picks v WHERE v.vcp_score > 70 AND v.enhanced_fund_score > 50 AND v.change_1d_pct > 1"
+python_tools:
+  -
+    id: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "processed_data"
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "# Quarantined analysis - use only for validation or research-enhanced insights\n\ndef run(context):\n    processed_data = context['candidates']\n    # Example: Filter and add additional insights based on intraday analysis\n    processed_data = [row for row in processed_data if row['volume'] > 1000000]\n    return processed_data"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all listed stocks meet the fundamental score threshold."
+  - "Validate the intraday context against today's snapshot."
+synthesis_guidance: "['Summarize the evidence in a research-oriented manner.', 'Highlight any discrepancies or insights that require attention.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:49:21"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.v is not approved"
+  - "unknown table v.change_1d_pct"
+  - "unknown table v.company_name"
+  - "unknown table v.enhanced_fund_score"
+  - "unknown table v.price"
+  - "unknown table v.relative_strength"
+  - "unknown table v.rsi"
+  - "unknown table v.symbol"
+  - "unknown table v.vcp_score"

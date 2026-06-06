@@ -1,0 +1,62 @@
+created_at: "2026-06-06T12:48:12"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: quarter to date; response style: portfolio-aware output."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0455_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as portfolio-aware output"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context): return {'risk_flags': ['high_volatility', 'overexposed_sector']}"
+    id: "calculate_risk_flags"
+    inputs:
+      - "portfolio_data"
+      - "market_risk_factors"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "risk_flags"
+sql_templates:
+
+status: "validated"
+synthesis_guidance: "Evaluate current portfolio state and sectors, assess for add/trim candidates based on risk-first review."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+title: "Portfolio Incremental Add Trim Review Variant 0455"
+tool_plan_template:
+  sql_templates:
+    -
+      description: "Fetch current holdings with required scores for analysis."
+      template: "SELECT p.symbol, p.qty, p.avg_cost, s.sector, s.stage_score, s.rsi, s.trend_signal, s.sales_growth FROM portfolio.holdings p JOIN scores.stage_snapshots s ON p.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE;"
+validation_rules:
+  - "mustInclude"
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

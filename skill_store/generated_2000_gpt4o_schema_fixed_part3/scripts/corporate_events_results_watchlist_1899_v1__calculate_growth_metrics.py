@@ -1,0 +1,1 @@
+def run(context): return context['growth_yoy_revenue_pct'] > 0 and context['growth_qoq_revenue_pct'] > 0

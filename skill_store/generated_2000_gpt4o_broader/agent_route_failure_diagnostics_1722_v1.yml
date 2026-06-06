@@ -1,0 +1,50 @@
+id: "agent_route_failure_diagnostics_1722_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1722"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for last 5 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as QA checklist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Ensure all diagnostic steps and tools are present. Assess historical session data and verify symbol resolution paths. Determine remedial paths based on evidenced outcomes."
+sql_templates:
+  -
+    template_name: "Get_Last_5_Sessions"
+    template_sql: "SELECT run_id, run_ts, universe_size, stocks_analyzed, market_sentiment FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 5"
+  -
+    template_name: "Identify_Symbol_Resolution_Issues"
+    template_sql: "SELECT symbol, COUNT(*) as occurrences FROM report.enhanced_filtered_stocks GROUP BY symbol HAVING COUNT(*) > 1"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all input patterns match exactly with patterns from recent sessions."
+  - "Tool gaps should be cross-verified with institutional logs."
+synthesis_guidance: "Aggregate diagnostic findings into a cohesive QA checklist focusing on common symbol resolution issues and missing tool validations."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:23"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_filtered_stocks.occurrences is not approved"

@@ -1,0 +1,82 @@
+id: "agent_route_failure_diagnostics_1694_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics with Watchlist Creation"
+description: "Diagnose Agent Adda route failures focusing on watchlist creation, validate symbol resolutions, identify missing tools, and analyze fallback loops for weekly reviews."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for weekly review: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as debug trace"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Select latest run data and filter relevant symbols for watchlist diagnostics."
+sql_templates:
+  -
+    template_type: "select_symbols_for_diagnostics"
+    sql: "WITH latest_runs AS ( SELECT run_id FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) ) SELECT efs.symbol, efs.score, efs.recommendation FROM report.enhanced_filtered_stocks efs JOIN latest_runs lr ON efs.run_id = lr.run_id WHERE efs.recommendation IN ('HOLD', 'SELL') LIMIT 50;"
+  -
+    template_type: "select_stage_snapshots"
+    sql: "SELECT ss.symbol, ss.stage, ss.stage_score FROM scores.stage_snapshots ss WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.stage = 'STAGE_2' LIMIT 50;"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    required_fields:
+      - "id"
+      - "language"
+      - "mode"
+      - "inputs"
+      - "outputs"
+      - "approved_tables"
+      - "code"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all queries use latest date filters as per _global_rules."
+  - "Constrain result sets with appropriate LIMIT."
+  - "Do not invent columns or tables outside the approved schema."
+synthesis_guidance: "['Integrate symbol recommendations with route diagnostics for deeper insights.', 'Highlight patterns of failures related to stages and recommendations.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: code is required"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

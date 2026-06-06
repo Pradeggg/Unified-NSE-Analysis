@@ -1,0 +1,54 @@
+id: "fii_dii_regime_breadth_review_1086_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1086"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: intraday context; response style: concise table."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for intraday context: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as concise table"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "intraday_context"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    tool: "PostgreSQL_readonly"
+    description: "Query intraday context data across FII/DII flows, regime history, market breadth, and index EOD data."
+    evidence_table: "signals.fii_dii_flows"
+sql_templates:
+  query: "WITH latest_flows AS (SELECT * FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows)), latest_regime AS (SELECT * FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history)), latest_breadth AS (SELECT * FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily)), latest_index AS (SELECT * FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND index_symbol = 'Nifty 50') SELECT lf.trade_date, lf.flow_signal, lr.regime, lb.ad_signal, li.close, li.trend_signal FROM latest_flows lf JOIN latest_regime lr ON lf.trade_date = lr.trade_date JOIN latest_breadth lb ON lf.trade_date = lb.trade_date JOIN latest_index li ON lf.trade_date = li.trade_date;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all joins are made correctly."
+  - "Verify correct filters for latest data are used."
+synthesis_guidance: "['Integrate FII/DII net flows and trends with regime signals into a single intraday summary.', 'Use TRIN and AD signals for breadth context.', 'Apply trend signals from index data for confirmation.', 'Determine risk-on/risk-off environments based on synthesis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:07"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

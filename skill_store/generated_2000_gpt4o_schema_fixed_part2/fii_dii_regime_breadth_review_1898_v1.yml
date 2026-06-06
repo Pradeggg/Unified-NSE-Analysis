@@ -1,0 +1,52 @@
+id: "fii_dii_regime_breadth_review_1898_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1898"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as action watchlist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "{require_from}:latest DATE from signals.fii_dii_flows; notes={get_latest_fii_dii_flows_records}\n{require_from}:latest DATE from signals.regime_history; notes={get_latest_regime_history}\n{require_from}: latest DATE from breadth.market_daily; notes={get_latest_breadth_market_daily}\n{require_from}:latest DATE from market.index_eod; notes={get_latest_index_eod_rows}"
+sql_templates:
+  -
+    template: "SELECT reg.trade_date, reg.regime, fii.flow_signal, bred.ad_signal, idx.trend_signal FROM signals.fii_dii_flows fii JOIN signals.regime_history reg ON fii.trade_date = reg.trade_date JOIN breadth.market_daily bred ON fii.trade_date = bred.trade_date JOIN market.index_eod idx ON fii.trade_date = idx.trade_date WHERE reg.trade_date = (SELECT MAX(trade_date) FROM signals.regime_history) AND idx.index_symbol = 'NIFTY 50'"
+    description: "Get latest market regime, FII/DII flows, market breadth signals, and NIFTY 50 index trend."
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure no null values in regime or flow_context columns."
+  - "Confirm latest market date aligns across evidence."
+synthesis_guidance: "['Capture how flows signal risk-on or risk-off.', 'Highlight any divergences between market breadth and institutional flows.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

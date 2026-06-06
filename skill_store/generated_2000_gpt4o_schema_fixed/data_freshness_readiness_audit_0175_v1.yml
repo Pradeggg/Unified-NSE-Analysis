@@ -1,0 +1,96 @@
+id: "data_freshness_readiness_audit_0175_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0175"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: risk-first review; timeframe: pre market; response style: narrative plus evidence."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "risk-first review for pre market: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as narrative plus evidence"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "risk-first_review"
+  - "pre_market"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Perform a data freshness audit focusing on Agent Adda's ability to provide fresh market data pre-market. Focus on risk-first evidence, emphasizing database loader freshness and identifying missing history crucial to readiness thresholds."
+sql_templates:
+  -
+    title: "Latest Index EOD Data Freshness"
+    sql: "SELECT MAX(trade_date) FROM market.index_eod"
+    description: "Retrieve the latest trade date from the index EOD data."
+    target: "index_eod_latest"
+    type: "SELECT"
+  -
+    title: "Latest Equity EOD Data Freshness"
+    sql: "SELECT MAX(trade_date) FROM market.equity_eod WHERE series = 'EQ'"
+    description: "Retrieve the latest trade date for equity EOD data from the cash market."
+    target: "equity_eod_latest"
+    type: "SELECT"
+  -
+    title: "Latest Stage Snapshot Freshness"
+    sql: "SELECT MAX(snapshot_date) FROM scores.stage_snapshots"
+    description: "Retrieve the latest snapshot date from stage snapshots."
+    target: "stage_snapshots_latest"
+    type: "SELECT"
+  -
+    title: "Market Daily Breadth Data Freshness"
+    sql: "SELECT MAX(trade_date) FROM breadth.market_daily"
+    description: "Retrieve the latest trade date from market breadth data."
+    target: "market_daily_latest"
+    type: "SELECT"
+python_tools:
+  -
+    id: "validate_freshness_thresholds"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "index_eod_latest"
+      - "equity_eod_latest"
+      - "stage_snapshots_latest"
+      - "market_daily_latest"
+    outputs:
+      - "freshness_status"
+      - "gaps_identified"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "breadth.market_daily"
+    code: "def run(context):\n    results = {}\n    current_date = datetime.date.today()\n    # Compare latest dates with current_date and thresholds\n    for key, date in context.items():\n        if (current_date - date).days > 1:  # Example threshold\n            results[key] = 'Stale'\n        else:\n            results[key] = 'Fresh'\n    return results"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all SQL statements have corresponding results."
+  - "Validate against global latest date rules."
+  - "Narrative should include identified freshness gaps if any."
+synthesis_guidance: "Use the extracted data to build a narrative on data freshness readiness, focusing on potential freshness gaps that could impact pre-market workflows. Include insights on where the system might need improvement."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:46"
+generation_model: "gpt-4o"
+validation_errors:
+  - "validate_freshness_thresholds: execution failed: NameError: name 'datetime' is not defined"
+review:
+  status: "needs_heal"
+  findings:
+    - "validate_freshness_thresholds: execution failed: NameError: name 'datetime' is not defined"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

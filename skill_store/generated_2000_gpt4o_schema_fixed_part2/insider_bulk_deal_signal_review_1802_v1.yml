@@ -1,0 +1,51 @@
+id: "insider_bulk_deal_signal_review_1802_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1802"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for today: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as action watchlist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "{synthesis}"
+sql_templates:
+  deal_summary: "WITH latest_stage AS (SELECT symbol, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), today_deals AS (SELECT symbol, entity, qty, price FROM signals.bulk_block_deals WHERE deal_date = CURRENT_DATE), insider_activity AS (SELECT symbol, insider_score FROM signals.insider_alerts WHERE alert_date = CURRENT_DATE) SELECT d.symbol, s.stage, d.entity, d.qty, d.price, i.insider_score FROM today_deals d LEFT JOIN latest_stage s ON d.symbol = s.symbol LEFT JOIN insider_activity i ON d.symbol = i.symbol ORDER BY s.stage DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Output must include summary of deals with insider and stage context."
+  - "Limit 10 symbols based on criteria."
+  - "Symbols must be ordered by stage, descending."
+synthesis_guidance: "Generate a concise summary highlighting institutional activity with technical support, synthesizing EOD and deal data. Focus on symbols with high insider scores and favorable stages."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

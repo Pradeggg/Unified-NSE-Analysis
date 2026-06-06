@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:43:20"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: today; response style: ranked candidates."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0210_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  - "SELECT symbol, company_name, sector, price, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE vcp_score IS NOT NULL AND enhanced_fund_score > 80 ORDER BY vcp_score DESC LIMIT 10;"
+  - "SELECT symbol, trade_date, high, volume, turnover_cr FROM market.equity_eod WHERE trade_date = CURRENT_DATE AND symbol IN (:symbol_list);"
+status: "validated"
+synthesis_guidance: "['Focus on cross-validation between technical VCP profiles and robust fundamentals.', 'Ensure TradingView compatibility by verifying symbol formats.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "today"
+  - "ranked_candidates"
+title: "VCP Breakouts With Fundamentals Variant 0210"
+tool_plan_template:
+  - "1. Use scores.stage2_vcp_picks to identify prime VCP breakout candidates with strong fundamental scores."
+  - "2. Cross-reference with market.equity_eod to validate current price action and liquidity support."
+  - "3. Prepare a ranked list of stock symbols for TradingView export."
+validation_rules:
+  - "Ensure returns are aligned with today's market data."
+  - "Confirm candidates have both VCP characteristics and high fundamental scores."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

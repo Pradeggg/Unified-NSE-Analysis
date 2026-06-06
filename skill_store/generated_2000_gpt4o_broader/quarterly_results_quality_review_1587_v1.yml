@@ -1,0 +1,56 @@
+id: "quarterly_results_quality_review_1587_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1587"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: sector-relative comparison; timeframe: intraday context; response style: research-only summary."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "sector-relative comparison for intraday context: latest quarterly results analysis"
+  - "which companies had strong quarterly results as research-only summary"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  plan: "Using the approved tables, first extract quarterly performance metrics, such as revenue and PAT growth. Then, analyze product margins and any reported narrative or commentary to identify key drivers or risks. Finally, create a sector-relative comparison and summary using intraday market context."
+sql_templates:
+  -
+    description: "Extract latest quarterly results focusing on revenue and PAT growth."
+    query: "SELECT symbol, period_label, revenue, expenses, operating_profit, pat, eps FROM scores.quarterly_results WHERE period_type = 'quarterly' ORDER BY period_end DESC LIMIT 10;"
+  -
+    description: "Analyze result beat/miss and margin trend from results analysis."
+    query: "SELECT symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct, opm_delta_pp FROM scores.results_analysis ORDER BY period_end DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure no tables or columns are invented."
+  - "SQL templates must be read-only."
+  - "Evidence gaps must be identified when concepts are missing."
+synthesis_guidance: "{'process': 'Compile extracted data to generate sector-relative comparisons and company rankings based on latest quarterly results; ensure context is intraday and narrative is purely research-focused.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

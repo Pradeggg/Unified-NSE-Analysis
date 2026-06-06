@@ -1,0 +1,50 @@
+id: "vcp_breakouts_with_fundamentals_0682_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0682"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: intraday context; response style: debug trace."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze VCP and breakout candidates using enhanced fundamental scores and institutional backing within the Indian market."
+sql_templates:
+  breakout_candidates: "SELECT symbol, company_name, sector, price, vcp_score FROM scores.stage2_vcp_picks WHERE vcp_score > 80 AND enhanced_fund_score > 70 ORDER BY vcp_score DESC;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure candidates are filtered based on VCP and enhanced fundamental scores."
+  - "Verify TradingView symbol compatibility."
+synthesis_guidance: "Highlight stocks meeting VCP breakout criteria and ensure strong institutional backing."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:50:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

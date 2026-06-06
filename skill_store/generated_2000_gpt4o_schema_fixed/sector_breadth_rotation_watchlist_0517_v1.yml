@@ -1,0 +1,67 @@
+id: "sector_breadth_rotation_watchlist_0517_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0517"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: research-only summary."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for latest EOD: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as research-only summary"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "{\n    \"queries\": [\"select * from breadth.sector_daily where sector = ?;\"\n    ]\n}"
+sql_templates:
+  -
+    name: "Sector_Breadth_Snapshot"
+    template: "WITH latest_breadth AS (\n    SELECT sector, index_name, pct_above_50dma, change_5d, breadth_signal\n    FROM breadth.sector_daily\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)\n),\nlatest_stage AS (\n    SELECT sector, symbol, stage, relative_strength\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2'\n)\nSELECT lb.sector, lb.index_name, lb.pct_above_50dma, lb.change_5d,\nss.symbol, ss.relative_strength\nFROM latest_breadth lb\nJOIN latest_stage ss ON lb.sector = ss.sector\nORDER BY lb.breadth_signal DESC\nLIMIT 10;"
+python_tools:
+  -
+    id: "calculate_sector_strength"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_data"
+      - "stage_data"
+    outputs:
+      - "sector_strength_score"
+    approved_tables:
+      - "breadth.sector_daily"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    sector_data = context['sector_data']\n    stage_data = context['stage_data']\n    # Calculate sector strength based on breadth and stage analysis\n    strengths = {}\n    for sector in sector_data:\n        if sector in stage_data:\n            strength = sector_data[sector]['pct_above_50dma'] + stage_data[sector]['relative_strength']\n            strengths[sector] = strength\n    return strengths"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all fields use the latest snapshot_date for freshness."
+  - "Candidate lists should contain sector and symbol details sorted by strength."
+synthesis_guidance: "['Provide a sector-relative analysis highlighting the top sectors and stock symbols.', 'Include sector and symbol rankings by breadth and relative strength.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:41"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_sector_strength: execution failed: KeyError: 'sector_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_sector_strength: execution failed: KeyError: 'sector_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,59 @@
+id: "sector_breadth_rotation_watchlist_0769_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0769"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: post results; response style: QA checklist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for post results: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as QA checklist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "post_results"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Generate sector-relative watchlist using approved tables to analyze breadth and stage."
+sql_templates:
+  -
+    title: "Get Latest Sector Breadth"
+    template: "SELECT sector, pct_above_50dma, breadth_signal FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)"
+    description: "Fetch latest sector breadth data."
+  -
+    title: "Get Stage 2 Participation"
+    template: "SELECT sector, stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.ma_pct_above)"
+    description: "Fetch latest stage 2 participation data."
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure latest date is used for all tables"
+  - "Restrict candidate lists with LIMIT"
+  - "Verify data integrity through source-trail validation"
+synthesis_guidance: "{'aggregation': 'Rank sectors by stage 2 participation and breadth signal strength.', 'QA_process': 'Check for discrepancies in source data and validate sector improvements.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

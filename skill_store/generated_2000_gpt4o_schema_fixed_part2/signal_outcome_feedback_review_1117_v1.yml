@@ -1,0 +1,62 @@
+id: "signal_outcome_feedback_review_1117_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1117"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: narrative plus evidence."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for latest EOD: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as narrative plus evidence"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  primary_table: "signals.signal_log"
+  secondary_table: "market.equity_eod"
+  join_criterion: "signals.signal_log.symbol = market.equity_eod.symbol"
+  output:
+    - "outcome_summary"
+    - "winner_patterns"
+    - "failure_patterns"
+    - "route_improvements"
+    - "next_checks"
+sql_templates:
+  -
+    description: "Retrieve latest signal outcomes with sector-relative comparison"
+    template: "WITH latest_signals AS (SELECT * FROM signals.signal_log WHERE date_issued >= (CURRENT_DATE - INTERVAL '1 month')) SELECT sl.symbol, sl.signal, sl.return_pct, meo.change_pct, ss.sector FROM latest_signals sl JOIN market.equity_eod meo ON sl.symbol = meo.symbol AND meo.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) JOIN scores.stage_snapshots ss ON sl.symbol = ss.symbol AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) WHERE ss.stage = 'STAGE_2'"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure signals are within the last month."
+  - "Cross-reference with latest equity end-of-day data."
+  - "Apply sector-relative comparisons for accuracy."
+synthesis_guidance: "['Analyze impact of resolved signals on corresponding sectors.', 'Identify patterns in successful and unsuccessful signals.', 'Propose improvements and next steps based on analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

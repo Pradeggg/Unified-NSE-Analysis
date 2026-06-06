@@ -1,0 +1,66 @@
+id: "market_3m_rotation_swing_1877_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1877"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  research:
+    - "Review market regime and sector rotation data over last 3 months."
+    - "Identify leading sectors and stage 2 leadership trends."
+    - "Compile a pre-market action watchlist of swing candidates."
+  analysis:
+    - "Assess technical indicators and stage scores for leading sectors."
+    - "Focus on market index changes and top-performing equities."
+sql_templates:
+  -
+    description: "Query for market index returns over the last 3 months"
+    sql: "SELECT index_symbol, AVG(change_pct) AS avg_change_pct FROM market.index_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY index_symbol;"
+  -
+    description: "Query for sector leadership and stage distribution change"
+    sql: "SELECT sector, COUNT(*) AS count, AVG(stage_score) AS avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY sector;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all key sectors are represented."
+  - "Validate the presence of sufficient swing candidates in the leading sectors."
+synthesis_guidance: "Integrate SQL query results to form a coherent market rotation analysis. Highlight leading sectors and swing candidates based on data insights."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:00"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_change_pct is not approved"
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage_snapshots.avg_stage_score is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"

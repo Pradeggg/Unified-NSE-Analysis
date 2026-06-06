@@ -1,0 +1,61 @@
+created_at: "2026-06-06T12:46:14"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: weekly review; response style: exceptions and gaps first."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0396_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for weekly review: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    description: "Find broken report links"
+    template: "SELECT run_id, run_ts FROM report.enhanced_runs WHERE run_ts < NOW() - INTERVAL '7 days';"
+  -
+    description: "Identify missing stock data"
+    template: "SELECT symbol, recommendation FROM report.enhanced_filtered_stocks WHERE recommendation IS NULL;"
+status: "test_failed"
+synthesis_guidance: "['Highlight exceptions and data gaps in reports.', 'Prioritize freshness and linkage issues in weekly reviews.']"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+title: "Enhanced Report Data Validation Variant 0396"
+tool_plan_template:
+  python_tools:
+    -
+      approved_tables:
+        - "report.enhanced_runs"
+      code: "def run(context):\n    # Simulate audit logic\n    findings = []\n    current_week = '2023-W38'  # Example current week\n    for run in context['report.enhanced_runs']:\n        if run['analysis_date'] < current_week:\n            findings.append({'run_id': run['run_id'], 'issue': 'outdated analysis'})\n    return findings"
+      id: "freshness_audit_tool"
+      inputs:
+        - "context"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "freshness_findings"
+validation_rules:
+  - "Check SQL queries for read-only compliance."
+  - "Ensure Python tools are in read-only mode and do not perform any database writes."
+version: 1
+validation_errors:
+  - "report.enhanced_runs.now is not approved"

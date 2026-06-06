@@ -1,0 +1,66 @@
+id: "portfolio_incremental_add_trim_1543_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1543"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: research-only summary."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for last 3 months: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as research-only summary"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh-follow-up"
+  - "last_3_months"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  -
+    description: "Review the latest 3-month performance and signals to determine add or trim actions in the portfolio."
+sql_templates:
+  -
+    description: "Retrieve portfolio holdings with latest stage snapshot data for analysis."
+    sql: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT ph.symbol, ph.qty, ph.avg_cost, ls.sector, ls.stage, ls.trading_signal FROM portfolio.holdings AS ph JOIN latest_snapshots AS ls ON ph.symbol = ls.symbol;"
+python_tools:
+  -
+    id: "analyze_trading_signals"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "trading_signal_data"
+    outputs:
+      - "add_candidates"
+      - "trim_candidates"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    # Read and analyze trading signals\n    trading_signals = context['trading_signal_data']\n    # Identify candidates based on trading signals\n    add_candidates = [x for x in trading_signals if x['trading_signal'] in ('BUY', 'STRONG_BUY')]\n    trim_candidates = [x for x in trading_signals if x['trading_signal'] == 'SELL']\n    return add_candidates, trim_candidates"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure that all symbols in the output have corresponding snapshot and holding data."
+  - "Validate that the calculated recommendations are consistent with trading signals."
+synthesis_guidance: "Summarize the findings into actionable insights based on trading signals and sector exposure."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analyze_trading_signals: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "analyze_trading_signals: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

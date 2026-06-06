@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:48:42"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: latest EOD; response style: research-only summary."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0514_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Query to find new high, VCP, and breakout stocks with strong fundamentals."
+    name: "find_new_high_vcp_breakout"
+    template: "SELECT eod.symbol, eod.high, eod.volume, snaps.fundamental_score, vcp.vcp_score FROM market.equity_eod AS eod JOIN scores.stage_snapshots AS snaps ON eod.symbol = snaps.symbol JOIN scores.stage2_vcp_picks AS vcp ON eod.symbol = vcp.symbol WHERE eod.trade_date = 'latest' AND (eod.close = eod.week52_high OR vcp.vcp_score IS NOT NULL) AND snaps.fundamental_score > 70"
+status: "validated"
+synthesis_guidance: "Focus on evidence-based insights using approved tables."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "research-only_summary"
+title: "VCP Breakouts With Fundamentals Variant 0514"
+tool_plan_template: "Use tables for screening and summaries."
+validation_rules:
+  - "Ensure the SQL template returns valid symbols with required criteria."
+  - "Output must align with the research-only summary style."
+version: 1

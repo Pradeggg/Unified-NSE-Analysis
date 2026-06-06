@@ -1,0 +1,50 @@
+id: "portfolio_incremental_add_trim_1571_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1571"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for pre market: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as research-only summary"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Run read-only SQL on approved tables to assess portfolio adjustments."
+sql_templates:
+  -
+    description: "Fetch current portfolio holdings along with latest stage and technical scores to identify add or trim opportunities."
+    sql: "WITH latest_snapshots AS (\n    SELECT *\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n)\nSELECT p.symbol, p.qty, p.avg_cost, s.company_name, s.sector, s.price, s.change_1d_pct,\n       s.trading_signal, s.stage, s.stage_score\nFROM portfolio.holdings p\nJOIN latest_snapshots s ON p.symbol = s.symbol\nWHERE s.trading_signal IN ('BUY', 'STRONG_BUY')\nORDER BY s.change_1d_pct DESC\nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure the SQL adheres to PostgreSQL syntax and approved schema."
+  - "Output lists of add and trim candidates based on trading signals."
+synthesis_guidance: "Provide a summary based on the SQL output of potential add and trim actions. Focus on sectors and significant movement signals."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:35"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

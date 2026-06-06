@@ -1,0 +1,65 @@
+id: "skill_card_0528_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Skill Card"
+description: "Validates enhanced report data with focus on position-sizing in the last 5 sessions. Provides a research-only summary."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  python_tools:
+    -
+      id: "run_report_validation"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "report_id"
+      outputs:
+        - "validation_result"
+      approved_tables:
+        - "report.enhanced_runs"
+        - "report.enhanced_filtered_stocks"
+      code: "def run(context):\n    pass  # Implementation to be filled in"
+sql_templates:
+  -
+    template_id: "summary_last_five_sessions"
+    type: "SELECT"
+    content: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, market_composite_score FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '5 days';"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:48:51"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

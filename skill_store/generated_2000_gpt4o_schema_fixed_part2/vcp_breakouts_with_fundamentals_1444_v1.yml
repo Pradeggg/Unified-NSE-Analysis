@@ -1,0 +1,54 @@
+id: "vcp_breakouts_with_fundamentals_1444_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1444"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "latest_vcp_candidates"
+    template: "WITH latest_eod AS (SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND series = 'EQ'), latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_vcp_picks AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)) SELECT v.symbol, v.company_name, v.sector, v.price, v.trading_signal, v.enhanced_fund_score FROM latest_vcp_picks v JOIN latest_snapshots s ON v.symbol = s.symbol WHERE s.stage = 'STAGE_2' AND v.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY v.vcp_score DESC, v.rank ASC LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure the trading signals are either 'BUY' or 'STRONG_BUY'."
+  - "Ensure the stage is 'STAGE_2'."
+  - "Limit results to 100 candidates for effective screening."
+synthesis_guidance: "['Focus on generating a watchlist with strong fundamental and technical signals.', 'Ensure output is tailored for Indian markets and is portfolio-focused.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:22"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

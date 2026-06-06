@@ -1,0 +1,53 @@
+id: "signal_outcome_feedback_review_1901_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1901"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: quick scan; timeframe: today; response style: comparison matrix."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for today: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as comparison matrix"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "today"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Assess signal outcomes using available data to identify patterns and improvements."
+sql_templates:
+  -
+    template: "SELECT sl.date_issued, sl.symbol, sl.signal, sl.price_at_issue, sl.target_1, sl.target_2, sl.stop_loss, sl.date_resolved, sl.price_at_resolution, sl.return_pct, sl.hit_target, sl.hit_stop, ss.stage, ss.technical_score FROM signals.signal_log sl JOIN scores.stage_snapshots ss ON sl.symbol = ss.symbol WHERE sl.date_issued >= (CURRENT_DATE - INTERVAL '1 month') ORDER BY sl.date_issued DESC LIMIT 100;"
+    description: "Fetch signal data with outcomes and stage information."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "{'outcome_summary': 'Ensure summary includes performance data for last month.', 'winner_patterns': 'Identify common traits in successful signals.', 'failure_patterns': 'Identify common traits in unsuccessful signals.', 'route_improvements': 'Suggestions should be based on identified patterns.', 'next_checks': 'Include recommendations for future signal analysis.'}"
+synthesis_guidance: "Focus on quickly identifying successful and unsuccessful signals to inform future strategies."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

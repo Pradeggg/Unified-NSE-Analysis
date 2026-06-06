@@ -1,0 +1,53 @@
+id: "market_3m_rotation_swing_1289_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1289"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  index_return: "SELECT trade_date, index_symbol, close, prev_close, change_pct FROM market.index_eod WHERE trade_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTHS);"
+  sector_leadership: "SELECT sector, AVG(change_1m_pct) as avg_change FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTHS) GROUP BY sector ORDER BY avg_change DESC;"
+  stage_distribution: "SELECT stage, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTHS) GROUP BY stage ORDER BY count DESC;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "status"
+synthesis_guidance: "['Use the index_return to identify overall market trends over the last 3 months.', 'Analyze sector_leadership to determine leading and lagging sectors.', 'Examine stage_distribution to understand changes in market stages and leadership.', 'Provide a list of prospective swing trading candidates based on Stage 2 setups.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:34"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.months is not approved"
+  - "scores.stage_snapshots.avg_change is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.months is not approved"

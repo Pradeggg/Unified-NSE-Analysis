@@ -1,0 +1,45 @@
+id: "signal_outcome_feedback_review_1509_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Outcome Feedback Analysis"
+description: "A research-only summary evaluating the success and failure of prior trading signals, focusing on source-trail validation for the Indian market."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Evaluate signal outcomes using trading data and performance metrics. Identify winning and failing patterns in past signals."
+sql_templates:
+  - "SELECT s.symbol, s.signal, s.date_issued, s.price_at_issue, s.target_1, s.stop_loss, s.price_at_resolution, s.return_pct, s.hit_target, s.hit_stop, ss.stage, ss.technical_score FROM signals.signal_log s JOIN scores.stage_snapshots ss ON s.symbol = ss.symbol WHERE s.date_resolved = (SELECT MAX(date_resolved) FROM signals.signal_log) AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all selected trading signals have defined outcome statuses."
+  - "Correlate signal outcomes with technical indicators for insights."
+synthesis_guidance: "Summarize findings in a research-only format focusing on patterns in successful and unsuccessful signals for skill improvement."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:47"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

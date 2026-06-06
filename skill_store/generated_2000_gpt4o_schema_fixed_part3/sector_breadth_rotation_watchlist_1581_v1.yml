@@ -1,0 +1,59 @@
+id: "sector_breadth_rotation_watchlist_1581_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1581"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: intraday context; response style: research-only summary."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for intraday context: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as research-only summary"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "intraday_context"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Plan involves using tables: breadth.sector_daily, breadth.ma_pct_above, scores.stage_snapshots, and market.equity_eod to generate a watchlist with sectors ranked by breadth, stage migration, RS, and momentum."
+sql_templates:
+  -
+    purpose: "Get latest sector breadth data"
+    template: "SELECT sector, pct_above_50dma, change_5d, breadth_signal FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily);"
+  -
+    purpose: "Get latest percentage above moving averages and stage 2 participation"
+    template: "SELECT snapshot_date, pct_above_50dma, stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.ma_pct_above);"
+  -
+    purpose: "Fetch stage 2 stocks with buy signals"
+    template: "SELECT symbol, stage, trading_signal, relative_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY');"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all SQL templates are read-only SELECT queries."
+  - "Validate response conforms to output_contract structure."
+synthesis_guidance: "Combine breadth signals, stage participation, and trading signals to generate a prioritized list of sectors and stocks for intraday observation."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

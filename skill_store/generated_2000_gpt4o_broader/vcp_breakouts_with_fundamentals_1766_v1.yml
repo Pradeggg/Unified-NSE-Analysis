@@ -1,0 +1,74 @@
+id: "vcp_breakouts_with_fundamentals_1766_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1766"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: post results; response style: QA checklist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "post_results"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  description: "Strategy to use the evidence provided"
+  steps:
+    - "Filter stocks reaching new highs or showing VCP characteristics from scores.stage2_vcp_picks."
+    - "Join with scores.stage_snapshots to ensure strong fundamental scores."
+    - "Validate freshness of the data post-results."
+    - "Compile a QA checklist based on the quality of breakouts."
+sql_templates:
+  -
+    type: "fetch"
+    purpose: "Fetch latest VCP picks and fundamentals"
+    query: "SELECT v.symbol, v.company_name, v.price, v.vcp_score, v.enhanced_fund_score FROM scores.stage2_vcp_picks v JOIN scores.stage_snapshots s ON v.symbol = s.symbol WHERE v.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND s.enhanced_fund_score > 7 AND s.stage = 'Stage 2' ORDER BY v.vcp_score DESC;"
+python_tools:
+  -
+    id: "check_freshness"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      symbol: "list of symbols"
+      latest_dates: "corresponding latest dates for each symbol"
+    outputs:
+      is_fresh: "boolean list indicating freshness"
+    approved_tables:
+      - "market.equity_eod"
+    code: "def run(context):\n    symbols = context['inputs']['symbol']\n    latest_dates = context['inputs']['latest_dates']\n    freshness_window = 10  # days\n    from datetime import datetime, timedelta\n    freshness_limit = datetime.now() - timedelta(days=freshness_window)\n    is_fresh = [datetime.strptime(date, '%Y-%m-%d') > freshness_limit for date in latest_dates]\n    return {\n        'is_fresh': is_fresh\n    }"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure symbols have strong fundamentals and recent VCP patterns."
+  - "Verify all data aligns with post-results freshness criteria."
+synthesis_guidance: "Focus on recent data for actionable insights. Maintain strict adherence to evidence and follow the provided templates."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "check_freshness: inputs must be a list"
+  - "check_freshness: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "check_freshness: inputs must be a list"
+    - "check_freshness: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

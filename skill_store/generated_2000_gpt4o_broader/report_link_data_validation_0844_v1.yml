@@ -1,0 +1,56 @@
+id: "report_link_data_validation_0844_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation: Watchlist Creation 0844"
+description: "Validate enhanced report data focusing on watchlist creation for Indian market: last 3 months."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for last 3 months: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  validation: "Confirm the presence of data using available tables and identify any missing components for action watchlist."
+  watchlist_creation: "Use analyzed data from last 3 months to identify high-performing stocks."
+sql_templates:
+  -
+    template_name: "select_recent_runs"
+    template: "SELECT run_id, run_ts, stocks_filtered FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '3 months';"
+  -
+    template_name: "select_filtered_stocks"
+    template: "SELECT symbol, score, recommendation, current_price FROM report.enhanced_filtered_stocks WHERE run_id = {run_id};"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure completeness of report metadata."
+  - "Check for missing stock data in HTML files."
+  - "Verify links generated in reports."
+synthesis_guidance: "Synthesize findings into an actionable watchlist report, highlighting missing links and data issues."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:36"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,54 @@
+id: "sector_breadth_rotation_watchlist_1021_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1021"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: last 5 sessions; response style: concise table."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for last 5 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as concise table"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "last_5_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Generate a concise table of sectors based on latest sector breadth, stage analysis, and momentum criteria."
+sql_templates:
+  -
+    description: "Select improving sectors based on latest breadth and stage analysis."
+    sql: "WITH latest_sector_data AS (\n  SELECT\n    sector,\n    MAX(snapshot_date) AS latest_date\n  FROM\n    breadth.sector_daily\n  GROUP BY\n    sector\n),\nsector_analysis AS (\n  SELECT\n    s.sector,\n    s.breadth_signal,\n    m.stage2_pct\n  FROM\n    breadth.sector_daily s\n    JOIN latest_sector_data l ON s.sector = l.sector AND s.snapshot_date = l.latest_date\n    JOIN breadth.ma_pct_above m ON s.snapshot_date = m.snapshot_date\n  WHERE\n    s.change_5d >= 0 -- improvement in last 5 sessions\n)\nSELECT\n  sa.sector,\n  sa.breadth_signal,\n  sa.stage2_pct\nFROM\n  sector_analysis sa\nWHERE\n  sa.stage2_pct > 20 -- active stage 2 participation\nORDER BY\n  sa.stage2_pct DESC\nLIMIT 5; -- concise table output"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure result set contains only approved columns."
+  - "Limit number of sectors to match concise table requirement."
+synthesis_guidance: "['Summarize the findings in a concise tabular format suitable for quick insights into sector rotation.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

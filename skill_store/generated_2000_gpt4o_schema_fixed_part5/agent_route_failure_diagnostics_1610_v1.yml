@@ -1,0 +1,67 @@
+id: "agent_route_failure_diagnostics_1610_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1610"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: today; response style: debug trace."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for today: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as debug trace"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "today"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Diagnose route failures through evidence from ordered tables and synthesize debug trace."
+sql_templates:
+  -
+    template: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT r.run_id, r.run_ts, r.analysis_date, f.symbol, f.recommendation FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks f ON r.run_id = f.run_id WHERE r.run_ts = CURRENT_DATE::timestamp LIMIT 100;"
+    description: "Fetch enhanced run diagnostics with symbols and recommendations for today."
+python_tools:
+  -
+    id: "route_analysis_tool_01"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "evidence_data"
+    outputs:
+      - "diagnostic_report"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Process evidence data to diagnose failures\n    # Return generated diagnostic report\n    pass"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure SQL result sets are bounded with a LIMIT."
+  - "Verify all table and column references are schema-approved."
+synthesis_guidance: "Aggregate evidence for symbol resolution issues and output as structured debug trace."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:56"
+generation_model: "gpt-4o"
+validation_errors:
+  - "route_analysis_tool_01: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "route_analysis_tool_01: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

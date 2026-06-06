@@ -1,0 +1,71 @@
+id: "data_freshness_readiness_audit_1211_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1211"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: latest EOD; response style: ranked candidates."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for latest EOD: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as ranked candidates"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  - "Check latest EOD data across all evidence tables for data freshness."
+  - "Rank sources based on recency and completeness for the latest EOD."
+sql_templates:
+  -
+    description: "Fetch latest EOD dates from market index and equity data."
+    sql: "SELECT MAX(trade_date) as latest_index_eod FROM market.index_eod; SELECT MAX(trade_date) as latest_equity_eod FROM market.equity_eod;"
+  -
+    description: "Fetch latest snapshot date from stage snapshots."
+    sql: "SELECT MAX(snapshot_date) as latest_stage_snapshot FROM scores.stage_snapshots;"
+python_tools:
+  -
+    id: "data_freshness_checker_01"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "latest_index_eod"
+      - "latest_equity_eod"
+      - "latest_stage_snapshot"
+    outputs:
+      - "freshness_matrix"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    index_date = context['latest_index_eod']\n    equity_date = context['latest_equity_eod']\n    stage_date = context['latest_stage_snapshot']\n    freshness_matrix = {\n        'Index EOD Freshness': index_date,\n        'Equity EOD Freshness': equity_date,\n        'Stage Snapshot Freshness': stage_date\n    }\n    return freshness_matrix"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure each date retrieval matches the latest EOD expected."
+  - "Align results with latest stage data using approved conditions."
+  - "Verify result sets are bounded with LIMIT where applicable."
+synthesis_guidance: "['Present results in a matrix highlighting latest EOD freshness.', 'Identify any gaps in data readiness, focusing on the Indian market context.', 'Provide actionable insights on loader actions for enhanced data quality.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:34"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.latest_stage_snapshot is not approved"

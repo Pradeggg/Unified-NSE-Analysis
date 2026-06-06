@@ -1,0 +1,51 @@
+id: "agent_route_failure_diagnostics_1988_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1988"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for intraday context: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as comparison matrix"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Plan diagnostics based on enhanced run reports and filtered stocks with an intraday context comparison matrix."
+sql_templates:
+  -
+    description: "Retrieve latest enhanced run data with intraday comparison"
+    query: "WITH latest_stocks AS (SELECT MAX(snapshot_date) AS latest_date FROM scores.stage_snapshots) SELECT r.run_id, r.run_ts, r.universe_size, f.symbol, f.rank, f.score, s.stage FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks f ON r.run_id = f.run_id JOIN scores.stage_snapshots s ON f.symbol = s.symbol WHERE s.snapshot_date = (SELECT latest_date FROM latest_stocks)"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure latest dates are used according to global rules."
+  - "Ensure joins follow schema join rules."
+synthesis_guidance: "['Focus on position-sizing in intraday context.', 'Provide diagnostics in a comparison matrix format.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:29"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

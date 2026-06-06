@@ -1,0 +1,74 @@
+id: "market_3m_rotation_swing_1667_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1667"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: post results; response style: debug trace."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze market rotation using the last 3 months' data, focusing on sector leadership, regime stages, and swing candidates."
+sql_templates:
+  -
+    description: "Get latest index returns from market.index_eod"
+    query: "SELECT index_symbol, close, change_pct FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod)"
+  -
+    description: "Get stage distribution and leadership over the last 3 months"
+    query: "WITH latest_stage AS (SELECT sector, COUNT(*) AS count, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector, stage) SELECT sector, count FROM latest_stage ORDER BY count DESC"
+  -
+    description: "Identify primary swing candidates"
+    query: "SELECT symbol, company_name, sector, trading_signal FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY vcp_score DESC, rank ASC LIMIT 10"
+python_tools:
+  -
+    id: "calculate_risk_metrics"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "index_returns"
+      - "primary_candidates"
+    outputs:
+      - "risks"
+    approved_tables:
+      - "market.index_eod"
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    # Example logic: Calculate average risk based on index changes and candidate signals\n    risks = {}\n    index_total_change = sum([entry['change_pct'] for entry in context['index_returns']])\n    candidate_count = len(context['primary_candidates'])\n    if candidate_count > 0:\n        average_risk = index_total_change / candidate_count\n        risks['average_risk'] = average_risk\n    return risks"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all indexes have returns for the selected date."
+  - "Confirm stage distribution reflects latest data."
+  - "Primary candidates must have a clear buy signal."
+synthesis_guidance: "Combine index return data with stage and candidate analysis to provide a comprehensive market regime and rotation summary."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:49"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_risk_metrics: execution failed: KeyError: 'index_returns'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_risk_metrics: execution failed: KeyError: 'index_returns'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

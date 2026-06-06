@@ -1,0 +1,53 @@
+id: "insider_bulk_deal_signal_review_0738_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0738"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for last 20 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as QA checklist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review insider and bulk deals, confirm with technicals using the context of position sizing over the last 20 sessions."
+sql_templates:
+  -
+    name: "insider_alert_and_bulk_deal_aggregation"
+    read_only: true
+    sql: "WITH latest_stage AS ( SELECT symbol, stage, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ), latest_eod AS ( SELECT symbol, close, trade_date FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) ), combined_data AS ( SELECT ial.symbol, ial.alert_date, ial.qty AS insider_qty, ibd.qty AS deal_qty, latest_stage.stage, latest_stage.technical_score FROM signals.insider_alerts ial JOIN signals.bulk_block_deals ibd ON ial.symbol = ibd.symbol AND ial.alert_date = ibd.deal_date JOIN latest_stage ON ial.symbol = latest_stage.symbol JOIN latest_eod ON ial.symbol = latest_eod.symbol WHERE ial.alert_date >= CURRENT_DATE - INTERVAL '20 days' ) SELECT * FROM combined_data WHERE stage = 'STAGE_2' AND technical_score > 50 LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure no invented attributes are used."
+  - "SQL template must remain read-only."
+synthesis_guidance: "['Focus on recent insider and bulk deals with confirmed positive technical setups.', 'Use position sizing insights for last 20 sessions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:22"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

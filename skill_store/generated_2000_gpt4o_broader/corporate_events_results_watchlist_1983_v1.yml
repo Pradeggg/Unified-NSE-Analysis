@@ -1,0 +1,60 @@
+id: "corporate_events_results_watchlist_1983_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1983"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for intraday context: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as comparison matrix"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh-follow-up"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  response: "comparison matrix of events and results."
+  strategy: "Fetch upcoming corporate events and analyze associated results for potential watchlist candidates with source evidence."
+sql_templates:
+  -
+    template: "SELECT id, symbol, event_type, event_date, purpose_raw, detail FROM signals.corporate_events WHERE event_date >= CURRENT_DATE;"
+    description: "Fetch upcoming corporate events."
+  -
+    template: "SELECT symbol, company_name, filing_date, growth_yoy_revenue_pct, eps_yoy_pct FROM scores.results_analysis WHERE PERIOD_END >= CURRENT_DATE - INTERVAL '7 days';"
+    description: "Analyze recent results for growth indicators."
+  -
+    template: "SELECT symbol, company_name, price, change_1d_pct, stage FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+    description: "Get today's stage and price snapshot."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "status"
+  - "sql_security"
+  - "python_security"
+synthesis_guidance: "Focus on daily refresh, intraday insights in a comparison matrix style for informed decision-making."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:57"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

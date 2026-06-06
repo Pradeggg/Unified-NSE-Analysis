@@ -1,0 +1,1 @@
+def run(context): resolved, unresolved = [], [] # hypothetical logic return {'resolved_symbols': resolved, 'unresolved_symbols': unresolved}

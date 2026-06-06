@@ -1,0 +1,52 @@
+id: "vcp_breakouts_with_fundamentals_1374_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1374"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: pre market; response style: exceptions and gaps first."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Identify VCP breakout candidates using the latest data with strong fundamentals and high liquidity to develop a pre-market watchlist for TradingView."
+sql_templates:
+  -
+    name: "fetch_vcp_breakouts_with_fundamentals"
+    sql: "WITH latest_vcp AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)), latest_stage AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY')), latest_eod AS (SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)) SELECT v.symbol, v.company_name, v.sector, v.price, v.vcp_score, v.enhanced_fund_score FROM latest_vcp v JOIN latest_stage s ON v.symbol = s.symbol JOIN latest_eod e ON v.symbol = e.symbol WHERE e.series = 'EQ' AND e.volume IS NOT NULL ORDER BY v.vcp_score DESC, v.enhanced_fund_score DESC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure the candidate list is sorted by VCP score and enhanced fundamental score."
+  - "Validate that all symbols are from the 'EQ' series for equity analysis."
+synthesis_guidance: "{'instructions': 'Synthesize the results into a watchlist for TradingView, highlighting gaps and exceptions where strong candidates may lack sufficient fundamental backing.', 'focus': 'Identify top candidates that meet the VCP breakout criteria alongside strong fundamentals and trading signals.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:40"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

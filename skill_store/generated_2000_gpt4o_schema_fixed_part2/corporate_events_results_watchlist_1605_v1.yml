@@ -1,0 +1,62 @@
+id: "corporate_events_results_watchlist_1605_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1605"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: risk-first review; timeframe: today; response style: debug trace."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "risk-first review for today: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as debug trace"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "risk-first_review"
+  - "today"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Identify key corporate events by querying signals.corporate_events for today's date. Assess stage and risk context using scores.stage_snapshots for each event and link to detailed results context from scores.results_analysis where applicable."
+sql_templates:
+  -
+    type: "corporate_events_query"
+    sql: "SELECT ce.symbol, ce.event_type, ce.event_date, ce.detail, ce.source FROM signals.corporate_events ce WHERE ce.event_date = CURRENT_DATE;"
+  -
+    type: "results_and_stage_context"
+    sql: "SELECT ra.symbol, ra.verdict, ra.growth_yoy_revenue_pct, ra.growth_qoq_revenue_pct, ss.stage, ss.trading_signal FROM scores.results_analysis ra JOIN scores.stage_snapshots ss ON ra.symbol = ss.symbol WHERE ra.symbol = ANY(:symbols) AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY ra.symbol, ra.period_end DESC;"
+python_tools:
+  -
+    id: "symbol_filter_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "raw_event_symbols"
+    outputs:
+      - "filtered_symbols"
+    approved_tables:
+      - "signals.corporate_events"
+      - "scores.results_analysis"
+    code: "def run(context):\n    raw_event_symbols = context['inputs']['raw_event_symbols']\n    # Apply filtering logic, example placeholder\n    filtered_symbols = [symbol for symbol in raw_event_symbols if len(symbol) > 3]\n    return {'filtered_symbols': filtered_symbols}"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure date filtering aligns with CURRENT_DATE for corporate events."
+  - "Use correct join conditions between tables using approved schema join rules."
+  - "Limit result sets for performance."
+synthesis_guidance: "['Prioritize risk-first review of symbols with upcoming events.', 'Debug trace should include SQL steps and reasoning.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:56"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.corporate_events.ce is not approved"

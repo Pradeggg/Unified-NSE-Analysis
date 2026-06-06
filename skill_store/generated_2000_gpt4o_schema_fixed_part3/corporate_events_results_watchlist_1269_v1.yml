@@ -1,0 +1,54 @@
+id: "corporate_events_results_watchlist_1269_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1269"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: post results; response style: ranked candidates."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for post results: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as ranked candidates"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze corporate events and results focusing on source-trail validation for the Indian market."
+sql_templates:
+  -
+    name: "fetch_recent_events"
+    template: "SELECT e.symbol, e.event_type, e.event_date, e.source, e.created_at FROM signals.corporate_events e WHERE e.event_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY e.event_date DESC LIMIT 20;"
+  -
+    name: "join_results_analysis"
+    template: "SELECT DISTINCT ON (ra.symbol) ra.symbol, ra.verdict, ra.period_end, ra.source_trail FROM scores.results_analysis ra ORDER BY ra.symbol, ra.period_end DESC NULLS LAST, ra.updated_at DESC;"
+  -
+    name: "join_stage_snapshots"
+    template: "SELECT ss.symbol, ss.stage, ss.trading_signal, ss.snapshot_date FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event_date filters for recent events."
+  - "Validate join conditions based on the approved schema."
+synthesis_guidance: "Synthesize data focusing on post-results corporate events with a strong emphasis on validation and ranked candidate responses."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:53"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.ra is not approved"
+  - "signals.corporate_events.e is not approved"

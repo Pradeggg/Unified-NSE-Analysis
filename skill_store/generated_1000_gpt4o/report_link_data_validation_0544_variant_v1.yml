@@ -1,0 +1,50 @@
+id: "report_link_data_validation_0544_variant_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0544"
+description: "Validate enhanced report run metadata, filtered stock rows, and source trails. Focus: watchlist creation for the last 3 months; research-only summary."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for last 3 months: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Research-only summary of report data validation focusing on recent watchlist creations."
+sql_templates:
+  -
+    description: "Fetch enhanced report runs in the last 3 months."
+    query: "SELECT * FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '3 months';"
+  -
+    description: "Fetch filtered stocks for enhanced reports in the last 3 months."
+    query: "SELECT * FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '3 months');"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all required fields are retrieved from the approved tables."
+  - "Check for discrepancies in report run metadata."
+  - "Verify data consistency across reports and filtered stocks."
+synthesis_guidance: "['Summarize the validation process focusing on the integrity and completeness of report links and data.', 'Provide insights into potential causes of broken links or missing data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:49:03"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.now is not approved"

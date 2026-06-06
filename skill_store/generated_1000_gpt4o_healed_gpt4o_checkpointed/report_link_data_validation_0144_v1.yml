@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:42:21"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: last 3 months; response style: narrative plus evidence."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0144_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for last 3 months: review report links not working"
+  - "validate generated report links and missing data as narrative plus evidence"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Select metadata from recent report runs."
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, indices_analyzed FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '3 months';"
+  -
+    description: "Select stocks from recent watchlist creations."
+    template: "SELECT run_id, symbol, score, recommendation, current_price FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '3 months');"
+status: "validated"
+synthesis_guidance: "Use SQL results to build a narrative explaining data presence or gaps, and assess the effectiveness of the watchlist."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+title: "Enhanced Report Data Validation Variant 0144"
+tool_plan_template: "Assess report run metadata and filtered stocks; analyze recent market trends and watchlist effectiveness."
+validation_rules:
+  - "check_links"
+  - "check_data_presence"
+  - "cross_reference"
+version: 1

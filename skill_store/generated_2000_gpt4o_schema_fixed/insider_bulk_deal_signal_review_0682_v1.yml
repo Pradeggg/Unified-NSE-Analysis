@@ -1,0 +1,76 @@
+id: "insider_bulk_deal_signal_review_0682_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0682"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: intraday context; response style: debug trace."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for intraday context: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as debug trace"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+
+  sql_templates:
+    -
+      description: "Fetch latest insider alerts with technical and market context."
+      template: "WITH latest_stage AS (\n  SELECT symbol, stage, stage_score\n  FROM scores.stage_snapshots\n  WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n)\nSELECT ia.symbol, ia.alert_date, ia.qty, ia.value_cr, \n       ss.stage, ss.stage_score\nFROM signals.insider_alerts ia\nJOIN latest_stage ss ON ia.symbol = ss.symbol\nWHERE ia.alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts)\nORDER BY ia.insider_score DESC\nLIMIT 50;"
+    -
+      description: "Retrieve bulk deal information with technical confirmation."
+      template: "WITH latest_stage AS (\n  SELECT symbol, trading_signal\n  FROM scores.stage_snapshots\n  WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n)\nSELECT bd.symbol, bd.deal_date, bd.qty, bd.price, \n       ss.trading_signal\nFROM signals.bulk_block_deals bd\nJOIN latest_stage ss ON bd.symbol = ss.symbol\nWHERE bd.deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals)\nORDER BY bd.qty DESC\nLIMIT 50;"
+  output_contract:
+    - "deal_summary"
+    - "insider_context"
+    - "technical_confirmation"
+    - "ranked_symbols"
+    - "risk_notes"
+  validation_rules:
+    - "Verify the data types match the schema column details."
+    - "Ensure queries are parameterized."
+    - "Check that LIMIT is applied appropriately."
+    - "Validate that joins adhere to schema join rules."
+  synthesis_guidance:
+    - "Focus on identifying accumulation or distribution patterns."
+    - "Highlight technical confirmations with positive trading signals."
+    - "Prioritize results with higher insider scores and significant bulk deals."
+  status: "generated"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:39"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

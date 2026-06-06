@@ -1,0 +1,66 @@
+id: "portfolio_incremental_add_trim_1459_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1459"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  -
+    description: "Evaluate holdings with latest stage data for add/trim actions."
+sql_templates:
+  -
+    template_id: "latest_stage_snapshots"
+    query: "SELECT ss.symbol, ss.company_name, ss.sector, ss.market_cap_cat, ss.price, ss.trading_signal FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+  -
+    template_id: "portfolio_holdings_context"
+    query: "SELECT ph.symbol, ph.qty, ph.avg_cost FROM portfolio.holdings ph"
+  -
+    template_id: "add_candidates"
+    query: "WITH latest_snapshots AS (SELECT ss.symbol, ss.trading_signal FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), holding_with_signal AS (SELECT ph.symbol, ph.qty FROM portfolio.holdings ph JOIN latest_snapshots ls ON ph.symbol = ls.symbol WHERE ls.trading_signal IN ('BUY', 'STRONG_BUY')) SELECT * FROM holding_with_signal WHERE qty < 100"
+    description: "Filter holdings for addition based on signal and current quantity."
+  -
+    template_id: "trim_candidates"
+    query: "WITH latest_snapshots AS (SELECT ss.symbol, ss.trading_signal FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), holding_with_signal AS (SELECT ph.symbol, ph.qty FROM portfolio.holdings ph JOIN latest_snapshots ls ON ph.symbol = ls.symbol WHERE ls.trading_signal IN ('SELL')) SELECT * FROM holding_with_signal WHERE qty > 0"
+    description: "Filter holdings for trimming based on sell signals."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure queries only select read-only data using approved columns and join rules."
+  - "Validate trading signals against predefined labels only."
+  - "Check quantity conditions logically and quantitatively."
+synthesis_guidance: "Use the latest data to evaluate current holdings for potential addition or trimming actions, ensuring both risks and opportunities are considered."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:53"
+generation_model: "gpt-4o"
+validation_errors:
+  - "portfolio.holdings.ph is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "portfolio.holdings.ph is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

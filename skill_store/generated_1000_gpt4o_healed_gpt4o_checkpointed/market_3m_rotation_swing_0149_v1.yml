@@ -1,0 +1,62 @@
+created_at: "2026-06-06T12:42:19"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: last 3 months; response style: narrative plus evidence."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0149_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as narrative plus evidence"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  index_performance: "SELECT index_symbol, AVG(change_pct) as avg_index_return FROM market.index_eod WHERE trade_date >= (SELECT MAX(trade_date) - INTERVAL 3 MONTH FROM market.index_eod) GROUP BY index_symbol"
+  sector_leaders: "SELECT sector, AVG(change_1m_pct) as avg_leader_return FROM scores.stage_snapshots WHERE snapshot_date >= (SELECT MAX(snapshot_date) - INTERVAL 3 MONTH FROM scores.stage_snapshots) AND stage = 2 GROUP BY sector ORDER BY avg_leader_return DESC"
+  swing_candidates: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= (SELECT MAX(snapshot_date) - INTERVAL 3 MONTH FROM scores.stage2_vcp_picks) AND vcp_score IS NOT NULL ORDER BY vcp_score DESC LIMIT 10"
+status: "validated"
+synthesis_guidance:
+  - "Combine index returns with sector leadership for narrative"
+  - "Highlight leading sectors and primary candidates"
+  - "Discuss potential risks inferred from data"
+  - "Ensure source-trail validation is clear and concise"
+  - "Frame the analysis with Agent Adda Indian market context"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+title: "3M Market Rotation Swing Assessment Variant 0149"
+tool_plan_template:
+
+validation_errors:
+
+validation_rules:
+  - "Ensure all SQL are readonly SELECT/WITH statements"
+  - "Status must be generated"
+  - "All evidence_required tables are used as approved"
+version: 1
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"

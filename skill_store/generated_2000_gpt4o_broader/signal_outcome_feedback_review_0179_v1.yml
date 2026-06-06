@@ -1,0 +1,56 @@
+id: "signal_outcome_feedback_review_0179_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0179"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: pre market; response style: narrative plus evidence."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for pre market: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as narrative plus evidence"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "pre_market"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze historical signal performance for patterns to refine future recommendations."
+sql_templates:
+  -
+    description: "Retrieve signals that hit target or stop."
+    template: "SELECT * FROM signals.signal_log WHERE hit_target = true OR hit_stop = true;"
+  -
+    description: "Analyze performance based on price changes over time."
+    template: "WITH signal_summary AS (SELECT symbol, AVG(return_pct) AS avg_return, COUNT(*) AS total_signals FROM signals.signal_log WHERE hit_target = true OR hit_stop = true GROUP BY symbol) SELECT * FROM signal_summary;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all SQL queries are only SELECT statements"
+  - "SQL templates should only use approved tables and columns"
+  - "Check evidence_gaps for required concepts not covered in schema"
+synthesis_guidance: "Focus on extracting lessons from past signal performance to inform future strategy adjustments."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:17"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

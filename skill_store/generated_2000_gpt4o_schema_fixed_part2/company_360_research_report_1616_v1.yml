@@ -1,0 +1,86 @@
+id: "company_360_research_report_1616_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1616"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: freshness audit; timeframe: latest EOD; response style: debug trace."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "freshness audit for latest EOD: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as debug trace"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "freshness_audit"
+  - "latest_EOD"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  tool_id: "finance_dashboard_pro"
+  tool_steps:
+    -
+      step_order: 1
+      target_table: "scores.stage_snapshots"
+      sql: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol = 'RELIANCE'"
+    -
+      step_order: 2
+      target_table: "scores.quarterly_results"
+      sql: "SELECT symbol, period_label, revenue, operating_profit FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY period_end DESC NULLS LAST, fetched_at DESC) AS rn FROM scores.quarterly_results WHERE symbol = 'RELIANCE' AND period_type = 'quarter') sub WHERE rn = 1"
+    -
+      step_order: 3
+      target_table: "market.equity_eod"
+      sql: "SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND symbol = 'RELIANCE'"
+sql_templates:
+  -
+    template_name: "latest_stage_snapshot"
+    template_sql: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol = $1"
+python_tools:
+  -
+    id: "financial_summary_builder"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "latest_data"
+    outputs:
+      - "report_summary"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "scores.quarterly_results"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Stub code to synthesize financial summaries\n    data = context['latest_data']\n    return {'report_summary': f\"Summary for {context['symbol']}: \\n{data}\"}"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Validate presence of latest snapshot using snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)."
+  - "Ensure financial trend integrity by checking for distinct latest periods using ORDER BY period_end DESC NULLS LAST."
+synthesis_guidance: "Aggregate gathered insights into a coherent 360-degree report focusing on financial health, technical trends, and growth narratives."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:15"
+generation_model: "gpt-4o"
+validation_errors:
+  - "financial_summary_builder: execution failed: KeyError: 'latest_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "financial_summary_builder: execution failed: KeyError: 'latest_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

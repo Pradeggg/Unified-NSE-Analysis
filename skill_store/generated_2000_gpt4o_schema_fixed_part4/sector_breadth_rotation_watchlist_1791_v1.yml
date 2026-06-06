@@ -1,0 +1,58 @@
+id: "sector_breadth_rotation_watchlist_1791_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1791"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for weekly review: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as QA checklist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Create a quick scan sector watchlist using a combination of sector breadth, stage trends, and relative strength indicators. Focus on sectors with improving metrics and stocks transitioning to Stage 2."
+sql_templates:
+  -
+    name: "sector_breadth_improvement"
+    sql: "WITH latest_breadth AS (SELECT sector, pct_above_50dma, stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.ma_pct_above)),\nlatest_sector AS (SELECT sector, change_5d, breadth_signal FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily))\nSELECT lb.sector, lb.pct_above_50dma, lb.stage2_pct, ls.change_5d, ls.breadth_signal FROM latest_breadth lb JOIN latest_sector ls ON lb.sector = ls.sector ORDER BY lb.stage2_pct DESC, lb.pct_above_50dma DESC LIMIT 10;"
+  -
+    name: "stage_2_candidates"
+    sql: "SELECT symbol, company_name, sector, stage, relative_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 20;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all SQL templates use the latest date filters for accurate snapshots."
+  - "Limit result sets to ensure manageable sizes for user interpretation."
+synthesis_guidance: "Combine sector breadth information with stage snapshots to identify improving sectors and potential stock candidates ready to add to a TradingView watchlist."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,56 @@
+id: "portfolio_lab_paper_trading_review_1034_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1034"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: concise table."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for last 20 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as concise table"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Retrieve latest 20 sessions from signals.signal_log for paper trading strategies."
+    - "Filter out real holdings by excluding portfolio.holdings."
+    - "Derive entries, exits, stops, and target information for each strategy."
+    - "Create a concise table showing watchlist for the last 20 sessions."
+sql_templates:
+  strategy_review: "WITH latest_sessions AS (SELECT symbol, date_issued, signal, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued > (CURRENT_DATE - INTERVAL '20 days') ORDER BY date_issued DESC LIMIT 20), exclude_holdings AS (SELECT symbol FROM portfolio.holdings) SELECT ls.symbol, ls.date_issued, ls.signal, ls.entry_low, ls.entry_high, ls.stop_loss, ls.target_1, ls.target_2 FROM latest_sessions ls WHERE ls.symbol NOT IN (SELECT symbol FROM exclude_holdings);"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure entries are correctly filtered to exclude real holdings."
+  - "Validate each entry for complete strategy information including exits, stops, targets."
+synthesis_guidance: "['Focus on presenting a clear and concise strategy review for paper trading without mixing with real holdings.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:16"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

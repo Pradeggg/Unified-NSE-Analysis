@@ -1,0 +1,59 @@
+id: "vcp_breakouts_with_fundamentals_1066_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1066"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: post results; response style: concise table."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "post_results"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  primary_criteria:
+    - "Stocks must be experiencing new highs, VCP patterns, or breakouts."
+    - "Stocks should have strong fundamental scores."
+  preferred_sources:
+    - "Use market.equity_eod for price data."
+    - "Use scores.stage_snapshots for fundamental scores."
+    - "Use scores.stage2_vcp_picks for VCP patterns."
+sql_templates:
+  -
+    description: "Select stocks with new high prices and good fundamentals."
+    template: "SELECT eod.symbol, eod.high, eod.volume, snap.fundamental_score FROM market.equity_eod eod JOIN scores.stage_snapshots snap ON eod.symbol = snap.symbol WHERE eod.high > eod.prev_close AND snap.fundamental_score > 70;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure stocks are filtered based on price and fundamental criteria."
+  - "All outputs must conform to concise table style."
+synthesis_guidance: "['Prioritize the latest data available.', 'Cross-reference between different tables for comprehensive analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,63 @@
+id: "sector_breadth_rotation_watchlist_1609_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1609"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: today; response style: debug trace."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for today: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as debug trace"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "today"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  id: "sector_rotation_tool_plan"
+  steps:
+    - "Evaluate sector breadth using sector_daily."
+    - "Analyze stage 2 participation from ma_pct_above."
+    - "Determine relative strength and technical scores from stage_snapshots."
+    - "Select candidate symbols with breadth and technical validation."
+sql_templates:
+  -
+    description: "Select sectors improving based on breadth and stage 2 participation."
+    sql: "WITH SectorStage AS (SELECT sector, AVG(stage2_pct) as avg_stage2 FROM breadth.ma_pct_above GROUP BY sector), BreadthChange AS (SELECT sector, AVG(change_5d) as avg_change_5d FROM breadth.sector_daily GROUP BY sector) SELECT s.sector FROM SectorStage AS s INNER JOIN BreadthChange AS b ON s.sector = b.sector WHERE s.avg_stage2 > 50 AND b.avg_change_5d > 0 ORDER BY b.avg_change_5d DESC;"
+  -
+    description: "Identify candidate symbols with positive technical and relative strength."
+    sql: "SELECT symbol, company_name, sector FROM scores.stage_snapshots WHERE stage = 2 AND technical_score > 70 AND relative_strength > 60;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all output sectors and symbols derive from SQL queries."
+  - "Verify sector rankings are based on breadth and stage criteria."
+  - "Confirm candidate symbols fulfill technical validation."
+synthesis_guidance: "{'description': \"Synthesizing improving sectors and candidate symbols for today's watchlist.\", 'focus_area': 'Ensure integration of breadth, stage, and technical analysis.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

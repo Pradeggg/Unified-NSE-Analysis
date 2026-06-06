@@ -1,0 +1,59 @@
+id: "report_link_data_validation_1866_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Report Data Validation and Freshness Audit"
+description: "Skill card focused on validating enhanced report metadata, filtered stock rows, and conducting freshness audits in the Indian market context."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for post results: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  plan_description: "Conduct report validation and freshness auditing by checking the timestamps, link validity, and availability of expected stock data in enhanced report runs."
+  steps:
+    - "Check the latest report timestamps and ensure they are within acceptable freshness limits."
+    - "Verify the link functionality for reports and pinpoint any broken links."
+    - "Ensure all expected stock data for each run is available and not missing."
+sql_templates:
+  -
+    description: "SQL to retrieve latest enhanced report runs to ensure they are within the last 3 months."
+    template: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '3 months' ORDER BY run_ts DESC LIMIT 100;"
+  -
+    description: "SQL to check for missing data in enhanced filtered stocks for recent report runs."
+    template: "WITH recent_runs AS (SELECT run_id FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '3 months') SELECT efs.run_id, efs.symbol FROM report.enhanced_filtered_stocks efs LEFT JOIN recent_runs rr ON efs.run_id = rr.run_id WHERE rr.run_id IS NULL LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure timestamps in reports are in the correct format and recent."
+  - "Check for null values in expected data columns."
+  - "Ensure report links resolve without errors."
+synthesis_guidance: "['Summarize findings related to data freshness and availability.', 'Provide actionable insights for resolving any detected issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

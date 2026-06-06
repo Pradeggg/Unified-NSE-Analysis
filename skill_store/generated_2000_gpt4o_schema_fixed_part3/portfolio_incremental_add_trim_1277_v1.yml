@@ -1,0 +1,81 @@
+id: "portfolio_incremental_add_trim_1277_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1277"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: pre market; response style: ranked candidates."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for pre market: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  -
+    action: "sql"
+    details:
+      operation: "query"
+      description: "Fetch latest stage and score details for portfolio holdings."
+      approved_tables:
+        - "scores.stage_snapshots"
+        - "portfolio.holdings"
+      sql_templates:
+        - "WITH latest_snapshot AS (SELECT MAX(snapshot_date) AS max_date FROM scores.stage_snapshots),"
+        - "joined_data AS ("
+        - "SELECT h.symbol, h.qty, h.avg_cost, s.sector, s.stage, s.trading_signal, s.relative_strength"
+        - "FROM portfolio.holdings h"
+        - "JOIN scores.stage_snapshots s ON h.symbol = s.symbol"
+        - "WHERE s.snapshot_date = (SELECT max_date FROM latest_snapshot)"
+        - ")"
+        - "SELECT * FROM joined_data"
+        - "LIMIT 100"
+sql_templates:
+
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "joined_data"
+    outputs:
+      - "ranked_add_candidates"
+      - "ranked_trim_candidates"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "# Example pseudocode for context\n# Filter and rank add candidates\nadd_candidates = filter(lambda x: x['trading_signal'] in ['BUY', 'STRONG_BUY'], context['joined_data'])\n# Filter and rank trim candidates\ntrim_candidates = filter(lambda x: x['relative_strength'] < 0, context['joined_data'])\nreturn {'ranked_add_candidates': sorted(add_candidates, key=lambda x: x['relative_strength'], reverse=True), 'ranked_trim_candidates': sorted(trim_candidates, key=lambda x: x['relative_strength'])}"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure fetched data respects schema types and meanings."
+  - "Highlight symbols with BUY or STRONG_BUY trading signals as add candidates."
+  - "Identify sectors with declining strength for trim considerations."
+synthesis_guidance: "['Use a ranked list format for outputs.', 'Emphasize sector strength and trending signals in decision-making.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

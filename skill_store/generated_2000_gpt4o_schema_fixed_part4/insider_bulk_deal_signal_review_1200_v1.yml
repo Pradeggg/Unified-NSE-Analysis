@@ -1,0 +1,55 @@
+id: "insider_bulk_deal_signal_review_1200_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1200"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: weekly review; response style: narrative plus evidence."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for weekly review: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as narrative plus evidence"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "weekly_review"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Review and interpret insider buying and bulk/block deals with associated technical confirmations. Use recent data for narrative analysis and potential market implications."
+sql_templates:
+  -
+    description: "Fetch insider alerts with bulk deals and their latest technical scores."
+    query: "WITH latest_stage AS ( SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ) SELECT ia.symbol, ia.alert_date, ia.qty, ia.value_cr, ia.category, bd.deal_date, bd.qty AS deal_qty, ss.stage, ss.technical_score FROM signals.insider_alerts ia JOIN signals.bulk_block_deals bd ON ia.symbol = bd.symbol JOIN latest_stage ss ON ia.symbol = ss.symbol WHERE bd.deal_date >= CURRENT_DATE - INTERVAL '1 week' AND ss.stage IN ('STAGE_1', 'STAGE_2') AND ss.trading_signal IN ('BUY', 'STRONG_BUY');"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all required tables are used."
+  - "SQL templates must not modify data (read-only constraints)."
+  - "Responses should align with the narrative plus evidence style."
+synthesis_guidance: "['Provide a concise summary of insider and bulk deal activities.', 'Highlight technical confirmations and their context.', 'Rank symbols based on potential buy signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:36"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

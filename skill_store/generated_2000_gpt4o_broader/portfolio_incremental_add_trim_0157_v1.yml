@@ -1,0 +1,69 @@
+id: "portfolio_incremental_add_trim_0157_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0157"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  - "{input_patterns}"
+  - "{sql_templates}"
+  - "{output_contract}"
+sql_templates:
+  -
+    description: "Select symbols and their respective scores for the current quarter from stage_snapshots."
+    sql: "SELECT symbol, sector, stage_score, technical_score, relative_strength FROM scores.stage_snapshots WHERE snapshot_date >= '2023-01-01';"
+  -
+    description: "Retrieve current holdings details."
+    sql: "SELECT symbol, qty, avg_cost FROM portfolio.holdings;"
+python_tools:
+  -
+    id: "run_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol_data"
+      - "holdings_data"
+    outputs:
+      - "suggestions"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run_analysis(symbol_data, holdings_data):\n    # Placeholder for analysis logic\n    return {'suggestions': []}"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all output fields are populated with relevant evidence."
+synthesis_guidance: "['Present portfolio state in a narrative format with evidence from SQL queries.', 'Identify sectors with potential over or under exposure and suggest add/trim actions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:58"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_analysis: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_analysis: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

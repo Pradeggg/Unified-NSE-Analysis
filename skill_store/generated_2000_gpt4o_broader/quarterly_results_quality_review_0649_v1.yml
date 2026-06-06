@@ -1,0 +1,50 @@
+id: "quarterly_results_quality_review_0649_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0649"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: source-trail validation; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "source-trail validation for last 3 months: latest quarterly results analysis"
+  - "which companies had strong quarterly results as debug trace"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "plan"
+sql_templates:
+  - "SELECT symbol, company_name, growth_qoq_revenue_pct, growth_qoq_pat_pct, opm_delta_pp FROM scores.results_analysis WHERE period_end >= DATEADD(month, -3, CURRENT_DATE) AND growth_qoq_revenue_pct IS NOT NULL"
+  - "SELECT symbol, period_label, operating_profit, opm_pct FROM scores.quarterly_results WHERE period_end >= DATEADD(month, -3, CURRENT_DATE) AND opm_pct IS NOT NULL"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates must be read-only SELECT/WITH templates."
+  - "Approved schema must be used without alteration."
+synthesis_guidance: "Ensure thorough debugging and source-trail validation. Prioritize read-only templates and utilize approved schema."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.quarterly_results.dateadd is not approved"
+  - "scores.quarterly_results.month is not approved"
+  - "scores.results_analysis.dateadd is not approved"
+  - "scores.results_analysis.month is not approved"

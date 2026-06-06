@@ -1,0 +1,53 @@
+id: "insider_bulk_deal_signal_review_1256_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1256"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: quarter to date; response style: ranked candidates."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for quarter to date: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as ranked candidates"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    template: "WITH insider_deals AS (SELECT symbol, MAX(alert_date) AS latest_alert_date, SUM(qty) AS total_qty, AVG(insider_score) AS avg_insider_score FROM signals.insider_alerts WHERE alert_date >= (CURRENT_DATE - INTERVAL '3 months') GROUP BY symbol), bulk_deals AS (SELECT symbol, MAX(deal_date) AS latest_deal_date, SUM(qty) AS total_qty, AVG(price) AS avg_price FROM signals.bulk_block_deals WHERE deal_date >= (CURRENT_DATE - INTERVAL '3 months') GROUP BY symbol) SELECT id.symbol, id.latest_alert_date, bd.latest_deal_date, ss.stage, ss.technical_score FROM insider_deals id JOIN bulk_deals bd ON id.symbol = bd.symbol JOIN scores.stage_snapshots ss ON id.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY ss.technical_score DESC LIMIT 10;"
+    description: "Fetch symbols with recent insider alerts and bulk/block deals, confirming technical signals."
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure symbols are ranked by technical_score."
+  - "Confirm alert and deal dates are within the latest quarter."
+synthesis_guidance: "['Focus on identifying symbols with both recent insider and bulk deals backed by positive technical indicators.', 'Provide a brief contextual summary for selected symbols.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

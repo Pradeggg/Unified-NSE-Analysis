@@ -1,0 +1,89 @@
+id: "data_freshness_readiness_audit_1407_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1407"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for today: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as portfolio-aware output"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  tool_name: "data_freshness_checker"
+  purpose: "Verify data freshness for Agent Adda evidence sources"
+  steps:
+    - "Analyze data availability in required tables"
+    - "Compare last update timestamps against current date"
+    - "Identify any stale or missing data"
+    - "Provide recommendations for data loading actions"
+sql_templates:
+  -
+    description: "Fetch the latest trade data for market index."
+    template: "SELECT MAX(trade_date) FROM market.index_eod;"
+  -
+    description: "Fetch the latest trade data for equity EOD."
+    template: "SELECT MAX(trade_date) FROM market.equity_eod WHERE series = 'EQ';"
+  -
+    description: "Fetch the latest stage snapshot data."
+    template: "SELECT MAX(snapshot_date) FROM scores.stage_snapshots;"
+python_tools:
+  -
+    id: "freshness_verifier"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      approved_tables:
+        - "market.index_eod"
+        - "market.equity_eod"
+        - "scores.stage_snapshots"
+        - "breadth.market_daily"
+        - "breadth.ma_pct_above"
+        - "report.enhanced_runs"
+      latest_dates: "SQL templates for fetching dates"
+    outputs:
+      freshness_matrix: "A matrix displaying the freshness status of each data source"
+      missing_sources: "List of data sources that are missing or outdated"
+    code: "def run(context):\n    # Pseudocode for verifying data freshness\n    freshness_matrix = {}\n    for table in context['approved_tables']:\n        latest_date = fetch_latest_date_from_db(table)\n        if not is_fresh(latest_date):\n            freshness_matrix[table] = 'Stale'\n        else:\n            freshness_matrix[table] = 'Fresh'\n    return {'freshness_matrix': freshness_matrix, 'missing_sources': [t for t, s in freshness_matrix.items() if s == 'Stale']}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'strategy': ['Focus analysis on sector-relative comparisons.', 'Highlight any portfolio-impacting data shortfalls.', 'Emphasize actionable insights such as loading suggestions or missing data alerts.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:28"
+generation_model: "gpt-4o"
+validation_errors:
+  - "freshness_verifier: approved_tables must be a list"
+  - "freshness_verifier: inputs must be a list"
+  - "freshness_verifier: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "freshness_verifier: approved_tables must be a list"
+    - "freshness_verifier: inputs must be a list"
+    - "freshness_verifier: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

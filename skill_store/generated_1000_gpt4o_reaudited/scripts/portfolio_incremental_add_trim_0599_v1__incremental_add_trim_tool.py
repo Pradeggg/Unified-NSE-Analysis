@@ -1,0 +1,1 @@
+def run(context): return evaluate_candidates(context['portfolio_data'], context['stage_snapshot_data'])

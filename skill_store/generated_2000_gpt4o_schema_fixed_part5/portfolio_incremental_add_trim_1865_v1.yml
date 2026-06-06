@@ -1,0 +1,53 @@
+id: "portfolio_incremental_add_trim_1865_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1865"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for post results: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as action watchlist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  -
+    description: "Analyze current holdings and determine incrementally add or trim candidates based on latest stage and signal scores."
+sql_templates:
+  latest_stage_data: "SELECT s.symbol, s.stage, s.trading_signal, s.stage_score, p.qty, p.avg_cost FROM scores.stage_snapshots s INNER JOIN portfolio.holdings p ON p.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.stage IN ('STAGE_2', 'STAGE_3') ORDER BY s.symbol"
+  add_candidates: "SELECT symbol, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY stage_score DESC LIMIT 5"
+  trim_candidates: "SELECT symbol, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal = 'SELL' ORDER BY stage_score ASC LIMIT 5"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all symbols in 'add_candidates' are unique"
+  - "Trim candidates should have SELL signals"
+  - "Check stage integrity for add/trim thresholds"
+synthesis_guidance: "Focus on sectors with high growth potential and risk diversification. Prioritize companies in Stage 2 with strong buy signals for additions, and those in sell signals for trims."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

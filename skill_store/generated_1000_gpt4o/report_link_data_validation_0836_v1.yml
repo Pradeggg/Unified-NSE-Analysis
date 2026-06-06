@@ -1,0 +1,54 @@
+id: "report_link_data_validation_0836_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0836"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  language: "sql"
+  templates:
+    - "SELECT * FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '20 days';"
+    - "SELECT * FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '20 days');"
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '20 days';"
+    description: "Fetch recent runs for the last 20 sessions."
+  -
+    template: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '20 days');"
+    description: "Fetch stock recommendations from recent runs."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure run timestamps are from the last 20 days."
+  - "Confirm that each report has associated stock data."
+  - "Highlight missing report links or data."
+synthesis_guidance: "['Identify trends in missing data or broken links.', 'Propose improvements based on data freshness.', 'Compile findings into an actionable watchlist.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:52:03"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.now is not approved"

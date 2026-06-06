@@ -1,0 +1,62 @@
+id: "quarterly_results_quality_review_0593_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0593"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "daily refresh follow-up for weekly review: latest quarterly results analysis"
+  - "which companies had strong quarterly results as research-only summary"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "daily_refresh_follow-up"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  type: "query_analysis"
+  description: "Analyze and summarize the latest quarterly results with a focus on revenue, PAT growth, and margins."
+  order_of_operations:
+    - "Fetch latest results for each company"
+    - "Compare with previous results to assess trends"
+    - "Summarize findings focusing on growth and risks"
+sql_templates:
+  quarterly_results_query: "SELECT DISTINCT ON (sr.symbol) sr.symbol, sr.period_end, sr.revenue, sr.pat, sr.opm_pct FROM scores.quarterly_results sr WHERE sr.period_type = 'quarter' ORDER BY sr.symbol, sr.period_end DESC NULLS LAST, sr.fetched_at DESC LIMIT 100"
+python_tools:
+  -
+    id: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "summary"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Placeholder for business logic\n    return {'summary': 'Analysis of latest quarterly results and key metrics.'}"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "field_validations"
+synthesis_guidance: "{'structure': 'Research-only summary', 'focus': 'Highlight companies with strong quarterly results, trends in revenue and PAT, and margin movements.', 'language_style': 'Analytical and factual', 'key_points': ['Emphasize the importance of consistent revenue and PAT growth', 'Discuss margin trends and their implications', 'Identify filing recency and its impact on market perception']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:25:38"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.quarterly_results.sr is not approved"

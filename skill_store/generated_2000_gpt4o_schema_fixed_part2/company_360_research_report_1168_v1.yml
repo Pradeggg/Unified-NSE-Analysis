@@ -1,0 +1,71 @@
+id: "company_360_research_report_1168_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Agent Adda Company Analysis Skill Card"
+description: "This skill card provides a comprehensive company research card including an overview, financials, fundamentals, technical context, and narrative evidence, with a focus on the Indian market."
+input_patterns:
+  - "/research {symbol} comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "position-sizing context for post results: /research {symbol} comprehensive report"
+  - "institutional grade 360 research for stock as narrative plus evidence"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "position-sizing_context"
+  - "post_results"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Extract the latest stage snapshot and technical score for the given symbol."
+    - "Analyze the most recent quarterly and annual financial results."
+    - "Review the balance sheet and cash flow statements for the latest annual period."
+    - "Generate a technical setup using the latest EOD data."
+    - "Synthesize a narrative combining technical and fundamental insights."
+sql_templates:
+  -
+    description: "Select latest stage snapshot and technical score"
+    template: "SELECT company_name, market_cap_cat, stage, technical_score, price FROM scores.stage_snapshots WHERE symbol = '{symbol}' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 1;"
+  -
+    description: "Select latest quarterly and annual financial results"
+    template: "WITH latest_quarter AS (SELECT DISTINCT ON (symbol) symbol, period_label, revenue, pat FROM scores.quarterly_results WHERE symbol = '{symbol}' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC) SELECT * FROM latest_quarter;"
+  -
+    description: "Select balance sheet and cash flow for latest annual period"
+    template: "SELECT * FROM scores.balance_sheet WHERE symbol = '{symbol}' AND period_end = (SELECT MAX(period_end) FROM scores.balance_sheet WHERE symbol = '{symbol}' AND period_type = 'annual');"
+  -
+    description: "Select latest EOD data for technical setup"
+    template: "SELECT trade_date, close, change_pct FROM market.equity_eod WHERE symbol = '{symbol}' AND trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'guidelines': ['Create a cohesive narrative by integrating technical and fundamental data.', 'Emphasize the position-sizing context following quarterly results.', 'Frame insights in an institutional-grade format suitable for expert analysis.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:56"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

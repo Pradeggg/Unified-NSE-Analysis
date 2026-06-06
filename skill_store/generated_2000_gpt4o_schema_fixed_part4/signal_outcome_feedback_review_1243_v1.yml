@@ -1,0 +1,69 @@
+id: "signal_outcome_feedback_review_1243_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1243"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: ranked candidates."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for last 3 months: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as ranked candidates"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    status: "generated"
+    sql_templates:
+      -
+        template: "WITH recent_signals AS (SELECT sl.symbol, sl.date_issued, sl.signal, sl.price_at_issue, sl.hit_target, sl.hit_stop, sl.date_resolved, sl.return_pct FROM signals.signal_log sl WHERE sl.date_issued >= CURRENT_DATE - INTERVAL '3 months'), signal_outcomes AS (SELECT rs.symbol, rs.signal, rs.date_issued, rs.hit_target, rs.hit_stop, rs.date_resolved, rs.return_pct, ss.stage, ss.technical_score FROM recent_signals rs JOIN scores.stage_snapshots ss ON rs.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT symbol, signal, date_issued, hit_target, hit_stop, stage, technical_score, return_pct FROM signal_outcomes ORDER BY return_pct DESC LIMIT 10;"
+        description: "Retrieve top signals from the last 3 months based on return percentage, including stage and technical score."
+    output_contract:
+      - "outcome_summary"
+      - "winner_patterns"
+      - "failure_patterns"
+      - "route_improvements"
+      - "next_checks"
+    validation_rules:
+      - "Ensure no WRITE operations are present in SQL templates."
+      - "Verify output matches the specified contract schema."
+    synthesis_guidance:
+      - "Focus on identifying patterns and providing actionable insights."
+      - "Rank outputs by return percentage and categorize by success/failure."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:13"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

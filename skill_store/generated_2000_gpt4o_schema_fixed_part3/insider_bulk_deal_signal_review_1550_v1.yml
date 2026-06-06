@@ -1,0 +1,55 @@
+id: "insider_bulk_deal_signal_review_1550_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1550"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: last 3 months; response style: research-only summary."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for last 3 months: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as research-only summary"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "last_3_months"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review insider and bulk deals data, identify signals confirmed by technical analysis, and generate a ranked list with context for research."
+sql_templates:
+  -
+    template: "SELECT ba.symbol, ba.qty, ba.value_cr, sa.stage, sa.technical_score, sa.trading_signal FROM signals.bulk_block_deals AS bb JOIN scores.stage_snapshots AS sa ON bb.symbol = sa.symbol WHERE bb.deal_date > CURRENT_DATE - INTERVAL '3 months' AND sa.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND sa.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 100;"
+    purpose: "Retrieve symbols with recent bulk deals and confirm with positive technical signals."
+  -
+    template: "SELECT ia.symbol, ia.entity, ia.alert_type, ia.insider_score, sa.stage, sa.trading_signal FROM signals.insider_alerts AS ia JOIN scores.stage_snapshots AS sa ON ia.symbol = sa.symbol WHERE ia.alert_date > CURRENT_DATE - INTERVAL '3 months' AND sa.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND sa.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 100;"
+    purpose: "Retrieve symbols with insider alerts and confirm with positive technical signals."
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure data consistency with latest snapshots within a 3-month timeframe."
+  - "Confirm that technical signals align with 'BUY' or 'STRONG_BUY' recommendations."
+synthesis_guidance: "['Focus on summarizing the potential accumulation or distribution indicators.', 'Provide a research-only summary using the TradingView export format.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:25"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

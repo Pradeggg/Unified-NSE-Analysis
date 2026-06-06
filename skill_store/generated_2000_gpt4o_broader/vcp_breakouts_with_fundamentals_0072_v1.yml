@@ -1,0 +1,52 @@
+id: "vcp_breakouts_with_fundamentals_0072_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0072"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: pre market; response style: concise table."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  strategy: "Use SELECT queries to filter potential VCP breakout stocks with strong fundamentals from the approved tables. Ensure response is a concise table suitable for market pre-open analysis."
+sql_templates:
+  -
+    query_name: "Select_VCP_Breakouts_Stocks"
+    query: "WITH latest_data AS (SELECT symbol, close, high, volume, trade_date FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND high > week52_high) SELECT ss.symbol, ss.company_name, ss.sector, ss.fundamental_score, ss.institutional_backing, sp.vcp_breakout_pct FROM scores.stage2_vcp_picks sp JOIN scores.stage_snapshots ss ON sp.symbol = ss.symbol WHERE sp.vcp_score > 75 AND ss.fundamental_score > 80 ORDER BY ss.fundamental_score DESC, sp.vcp_breakout_pct DESC"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "status"
+synthesis_guidance: "{'strategy': 'Summarize findings in a table format highlighting key stock data like symbol, sector, fundamental scores, VCP breakout potential, and institutional backing. Presenting a snapshot aids pre-market institutional review.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

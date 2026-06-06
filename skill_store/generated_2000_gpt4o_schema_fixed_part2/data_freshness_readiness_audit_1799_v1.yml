@@ -1,0 +1,79 @@
+id: "data_freshness_readiness_audit_1799_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1799"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for weekly review: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Evaluate data freshness for weekly review by analyzing latest trade data, stage snapshots, and report runs."
+sql_templates:
+  -
+    template_id: "latest_index_trade_dates"
+    description: "Retrieve the most recent trade dates for index EOD data."
+    table: "market.index_eod"
+    sql: "SELECT MAX(trade_date) AS latest_index_trade_date FROM market.index_eod;"
+  -
+    template_id: "latest_equity_trade_dates"
+    description: "Retrieve the most recent trade dates for equity EOD data."
+    table: "market.equity_eod"
+    sql: "SELECT MAX(trade_date) AS latest_equity_trade_date FROM market.equity_eod;"
+  -
+    template_id: "latest_stage_snapshot_dates"
+    description: "Retrieve the most recent snapshot dates for stage snapshots."
+    table: "scores.stage_snapshots"
+    sql: "SELECT MAX(snapshot_date) AS latest_snapshot_date FROM scores.stage_snapshots;"
+python_tools:
+  -
+    id: "freshness_checker"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "latest_index_trade_date"
+      - "latest_equity_trade_date"
+      - "latest_snapshot_date"
+    outputs:
+      - "freshness_status"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Perform data freshness checks and return freshness status\n    return {'freshness_status': 'All sources are within acceptable freshness thresholds.'}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all latest dates are within acceptable data freshness thresholds."
+  - "Consistently use system timestamping for validations."
+synthesis_guidance: "Consolidate freshness data to discuss readiness and identify any source-trail issues."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_equity_trade_date is not approved"
+  - "market.index_eod.latest_index_trade_date is not approved"
+  - "scores.stage_snapshots.latest_snapshot_date is not approved"

@@ -1,0 +1,65 @@
+id: "data_freshness_readiness_audit_1435_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1435"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: risk-first review; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "risk-first review for last 20 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as portfolio-aware output"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "risk-first_review"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  - "This skill card template evaluates the data freshness for key Agent Adda tables over the last 20 trading sessions."
+sql_templates:
+  -
+    template: "SELECT trade_date, index_symbol, close FROM market.index_eod WHERE trade_date >= (SELECT MAX(trade_date) FROM market.index_eod) - INTERVAL '20 days'"
+    description: "Check latest 20 sessions for Index EOD data freshness."
+  -
+    template: "SELECT trade_date, symbol, close FROM market.equity_eod WHERE trade_date >= (SELECT MAX(trade_date) FROM market.equity_eod) - INTERVAL '20 days'"
+    description: "Check latest 20 sessions for Equity EOD data freshness."
+  -
+    template: "SELECT snapshot_date, symbol, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+    description: "Verify the latest stage snapshot."
+  -
+    template: "SELECT trade_date, advances, declines FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily)"
+    description: "Assess freshness of market breadth data."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure each SQL template successfully executes within database constraints."
+  - "Verify output returns expected data structure as per 'output_contract'."
+synthesis_guidance: "['Focus on data readiness and highlight potential freshness gaps.', 'Ensure portfolio-awareness context is reflected in outputs.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:15"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,59 @@
+id: "agent_route_failure_diagnostics_1694_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1694"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: weekly review; response style: debug trace."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for weekly review: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as debug trace"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Inspect failed routes for missing tools and incorrect symbol resolution."
+sql_templates:
+  -
+    template_id: "route_failures"
+    template_description: "Identify failures from enhanced runs and related filtered stocks."
+    sql: "SELECT er.run_id, er.run_ts, er.notes, efs.symbol\nFROM report.enhanced_runs er\nJOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id\nWHERE er.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)\nAND er.notes LIKE '%failure%'"
+  -
+    template_id: "missing_symbols"
+    template_description: "Detect missing or incorrect symbol resolutions."
+    sql: "SELECT ss.symbol, ss.stage\nFROM scores.stage_snapshots ss\nWHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nAND ss.symbol NOT IN (SELECT DISTINCT symbol FROM report.enhanced_filtered_stocks)"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure only read-only data retrieval is performed."
+  - "Use approved tables and columns exclusively for queries."
+  - "Do not invent new tables, columns, or aliases."
+synthesis_guidance: "Analyze diagnostic outputs against expected workflows. Propose route optimizations and tool additions."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

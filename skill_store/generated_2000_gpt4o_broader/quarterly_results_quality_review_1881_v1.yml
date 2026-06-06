@@ -1,0 +1,67 @@
+id: "quarterly_results_quality_review_1881_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1881"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for intraday context: latest quarterly results analysis"
+  - "which companies had strong quarterly results as action watchlist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Use monthly snapshots for recent insights and identify patterns after the quarterly release."
+sql_templates:
+  - "WITH RecentResults AS (SELECT symbol, period_end, opm_pct, eps FROM scores.quarterly_results WHERE period_end = (SELECT MAX(period_end) FROM scores.quarterly_results)), ResultsAnalysis AS (SELECT symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct FROM scores.results_analysis WHERE period_end = (SELECT MAX(period_end) FROM scores.results_analysis)) SELECT symbol, opm_pct, eps, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct FROM RecentResults JOIN ResultsAnalysis ON RecentResults.symbol = ResultsAnalysis.symbol"
+python_tools:
+  -
+    id: "compute_growth_trends"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "quarterly_results"
+      - "results_analysis"
+    outputs:
+      - "growth_trends"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+    code: "def run(context):\n    results = context['quarterly_results']\n    analysis = context['results_analysis']\n    # Example pseudocode for calculating trends\n    growth_trends = []\n    for result in results:\n        trend = {}  # Calculate based on logic\n        growth_trends.append(trend)\n    return {'growth_trends': growth_trends}"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  -
+    rule: "Ensure data freshness and relevance for the intraday context."
+    check: "All period_end fields must match the latest available."
+  -
+    rule: "Verify symbol matching across results and analysis."
+    check: "Symbols must exist in both results and analysis outputs."
+synthesis_guidance: "['Synthesize data to identify companies with the strongest year-on-year and quarter-on-quarter growth indicators.', 'Highlight companies with significant margin changes linked to the latest results.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "compute_growth_trends: execution failed: KeyError: 'quarterly_results'"
+review:
+  status: "needs_heal"
+  findings:
+    - "compute_growth_trends: execution failed: KeyError: 'quarterly_results'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

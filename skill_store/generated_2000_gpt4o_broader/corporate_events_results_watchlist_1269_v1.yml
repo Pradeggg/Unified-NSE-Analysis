@@ -1,0 +1,56 @@
+id: "corporate_events_results_watchlist_1269_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1269"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: post results; response style: ranked candidates."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for post results: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as ranked candidates"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  python_tools:
+
+  evidence_gaps:
+
+sql_templates:
+  - "SELECT * FROM signals.corporate_events WHERE event_date > CURRENT_DATE ORDER BY event_date ASC;"
+  - "SELECT symbol, score, verdict FROM scores.results_analysis WHERE filing_date > CURRENT_DATE - INTERVAL '1 month' ORDER BY score DESC LIMIT 10;"
+  - "WITH top_symbols AS (SELECT symbol FROM scores.results_analysis WHERE score > 70) SELECT * FROM scores.stage_snapshots WHERE symbol IN (SELECT symbol FROM top_symbols) AND snapshot_date = CURRENT_DATE ORDER BY stage_score DESC;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "{'context': 'Post-results analysis in Indian market focus, aimed at generating actionable watchlists and insights post-major corporate events.', 'result_style': 'Ranked candidates based on performance and potential with thorough source-trail validation.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,78 @@
+id: "portfolio_incremental_add_trim_1459_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1459"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+
+sql_templates:
+  add_candidates:
+    template: "SELECT ph.symbol, ph.qty, s.stage_score, s.trading_signal FROM portfolio.holdings ph JOIN scores.stage_snapshots s ON ph.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY s.stage_score DESC LIMIT 10;"
+    description: "Identify symbols with strong buy signals for potential addition."
+  trim_candidates:
+    template: "SELECT ph.symbol, ph.qty, s.stage_score, s.trading_signal FROM portfolio.holdings ph JOIN scores.stage_snapshots s ON ph.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal = 'SELL' ORDER BY s.stage_score ASC LIMIT 10;"
+    description: "Identify symbols with sell signals for potential trimming."
+python_tools:
+  -
+    run:
+      id: "calculate_sector_exposure"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "portfolio_state"
+      outputs:
+        - "sector_exposure"
+      approved_tables:
+        - "scores.stage_snapshots"
+        - "portfolio.holdings"
+      code: "# Calculate sector exposure based on current portfolio holdings\n# This is a read-only operation\nsector_exposure = {'Technology': 25.0, 'Finance': 20.0, ...}"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure snapshots are from the latest date."
+  - "Validate trading signals are within approved labels."
+synthesis_guidance: "['Consider technical and fundamental scores in the context of sector exposure.', 'Leverage source-trail validation to ensure portfolio actions align with stage scores.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:23"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: language must be python"
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: code is required"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: language must be python"
+    - "<missing-id>: mode must be read_only"
+    - "<missing-id>: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

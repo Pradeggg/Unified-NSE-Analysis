@@ -1,0 +1,71 @@
+id: "signal_outcome_feedback_review_1355_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1355"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for quarter to date: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as exceptions and gaps first"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    type: "sql"
+    description: "Retrieve signal outcomes for the current quarter."
+    template: "SELECT symbol, signal, date_issued, date_resolved, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= (SELECT MAX(date_issued) - INTERVAL '3 months' FROM signals.signal_log);"
+sql_templates:
+  -
+    type: "query"
+    description: "Fetch symbols with resolved signals in the current quarter."
+    template: "SELECT DISTINCT symbol FROM signals.signal_log WHERE date_resolved >= (SELECT MAX(date_resolved) - INTERVAL '3 months' FROM signals.signal_log);"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "symbol_analysis"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Example Python analysis\n    results = []\n    for row in context['signals.signal_log'].itertuples():\n        if row.hit_stop:\n            results.append({'symbol': row.symbol, 'outcome': 'hit_stop'})\n        elif row.hit_target:\n            results.append({'symbol': row.symbol, 'outcome': 'hit_target'})\n    return results"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure data is within quarter to date."
+  - "Verify distinct symbols and resolved outcomes."
+synthesis_guidance: "['Prioritize exceptions and gaps.', 'Focus on risk-first approaches.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: execution failed: KeyError: 'signals.signal_log'"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: execution failed: KeyError: 'signals.signal_log'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

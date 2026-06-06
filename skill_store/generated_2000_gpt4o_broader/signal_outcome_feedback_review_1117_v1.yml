@@ -1,0 +1,77 @@
+id: "signal_outcome_feedback_review_1117_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1117"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: narrative plus evidence."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for latest EOD: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as narrative plus evidence"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+    -
+      id: "evaluate_outcomes"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "signal_data"
+        - "market_data"
+      outputs:
+        - "outcome_summary"
+        - "winner_patterns"
+        - "failure_patterns"
+        - "route_improvements"
+        - "next_checks"
+      approved_tables:
+        - "signals.signal_log"
+        - "scores.stage_snapshots"
+        - "market.equity_eod"
+      code: "def run(context):\n    signals = context['signal_data']\n    market = context['market_data']\n    \n    # Extract successful signals\n    winners = [s for s in signals if s['hit_target'] == 1]\n    winner_patterns = extract_patterns(winners)\n    \n    # Extract failed signals\n    failures = [s for s in signals if s['hit_stop'] == 1]\n    failure_patterns = extract_patterns(failures)\n    \n    # Generate outcome summary\n    outcome_summary = generate_summary(signals)\n    \n    # Identify route improvements\n    route_improvements = suggest_improvements(winners, failures)\n    \n    # Define checks for next review\n    next_checks = determine_next_checks(signals)\n    \n    return outcome_summary, winner_patterns, failure_patterns, route_improvements, next_checks"
+  evidence_gaps:
+
+sql_templates:
+  -
+    name: "latest_signals_outcomes"
+    query: "SELECT * FROM signals.signal_log WHERE date_resolved = (SELECT MAX(date_resolved) FROM signals.signal_log);"
+  -
+    name: "sector_comparison"
+    query: "SELECT sector, AVG(return_pct) AS avg_return FROM signals.signal_log WHERE date_resolved = (SELECT MAX(date_resolved) FROM signals.signal_log) GROUP BY sector;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all SELECT queries are read-only."
+  - "Verify outputs match schema."
+  - "Check all inputs derive from approved tables."
+synthesis_guidance: "Focus on providing actionable insights comparing sector outcomes, highlighting what worked or failed based on the latest end-of-day data."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:32"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,55 @@
+id: "agent_route_failure_diagnostics_0756_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0756"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: quarter to date; response style: QA checklist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for quarter to date: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as QA checklist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze failures in Agent Adda's routes using the evidence provided, focusing on freshness and diagnosing possible tool gaps or symbol resolution issues."
+sql_templates:
+  -
+    template_name: "Check Latest Run Freshness"
+    sql: "SELECT run_id, run_ts FROM report.enhanced_runs WHERE run_ts >= (CURRENT_DATE - INTERVAL '3 months') ORDER BY run_ts DESC LIMIT 5;"
+  -
+    template_name: "Symbol Resolution Issues"
+    sql: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = (SELECT run_id FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 1);"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure SQL selects only relevant recent data for analysis."
+  - "Validate symbol resolution logic against current recommendations."
+  - "Check tool availability and failures in recent runs."
+synthesis_guidance: "['Frame findings in a QA checklist format.', 'Prioritize freshness and symbol resolution clarity.', 'Identify gaps in tools or processes causing route failures.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:17"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

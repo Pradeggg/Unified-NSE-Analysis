@@ -1,0 +1,84 @@
+id: "portfolio_lab_paper_trading_review_1776_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1776"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: pre market; response style: QA checklist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for pre market: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as QA checklist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "pre_market"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Analyze paper trading strategies within the specified context, ensuring separation from actual holdings with a focus on signal validation and exposure measurement."
+sql_templates:
+  -
+    description: "Fetch the latest stage and scores for each symbol in the portfolio."
+    sql: "SELECT sh.symbol, ss.stage, ss.stage_score, ss.technical_score FROM portfolio.holdings sh JOIN scores.stage_snapshots ss ON sh.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    description: "Get trading signals for portfolio symbols to review entries and exits."
+    sql: "SELECT sl.symbol, sl.signal, sl.entry_low, sl.entry_high, sl.stop_loss, sl.target_1, sl.target_2 FROM signals.signal_log sl WHERE sl.symbol IN (SELECT symbol FROM portfolio.holdings);"
+  -
+    description: "Obtain the latest market prices for portfolio symbols."
+    sql: "SELECT me.symbol, me.close FROM market.equity_eod me WHERE me.symbol IN (SELECT symbol FROM portfolio.holdings) AND me.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+python_tools:
+  -
+    id: "calculate_exposure"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      -
+        name: "holdings_data"
+        type: "dataframe"
+      -
+        name: "market_prices"
+        type: "dataframe"
+    outputs:
+      -
+        name: "exposure"
+        type: "dataframe"
+    approved_tables:
+      - "portfolio.holdings"
+      - "market.equity_eod"
+    code: "def run(context):\n    holdings = context['holdings_data']\n    prices = context['market_prices']\n    holdings = holdings.merge(prices, on='symbol')\n    holdings['exposure'] = holdings['qty'] * holdings['close']\n    return holdings[['symbol', 'exposure']]"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure data validity by cross-referencing symbols across different data sources."
+  - "Use approved join conditions only as specified."
+  - "Maintain strict adherence to read-only operations in SQL."
+synthesis_guidance: "Focus on delivering a clear set of strategy validations and exceptions to identify trading signals' effectiveness in the paper trading context. Emphasize separation from real holdings."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:47"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_exposure: inputs must contain only strings"
+  - "calculate_exposure: outputs must contain only strings"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_exposure: inputs must contain only strings"
+    - "calculate_exposure: outputs must contain only strings"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

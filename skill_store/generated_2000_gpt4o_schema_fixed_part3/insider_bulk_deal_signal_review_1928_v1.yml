@@ -1,0 +1,62 @@
+id: "insider_bulk_deal_signal_review_1928_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1928"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: last 5 sessions; response style: comparison matrix."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for last 5 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as comparison matrix"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  description: "Analyze insider and bulk deals with a focus on technical confirmation to assess accumulation/distribution."
+  steps:
+    - "Query the latest insider alerts and bulk deals for specified symbols."
+    - "Join alerts and deals with the latest stage snapshots for technical and stage context."
+    - "Filter and rank symbols based on combined insider, bulk deal, and technical scores."
+    - "Prepare a comparison matrix for position-sizing context."
+sql_templates:
+  -
+    template_name: "latest_insider_alerts"
+    sql: "SELECT ia.symbol, ia.alert_type, ia.qty, ia.value_cr, ia.insider_score FROM signals.insider_alerts ia WHERE ia.alert_date >= CURRENT_DATE - INTERVAL '5 days' AND ia.symbol IN (%s) ORDER BY ia.alert_date DESC"
+  -
+    template_name: "latest_bulk_deals"
+    sql: "SELECT bd.symbol, bd.side, bd.qty, bd.price, bd.deal_type FROM signals.bulk_block_deals bd WHERE bd.deal_date >= CURRENT_DATE - INTERVAL '5 days' AND bd.symbol IN (%s) ORDER BY bd.deal_date DESC"
+  -
+    template_name: "latest_stage_snapshots"
+    sql: "SELECT ss.symbol, ss.technical_score, ss.stage, ss.stage_score FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.symbol IN (%s)"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'guidance': 'Synthesize deal and alert data to highlight potential accumulation or distribution events. Use a matrix format to compare the symbols based on position-sizing criteria and technical strength derived from the latest scores.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.bulk_block_deals.bd is not approved"
+  - "signals.bulk_block_deals.s is not approved"
+  - "signals.insider_alerts.ia is not approved"
+  - "signals.insider_alerts.s is not approved"

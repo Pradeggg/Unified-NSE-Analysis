@@ -1,0 +1,57 @@
+id: "market_3m_rotation_swing_1093_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1093"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: concise table."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for weekly review: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "weekly_review"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Assess market rotations, sector leadership, stage 2 candidates, and potential swing trades from the last 3 months."
+sql_templates:
+  -
+    description: "Get the latest index changes and returns from the past 3 months."
+    template: "SELECT index_symbol, MAX(trade_date) AS latest_date, AVG(change_pct) AS avg_change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol;"
+  -
+    description: "Identify stage 2 leadership and change over the past 3 months."
+    template: "SELECT sector, COUNT(*) AS stage2_count FROM scores.stage_snapshots WHERE stage = 'STAGE_2' AND snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY stage2_count DESC;"
+  -
+    description: "Find primary swing candidates based on the latest VCP picks."
+    template: "SELECT symbol, company_name, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "output_symbols_limit"
+  - "no_empty_results"
+synthesis_guidance: "Present the data as a concise table summarizing index returns, leading sectors, and primary swing candidates with associated risks."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_change_pct is not approved"
+  - "market.index_eod.latest_date is not approved"
+  - "scores.stage_snapshots.stage2_count is not approved"

@@ -1,0 +1,70 @@
+id: "report_link_data_validation_0396_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Weekly Report Link Validation"
+description: "Validate and audit links in weekly reports. Focus on identifying broken links or missing data points using latest report metadata."
+input_patterns:
+  - "review report links not working"
+  - "validate missing data in reports"
+  - "freshness audit for weekly reviews"
+tags:
+  - "report_qa"
+  - "link_validation"
+  - "data_audit"
+  - "weekly_review"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  intent: "Validate report links and data"
+  task:
+    - "Identify runs with missing or broken links"
+    - "Check for missing stock data in filtered outputs"
+    - "Audit report freshness and data accuracy"
+  output_contract:
+    - "findings"
+    - "broken_links"
+    - "missing_data"
+    - "remediation"
+    - "verification"
+sql_templates:
+  findings: "SELECT r.run_id, e.symbol, e.current_price FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks e ON r.run_id = e.run_id WHERE r.run_ts = (SELECT MAX(run_ts) - INTERVAL '1 week' FROM report.enhanced_runs) AND e.current_price IS NULL LIMIT 100"
+  broken_links: "SELECT run_id, run_ts FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) AND universe_size != stocks_analyzed LIMIT 50"
+  missing_data: "SELECT e.run_id, e.symbol FROM report.enhanced_filtered_stocks e WHERE e.run_id = (SELECT run_id FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 1) AND e.current_price IS NULL LIMIT 100"
+python_tools:
+  -
+    id: "findings_output"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sql_result"
+    outputs:
+      - "findings"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    sql_result = context['sql_result']\n    # Extract and analyze the result set\n    # Transform findings into actionable insights\n    return {'findings': 'Example analysis output based on sql_result'}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  -
+    rule: "Ensure run timestamps are within the last week"
+    validation: "r.run_ts >= (CURRENT_DATE - INTERVAL '1 week')"
+synthesis_guidance: "{'strategy': 'Focus on the freshness of data and the completeness and accuracy of report links. Present exceptions and data gaps in reports to help guide remediation.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:54"
+generation_model: "gpt-4o"
+validation_errors:
+  - "findings_output: execution failed: KeyError: 'sql_result'"
+review:
+  status: "needs_heal"
+  findings:
+    - "findings_output: execution failed: KeyError: 'sql_result'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

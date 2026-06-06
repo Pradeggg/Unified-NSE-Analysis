@@ -1,0 +1,57 @@
+id: "vcp_breakouts_with_fundamentals_0618_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0618"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: latest EOD; response style: debug trace."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters: "Identify stocks with recent breakouts, strong fundamentals, and market performance."
+  candidates: "Build a candidate list using market data and stage scores."
+  tradingview_symbols: "Extract symbols for TradingView upload."
+  evidence: "Gather evidence from snapshots and VCP picks."
+  risks: "Analyze any potential market risks or performance anomalies."
+sql_templates:
+  -
+    description: "Select stocks with VCP pattern breakout and strong fundamentals."
+    query: "SELECT eod.symbol, eod.close, eod.volume, vcp.vcp_score, ss.fundamental_score FROM market.equity_eod AS eod JOIN scores.stage2_vcp_picks AS vcp ON eod.symbol = vcp.symbol JOIN scores.stage_snapshots AS ss ON eod.symbol = ss.symbol WHERE eod.trade_date = CURDATE() AND eod.close > eod.prev_close AND vcp.vcp_score > 70 AND ss.fundamental_score > 80;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "status"
+  - "allowed_tables"
+synthesis_guidance: "Focus on high VCP score and strong fundamentals for breakout candidates."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

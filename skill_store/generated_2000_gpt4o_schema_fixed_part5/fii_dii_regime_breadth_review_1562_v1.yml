@@ -1,0 +1,72 @@
+id: "fii_dii_regime_breadth_review_1562_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1562"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for post results: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as research-only summary"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    sql_templates:
+      -
+        name: "latest_flow_regime_breadth_index"
+        sql: "WITH latest_flows AS (SELECT * FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows)),  latest_regime AS (SELECT * FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history)),  latest_breadth AS (SELECT * FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily)),  latest_index AS (SELECT * FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod)) SELECT lf.trade_date, lf.fii_net_today, lf.dii_net_today, lf.fii_net_5d, lf.dii_net_5d, lf.flow_signal, lf.fii_trend, lf.dii_trend, lr.regime, lr.confidence, lr.days_in_regime, lb.advances, lb.declines, lb.bullish_pct, lb.bearish_pct, li.index_symbol, li.close, li.change_pct FROM latest_flows lf JOIN latest_regime lr ON lf.trade_date = lr.trade_date JOIN latest_breadth lb ON lf.trade_date = lb.trade_date JOIN latest_index li ON lf.trade_date = li.trade_date WHERE li.index_symbol = 'Nifty 50';"
+    python_tools:
+      -
+        required_function: "run(context)"
+        language: "python"
+        mode: "read_only"
+        inputs:
+          - "flow_context"
+          - "regime"
+          - "breadth_context"
+          - "index_confirmation"
+        outputs:
+          - "risk_flags"
+        approved_tables:
+          - "signals.fii_dii_flows"
+          - "signals.regime_history"
+          - "breadth.market_daily"
+          - "market.index_eod"
+        code: "def run(context):\n    risk_flags = []\n    if context['flow_context']['fii_trend'] == 'NEGATIVE' and context['breadth_context']['bearish_pct'] > 50:\n        risk_flags.append('Risk-Off')\n    else:\n        risk_flags.append('Risk-On')\n    return {'risk_flags': risk_flags}"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "{'rules': ['Ensure all SQL templates are read-only SELECT/WITH statements.', 'Python evidence tools must be read-only and quarantined in specified policy.']}"
+synthesis_guidance: "{'rules': ['Analysis should remain within the context of deep institutional review.', 'Summarize findings as a research-only output without speculation.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:24"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

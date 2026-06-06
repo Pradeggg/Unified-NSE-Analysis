@@ -1,0 +1,53 @@
+id: "company_360_research_report_1910_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Reliance Comprehensive Research Report"
+description: "This skill card provides a comprehensive research report for Reliance with financials, fundamentals, technical context, and narrative evidence."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  evidence_gaps:
+    - "No direct trading data for intraday analysis"
+sql_templates:
+  company_snapshot: "SELECT company_name, sector, market_cap_cat, live_price FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  financial_trends: "WITH quarterly AS (SELECT symbol, revenue, operating_profit, pat FROM scores.quarterly_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1), annual AS (SELECT symbol, revenue, operating_profit, pat FROM scores.annual_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1) SELECT * FROM quarterly UNION ALL SELECT * FROM annual;"
+  technical_setup: "SELECT rsi, trend_signal, trading_signal FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure inputs match approved input_patterns."
+  - "Verify SQL output aligns with output_contract fields."
+synthesis_guidance: "['Integrate narrative evidence with financial metrics.', 'Present as a comparison matrix with clear labels.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:29"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

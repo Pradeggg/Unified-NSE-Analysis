@@ -1,0 +1,61 @@
+id: "agent_route_failure_diagnostics_0084_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0084"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: intraday context; response style: concise table."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for intraday context: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as concise table"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "intraday_context"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Examine provided evidence to diagnose issues in the agent route. Identify missing tools, symbol resolution errors, and any fallback loops that occur."
+sql_templates:
+  -
+    type: "SELECT"
+    query: "SELECT run_id, run_ts, universe_size, stocks_filtered FROM report.enhanced_runs WHERE analysis_date = CURRENT_DATE;"
+  -
+    type: "SELECT"
+    query: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE rs_rank < 50;"
+python_tools:
+  -
+    id: "symbol_resolution_diagnostic_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+    outputs:
+      - "resolution_status"
+      - "error_detail"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Placeholder for logic to check symbol resolution status\n    return {'resolution_status': 'unresolved', 'error_detail': 'Symbol not found in approved tables.'}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure concise table format for diagnostics."
+  - "Ensure SQL queries are strictly read-only and follow templates."
+synthesis_guidance: "['Combine evidence insights to outline key diagnostics related to route failures.', 'Provide specific guidance on fixing identified issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:59"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_filtered_stocks.rs_rank is not approved"

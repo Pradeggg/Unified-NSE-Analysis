@@ -1,0 +1,73 @@
+id: "data_freshness_readiness_audit_1253_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1253"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: ranked candidates."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for quarter to date: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as ranked candidates"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  evidence_probes:
+    -
+      evidence_table: "market.index_eod"
+      probe_type: "select"
+      query_template: "SELECT trade_date, index_symbol, close FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) LIMIT 5"
+    -
+      evidence_table: "market.equity_eod"
+      probe_type: "select"
+      query_template: "SELECT trade_date, symbol, close FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) LIMIT 5"
+    -
+      evidence_table: "scores.stage_snapshots"
+      probe_type: "select"
+      query_template: "SELECT snapshot_date, symbol, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 5"
+sql_templates:
+  -
+    id: "latest_index_eod_freshness"
+    description: "Ensure the latest index EOD data is available."
+    template: "SELECT trade_date, index_symbol FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod)"
+  -
+    id: "latest_equity_eod_freshness"
+    description: "Ensure the latest equity EOD data is available."
+    template: "SELECT trade_date, symbol FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "evidence_tables"
+  - "freshness_criteria"
+synthesis_guidance: "['Verify all latest rows are being pulled correctly.', 'Identify missing or stale data and suggest loader actions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

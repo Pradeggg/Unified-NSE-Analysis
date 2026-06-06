@@ -1,0 +1,59 @@
+created_at: "2026-06-06T12:41:43"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: intraday context; response style: concise table."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0084_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for intraday context: review report links not working"
+  - "validate generated report links and missing data as concise table"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    description: "Fetch report run metadata with potential gaps."
+    query: "SELECT run_id, run_ts, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE universe_size > stocks_analyzed;"
+  -
+    description: "Identify stocks with missing price data."
+    query: "SELECT run_id, symbol, current_price, open_price FROM report.enhanced_filtered_stocks WHERE current_price IS NULL OR open_price IS NULL;"
+status: "validated"
+synthesis_guidance: "['Provide findings in the format of a concise table highlighting key data validation issues.']"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "intraday_context"
+  - "concise_table"
+title: "Enhanced Report Data Validation Variant 0084"
+tool_plan_template:
+  steps:
+    - "Extract metadata from report.enhanced_runs for report timestamps and universe overview."
+    - "Analyze report.enhanced_filtered_stocks to identify missing or incomplete stock data."
+    - "Cross-reference report timestamps and stock data for potential gaps or errors."
+    - "Compile findings into a concise table summarizing broken links and missing data instances."
+  summary: "Validate report links and generate a concise table of findings highlighting issues with data and links."
+validation_rules:
+  - "Ensure all report links are functional."
+  - "Verify the completeness of stock price data."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

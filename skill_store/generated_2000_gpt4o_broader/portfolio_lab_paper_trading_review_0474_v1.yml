@@ -1,0 +1,56 @@
+id: "portfolio_lab_paper_trading_review_0474_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0474"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: pre market; response style: portfolio-aware output."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for pre market: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "pre_market"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "A structured review of the paper trading portfolio, focusing on entries, exits, stop-losses, and target assessment, specifically for pre-market scenarios. It should maintain separation between paper trading and actual holdings."
+sql_templates:
+  -
+    description: "Select active signals for paper trading portfolio"
+    template: "SELECT symbol, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE action_bucket = 'Active' AND date_resolved IS NULL;"
+  -
+    description: "Retrieve the latest stage snapshots for market analysis"
+    template: "SELECT symbol, sector, stage, stage_score, supertrend_state FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure the distinction between actual holdings and the paper trading portfolio."
+  - "Verify target and stop-loss data consistency."
+synthesis_guidance: "Combine insights from paper trading signals with stage snapshots for a comprehensive pre-market strategy review. Focus on entries, exits, and protection with stop-losses."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:41"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

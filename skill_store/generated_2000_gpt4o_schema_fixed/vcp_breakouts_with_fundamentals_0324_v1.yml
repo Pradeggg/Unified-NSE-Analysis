@@ -1,0 +1,55 @@
+id: "vcp_breakouts_with_fundamentals_0324_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0324"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Identify stocks using scores.stage2_vcp_picks for VCP picks, join with scores.stage_snapshots for fundamentals and signals, cross-reference with market.equity_eod for price data over the last 5 sessions."
+sql_templates:
+  -
+    description: "Select potential breakout stocks with strong fundamentals."
+    sql: "SELECT v.symbol, v.company_name, v.price, v.vcp_score, s.enhanced_fund_score, s.trading_signal FROM scores.stage2_vcp_picks v INNER JOIN scores.stage_snapshots s ON v.symbol = s.symbol WHERE v.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND v.vcp_score > ? AND s.enhanced_fund_score > ? AND s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY v.vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "candidates"
+  - "filters"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+synthesis_guidance: "Prioritize stocks with high VCP and fundamental scores. Highlight any gaps in fundamental data. Emphasize latest 5-day performance."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:03"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,51 @@
+created_at: "2026-06-06T12:49:56"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: intraday context; response style: research-only summary."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0586_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  - "SELECT symbol, company_name, sector, price, fundamental_score FROM scores.stage_snapshots WHERE stage = 'Stage 2' AND fundamental_score > 80 ORDER BY change_1d_pct DESC LIMIT 10;"
+  - "WITH latest_vcp AS (SELECT symbol, MAX(snapshot_date) AS max_date FROM scores.stage2_vcp_picks GROUP BY symbol) SELECT p.symbol, p.company_name, p.price, p.vcp_score FROM scores.stage2_vcp_picks p INNER JOIN latest_vcp v ON p.symbol = v.symbol AND p.snapshot_date = v.max_date WHERE p.vcp_score > 70 ORDER BY vcp_score DESC LIMIT 10;"
+status: "validated"
+synthesis_guidance: "Focus on constructing a concise research-only summary based on the provided evidence."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "intraday_context"
+  - "research-only_summary"
+title: "VCP Breakouts With Fundamentals Variant 0586"
+tool_plan_template: "Research and summarize VCP breakout stocks with strong fundamentals using approved tables."
+validation_rules:
+  - "Check if all securities have a fundamental score greater than 80."
+  - "Ensure securities are classified as Stage 2."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,52 @@
+id: "quarterly_results_quality_review_0047_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0047"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: concise table."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "sector-relative comparison for last 3 months: latest quarterly results analysis"
+  - "which companies had strong quarterly results as concise table"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+  freshness:
+    max_eod_age_days: 3
+tool_plan_template: "Analyze the latest quarterly results over the past 3 months for companies in the Indian market. Focus on revenue and PAT growth, margin changes, and sector-relative performance."
+sql_templates:
+  latest_quarter_results: "SELECT DISTINCT ON (qr.symbol) qr.symbol, ra.industry, qr.period_end, qr.revenue, qr.pat, ra.verdict FROM scores.quarterly_results qr JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end WHERE qr.period_end > CURRENT_DATE - INTERVAL '3 months' AND qr.period_type = 'quarter' ORDER BY qr.symbol, qr.period_end DESC NULLS LAST, qr.fetched_at DESC LIMIT 100;"
+  sector_performance_comparison: "SELECT ra.industry, AVG(ra.growth_yoy_revenue_pct) AS avg_yoy_revenue_growth, AVG(ra.growth_yoy_pat_pct) AS avg_yoy_pat_growth, COUNT(DISTINCT ra.symbol) AS company_count FROM scores.results_analysis ra JOIN scores.quarterly_results qr ON ra.symbol = qr.symbol WHERE ra.period_end > CURRENT_DATE - INTERVAL '3 months' AND qr.period_type = 'quarter' GROUP BY ra.industry ORDER BY avg_yoy_revenue_growth DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Verify SQL compliance with PostgreSQL syntax."
+  - "Ensure results are limited and parameterized appropriately."
+synthesis_guidance: "['Provide concise tabular summaries for revenue and PAT growth.', 'Highlight sector-relative strengths and weaknesses.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

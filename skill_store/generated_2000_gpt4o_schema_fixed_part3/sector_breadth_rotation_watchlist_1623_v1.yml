@@ -1,0 +1,73 @@
+id: "sector_breadth_rotation_watchlist_1623_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1623"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: debug trace."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for last 5 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as debug trace"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "last_5_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Identify sectors showing improvement in breadth over the last 5 sessions."
+  - "Rank these sectors by breadth and stage 2 participation."
+  - "Select candidate symbols with strong buy signals."
+  - "Generate TradingView symbols for selected candidates."
+sql_templates:
+  -
+    template_id: "sector_improvement"
+    description: "Identify improving sectors based on breadth over the last 5 sessions."
+    sql: "SELECT sector, AVG(change_5d) AS avg_change_5d FROM breadth.sector_daily WHERE snapshot_date >= CURRENT_DATE - INTERVAL '5 days' GROUP BY sector ORDER BY avg_change_5d DESC LIMIT 5"
+  -
+    template_id: "stage_two_ranking"
+    description: "Rank sectors by breadth and stage 2 participation."
+    sql: "WITH sector_breadth AS (SELECT sector, COUNT(*) AS stage2_count FROM scores.stage_snapshots WHERE stage = 'STAGE_2' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector) SELECT sd.sector, sd.breadth_signal, sb.stage2_count FROM breadth.sector_daily sd JOIN sector_breadth sb ON sd.sector = sb.sector WHERE sd.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) ORDER BY sb.stage2_count DESC, sd.breadth_signal DESC LIMIT 5"
+  -
+    template_id: "candidate_symbols"
+    description: "Select candidate symbols with strong buy signals."
+    sql: "SELECT symbol, company_name FROM scores.stage_snapshots WHERE trading_signal = 'STRONG_BUY' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 10"
+python_tools:
+  -
+    id: "symbol_formatter"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbols"
+    outputs:
+      - "tradingview_symbols"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    symbols = context.inputs['symbols']\n    tradingview_symbols = [symbol + '.NSE' for symbol in symbols]\n    return {'tradingview_symbols': tradingview_symbols}"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sector improvement logic captures daily breadth changes correctly."
+  - "Check stage two participation ranking accuracy using latest data."
+  - "Verify candidate symbols have strong buy signals."
+synthesis_guidance: "['Combine improving sectors with candidate symbols for a comprehensive watchlist.', 'Generate TradingView alert settings.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:13"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.sector_daily.avg_change_5d is not approved"

@@ -1,0 +1,62 @@
+id: "data_freshness_readiness_audit_0483_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0483"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: portfolio-aware output."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for intraday context: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as portfolio-aware output"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  inputs:
+    - "tables"
+    - "patterns"
+  outputs:
+    - "analysis_summary"
+  logic: "Identify tables with missing or outdated data based on approved schemata and freshness thresholds."
+  language: "SQL"
+sql_templates:
+  -
+    name: "latest_trade_date_check"
+    sql: "SELECT MAX(trade_date) AS latest_trade_date FROM market.index_eod;"
+  -
+    name: "missing_equity_data_check"
+    sql: "SELECT symbol FROM market.equity_eod WHERE trade_date < (SELECT MAX(trade_date) FROM market.equity_eod) - INTERVAL '1 day';"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all tables were queried."
+  - "Confirm that maximum trade dates align with today\u2019s date."
+  - "Identify and raise alert for any table with a trade date older than 1 day."
+synthesis_guidance: "['Summarize findings highlighting gaps in data freshness.', 'Suggest actions for loaders to address missing or stale data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:14"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.latest_trade_date is not approved"

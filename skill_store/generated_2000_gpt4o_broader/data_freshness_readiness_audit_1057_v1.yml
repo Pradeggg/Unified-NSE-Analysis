@@ -1,0 +1,65 @@
+id: "data_freshness_readiness_audit_1057_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1057"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: concise table."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for quarter to date: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as concise table"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Analyze data freshness by comparing timestamps with current date and generating a summary table."
+sql_templates:
+  -
+    description: "Check data freshness for index and equity EOD data."
+    query: "SELECT MAX(trade_date) as last_trade_date FROM market.index_eod UNION SELECT MAX(trade_date) FROM market.equity_eod;"
+  -
+    description: "Check sector snapshot freshness."
+    query: "SELECT MAX(snapshot_date) as last_snapshot_date FROM scores.stage_snapshots;"
+python_tools:
+  -
+    id: "evaluate_freshness_gaps"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      trade_dates: "list_of_dates_from_sql_templates"
+    outputs:
+      freshness_issues: "boolean"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    from datetime import datetime, timedelta\n    max_lag = timedelta(days=context['max_allowed_lag_days'])\n    freshness_issues = False\n    current_date = datetime.now().date()\n    for trade_date in context['trade_dates']:\n        if current_date - trade_date > max_lag:\n            freshness_issues = True\n            break\n    return {'freshness_issues': freshness_issues}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "max_allowed_lag_days"
+synthesis_guidance: "Interpret the data freshness in the context of sector-relative performance and readiness. Highlight any significant lags or gaps."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:55"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.last_snapshot_date is not approved"

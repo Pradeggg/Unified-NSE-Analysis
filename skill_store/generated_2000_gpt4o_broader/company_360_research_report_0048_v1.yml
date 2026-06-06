@@ -1,0 +1,79 @@
+id: "company_360_research_report_0048_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0048"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: position-sizing context; timeframe: last 3 months; response style: concise table."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "position-sizing context for last 3 months: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as concise table"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "position-sizing_context"
+  - "last_3_months"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template: "Read and analyze various financial, technical, and narrative sources to produce a succinct table reflecting the company's recent performance."
+sql_templates:
+  -
+    template_name: "Recent_Technical_Score"
+    query: "SELECT snapshot_date, symbol, stage_score, technical_score, rsi, trend_signal FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    template_name: "Financial_Overview"
+    query: "SELECT period_end, revenue, expenses, operating_profit, pat, eps FROM scores.quarterly_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1;"
+  -
+    template_name: "EOD_Summary"
+    query: "SELECT trade_date, close, change_pct, volume FROM market.equity_eod WHERE symbol = 'RELIANCE' AND trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY trade_date DESC;"
+python_tools:
+  -
+    id: "recent_trend_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "technical_score"
+      - "price_change"
+    outputs:
+      - "trend_strength"
+      - "actionable_signals"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Analyze trend strength based on technical scores and price changes\n    score = context['technical_score']\n    change = context['price_change']\n    trend_strength = 'Strong' if score > 70 and change > 2 else 'Weak'\n    signals = 'Buy' if trend_strength == 'Strong' else 'Hold'\n    return {'trend_strength': trend_strength, 'actionable_signals': signals}"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure data sources are consistent across evidence tables."
+  - "Check alignment between technical signals and recent EOD data."
+  - "Validate financial trends with latest quarterly and annual results."
+synthesis_guidance: "Combine technical, financial, and narrative insights to present a holistic view of the company's recent performance, focusing on actionable position-sizing insights for the Indian market."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:44"
+generation_model: "gpt-4o"
+validation_errors:
+  - "recent_trend_analysis: execution failed: KeyError: 'technical_score'"
+review:
+  status: "needs_heal"
+  findings:
+    - "recent_trend_analysis: execution failed: KeyError: 'technical_score'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

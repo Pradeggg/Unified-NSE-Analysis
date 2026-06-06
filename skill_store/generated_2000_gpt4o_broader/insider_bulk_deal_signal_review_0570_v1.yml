@@ -1,0 +1,53 @@
+id: "insider_bulk_deal_signal_review_0570_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0570"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for post results: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as research-only summary"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Assess insider activity and bulk deals using insider alerts and bulk deal disclosures. Analyze technical confirmation using stage snapshots and equity EOD data. Provide a research-only summary."
+sql_templates:
+  - "SELECT id, alert_date, symbol, alert_type, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE symbol = ? AND alert_type = 'Buy';"
+  - "SELECT id, deal_date, symbol, side, qty, price FROM signals.bulk_block_deals WHERE symbol = ? AND side = 'Buy';"
+  - "SELECT symbol, stage_score, technical_score, rsi, trend_signal FROM scores.stage_snapshots WHERE symbol = ?;"
+  - "SELECT trade_date, close, volume FROM market.equity_eod WHERE symbol = ?;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all SQL templates are read-only."
+  - "Check that output_contract keys are populated correctly."
+synthesis_guidance: "Integrate insights from all evidence tables to provide a cohesive summary of insider and bulk deal activity, supported by technical analysis. Highlight highly ranked opportunities and potential risks."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:58:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

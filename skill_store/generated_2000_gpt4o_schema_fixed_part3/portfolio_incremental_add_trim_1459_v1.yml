@@ -1,0 +1,68 @@
+id: "portfolio_incremental_add_trim_1459_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1459"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  python_tools:
+    -
+      id: "calculate_adjustments"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        holdings_data: "DataFrame from portfolio.holdings"
+        stage_data: "DataFrame from scores.stage_snapshots"
+      outputs:
+        add_candidates: "List of symbols to consider for adding"
+        trim_candidates: "List of symbols to consider for trimming"
+      approved_tables:
+        - "portfolio.holdings"
+        - "scores.stage_snapshots"
+      code: "def run(context):\n    holdings = context['holdings_data']\n    stages = context['stage_data']\n    latest_stages = stages[stages['snapshot_date'] == stages['snapshot_date'].max()]\n    combined = holdings.merge(latest_stages, on='symbol')\n    add_candidates = combined[(combined['trading_signal'].isin(['BUY', 'STRONG_BUY'])) & (combined['stage'] == 'STAGE_2')].symbol.tolist()\n    trim_candidates = combined[(combined['trading_signal'] == 'SELL')].symbol.tolist()\n    return {'add_candidates': add_candidates, 'trim_candidates': trim_candidates}"
+sql_templates:
+  latest_stage_data:
+    query: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+    description: "Fetch the latest stage data for analysis."
+  portfolio_holdings:
+    query: "SELECT * FROM portfolio.holdings"
+    description: "Fetch the current portfolio holdings."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure the latest stage data uses the most recent snapshot date."
+  - "Check for missing or null values in critical fields like symbols and trading signals."
+synthesis_guidance: "Focus on aligning portfolio decisions with stage and signal data. Prioritize signals indicating potential benefits such as 'BUY' or 'STRONG_BUY' for additions, and 'SELL' signals for reductions."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:11"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

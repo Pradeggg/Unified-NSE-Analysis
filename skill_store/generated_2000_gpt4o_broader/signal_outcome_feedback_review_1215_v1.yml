@@ -1,0 +1,59 @@
+id: "signal_outcome_feedback_review_1215_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1215"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: latest EOD; response style: ranked candidates."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for latest EOD: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as ranked candidates"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  type: "workflow"
+  steps:
+    - "Gather past signal outcomes."
+    - "Evaluate signal success or failure."
+    - "Identify patterns in successful signals."
+    - "Identify patterns in failed signals."
+    - "Provide recommendations for route improvements and next steps."
+sql_templates:
+  past_signal_outcomes:
+    query: "SELECT date_issued, symbol, signal, price_at_issue, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_resolved IS NOT NULL AND date_issued >= CURDATE() - INTERVAL 1 DAY;"
+    description: "Fetches all signals resolved within the last day, including their outcomes."
+  evaluate_signals:
+    query: "WITH winners AS (SELECT symbol FROM signals.signal_log WHERE hit_target = 1), failures AS (SELECT symbol FROM signals.signal_log WHERE hit_stop = 1) SELECT * FROM winners UNION ALL SELECT * FROM failures;"
+    description: "Identifies signals that hit targets and those that hit stops."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "Output must include summary of outcomes and patterns."
+synthesis_guidance: "Focus on extracting lessons from signal outcomes. Highlight risk management and suggest improvements based on recent EOD data."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:30"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.curdate is not approved"
+  - "signals.signal_log.day is not approved"

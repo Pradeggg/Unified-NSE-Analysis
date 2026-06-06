@@ -1,0 +1,62 @@
+id: "market_3m_rotation_swing_1387_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1387"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as exceptions and gaps first"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  as_of_date: "datetime"
+  primary_candidates: "array of objects"
+  index_returns: "array of objects"
+  leading_sectors: "array of objects"
+sql_templates:
+  -
+    title: "Calculate Index Returns Past 3 Months"
+    description: "Fetch index returns over the last 3 months based on EOD data."
+    sql: "SELECT index_symbol, trade_date, close, change_pct FROM market.index_eod WHERE trade_date BETWEEN CURDATE() - INTERVAL 3 MONTH AND CURDATE()"
+  -
+    title: "Identify Leading Sectors by Stage"
+    description: "Determine leading sectors based on stage and technical scores."
+    sql: "SELECT sector, AVG(technical_score) AS avg_tech_score FROM scores.stage_snapshots WHERE snapshot_date BETWEEN CURDATE() - INTERVAL 3 MONTH AND CURDATE() GROUP BY sector ORDER BY avg_tech_score DESC LIMIT 5"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure data timeframe covers exactly last 3 months."
+  - "Check calculated sector leadership is among top by average technical score."
+synthesis_guidance: "Focus on sector-relative trends and potential swing trading opportunities. Highlight any exceptional or missing data points."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage_snapshots.avg_tech_score is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.month is not approved"

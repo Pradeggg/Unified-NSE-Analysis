@@ -1,0 +1,54 @@
+id: "vcp_breakouts_with_fundamentals_1990_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1990"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  python_tools:
+
+sql_templates:
+  -
+    id: "latest_vcp_breakouts"
+    template: "WITH latest_snapshots AS (SELECT symbol, enhanced_fund_score, price FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY')), latest_vcp AS (SELECT symbol, vcp_score, change_1d_pct FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)) SELECT e.symbol, e.high, e.low, e.close, v.vcp_score, s.enhanced_fund_score FROM market.equity_eod e JOIN latest_snapshots s ON e.symbol = s.symbol JOIN latest_vcp v ON e.symbol = v.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND e.series = 'EQ' ORDER BY v.vcp_score DESC, e.close DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure stocks have strong fundamentals and are VCP or breakout candidates."
+  - "Include only BUY or STRONG_BUY trading signals."
+synthesis_guidance: "['Map SQL query outputs to the comparison matrix.', 'Highlight TradingView export capability.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

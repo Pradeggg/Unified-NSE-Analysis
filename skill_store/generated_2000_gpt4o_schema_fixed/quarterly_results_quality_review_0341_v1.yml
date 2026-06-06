@@ -1,0 +1,59 @@
+id: "quarterly_results_quality_review_0341_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0341"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: last 3 months; response style: exceptions and gaps first."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for last 3 months: latest quarterly results analysis"
+  - "which companies had strong quarterly results as exceptions and gaps first"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  task: "Analyze latest quarterly results."
+  steps:
+    - "Select latest quarterly entries for each company within last 3 months from scores.quarterly_results."
+    - "Join results with scores.results_analysis to compare narrative and financial data."
+    - "Evaluate margin changes and identify patterns of beat, miss, or mixed results."
+    - "Join with scores.stage_snapshots to gather technical scores and current stage context."
+sql_templates:
+  -
+    label: "Fetch Latest Quarterly Results"
+    template: "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.revenue, qr.pat, qr.opm_pct, ra.verdict, ra.growth_yoy_revenue_pct, ra.growth_qoq_revenue_pct, ra.growth_yoy_pat_pct, ra.growth_qoq_pat_pct FROM scores.quarterly_results qr JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end WHERE qr.period_end > CURRENT_DATE - INTERVAL '3 months' ORDER BY qr.symbol, qr.period_end DESC, qr.fetched_at DESC LIMIT 50;"
+  -
+    label: "Fetch Technical Scores"
+    template: "SELECT ss.symbol, ss.stage, ss.technical_score FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'steps': ['Highlight companies with exceptional or concerning results first.', 'Summarize margin trends and their drivers.', 'Rank companies based on revenue and PAT growth metrics.', 'Note gaps where narrative analysis does not align with financial data.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

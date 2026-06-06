@@ -1,0 +1,86 @@
+id: "corporate_events_results_watchlist_1549_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1549"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: last 3 months; response style: research-only summary."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for last 3 months: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as research-only summary"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  language: "python"
+  mode: "read_only"
+  inputs:
+    -
+      name: "context"
+      type: "dict"
+  outputs:
+    -
+      name: "results"
+      type: "json"
+  approved_tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+  code: "def run(context):\n    # Query for corporate events within the last 3 months\n    event_data = context['signals.corporate_events']\n    if event_data.empty:\n        return {'error': 'No event data available.'}\n\n    upcoming_events = event_data[(event_data['event_date'] > '2023-07-01') & (event_data['event_date'] <= '2023-10-01')]\n\n    # Summarize results-related watchlist actions\n    result_reports = context['scores.results_analysis']\n    recent_results = result_reports[(result_reports['created_at'] > '2023-07-01') & (result_reports['created_at'] <= '2023-10-01')]\n\n    # Data framing for response\n    response = {\n        'event_calendar': upcoming_events[['symbol', 'event_type', 'event_date', 'purpose_raw']],\n        'symbol_watchlist': recent_results['symbol'].unique().tolist(),\n        'result_context': [\n            {\n                'symbol': row['symbol'],\n                'company_name': row['company_name'],\n                'growth_yoy_revenue_pct': row['growth_yoy_revenue_pct'],\n                'growth_qoq_revenue_pct': row['growth_qoq_revenue_pct']\n            } for _, row in recent_results.iterrows()\n        ],\n        'action_bucket': 'Maintain watchlist based on recent performance.',\n        'source_trail': upcoming_events[['source']].drop_duplicates().tolist()\n    }\n    return response"
+sql_templates:
+  -
+    template: "WITH recent_events AS (SELECT symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date > CURRENT_DATE - INTERVAL '3 MONTH' AND event_date <= CURRENT_DATE) SELECT * FROM recent_events;"
+    description: "Fetch recent corporate events in the last 3 months."
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      -
+        name: "context"
+        type: "dict"
+    outputs:
+      -
+        name: "results"
+        type: "json"
+    approved_tables:
+      - "signals.corporate_events"
+      - "scores.results_analysis"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    event_data = context['signals.corporate_events']\n    if event_data.empty:\n        return {'error': 'No event data available.'}\n    upcoming_events = event_data[(event_data['event_date'] > '2023-07-01') & (event_data['event_date'] <= '2023-10-01')]\n    result_reports = context['scores.results_analysis']\n    recent_results = result_reports[(result_reports['created_at'] > '2023-07-01') & (result_reports['created_at'] <= '2023-10-01')]\n    response = {\n        'event_calendar': upcoming_events[['symbol', 'event_type', 'event_date', 'purpose_raw']],\n        'symbol_watchlist': recent_results['symbol'].unique().tolist(),\n        'result_context': [\n            {\n                'symbol': row['symbol'],\n                'company_name': row['company_name'],\n                'growth_yoy_revenue_pct': row['growth_yoy_revenue_pct'],\n                'growth_qoq_revenue_pct': row['growth_qoq_revenue_pct']\n            } for _, row in recent_results.iterrows()\n        ],\n        'action_bucket': 'Maintain watchlist based on recent performance.',\n        'source_trail': upcoming_events[['source']].drop_duplicates().tolist()\n    }\n    return response"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure timeframe filter is applied correctly."
+  - "Check if the context provides valid data for each table."
+synthesis_guidance: "['Use recent corporate and results events to build watchlists.', 'Focus on source-trail validations for accurate summaries.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:56"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: inputs must contain only strings"
+  - "<missing-id>: outputs must contain only strings"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: inputs must contain only strings"
+    - "<missing-id>: outputs must contain only strings"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

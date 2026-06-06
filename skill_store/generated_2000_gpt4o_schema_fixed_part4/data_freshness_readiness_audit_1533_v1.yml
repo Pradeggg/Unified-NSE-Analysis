@@ -1,0 +1,93 @@
+id: "data_freshness_readiness_audit_1533_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1533"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: last 20 sessions; response style: research-only summary."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for last 20 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as research-only summary"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "check_index_eod_freshness"
+    template: "SELECT MAX(trade_date) as latest_index_date FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '20 days';"
+  -
+    name: "check_equity_eod_freshness"
+    template: "SELECT MAX(trade_date) as latest_equity_date FROM market.equity_eod WHERE trade_date > CURRENT_DATE - INTERVAL '20 days';"
+  -
+    name: "check_stage_snapshots_freshness"
+    template: "SELECT MAX(snapshot_date) as latest_stage_date FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL '20 days';"
+  -
+    name: "check_market_daily_freshness"
+    template: "SELECT MAX(trade_date) as latest_market_daily_date FROM breadth.market_daily WHERE trade_date > CURRENT_DATE - INTERVAL '20 days';"
+python_tools:
+  -
+    id: "freshness_calculator"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "latest_index_date"
+      - "latest_equity_date"
+      - "latest_stage_date"
+      - "latest_market_daily_date"
+    outputs:
+      - "freshness_health"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "breadth.market_daily"
+    code: "def run(context):\n    freshness_health = {\n        'index': context['latest_index_date'],\n        'equity': context['latest_equity_date'],\n        'stage': context['latest_stage_date'],\n        'market_daily': context['latest_market_daily_date']\n    }\n    return freshness_health"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "latest_index_date > CURRENT_DATE - INTERVAL '1 day'"
+  - "latest_equity_date > CURRENT_DATE - INTERVAL '1 day'"
+  - "latest_stage_date > CURRENT_DATE - INTERVAL '1 day'"
+  - "latest_market_daily_date > CURRENT_DATE - INTERVAL '1 day'"
+synthesis_guidance: "['Identify gaps between expected and actual freshness.', 'Recommend immediate actions for data loader improvements.', 'Summarize impact on research and reporting workflows.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:58"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.latest_market_daily_date is not approved"
+  - "freshness_calculator: execution failed: process exited 1"
+  - "market.equity_eod.latest_equity_date is not approved"
+  - "market.index_eod.latest_index_date is not approved"
+  - "scores.stage_snapshots.latest_stage_date is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "breadth.market_daily.latest_market_daily_date is not approved"
+    - "freshness_calculator: execution failed: process exited 1"
+    - "market.equity_eod.latest_equity_date is not approved"
+    - "market.index_eod.latest_index_date is not approved"
+    - "scores.stage_snapshots.latest_stage_date is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

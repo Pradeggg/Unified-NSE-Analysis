@@ -1,0 +1,57 @@
+id: "fii_dii_regime_breadth_review_1086_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1086"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: intraday context; response style: concise table."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for intraday context: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as concise table"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "intraday_context"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Retrieve and aggregate data to provide a concise analysis of institutional flows, market regime, and breadth indicators, addressing risk-on or risk-off context with intraday insights."
+sql_templates:
+  -
+    template_id: "flow_analysis"
+    query: "SELECT trade_date, fii_net_today, dii_net_today, flow_signal FROM signals.fii_dii_flows WHERE trade_date = CURRENT_DATE;"
+  -
+    template_id: "regime_analysis"
+    query: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date = CURRENT_DATE;"
+  -
+    template_id: "breadth_analysis"
+    query: "SELECT trade_date, adv_oscillator, ad_signal, trin_signal FROM breadth.market_daily WHERE trade_date = CURRENT_DATE;"
+  -
+    template_id: "index_analysis"
+    query: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date = CURRENT_DATE AND index_symbol = 'NIFTY';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all SQL queries are read-only SELECT statements."
+  - "Verify queries align with approved schema tables and columns."
+synthesis_guidance: "Combine SQL query results into a concise overview, clearly indicating current market regime, flow trends, breadth, and index status, highlighting risk-on or risk-off context."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:12"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.adv_oscillator is not approved"

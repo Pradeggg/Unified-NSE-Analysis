@@ -1,0 +1,55 @@
+id: "vcp_breakouts_with_fundamentals_1150_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1150"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  sql_templates:
+    -
+      name: "latest_breakouts"
+      queries:
+        - "SELECT e.symbol, e.high, e.close, e.volume, s.fundamental_score, s.enhanced_fund_score, s.minervini_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND e.series = 'EQ' AND s.stage = 'STAGE_2' AND s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY s.enhanced_fund_score DESC LIMIT 20"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure the SQL query adheres to SELECT standards and does not allow data manipulation."
+  - "Verify the candidate stocks align with the concept of VCP, new highs, and strong fundamentals using provided filters and scores."
+synthesis_guidance: "{'approach': 'Present findings as a narrative, emphasizing the rationale behind selecting each candidate based on scores and indicators. Export the findings to TradingView-compatible formats.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:55:50"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

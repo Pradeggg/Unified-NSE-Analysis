@@ -1,0 +1,60 @@
+id: "market_3m_rotation_swing_1947_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1947"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Read-only approach using SQL templates and Python tools for synthesis and analysis."
+sql_templates:
+  -
+    description: "Retrieve top index performers over the last 3 months."
+    sql: "SELECT index_symbol, AVG(change_pct) as avg_change FROM market.index_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY index_symbol ORDER BY avg_change DESC;"
+  -
+    description: "Identify sectors with largest stage distribution changes."
+    sql: "SELECT sector, AVG(stage_score) as avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY sector ORDER BY avg_stage_score DESC;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all data uses the last 3 months timeframe."
+  - "Verify sector-relative comparison is clear and complete."
+  - "Confirm no write operations occur."
+synthesis_guidance: "Framework for integrating SQL results into market analysis summary with a focus on sector comparison and candidate selection."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:34"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_change is not approved"
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage_snapshots.avg_stage_score is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"

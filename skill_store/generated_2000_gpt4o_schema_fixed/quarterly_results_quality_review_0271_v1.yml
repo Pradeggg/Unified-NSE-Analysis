@@ -1,0 +1,58 @@
+id: "quarterly_results_quality_review_0271_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0271"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: pre market; response style: ranked candidates."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for pre market: latest quarterly results analysis"
+  - "which companies had strong quarterly results as ranked candidates"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Step 1: Retrieve the latest quarterly results.\nStep 2: Analyze revenue and PAT growth.\nStep 3: Examine margin trends.\nStep 4: Assess filing freshness and narrative quality.\nStep 5: Rank companies based on performance."
+sql_templates:
+  -
+    template_name: "Retrieve_Latest_Quarterly_Results"
+    description: "Fetch latest quarterly results for each company."
+    sql: "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.period_label, qr.revenue, qr.pat, qr.opm_pct, ra.verdict FROM scores.quarterly_results qr JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end WHERE qr.period_type = 'quarter' ORDER BY qr.symbol, qr.period_end DESC, qr.fetched_at DESC LIMIT 10;"
+  -
+    template_name: "Ranked_Company_Analysis"
+    description: "Analyzing and ranking companies based on their latest performance."
+    sql: "SELECT ra.symbol, ra.company_name, ra.verdict, ra.growth_yoy_revenue_pct, ra.growth_qoq_revenue_pct, ra.growth_yoy_pat_pct, ra.growth_qoq_pat_pct, ss.stage FROM scores.results_analysis ra JOIN scores.quarterly_results qr ON ra.symbol = qr.symbol JOIN scores.stage_snapshots ss ON ra.symbol = ss.symbol WHERE ra.period_end = (SELECT MAX(period_end) FROM scores.results_analysis) AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ra.verdict IN ('beat', 'inline') ORDER BY ra.growth_yoy_revenue_pct DESC, ra.growth_yoy_pat_pct DESC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure all symbols have the latest quarterly data."
+  - "Verify revenue and PAT growth calculations."
+  - "Check margin trends coherence."
+  - "Rank companies by performance metrics."
+synthesis_guidance: "['Prioritize data freshness and accuracy.', 'Provide a focused narrative on the top-ranked companies.', 'Highlight key drivers and risks.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:58"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

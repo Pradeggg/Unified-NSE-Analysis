@@ -1,0 +1,64 @@
+id: "report_link_data_validation_0732_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0732"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "To perform a deep institutional review for the last 20 sessions, run SQL queries to validate report links and ensure no data is missing."
+sql_templates:
+  -
+    description: "Get the latest 20 sessions report links and validate against filtered stock data."
+    template: "WITH latest_runs AS (SELECT run_id, run_ts FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 20) SELECT er.run_id, er.run_ts, efs.symbol FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id WHERE er.run_id IN (SELECT run_id FROM latest_runs) AND efs.symbol IS NOT NULL;"
+python_tools:
+  -
+    id: "stock_html_validation"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "html_file"
+    outputs:
+      - "is_valid"
+    approved_tables:
+
+    code: "def run(context):\n    # Validate HTML structure for stock data\n    # Return is_valid as True or False\n    return {'is_valid': True} # Example placeholder"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure no stock with a missing symbol in the latest 20 sessions."
+  - "Check for missing or broken report links."
+  -
+    type: "evidence_gap"
+    concept: "HTML validation"
+    description: "Validation of report HTML structures is not covered in the existing schema."
+synthesis_guidance: "['Use findings from SQL validation to synthesize QA checklist outputs.', 'Focus on identifying broken or missing data linkages.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

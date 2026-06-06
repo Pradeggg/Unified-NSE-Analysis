@@ -1,0 +1,53 @@
+id: "portfolio_incremental_add_trim_0651_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0651"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Examine current portfolio holdings and stage snapshots to decide incremental add or trim actions."
+sql_templates:
+  sector_exposure:
+    type: "SELECT"
+    query: "SELECT sector, SUM(qty * live_price) as total_value FROM scores.stage_snapshots ss JOIN portfolio.holdings ph ON ss.symbol = ph.symbol WHERE snapshot_date = CURRENT_DATE GROUP BY sector"
+  add_candidates:
+    type: "SELECT"
+    query: "SELECT symbol, company_name, stage, stage_score FROM scores.stage_snapshots WHERE stage IN ('1', '2') AND stage_score >= 75 AND snapshot_date = CURRENT_DATE"
+  trim_candidates:
+    type: "SELECT"
+    query: "SELECT symbol, company_name, stage, stage_score FROM scores.stage_snapshots WHERE stage IN ('3', '4') AND stage_score < 50 AND snapshot_date = CURRENT_DATE"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure symbols match between holdings and stage snapshots."
+  - "Validate current snapshot date."
+synthesis_guidance: "Focus on identifying sectors with high exposure and stocks that are strong add or trim candidates."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:50:29"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table ph.symbol"
+  - "unknown table ss.symbol"

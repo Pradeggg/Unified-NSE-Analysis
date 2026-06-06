@@ -1,0 +1,56 @@
+id: "quarterly_results_quality_review_0789_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0789"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: source-trail validation; timeframe: intraday context; response style: QA checklist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "source-trail validation for intraday context: latest quarterly results analysis"
+  - "which companies had strong quarterly results as QA checklist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  implementations:
+    - "Review the quarterly results for recent filings and assess earnings trends."
+    - "Validate results against source trails and timing to ensure accuracy."
+    - "Rank companies based on margin and PAT growth performance."
+sql_templates:
+  -
+    description: "Retrieve the latest quarterly results with revenue and PAT growth."
+    sql: "SELECT r.symbol, r.revenue, r.pat, r.opm_pct, r.fetched_at, a.growth_yoy_revenue_pct, a.growth_yoy_pat_pct, a.opm_delta_pp FROM scores.quarterly_results AS r JOIN scores.results_analysis AS a ON r.symbol = a.symbol WHERE r.fetched_at = (SELECT MAX(fetched_at) FROM scores.quarterly_results) AND a.filing_date = (SELECT MAX(filing_date) FROM scores.results_analysis);"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure SQL queries use only the approved columns"
+  - "Maintain structure for source-trail validation"
+  - "Align tables with evidence requirements for accuracy"
+synthesis_guidance: "['Integrate SQL and research findings into a coherent QA checklist', 'Highlight key growth and margin trends for quick analysis', 'Emphasize source-trail reliability and timely insights']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:54"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

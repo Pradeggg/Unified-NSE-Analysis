@@ -1,0 +1,71 @@
+id: "data_freshness_readiness_audit_0889_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0889"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for intraday context: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as action watchlist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  python_tools:
+    -
+      required_function: "run(context)"
+      language: "python"
+      mode: "read_only"
+      inputs:
+
+      outputs:
+
+      approved_tables:
+        - "market.index_eod"
+        - "market.equity_eod"
+        - "scores.stage_snapshots"
+        - "breadth.market_daily"
+        - "breadth.ma_pct_above"
+        - "report.enhanced_runs"
+      code: "# Implement logic using approved_schema for data freshness checks"
+sql_templates:
+  -
+    description: "Check latest date availability for market index data."
+    template: "SELECT trade_date AS latest_date FROM market.index_eod ORDER BY trade_date DESC LIMIT 1;"
+  -
+    description: "Retrieve top delayed equities based on trade date."
+    template: "SELECT symbol, trade_date, close FROM market.equity_eod ORDER BY trade_date DESC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure latest dates exceed current date - threshold for data freshness."
+  - "Intersect tables on valid symbols for consistency in cross-checking."
+synthesis_guidance: "['Analyze missing sources affecting narrative.', 'Flag any issues with DB loader delays impacting data readiness.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:28"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.latest_date is not approved"

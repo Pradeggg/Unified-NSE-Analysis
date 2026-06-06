@@ -1,0 +1,66 @@
+id: "market_3m_rotation_swing_0631_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0631"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for last 20 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  tasks:
+    - "Analyze market regime over the last 3 months using index EOD data."
+    - "Identify leading sectors using Stage snapshots."
+    - "Determine potential swing trade candidates focusing on Stage 2 VCP picks."
+  steps:
+    - "Fetch index EOD data for the last 3 months."
+    - "Evaluate stage distribution changes from Stage snapshots."
+    - "Select primary swing candidates from Stage 2 VCP picks."
+sql_templates:
+  - "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)"
+  - "SELECT sector, stage, change_1m_pct FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)"
+  - "SELECT symbol, company_name, sector, price, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 20 DAY)"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure that SQL results map to the output_contract fields."
+  - "Verification of active and predictive sectors against recent performance."
+  - "Cross-check swing candidate selections with Stage 2 attributes."
+synthesis_guidance: "{'context': 'Use Indian market evidence and research-only framing to provide an analytical summary.', 'logic': 'Focus on trend analysis for sector rotations and Stage 2 leadership evaluations.', 'insight_generation': 'Highlight risks, opportunities in recent market conditions, and volatility patterns in swing candidates.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:09"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage2_vcp_picks.curdate is not approved"
+  - "scores.stage2_vcp_picks.date_sub is not approved"
+  - "scores.stage2_vcp_picks.day is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"

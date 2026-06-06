@@ -1,0 +1,1 @@
+def run(context): return {'risk_flags': assess_risk(context['flow_trend'], context['regime_data'], context['breadth_data'])}

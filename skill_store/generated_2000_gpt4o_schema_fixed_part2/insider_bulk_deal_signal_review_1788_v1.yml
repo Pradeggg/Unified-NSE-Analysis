@@ -1,0 +1,50 @@
+id: "insider_bulk_deal_signal_review_1788_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1788"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: intraday context; response style: QA checklist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for intraday context: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as QA checklist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Use read-only SQL templates to fetch necessary data for insider and bulk deal analysis combined with technical confirmation and accumulation trends. Please adhere to approved schema and ensure no write operations."
+sql_templates:
+  insider_bulk_deals_query: "WITH latest_stage AS (\n    SELECT symbol, stage, trading_signal, stage_score, technical_score, snapshot_date\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n),\nlatest_eod AS (\n    SELECT symbol, close, volume\n    FROM market.equity_eod\n    WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)\n)\nSELECT b.symbol, b.deal_date, b.qty, b.price, i.alert_date, i.insider_score, s.stage, s.trading_signal\nFROM signals.bulk_block_deals b\nJOIN latest_stage s ON b.symbol = s.symbol\nJOIN latest_eod e ON b.symbol = e.symbol\nLEFT JOIN signals.insider_alerts i ON b.symbol = i.symbol\nWHERE s.trading_signal IN ('BUY', 'STRONG_BUY')\nORDER BY b.deal_date DESC\nLIMIT 100;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure SQL queries are read-only and focus on the latest available data."
+  - "Verify alignment with approved schema and join rules."
+synthesis_guidance: "Provide a synthesized overview focusing on accumulation trends, position-sizing strategies, and technical confirmations backed by insider and bulk deal data."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:03"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

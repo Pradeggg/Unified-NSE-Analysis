@@ -1,0 +1,45 @@
+id: "signal_outcome_feedback_review_0459_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review"
+description: "Analyze past signals to understand which strategies were successful and where improvements can be made."
+input_patterns:
+  - "Review which signals hit targets"
+  - "Identify failed recommendations"
+  - "Examine signal outcomes for skill enhancement"
+tags:
+  - "signal_log"
+  - "outcome_analysis"
+  - "learning"
+  - "strategy_improvement"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Use a combination of signal records, current market stages, and historical price data to review strategy effectiveness within a quarter-to-date timeframe."
+sql_templates:
+  -
+    name: "fetch_successful_signals"
+    query: "SELECT sl.symbol, sl.date_issued, sl.hit_target, sl.return_pct FROM signals.signal_log sl WHERE sl.hit_target = TRUE AND sl.date_issued >= (CURRENT_DATE - INTERVAL '3 months') ORDER BY sl.return_pct DESC;"
+  -
+    name: "fetch_failed_signals"
+    query: "SELECT sl.symbol, sl.date_issued, sl.hit_stop, sl.return_pct FROM signals.signal_log sl WHERE sl.hit_stop = TRUE AND sl.date_issued >= (CURRENT_DATE - INTERVAL '3 months') ORDER BY sl.return_pct ASC;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "successful_patterns"
+  - "failed_patterns"
+  - "strategy_recommendations"
+  - "follow_up_actions"
+validation_rules:
+  - "Ensure signal records fall within the quarter-to-date period"
+  - "Verify symbols have current market data available for review"
+synthesis_guidance: "['Summarize key patterns from successful signals', 'Identify common factors in failed signals', 'Provide actionable strategy recommendations based on analysis']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:50"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.sl is not approved"

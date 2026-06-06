@@ -1,0 +1,59 @@
+created_at: "2026-06-06T12:51:23"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata and source trails with a focus on freshness audit for the Indian market, pre-market timeframe."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_card_001_0776_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for pre market: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    description: "Validate report run metadata for freshness."
+    template: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE"
+  -
+    description: "Check missing data in filtered stock rows."
+    template: "SELECT run_id, symbol, recommendation FROM report.enhanced_filtered_stocks WHERE recommendation IS NULL"
+status: "validated"
+synthesis_guidance: "Focus on maintaining data integrity and ensuring timely updates for market readiness."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "pre_market"
+  - "QA_checklist"
+title: "Enhanced Report Data Validation"
+tool_plan_template:
+  broken_links: "Identify non-functional report links."
+  findings: "Analyze discrepancies or gaps in the enhanced report run metadata and stock data."
+  missing_data: "Detect missing stock data in HTML report files."
+  remediation: "Suggest fixes for identified issues."
+  verification: "Ensure all corrections are effective and verify data integrity pre-market."
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates are read-only SELECT queries."
+  - "Avoid data alteration in SQL templates."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

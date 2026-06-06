@@ -1,0 +1,58 @@
+id: "sector_breadth_rotation_watchlist_1595_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1595"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: risk-first review; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "risk-first review for weekly review: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as research-only summary"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "risk-first_review"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    template: "SELECT sector, AVG(pct_above_50dma) as avg_pct_above_50dma FROM breadth.sector_daily WHERE snapshot_date = CURRENT_DATE - INTERVAL '7 days' GROUP BY sector ORDER BY avg_pct_above_50dma DESC;"
+    type: "sector_breadth_rank"
+  -
+    template: "SELECT sector, AVG(stage2_pct) as avg_stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date = CURRENT_DATE - INTERVAL '7 days' GROUP BY sector ORDER BY avg_stage2_pct DESC;"
+    type: "stage2_participation_rank"
+  -
+    template: "SELECT symbol, sector, price FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE - INTERVAL '7 days' AND stage = 2 ORDER BY price DESC;"
+    type: "stage_2_candidates"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "The query results must reflect sectors ranked by breadth and Stage 2 participation."
+  - "Ensure symbols are extracted for sectors showing improvement based on criteria."
+synthesis_guidance: "The synthesis should focus on risk considerations for weekly sector rotation movements, highlighting sectors with improving breadth and momentum. Emphasize a research-oriented summary suitable for TradingView additions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:14"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.avg_stage2_pct is not approved"
+  - "breadth.ma_pct_above.sector is not approved"
+  - "breadth.sector_daily.avg_pct_above_50dma is not approved"

@@ -1,0 +1,185 @@
+created_at: "2026-06-06T12:46:14"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: today; response style: portfolio-aware output."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0401_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    required_function:
+      approved_tables:
+        - "market.index_eod"
+        - "market.equity_eod"
+        - "scores.stage_snapshots"
+        - "scores.stage2_vcp_picks"
+      code: "def run(context):\n    # Read-only analysis code using approved tables\n    pass"
+      inputs:
+
+      language: "python"
+      mode: "read_only"
+      outputs:
+
+review:
+  attempts: 3
+  findings:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  indices_movement: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '90' DAY ORDER BY trade_date DESC"
+  sector_leadership: "SELECT sector, AVG(change_1m_pct) as avg_change FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL '90' DAY GROUP BY sector ORDER BY avg_change DESC"
+  stage2_vcp_candidates: "SELECT symbol, company_name, price, sector FROM scores.stage2_vcp_picks WHERE snapshot_date > CURRENT_DATE - INTERVAL '90' DAY ORDER BY vcp_score DESC"
+status: "test_failed"
+synthesis_guidance: "Combine sector insights and VCP picks to recommend high-potential swing trades while noting market risks."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "today"
+  - "portfolio-aware_output"
+title: "3M Market Rotation Swing Assessment Variant 0401"
+tool_plan_template:
+  context: "Using recent 3-month data, analyze sector rotations and identify swing trade candidates"
+  steps:
+    - "Extract recent 3-month index and equity data to understand broad market movements."
+    - "Identify sectors showing positive momentum and leadership using technical scores."
+    - "Select potential swing candidates from stage 2 VCP picks."
+validation_errors:
+  - "description is required"
+  - "domain is required"
+  - "evidence_required is required"
+  - "id is required"
+  - "input_patterns is required"
+  - "output_contract is required"
+  - "tags is required"
+  - "title is required"
+  - "validation_rules is required"
+  - "version is required"
+  - "version must be a positive integer"
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "Check if the output matches the portfolio-aware style."
+version: 1
+card:
+  created_at: "2026-06-06T12:46:14"
+  created_by: "llm_generated"
+  description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: today; response style: portfolio-aware output."
+  domain: "market_analysis"
+  evidence_required:
+    tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "market_3m_rotation_swing_0401_v1"
+  input_patterns:
+    - "last 3 months market analysis"
+    - "find swing candidates from recent sector rotation"
+    - "market regime and stage 2 leadership over 3 months"
+    - "quick scan for today: last 3 months market analysis"
+    - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+  output_contract:
+    - "as_of_date"
+    - "index_returns"
+    - "stage_distribution_change"
+    - "leading_sectors"
+    - "primary_candidates"
+    - "risks"
+  python_tools:
+    -
+      required_function:
+        approved_tables:
+          - "market.index_eod"
+          - "market.equity_eod"
+          - "scores.stage_snapshots"
+          - "scores.stage2_vcp_picks"
+        code: "def run(context):\n    # Read-only analysis code using approved tables\n    pass"
+        inputs:
+
+        language: "python"
+        mode: "read_only"
+        outputs:
+
+  review:
+    attempts: 3
+    findings:
+      - "ID missing: approved_tables must be a list"
+      - "ID missing: code is required"
+      - "ID missing: inputs must be a list"
+      - "ID missing: language must be python"
+      - "ID missing: mode must be read_only"
+      - "ID missing: outputs must be a non-empty list"
+      - "market.index_eod.day is not approved"
+      - "scores.stage2_vcp_picks.day is not approved"
+      - "scores.stage_snapshots.avg_change is not approved"
+      - "scores.stage_snapshots.day is not approved"
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "needs_heal"
+  sql_templates:
+    indices_movement: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '90' DAY ORDER BY trade_date DESC"
+    sector_leadership: "SELECT sector, AVG(change_1m_pct) as avg_change FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL '90' DAY GROUP BY sector ORDER BY avg_change DESC"
+    stage2_vcp_candidates: "SELECT symbol, company_name, price, sector FROM scores.stage2_vcp_picks WHERE snapshot_date > CURRENT_DATE - INTERVAL '90' DAY ORDER BY vcp_score DESC"
+  status: "generated"
+  synthesis_guidance: "Combine sector insights and VCP picks to recommend high-potential swing trades while noting market risks."
+  tags:
+    - "market_regime"
+    - "sector_rotation"
+    - "stage_analysis"
+    - "swing_trading"
+    - "quick_scan"
+    - "today"
+    - "portfolio-aware_output"
+  title: "3M Market Rotation Swing Assessment Variant 0401"
+  tool_plan_template:
+    context: "Using recent 3-month data, analyze sector rotations and identify swing trade candidates"
+    steps:
+      - "Extract recent 3-month index and equity data to understand broad market movements."
+      - "Identify sectors showing positive momentum and leadership using technical scores."
+      - "Select potential swing candidates from stage 2 VCP picks."
+  validation_errors:
+    - "ID missing: approved_tables must be a list"
+    - "ID missing: code is required"
+    - "ID missing: inputs must be a list"
+    - "ID missing: language must be python"
+    - "ID missing: mode must be read_only"
+    - "ID missing: outputs must be a non-empty list"
+    - "market.index_eod.day is not approved"
+    - "scores.stage2_vcp_picks.day is not approved"
+    - "scores.stage_snapshots.avg_change is not approved"
+    - "scores.stage_snapshots.day is not approved"
+  validation_rules:
+    - "Ensure all SQL queries are read-only."
+    - "Check if the output matches the portfolio-aware style."
+  version: 1

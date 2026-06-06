@@ -1,0 +1,55 @@
+id: "corporate_events_results_watchlist_1143_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1143"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for last 3 months: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as narrative plus evidence"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "fetch_corporate_events"
+    query: "SELECT symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY event_date ASC;"
+  -
+    name: "fetch_results_analysis"
+    query: "SELECT symbol, company_name, period_end, growth_yoy_revenue_pct, growth_qoq_revenue_pct FROM scores.results_analysis WHERE period_end >= CURRENT_DATE - INTERVAL '3 months' ORDER BY period_end DESC;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "ensure_event_date"
+  - "ensure_growth_metrics"
+synthesis_guidance: "{'event_calendar': 'Compile a list of upcoming corporate events and include the type, date, and purpose.', 'symbol_watchlist': 'Generate a watchlist of symbols based on significant event data.', 'result_context': 'Provide narrative context and analysis of the results with growth metrics.', 'action_bucket': 'Suggest potential actions based on event analysis and trends.', 'source_trail': 'Include a source trail for all data points used in analysis.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:47"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

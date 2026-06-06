@@ -1,0 +1,51 @@
+created_at: "2026-06-06T12:50:48"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: weekly review; response style: debug trace."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0699_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+  holdings_review:
+    description: "Fetch current holdings with relevant stage and trend information for review."
+    sql: "SELECT h.symbol, h.qty, s.sector, s.stage, s.stage_score, s.trend_signal, s.price FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE;"
+status: "validated"
+synthesis_guidance: "Review the current portfolio holdings with sector distribution and market conditions. Identify potential candidates for adding or trimming positions based on the stage score and trend signals."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "debug_trace"
+title: "Portfolio Incremental Add Trim Review Variant 0699"
+tool_plan_template:
+
+validation_rules:
+  - "Ensure data accuracy for current snapshot date."
+  - "Validate stage score and trend signal information."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

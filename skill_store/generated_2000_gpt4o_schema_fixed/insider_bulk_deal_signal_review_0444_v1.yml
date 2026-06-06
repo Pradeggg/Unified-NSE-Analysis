@@ -1,0 +1,53 @@
+id: "insider_bulk_deal_signal_review_0444_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0444"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for last 3 months: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as portfolio-aware output"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Generate a summary of insider alerts and bulk/block deals over the last 3 months with technical confirmation."
+sql_templates:
+  -
+    template_name: "insider_bulk_deal_query"
+    template_sql: "WITH latest_stage AS ( SELECT symbol, stage, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') ), insider_bulk AS ( SELECT ia.symbol, ia.alert_date, ia.alert_type, ia.insider_score, bd.deal_date, bd.side, bd.qty, bd.price FROM signals.insider_alerts ia JOIN signals.bulk_block_deals bd ON ia.symbol = bd.symbol WHERE ia.alert_date >= CURRENT_DATE - INTERVAL '3 months' AND bd.deal_date >= CURRENT_DATE - INTERVAL '3 months' ) SELECT ib.symbol, ib.alert_date, ib.insider_score, ib.deal_date, ib.side, ib.qty, ib.price, ls.technical_score FROM insider_bulk ib JOIN latest_stage ls ON ib.symbol = ls.symbol LIMIT 100"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

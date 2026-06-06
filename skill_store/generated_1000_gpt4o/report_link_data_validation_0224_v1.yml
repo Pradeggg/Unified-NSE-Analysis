@@ -1,0 +1,47 @@
+id: "report_link_data_validation_0224_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0224"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: last 5 sessions; response style: ranked candidates."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "last_5_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Perform watchlist validation for the last 5 sessions and confirm link reliability through report generation data."
+sql_templates:
+  runs_query: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered, indices_analyzed FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '5 days';"
+  filtered_stocks_query: "SELECT run_id, rank, symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM runs_query);"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "All required data columns must be present in the results."
+  - "Run timestamps must be within the last 5 days."
+  - "Filter for missing or broken report links."
+synthesis_guidance: "Analyze query results focusing on broken or missing links. Prioritize fixing critical issues ensuring all results are reported as ranked candidates."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:43:26"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_filtered_stocks.runs_query is not approved"
+  - "report.enhanced_runs.now is not approved"

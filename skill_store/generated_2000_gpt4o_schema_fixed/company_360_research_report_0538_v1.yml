@@ -1,0 +1,69 @@
+id: "company_360_research_report_0538_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Card for RELIANCE"
+description: "Generate a comprehensive research card for RELIANCE with an overview, financials, key metrics, and position-sizing context for the last 20 sessions."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "Position-sizing context for last 20 sessions: /research RELIANCE comprehensive report"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "position-sizing_context"
+  - "last_20_sessions"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+    -
+      required_function: "run(context)"
+      language: "python"
+      mode: "read_only"
+      blocked_capabilities:
+        - "network"
+        - "subprocess"
+        - "filesystem_write"
+        - "db_write"
+        - "broker_api"
+      required_fields:
+        - "id"
+        - "language"
+        - "mode"
+        - "inputs"
+        - "outputs"
+        - "approved_tables"
+        - "code"
+sql_templates:
+  latest_stage_snapshot: "SELECT * FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 1;"
+  quarterly_financials: "SELECT * FROM scores.quarterly_results WHERE symbol = 'RELIANCE' AND period_type = 'quarter' ORDER BY period_end DESC NULLS LAST, fetched_at DESC LIMIT 1;"
+  annual_financials: "SELECT * FROM scores.annual_results WHERE symbol = 'RELIANCE' AND period_type = 'annual' ORDER BY period_end DESC NULLS LAST, fetched_at DESC LIMIT 1;"
+  eod_equity_data: "SELECT * FROM market.equity_eod WHERE symbol = 'RELIANCE' AND trade_date > CURRENT_DATE - INTERVAL '20 days' AND series = 'EQ' ORDER BY trade_date DESC LIMIT 20;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "position_sizing_context"
+  - "risks"
+validation_rules:
+  - "checks"
+synthesis_guidance: "{'format': 'research-only_summary', 'components': ['Overview', 'Key Metrics', 'Trends', 'Financial Performance', 'Market Position', 'Risks and Challenges']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:48"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,56 @@
+id: "fii_dii_regime_breadth_review_1436_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1436"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as portfolio-aware output"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  - "Analyze FII/DII flows and trends over the last 20 sessions."
+  - "Assess market regime and breadth indicators."
+  - "Evaluate index performance for confirmation."
+  - "Synthesize findings into a cohesive risk-on/risk-off narrative."
+sql_templates:
+  flow_regime_query: "WITH latest_flows AS ( SELECT trade_date, fii_net_today, dii_net_today, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days' ), regime_info AS ( SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days' ), combined_data AS ( SELECT f.trade_date, f.fii_net_today, f.dii_net_today, f.flow_signal, r.regime, r.confidence FROM latest_flows f JOIN regime_info r ON f.trade_date = r.trade_date ) SELECT * FROM combined_data;"
+  breadth_index_query: "WITH latest_breadth AS ( SELECT trade_date, advances, declines, market_sentiment FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days' ), index_performance AS ( SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days' AND index_symbol = 'Nifty 50' ) SELECT b.trade_date, b.advances, b.declines, b.market_sentiment, i.close, i.change_pct FROM latest_breadth b JOIN index_performance i ON b.trade_date = i.trade_date;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all queries filter for the last 20 sessions."
+  - "Validate joins using approved _join_rules."
+  - "Check index performance against Nifty 50 only."
+synthesis_guidance: "['Correlate FII/DII flows with regime shifts.', 'Analyze breadth for bullish/bearish indicators.', 'Contextualize index performance as confirming market sentiment.', 'Highlight any discrepancies that point to risk flags.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:35"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

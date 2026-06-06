@@ -1,0 +1,53 @@
+id: "portfolio_incremental_add_trim_1053_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1053"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: concise table."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as concise table"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  syntax: "PostgreSQL"
+sql_templates:
+  -
+    template: "WITH latest_stages AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT h.symbol, h.qty, h.avg_cost, ss.sector, ss.trading_signal, ss.price, (ss.price - h.avg_cost) / h.avg_cost * 100 AS profit_margin FROM portfolio.holdings h JOIN latest_stages ss ON h.symbol = ss.symbol WHERE ss.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY ss.trading_signal DESC LIMIT 10;"
+    usage_notes: "Fetch top portfolio positions recommended for an incremental add. Consider using LIMIT to control output size."
+  -
+    template: "WITH latest_stages AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT h.symbol, h.qty, h.avg_cost, ss.sector, ss.trading_signal, ss.price, (ss.price - h.avg_cost) / h.avg_cost * 100 AS profit_margin FROM portfolio.holdings h JOIN latest_stages ss ON h.symbol = ss.symbol WHERE ss.trading_signal = 'SELL' ORDER BY profit_margin ASC LIMIT 10;"
+    usage_notes: "Fetch top portfolio positions recommended for trimming based on current sell signals. Consider using LIMIT to control output size."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'script': 'Integrate portfolio state, sector exposure, add/trim candidates, and flagged risks into a comprehensive review table, focusing on quarter-to-date performance and actionable insights.', 'style': 'Generate a concise summary with actionable recommendations and insights, using tabulated data where beneficial.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:37"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

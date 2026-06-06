@@ -1,0 +1,61 @@
+id: "company_360_research_report_0566_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0566"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: freshness audit; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "freshness audit for post results: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as research-only summary"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "freshness_audit"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template: "Generate a research-oriented 360-degree view of the company by compiling data from tables: latest stage snapshot, quarterly and annual results, balance sheet, cash flow, results analysis, and recent equity data."
+sql_templates:
+  latest_stage_snapshot: "SELECT * FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 1;"
+  latest_quarterly_results: "SELECT DISTINCT ON (symbol) * FROM scores.quarterly_results WHERE symbol = 'RELIANCE' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC;"
+  latest_annual_results: "SELECT DISTINCT ON (symbol) * FROM scores.annual_results WHERE symbol = 'RELIANCE' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC;"
+  latest_balance_sheet: "SELECT DISTINCT ON (symbol) * FROM scores.balance_sheet WHERE symbol = 'RELIANCE' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC;"
+  latest_cash_flow: "SELECT DISTINCT ON (symbol) * FROM scores.cash_flow WHERE symbol = 'RELIANCE' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC;"
+  latest_results_analysis: "SELECT DISTINCT ON (symbol) * FROM scores.results_analysis WHERE symbol = 'RELIANCE' ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC;"
+  latest_equity_data: "SELECT * FROM market.equity_eod WHERE symbol = 'RELIANCE' AND trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all data points are from the latest available dates."
+  - "Verify symbol alignment across all tables using 'RELIANCE'."
+synthesis_guidance: "['Combine narrative insights from results analysis with technical scores.', 'Identify valuation gaps using balance sheet and cash flow comparison.', 'Highlight key financial trends emerging from quarterly and annual data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:25:19"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

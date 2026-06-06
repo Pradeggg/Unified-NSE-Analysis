@@ -1,0 +1,59 @@
+id: "market_3m_rotation_swing_1317_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1317"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: exceptions and gaps first."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as exceptions and gaps first"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  sector_leadership:
+    purpose: "Identify leading sectors based on performance metrics over the last 3 months."
+    read_only: true
+    template: "SELECT sector, AVG(change_pct) as avg_change FROM market.equity_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY sector ORDER BY avg_change DESC;"
+  market_regime:
+    purpose: "Analyze the overall market regime and stage distribution."
+    read_only: true
+    template: "WITH stage_distribution AS (SELECT stage, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY stage) SELECT stage, count FROM stage_distribution ORDER BY count DESC;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all elements in output_contract are returned."
+  - "Validate dates are current as of the latest EOD."
+synthesis_guidance: "['Highlight disparities in sector performance.', 'Identify gaps in stage distribution and leadership.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.avg_change is not approved"
+  - "market.equity_eod.curdate is not approved"
+  - "market.equity_eod.date_sub is not approved"
+  - "market.equity_eod.month is not approved"
+  - "market.equity_eod.sector is not approved"

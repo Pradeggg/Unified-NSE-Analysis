@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:50:28"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: debug trace."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0647_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for last 3 months: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+  -
+    description: "Average 1-month percentage change for symbols in portfolio over the last 3 months by sector."
+    query: "WITH recent_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)) SELECT s.symbol, s.sector, AVG(s.change_1m_pct) AS avg_change_1m FROM recent_snapshots s JOIN portfolio.holdings h ON s.symbol = h.symbol GROUP BY s.symbol, s.sector;"
+status: "validated"
+synthesis_guidance: "{'approach': 'Highlight stocks and sectors with significant performance variance for potential add or trim actions.', 'focus': 'Prioritize sectors and symbols with the most notable 1-month changes based on sector-relative benchmarks.'}"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "debug_trace"
+title: "Portfolio Incremental Add Trim Review Variant 0647"
+tool_plan_template:
+  constraints:
+    - "Status must be generated."
+    - "Use only approved tables and columns."
+    - "No data modification is allowed."
+  goal: "To analyze portfolio holdings and suggest add/trim actions based on a sector-relative comparison for the last 3 months."
+  type: "automatic"
+validation_rules:
+  - "basic_checks"
+  - "advanced_checks"
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

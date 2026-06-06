@@ -1,0 +1,55 @@
+id: "data_freshness_readiness_audit_0357_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0357"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for quarter to date: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as exceptions and gaps first"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "CREATE OR REPLACE FUNCTION assess_freshness(context JSONB) RETURNS JSONB AS $$ DECLARE ... BEGIN ... END; $$ LANGUAGE plpgsql;"
+sql_templates:
+  -
+    description: "Identify the latest available dates for each required table."
+    query: "SELECT table_name, MAX(date_field) AS latest_date FROM (VALUES ('market.index_eod', (SELECT MAX(trade_date) FROM market.index_eod)), ('market.equity_eod', (SELECT MAX(trade_date) FROM market.equity_eod)), ('scores.stage_snapshots', (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), ('breadth.market_daily', (SELECT MAX(trade_date) FROM breadth.market_daily)), ('breadth.ma_pct_above', (SELECT MAX(snapshot_date) FROM breadth.ma_pct_above)), ('report.enhanced_runs', (SELECT MAX(run_ts) FROM report.enhanced_runs))) AS data_dates(table_name, date_field) GROUP BY table_name;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure SQL templates return the expected latest date for each evidence table."
+  - "Identify tables with missing or outdated data compared to expected freshness thresholds."
+synthesis_guidance: "Focus on highlighting tables with invalid or missing freshness data first, then suggest actions to bring data current based on blocking gaps identified."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,64 @@
+id: "data_freshness_readiness_audit_1575_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Agent Adda Data Freshness Assessment"
+description: "Analyze data freshness for Agent Adda's pre-market readiness to ensure optimal data quality for market evaluation."
+input_patterns:
+  - "analyze data freshness for pre-market"
+  - "evaluate data quality for trading"
+  - "data freshness check for indices and equities"
+  - "research summary for data readiness"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "pre_market"
+  - "research_only"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    python_tools:
+      -
+        required_function: "run(context)"
+        language: "python"
+        mode: "read_only"
+        inputs:
+          - "freshness_thresholds"
+          - "missing_sources"
+        outputs:
+          - "freshness_check_summary"
+        approved_tables:
+          - "market.index_eod"
+          - "market.equity_eod"
+          - "scores.stage_snapshots"
+          - "breadth.market_daily"
+        code: "# Contextualized analysis to determine data freshness readiness\n# **Networking and database writes are blocked for security**\n\nimport datetime\n\ndef run(context):\n    # Calculate the latest available data dates\n    index_latest_date = context.get_max_trade_date('market.index_eod')\n    equity_latest_date = context.get_max_trade_date('market.equity_eod')\n    stage_latest_date = context.get_max_snapshot_date('scores.stage_snapshots')\n    \n    # Compare against freshness thresholds\n    freshness_results = {}\n    \n    # Check each source\n    for source, latest_date in {'index': index_latest_date, 'equity': equity_latest_date, 'stage': stage_latest_date}.items():\n        freshness_results[source] = 'Stale' if (datetime.date.today() - latest_date).days > context.inputs['freshness_thresholds'][source] else 'Fresh'\n    \n    # Detect any missing sources\n    missing_sources = context.inputs['missing_sources']\n    return {'freshness_results': freshness_results, 'missing_sources': missing_sources}"
+sql_templates:
+  -
+    name: "Freshness_Check_Query"
+    template: "SELECT trade_date FROM {{table}} WHERE trade_date = (SELECT MAX(trade_date) FROM {{table}});"
+python_tools:
+
+output_contract:
+  - "freshness_results"
+  - "missing_sources"
+validation_rules:
+  - "Ensure returned data respects the freshness threshold criteria."
+  - "Cross-verify with documented thresholds for each data source."
+synthesis_guidance: "['Synthesize results highlighting any stale data sources.', 'Provide a risk-first summary focusing on critical gaps in data availability.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:32"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

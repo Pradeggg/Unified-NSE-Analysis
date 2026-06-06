@@ -1,0 +1,59 @@
+id: "portfolio_incremental_add_trim_0199_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0199"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: weekly review; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "{evidence_gaps}. Fill in gaps with additional narrative or ask clarifying questions."
+sql_templates:
+  -
+    description: "Select current holdings with live price and change metrics."
+    template: "SELECT h.symbol, h.qty, h.avg_cost, s.live_price, s.change_1w_pct, s.stage_score FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    type: "read"
+    columns:
+      - "symbol"
+      - "qty"
+      - "avg_cost"
+      - "live_price"
+      - "change_1w_pct"
+      - "stage_score"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Provide a narrative review using evidence gathered through SQL queries and highlight key portfolio add/trim decisions based on stage scores and recent price changes."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

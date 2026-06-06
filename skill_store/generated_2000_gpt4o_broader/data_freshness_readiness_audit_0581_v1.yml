@@ -1,0 +1,63 @@
+id: "data_freshness_readiness_audit_0581_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0581"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: intraday context; response style: research-only summary."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for intraday context: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as research-only summary"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "intraday_context"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "For assessing data freshness readiness, determine the latest available trade_date in key tables and compare against current requirements."
+sql_templates:
+  -
+    template_name: "check_freshness"
+    description: "Checks the latest trade_date in each relevant table to ensure data readiness."
+    sql:
+      - "SELECT MAX(trade_date) AS last_trade_date FROM market.index_eod"
+      - "SELECT MAX(trade_date) AS last_trade_date FROM market.equity_eod"
+      - "SELECT MAX(snapshot_date) AS last_snapshot_date FROM scores.stage_snapshots"
+      - "SELECT MAX(trade_date) AS last_trade_date FROM breadth.market_daily"
+      - "SELECT MAX(snapshot_date) AS last_snapshot_date FROM breadth.ma_pct_above"
+      - "SELECT MAX(run_ts) AS last_run_ts FROM report.enhanced_runs"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "All schemas must be approved and aligned with current dependencies."
+  - "No data modification; templates should focus on SELECT statements only."
+synthesis_guidance: "Synthesize findings into a summary focusing on data freshness readiness and observed gaps in available data for intraday context."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:58:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.last_snapshot_date is not approved"
+  - "breadth.market_daily.last_trade_date is not approved"
+  - "market.equity_eod.last_trade_date is not approved"
+  - "market.index_eod.last_trade_date is not approved"
+  - "report.enhanced_runs.last_run_ts is not approved"
+  - "scores.stage_snapshots.last_snapshot_date is not approved"

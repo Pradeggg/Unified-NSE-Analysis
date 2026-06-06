@@ -1,0 +1,62 @@
+created_at: "2026-06-06T12:46:25"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: portfolio-aware output."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0422_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "fetch_new_highs"
+    template: "SELECT symbol, high, trade_date FROM market.equity_eod WHERE high > week52_high AND trade_date >= CURRENT_DATE - INTERVAL '5 days';"
+  -
+    name: "fetch_vcp_breakouts"
+    template: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE vcp_breakout_pct > 0 AND snapshot_date >= CURRENT_DATE - INTERVAL '5 days';"
+  -
+    name: "fetch_strong_fundamentals"
+    template: "SELECT symbol, fundamental_score FROM scores.stage_snapshots WHERE fundamental_score > 0 AND snapshot_date >= CURRENT_DATE - INTERVAL '5 days';"
+status: "validated"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "portfolio-aware_output"
+title: "VCP Breakouts With Fundamentals Variant 0422"
+tool_plan_template:
+
+validation_errors:
+
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+version: 1

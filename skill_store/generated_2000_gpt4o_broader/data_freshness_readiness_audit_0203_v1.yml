@@ -1,0 +1,61 @@
+id: "data_freshness_readiness_audit_0203_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0203"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: today; response style: ranked candidates."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for today: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as ranked candidates"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Evaluate data freshness with a focus on daily refresh. Rank potential gaps and recommend actions."
+sql_templates:
+  data_freshness_check:
+    description: "Check freshness of market-related tables."
+    query: "SELECT table_name, MAX(trade_date) AS last_update FROM ({subqueries}) GROUP BY table_name;"
+    subqueries:
+      market.index_eod: "SELECT 'market.index_eod' AS table_name, trade_date FROM market.index_eod"
+      market.equity_eod: "SELECT 'market.equity_eod' AS table_name, trade_date FROM market.equity_eod"
+      scores.stage_snapshots: "SELECT 'scores.stage_snapshots' AS table_name, snapshot_date AS trade_date FROM scores.stage_snapshots"
+      breadth.market_daily: "SELECT 'breadth.market_daily' AS table_name, trade_date FROM breadth.market_daily"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all timestamp fields are checked."
+  - "Assess the lag based on today\u2019s date availability."
+  - "Identify missing data points impacting narratives."
+synthesis_guidance: "Provide ranked insights into data fresh enough for current usage. Highlight immediate action points."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:38"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.table_name is not approved"
+  - "market.equity_eod.table_name is not approved"
+  - "market.index_eod.table_name is not approved"
+  - "scores.stage_snapshots.table_name is not approved"
+  - "scores.stage_snapshots.trade_date is not approved"

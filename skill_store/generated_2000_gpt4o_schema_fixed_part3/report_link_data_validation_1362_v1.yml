@@ -1,0 +1,51 @@
+id: "report_link_data_validation_1362_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Agent Adda Skill Card: Report Data Validation"
+description: "Agent Adda skill card for validating enhanced report metadata and filtered stock data. Focuses on post-results review, identifying gaps and exceptions."
+input_patterns:
+  - "Review report links not working"
+  - "Underlying stock HTML files do not have data"
+  - "Validate generated report links and missing data"
+  - "Deep institutional review for post results: review report links not working"
+  - "Validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "post_results"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Plan a validation using SQL to check linkage and data presence in reports."
+sql_templates:
+  -
+    name: "validate_links_and_data"
+    description: "Check for broken links and missing data in enhanced reports."
+    sql: "SELECT er.run_id, er.run_ts, COUNT(efs.symbol) AS stocks_present, er.stocks_filtered - COUNT(efs.symbol) AS missing_stocks_count FROM report.enhanced_runs er LEFT JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id WHERE er.run_ts >= CURRENT_DATE - INTERVAL '3 months' GROUP BY er.run_id, er.run_ts HAVING er.stocks_filtered != COUNT(efs.symbol);"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure SQL remains read-only and follows schema constraints."
+  - "Identify analysis gaps and propose enhancement strategies."
+synthesis_guidance: "Prioritize findings that highlight systemic issues within report generation. Address data linkage and integrity."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:59"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

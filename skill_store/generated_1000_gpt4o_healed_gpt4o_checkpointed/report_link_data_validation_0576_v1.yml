@@ -1,0 +1,57 @@
+created_at: "2026-06-06T12:49:18"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: pre market; response style: research-only summary."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0576_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for pre market: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    name: "FetchRecentRuns"
+    query: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts > NOW() - INTERVAL '1 DAY';"
+  -
+    name: "FetchFilteredStockAnomalies"
+    query: "SELECT run_id, symbol, recommendation, day_change_pct FROM report.enhanced_filtered_stocks WHERE day_change_pct IS NULL OR recommendation IS NULL;"
+status: "test_failed"
+synthesis_guidance: "Summarize the data validation results focusing on report freshness, completeness, and accessibility issues."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "pre_market"
+  - "research-only_summary"
+title: "Enhanced Report Data Validation Variant 0576"
+tool_plan_template:
+  workflow: "Analyze report runtime metadata and filtered stock anomalies, with a focus on data freshness pre-market."
+validation_errors:
+  - "report.enhanced_runs.now is not approved"
+validation_rules:
+  - "Ensure run_ts and analysis_date are within expected pre-market intervals."
+  - "Check that filtered stock data is populated for analyzed stocks."
+  - "Confirm that report links are correctly generated and accessible."
+version: 1
+review:
+  attempts: 3
+  findings:
+    - "report.enhanced_runs.now is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"

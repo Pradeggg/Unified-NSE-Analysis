@@ -1,0 +1,76 @@
+id: "sector_breadth_rotation_watchlist_1189_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1189"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: intraday context; response style: narrative plus evidence."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for intraday context: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as narrative plus evidence"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  status: "generated"
+  steps:
+    - "Query the latest sector breadth data."
+    - "Identify sectors with improving breadth using 50dma and stage 2 participation."
+    - "Find leading symbols with strong stage 2, RS, and momentum."
+    - "Validate results with intraday context for TradingView watchlist."
+sql_templates:
+  sector_ranks_query:
+    status: "generated"
+    query: "SELECT sector, pct_above_50dma, stage2_pct, breadth_signal FROM breadth.sector_daily INNER JOIN breadth.ma_pct_above ON breadth.sector_daily.snapshot_date = breadth.ma_pct_above.snapshot_date WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) AND stage2_pct > 20 ORDER BY pct_above_50dma DESC LIMIT 10;"
+    notes: "Ranks sectors by 50dma and stage 2 participation for latest date."
+  improving_sectors_query:
+    status: "generated"
+    query: "SELECT sector, symbol, company_name FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY relative_strength DESC LIMIT 10;"
+    notes: "Fetches improving sectors and symbols with strong buy signals."
+python_tools:
+  -
+    id: "intraday_context_fetcher"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol_list"
+    outputs:
+      - "enhanced_intraday_data"
+    approved_tables:
+      - "market.equity_eod"
+    code: "def run(context):\n    # Fetch latest intraday data for provided symbols\n    # Implementation is read-only and does not alter any data\n    return enhanced_intraday_data"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure unique sectors in sector_ranks."
+  - "Symbols must appear in the improving_sectors list."
+synthesis_guidance: "['Narrative should connect improvements in sector breadth to practical watchlist actions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:41:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "intraday_context_fetcher: execution failed: NameError: name 'enhanced_intraday_data' is not defined"
+review:
+  status: "needs_heal"
+  findings:
+    - "intraday_context_fetcher: execution failed: NameError: name 'enhanced_intraday_data' is not defined"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

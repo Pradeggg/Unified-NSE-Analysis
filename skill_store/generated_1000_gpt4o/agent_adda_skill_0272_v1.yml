@@ -1,0 +1,55 @@
+id: "agent_adda_skill_0272_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Skill"
+description: "Validate enhanced report metadata, filtered stock rows, data population, and source trails for Indian market analysis pre-market."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for pre market: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  evidence:
+    - "Use data from report.enhanced_runs and report.enhanced_filtered_stocks."
+  analytical_strategy:
+    - "Rank candidates based on availability and integrity of data."
+  output_framework:
+    - "Generate findings on broken links and missing data with ranked recommendations."
+sql_templates:
+  - "SELECT run_id, run_ts, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE market_composite_score IS NOT NULL;"
+  - "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE above_50dma = TRUE AND tech_score > 70;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all findings are verifiable."
+  - "Cross-validate SQL outputs with input patterns."
+synthesis_guidance: "['Rank findings for institutional clarity.', 'Highlight crucial missing data areas for resolution.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:44:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

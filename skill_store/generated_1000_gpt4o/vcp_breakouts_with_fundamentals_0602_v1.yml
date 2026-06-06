@@ -1,0 +1,72 @@
+id: "vcp_breakouts_with_fundamentals_0602_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0602"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: today; response style: debug trace."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "today"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze VCP breakouts using approved tables, focusing on price movement, trading signals, and fundamental scores."
+sql_templates:
+  query: "SELECT e.symbol, e.close, e.high AS week52_high, s.company_name, s.sector, s.market_cap_cat, s.rsi, s.trend_signal, s.trading_signal, s.enhanced_fund_score, s.institutional_backing FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date = CURRENT_DATE AND e.high >= e.week52_high AND s.enhanced_fund_score > 70 AND s.trading_signal = 'BUY'"
+python_tools:
+  -
+    id: "fundamental_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "price"
+      - "trading_signal"
+    outputs:
+      - "recommendation_score"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Placeholder for operations involving context data\n    recommendation_score = compute_score(context['symbol'], context['price'])\n    return {'recommendation_score': recommendation_score}"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure SQL template only performs read-only operations."
+  - "Verify that all tables and columns used are from the approved schema."
+  - "Check response includes an institutional review focus for current day."
+synthesis_guidance: "Emphasize the significance of VCP patterns with strong fundamentals and institutional backing to potential investors."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:50:03"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table e.close"
+  - "unknown table e.high"
+  - "unknown table e.symbol"
+  - "unknown table e.trade_date"
+  - "unknown table e.week52_high"
+  - "unknown table s.company_name"
+  - "unknown table s.enhanced_fund_score"
+  - "unknown table s.institutional_backing"
+  - "unknown table s.market_cap_cat"
+  - "unknown table s.rsi"
+  - "unknown table s.sector"
+  - "unknown table s.symbol"
+  - "unknown table s.trading_signal"
+  - "unknown table s.trend_signal"

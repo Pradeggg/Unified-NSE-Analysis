@@ -1,0 +1,65 @@
+id: "portfolio_incremental_add_trim_0407_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0407"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for today: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Select current holdings with market cap category and sector to evaluate potential add/trim decisions."
+    sql: "SELECT h.symbol, h.qty, s.sector, s.market_cap_cat, s.stage_score, s.trend_signal, s.trading_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE;"
+python_tools:
+  -
+    id: "trend_signal_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "trend_signal_data"
+    outputs:
+      - "trend_insights"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    trend_data = context['trend_signal_data']\n    insights = analyze_trend_signals(trend_data)\n    return {'trend_insights': insights}"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all output data respects the structure and requirements of the contract."
+  - "No write operations should be performed on the database."
+synthesis_guidance: "Focus on sector-relative comparison to inform add/trim decisions for today."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:46:18"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table h.qty"
+  - "unknown table h.symbol"
+  - "unknown table s.market_cap_cat"
+  - "unknown table s.sector"
+  - "unknown table s.snapshot_date"
+  - "unknown table s.stage_score"
+  - "unknown table s.symbol"
+  - "unknown table s.trading_signal"
+  - "unknown table s.trend_signal"

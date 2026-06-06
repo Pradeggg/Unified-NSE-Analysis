@@ -1,0 +1,64 @@
+id: "insider_bulk_deal_signal_review_1382_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1382"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: intraday context; response style: exceptions and gaps first."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for intraday context: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as exceptions and gaps first"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  checklist:
+    - "Validate inputs against patterns"
+    - "Ensure matching evidence availability"
+    - "Identify and log evidence gaps if any"
+    - "Synthesize insights into output contract"
+  exceptions_handling: "Prioritize identifying gaps and exceptions in evidence; log discrepancies for further investigation"
+sql_templates:
+  -
+    name: "fetch_insider_alerts"
+    template: "SELECT symbol, alert_type, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '1 day';"
+  -
+    name: "fetch_bulk_deals"
+    template: "SELECT symbol, entity, side, qty, price FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '1 day';"
+  -
+    name: "fetch_technical_snapshots"
+    template: "SELECT symbol, price, rsi, trend_signal, supertrend_state FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "symbol_consistency"
+  - "date_validation"
+synthesis_guidance: "{'strategy': 'Integrate insider alerts and bulk deal information with technical signals to provide a comprehensive review of market activities', 'focus': 'Highlight transactions with significant deviations, anomalies, or missing data'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:46"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

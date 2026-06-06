@@ -1,0 +1,82 @@
+created_at: "2026-06-06T12:48:12"
+created_by: "llm_generated"
+description: "Skill for validating TradingView export issues, ensuring report links and data integrity within a portfolio context, focused on quarter-to-date performance."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_card_001_0460_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for quarter to date: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "# Python tool code in read-only mode..."
+    id: "run"
+    inputs:
+      - "data"
+      - "context"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "validation_results"
+sql_templates:
+  -
+    description: "Fetch report run metadata for the quarter to date."
+    template: "SELECT run_id, run_ts, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE analysis_date >= DATE('now', '-3 months');"
+    type: "SELECT"
+  -
+    description: "Get filtered stock details with TradingView signals."
+    template: "SELECT symbol, recommendation, daily_signal, weekly_signal FROM report.enhanced_filtered_stocks WHERE recommendation IS NOT NULL AND daily_signal IS NOT NULL;"
+    type: "SELECT"
+status: "test_failed"
+synthesis_guidance:
+  - "Ensure outputs are clearly linked to input issues."
+  - "Provide actionable remediation steps."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+title: "TradingView Export Validation - QTD"
+tool_plan_template:
+  -
+    description: "Use SQL templates to fetch and validate report metadata and filtered stock information."
+    modes:
+      - "read-only"
+    tool_name: "SQL"
+  -
+    description: "Implement a Python tool if SQL becomes complex, ensuring a read-only operation for validation purposes."
+    tool_name: "Python Evidence Tool"
+validation_errors:
+  - "report.enhanced_runs.date is not approved"
+  - "run: must define run(context)"
+validation_rules:
+  - "Report links must resolve without error."
+  - "All required data fields must be present and correct."
+  - "Stock signals must match portfolio requirements."
+version: 1
+review:
+  attempts: 3
+  findings:
+    - "report.enhanced_runs.date is not approved"
+    - "run: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"

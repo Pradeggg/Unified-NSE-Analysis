@@ -1,0 +1,62 @@
+id: "report_link_data_validation_1978_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1978"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: pre market; response style: comparison matrix."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for pre market: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "pre_market"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Compare report links and stock data using SQL queries to validate metadata and filtered stocks from the enhanced reports."
+sql_templates:
+  -
+    name: "validate_links_and_data"
+    template: "WITH latest_runs AS (SELECT run_id, run_ts FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '3 months'), validated_data AS (SELECT ers.run_id, COUNT(efs.symbol) AS missing_stocks FROM report.enhanced_runs ers LEFT JOIN report.enhanced_filtered_stocks efs ON ers.run_id = efs.run_id WHERE ers.run_ts > CURRENT_DATE - INTERVAL '3 months' GROUP BY ers.run_id HAVING COUNT(efs.symbol) = 0) SELECT lr.run_id, lr.run_ts, vd.missing_stocks FROM latest_runs lr LEFT JOIN validated_data vd ON lr.run_id = vd.run_id ORDER BY lr.run_ts DESC LIMIT 10;"
+python_tools:
+  -
+    id: "run_data_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sql_query"
+    outputs:
+      - "analysis_results"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\\n    # Run the SQL query in a read-only mode\\n    results = context.sql_executor.execute(context.inputs['sql_query'])\\n    # Analyze results for any discrepancies or issues\\n    analysis = []\\n    for row in results:\\n        if row['missing_stocks'] > 0:\\n            analysis.append({\\\"run_id\\\": row['run_id'], \\\"issue\\\": \\\"Missing stock data\\\"})\\n    return {\\\"analysis_results\\\": analysis}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Check for missing report data using JOIN and timestamp filters."
+synthesis_guidance: "Summarize validation findings in a comparison matrix focusing on position-sizing context for pre-market scenarios."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:24"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_data_analysis: python syntax error: unexpected character after line continuation character"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_data_analysis: python syntax error: unexpected character after line continuation character"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

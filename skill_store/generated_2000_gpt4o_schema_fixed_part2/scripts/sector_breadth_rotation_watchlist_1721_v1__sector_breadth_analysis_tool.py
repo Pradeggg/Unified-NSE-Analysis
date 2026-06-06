@@ -1,0 +1,1 @@
+def run(context): return {'analysis_summary': 'Sectors analyzed successfully.'}

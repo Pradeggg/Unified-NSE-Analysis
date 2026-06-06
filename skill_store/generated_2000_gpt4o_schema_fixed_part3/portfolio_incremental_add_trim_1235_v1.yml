@@ -1,0 +1,60 @@
+id: "portfolio_incremental_add_trim_1235_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1235"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for last 20 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  steps:
+    - "Query the latest stage snapshots for portfolio holdings."
+    - "Analyze signals and scores to determine add or trim candidates."
+    - "Rank candidates based on potential risk and return."
+sql_templates:
+  -
+    name: "latest_stage_snapshots"
+    template: "SELECT ss.symbol, ss.company_name, ss.sector, ss.stage, ss.stage_score, ss.trading_signal, ss.relative_strength, ph.qty, ph.avg_cost FROM scores.stage_snapshots AS ss JOIN portfolio.holdings AS ph ON ph.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    name: "add_candidates"
+    template: "SELECT symbol, company_name, stage_score, relative_strength FROM results WHERE trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY stage_score DESC, relative_strength DESC LIMIT 10;"
+  -
+    name: "trim_candidates"
+    template: "SELECT symbol, company_name, stage_score, relative_strength FROM results WHERE trading_signal = 'SELL' ORDER BY stage_score DESC, relative_strength DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure SQL adheres to approved schema and join conditions."
+  - "Verify signal and stage logic uses correct labels and scores."
+synthesis_guidance: "['Focus on risk and return in the context of current market conditions.', 'Balance sector exposure when considering add and trim actions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:57"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

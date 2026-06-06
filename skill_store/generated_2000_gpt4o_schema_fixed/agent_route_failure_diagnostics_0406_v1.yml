@@ -1,0 +1,69 @@
+id: "agent_route_failure_diagnostics_0406_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0406"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for today: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as portfolio-aware output"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  context:
+    domain: "data_quality"
+    focus: "route failure diagnostics and freshness audit"
+  objective: "Analyze route failures and provide diagnostics using freshness audits."
+sql_templates:
+  -
+    description: "Retrieve latest run diagnostics for today's freshness audit."
+    sql: "SELECT er.run_id, er.run_ts, er.notes FROM report.enhanced_runs er WHERE er.run_ts >= CURRENT_DATE AND er.run_id IN (SELECT rf.run_id FROM report.enhanced_filtered_stocks rf WHERE rf.symbol IN (SELECT ss.symbol FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.stage = 'STAGE_2')) ORDER BY er.run_ts DESC;"
+python_tools:
+  -
+    id: "route_diagnostics_validator"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_data"
+    outputs:
+      - "validated_routes"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    code: "# Read-only tool for diagnostics validation\ndef run(context):\n    # Place-holder for diagnostics logic\n    validated_routes = perform_diagnostics(context.run_data)\n    return validated_routes"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "sql_execution"
+  - "logic_consistency"
+synthesis_guidance: "{'style': 'Ensure output is narrative-friendly while maintaining SQL diagnostics authenticity.', 'examples': ['Diagnostic: Run failures due to symbol misalignment on latest snapshot date.', 'Tool gap diagnostic: Missing stage alignment data.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:05"
+generation_model: "gpt-4o"
+validation_errors:
+  - "route_diagnostics_validator: execution failed: NameError: name 'perform_diagnostics' is not defined"
+review:
+  status: "needs_heal"
+  findings:
+    - "route_diagnostics_validator: execution failed: NameError: name 'perform_diagnostics' is not defined"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

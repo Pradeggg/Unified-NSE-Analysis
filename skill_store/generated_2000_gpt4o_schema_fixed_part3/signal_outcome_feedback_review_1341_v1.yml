@@ -1,0 +1,48 @@
+id: "signal_outcome_feedback_review_1341_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1341"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: quick scan; timeframe: last 3 months; response style: exceptions and gaps first."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for last 3 months: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as exceptions and gaps first"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze the signals over the last 3 months to determine which hit targets or stops and identify patterns for successful and unsuccessful outcomes."
+sql_templates:
+  -
+    template: "SELECT s.symbol, s.signal, s.setup_class, s.return_pct, s.hit_target, s.hit_stop FROM signals.signal_log AS s WHERE s.date_issued >= CURRENT_DATE - INTERVAL '3 months' AND (s.hit_target = true OR s.hit_stop = true);"
+    description: "Fetches signals from the last 3 months that hit targets or stops."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure return_pct is verified for accurate calculations."
+  - "Validate hit_target and hit_stop columns for precise tracking."
+synthesis_guidance: "Focus on generating a summary that highlights exceptional outcomes and identifies gaps in current strategies for improvement."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:39"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.s is not approved"

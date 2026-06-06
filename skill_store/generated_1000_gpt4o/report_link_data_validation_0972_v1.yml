@@ -1,0 +1,77 @@
+id: "report_link_data_validation_0972_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0972"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: pre market; response style: comparison matrix."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for pre market: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  title: "Data Validation Tool Plan"
+  steps:
+    - "Extract run metadata from report.enhanced_runs."
+    - "Extract relevant stock data from report.enhanced_filtered_stocks."
+    - "Compare metadata with expected pre market reports."
+    - "Check for missing data and broken links."
+    - "Generate a comparison matrix for presentation."
+sql_templates:
+  -
+    description: "Select metadata from enhanced runs."
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered, indices_analyzed, market_composite_score, market_sentiment FROM report.enhanced_runs WHERE analysis_date = '2023-10-02';"
+  -
+    description: "Select filtered stock data."
+    template: "SELECT run_id, symbol, recommendation, current_price, day_change_pct FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE analysis_date = '2023-10-02');"
+python_tools:
+  -
+    id: "run_report_validation"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+      - "symbol"
+      - "recommendation"
+      - "current_price"
+    outputs:
+      - "validation_results"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "\n# Python code to validate report links and data\n# Tool runs in read_only mode\n\ndef run(context):\n    # Example validation logic goes here\n    validation_results = {'status': 'pending'}\n    return validation_results\n"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Confirmed metadata alignment with pre market expectations."
+  - "Detected and classified missing data or discrepancies."
+  - "Links verification through enhanced checks."
+synthesis_guidance: "['Combine extracted data from SQL templates to create comparison matrices.', 'Identify and list broken links or missing data across tables.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:53:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_report_validation: missing output validation_results"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_report_validation: missing output validation_results"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

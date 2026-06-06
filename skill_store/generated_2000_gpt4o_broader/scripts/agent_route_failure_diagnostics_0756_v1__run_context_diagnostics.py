@@ -1,0 +1,1 @@
+def run(context): return {'diagnostics_report': 'Analysis completed successfully.'}

@@ -1,0 +1,53 @@
+id: "fii_dii_regime_breadth_review_1254_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1254"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: quarter to date; response style: ranked candidates."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for quarter to date: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as ranked candidates"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "{{#user_message}}\nResearch and synthesize data on FII/DII flow trends, market regimes, and market breadth to provide a ranked list of insights with resulting context for watching risk-on/risk-off signals quarter to date.\n{{/user_message}}\n{{#tool_message}}\nFetching and calculating data based on the pre-defined plans.\n{{/tool_message}}"
+sql_templates:
+  -
+    description: "Get latest market regime, breadth, and FII/DII flows."
+    sql: "WITH latest_flows AS (\n  SELECT DISTINCT ON (trade_date) fii_net_today, dii_net_today, flow_signal\n  FROM signals.fii_dii_flows\n  WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'\n  ORDER BY trade_date DESC\n),\nlatest_regime AS (\n  SELECT DISTINCT ON (trade_date) regime, confidence, days_in_regime\n  FROM signals.regime_history\n  WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'\n  ORDER BY trade_date DESC\n),\nlatest_breadth AS (\n  SELECT DISTINCT ON (trade_date) advances, declines, ad_signal\n  FROM breadth.market_daily\n  WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'\n  ORDER BY trade_date DESC\n)\nSELECT *\nFROM latest_flows\nJOIN latest_regime USING (trade_date)\nJOIN latest_breadth USING (trade_date)\nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all SQL templates use read-only syntax."
+  - "Verify that the results are bounded with LIMIT."
+  - "Check that only approved tables and columns are used."
+synthesis_guidance: "Focus on combining FII/DII flows, regime history, and market breadth to deduce risk-on/risk-off indications over the specified period. Provide ranked candidates for inclusion in watchlists with clear rationale based on data evidence."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:07"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:51:03"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: QA checklist."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0727_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for last 5 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Fetch sector-relative change percentages and technical scores for the last 5 sessions."
+    sql: "SELECT symbol, sector, change_1d_pct, change_1w_pct, technical_score FROM scores.stage_snapshots WHERE snapshot_date >= (SELECT DATE FROM (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AS temp);"
+  -
+    description: "Retrieve current portfolio holdings details."
+    sql: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+status: "validated"
+synthesis_guidance: "Consolidate sector-relative performance and current holdings to offer QA checklist guidance on add/trim decisions."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "QA_checklist"
+title: "Portfolio Incremental Add Trim Review Variant 0727"
+tool_plan_template: "Analyze sector-relative performance for portfolio holdings over the last 5 sessions."
+validation_errors:
+
+validation_rules:
+  - "Ensure response uses a QA checklist format."
+  - "Verify data source integrity by cross-referencing approved tables."
+version: 1

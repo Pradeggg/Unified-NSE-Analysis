@@ -1,0 +1,55 @@
+id: "agent_route_failure_diagnostics_1820_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1820"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for latest EOD: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as action watchlist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  steps:
+    - "Extract the latest enhanced run ID based on run_ts."
+    - "Identify failed agent routes using enhanced_filtered_stocks."
+    - "List symbols with unresolved TradingView export issues."
+sql_templates:
+  -
+    query: "SELECT er.run_id, er.run_ts FROM report.enhanced_runs er WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+    description: "Fetch the latest enhanced run ID."
+  -
+    query: "SELECT efs.symbol FROM report.enhanced_filtered_stocks efs WHERE efs.run_id = :run_id AND efs.recommendation = 'TIMEOUT';"
+    description: "Identify symbols with agent timeout issues."
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all run_ids referenced match the latest EOD run."
+  - "Verify symbols resolve to correct market data."
+  - "Confirm TradingView export settings align with expectations."
+synthesis_guidance: "['Focus on recent occurrences of route failures.', 'Highlight redundancies in symbol resolution logic.', 'Suggest improvements in TOOLS framework.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_filtered_stocks.efs is not approved"

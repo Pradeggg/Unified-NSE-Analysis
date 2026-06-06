@@ -1,0 +1,97 @@
+id: "market_3m_rotation_swing_v1"
+version: 1
+status: "generated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment"
+description: "Research-only Agent Adda skill card for assessing the Indian equity market over the last 3 months, covering broad index regime, stage distribution changes, sector leadership from stage and VCP evidence, and liquid Stage 2 swing candidates."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+  market: "Indian listed equities and Indian market indices only"
+  minimum_window: "Last 3 calendar months ending on the requested as_of_date or latest available trade_date"
+  required_filters:
+    - "Use market.index_eod for index-level price, trend, RSI, momentum, relative strength, and trading signal evidence."
+    - "Use scores.stage_snapshots for stage distribution, sector mix, market cap category, technical score, relative strength, and stance evidence."
+    - "Use scores.stage2_vcp_picks for ranked Stage 2 VCP candidate evidence."
+    - "Use market.equity_eod for recent price, turnover, volume, delivery, and market cap liquidity context for candidate symbols."
+tool_plan_template:
+  -
+    step: 1
+    name: "Resolve analysis dates"
+    action: "Set as_of_date to the user-provided date or latest available Indian market date. Set start_date to approximately 3 calendar months before as_of_date. If exact baseline snapshot is unavailable, use the nearest available snapshot_date on or before start_date and disclose it."
+  -
+    step: 2
+    name: "Assess broad market regime"
+    action: "Fetch index EOD history over the window. Compare close, change_pct, rsi, momentum_50d, relative_strength, trend_signal, and trading_signal for major indices requested by the user or default Indian broad-market indices available in evidence."
+  -
+    step: 3
+    name: "Measure stage distribution shift"
+    action: "Fetch stage snapshots for as_of_date and baseline_snapshot_date. Count and compare stage values overall, by sector, and by market_cap_cat. Highlight expansion or contraction in Stage 2 participation."
+  -
+    step: 4
+    name: "Identify leading sectors"
+    action: "Use scores.stage_snapshots and scores.stage2_vcp_picks to rank sectors by Stage 2 breadth, average relative_strength, average technical_score, average investment_score, and concentration of ranked VCP picks. Treat this as leadership evidence, not a complete sector-index return calculation."
+  -
+    step: 5
+    name: "Shortlist liquid swing candidates"
+    action: "Start from scores.stage2_vcp_picks on as_of_date. Validate each symbol using stage, relative_strength, rsi, trend_signal, trading_signal, supertrend_state, vcp_score, vcp_breakout_pct, and vcp_contraction_pct. Add market.equity_eod liquidity context using turnover_cr, volume, delivery_pct, total_trades, and market_cap_cr."
+  -
+    step: 6
+    name: "Synthesize research-only output"
+    action: "Return regime summary, index returns, stage distribution change, leading sectors, primary candidates, and risks. Include evidence gaps where the approved schema does not support a concept directly."
+sql_templates:
+  -
+    name: "index_eod_3m_regime"
+    description: "Read-only index evidence for broad Indian market regime over the last 3 months."
+    template: "SELECT trade_date, index_symbol, open, high, low, close, prev_close, change_pct, volume, turnover_cr, total_trades, week52_high, week52_low, technical_score, rsi, momentum_50d, relative_strength, trend_signal, trading_signal FROM market.index_eod WHERE trade_date BETWEEN :start_date AND :as_of_date AND index_symbol IN (:index_symbols) ORDER BY trade_date, index_symbol"
+  -
+    name: "stage_snapshot_current"
+    description: "Read-only current snapshot for stage distribution, sector leadership, and candidate context."
+    template: "SELECT snapshot_date, symbol, company_name, sector, market_cap_cat, price, live_price, price_date, change_1d_pct, change_1w_pct, change_1m_pct, stage, stage_score, technical_score, rsi, trend_signal, trading_signal, relative_strength, supertrend_state, supertrend_value, can_slim_score, minervini_score, fundamental_score, enhanced_fund_score, earnings_quality, sales_growth, financial_strength, institutional_backing, investment_score, stance, narrative, fund_details, source_csv FROM scores.stage_snapshots WHERE snapshot_date = :as_of_date ORDER BY sector, symbol"
+  -
+    name: "stage_snapshot_baseline"
+    description: "Read-only baseline snapshot near the start of the 3-month window for stage distribution comparison."
+    template: "SELECT snapshot_date, symbol, company_name, sector, market_cap_cat, price, live_price, price_date, change_1d_pct, change_1w_pct, change_1m_pct, stage, stage_score, technical_score, rsi, trend_signal, trading_signal, relative_strength, supertrend_state, supertrend_value, can_slim_score, minervini_score, fundamental_score, enhanced_fund_score, earnings_quality, sales_growth, financial_strength, institutional_backing, investment_score, stance, narrative, fund_details, source_csv FROM scores.stage_snapshots WHERE snapshot_date = :baseline_snapshot_date ORDER BY sector, symbol"
+  -
+    name: "stage2_vcp_current_picks"
+    description: "Read-only ranked Stage 2 VCP pick evidence for swing-candidate research."
+    template: "SELECT snapshot_date, rank, symbol, company_name, sector, price, live_price, price_date, change_1d_pct, change_1w_pct, rsi, relative_strength, trading_signal, trend_signal, supertrend_state, investment_score, enhanced_fund_score, earnings_quality, sales_growth, financial_strength, vcp_score, vcp_breakout_pct, vcp_contraction_pct, stance, narrative, fund_details, source_report, created_at, updated_at FROM scores.stage2_vcp_picks WHERE snapshot_date = :as_of_date ORDER BY rank LIMIT :limit"
+  -
+    name: "candidate_equity_eod_liquidity"
+    description: "Read-only EOD liquidity and price context for shortlisted NSE equity symbols."
+    template: "SELECT trade_date, symbol, series, open, high, low, close, last_price, prev_close, change_abs, change_pct, volume, turnover_cr, total_trades, delivery_qty, delivery_pct, week52_high, week52_low, market_cap_cr FROM market.equity_eod WHERE trade_date BETWEEN :start_date AND :as_of_date AND symbol IN (:candidate_symbols) AND series = 'EQ' ORDER BY symbol, trade_date"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "status must remain generated."
+  - "Use only research-only Indian market framing; do not present the output as investment advice, a recommendation, or a trade instruction."
+  - "Do not include executable Python or procedural code."
+  - "SQL templates must remain read-only and must use only SELECT queries over approved tables."
+  - "Use evidence_required.tables exactly as the table list key; do not introduce primary_tables or required_tables."
+  - "Do not invent tables, columns, sector-index data, constituent weights, targets, stop losses, or unsupported catalysts."
+  - "If exact 3-month baseline dates are unavailable, disclose the nearest available dates used."
+  - "If sector leadership is inferred from stage breadth, VCP picks, relative_strength, and technical_score rather than sector-index returns, state that limitation."
+  - "Candidate inclusion must be evidence-based using approved fields such as stage, rank, relative_strength, rsi, trend_signal, trading_signal, supertrend_state, vcp_score, turnover_cr, volume, delivery_pct, and market_cap_cr."
+  - "Flag stale evidence if price_date, trade_date, or snapshot_date is materially older than as_of_date."
+  - "Any missing concept from the approved schema must be listed in evidence_gaps rather than replaced with invented SQL or unsupported claims."
+synthesis_guidance: "{'tone': 'Concise, evidence-led, research-only, suitable for Agent Adda Indian market analysis.', 'structure': ['Start with as_of_date and data window used.', 'Summarize broad market regime using index close movement, rsi, momentum_50d, relative_strength, trend_signal, and trading_signal.', 'Report index_returns as observed price movement over the available 3-month window, with dates used.', 'Explain stage_distribution_change by comparing counts and percentages of stage values between baseline_snapshot_date and as_of_date.', 'Rank leading_sectors using Stage 2 breadth, improvement from baseline, relative_strength, technical_score, and Stage 2 VCP pick concentration.', 'List primary_candidates with symbol, company_name, sector, rank if available, stage or VCP evidence, liquidity context, and key supportive or cautionary fields.', 'End with risks, including market regime weakness, overbought RSI, weak liquidity, stale data, concentration in a narrow sector group, and schema limitations.'], 'candidate_framing': 'Use neutral labels such as watchlist candidate, research candidate, or evidence-supported swing setup. Avoid buy, sell, target, stop-loss, guaranteed return, or urgent action language.', 'risk_framing': 'State that swing setups can fail despite Stage 2 or VCP evidence, especially during weak index regimes, adverse sector rotation, poor liquidity, or broad market distribution.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:15:22"
+generation_model: "gpt-5.5"

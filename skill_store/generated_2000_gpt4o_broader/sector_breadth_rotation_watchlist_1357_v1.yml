@@ -1,0 +1,64 @@
+id: "sector_breadth_rotation_watchlist_1357_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1357"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for quarter to date: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as exceptions and gaps first"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Query sector daily breadth to determine which sectors have improving breadth."
+    - "Analyze MA percentage above data to rank sectors based on Stage 2 participation."
+    - "Compare scores stage snapshots to find stocks with improving relative strength in top sectors."
+sql_templates:
+  -
+    description: "Get improving sectors based on 5-day breadth change."
+    sql: "SELECT sector, AVG(change_5d) as avg_change_5d FROM breadth.sector_daily WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 90 DAY) GROUP BY sector ORDER BY avg_change_5d DESC;"
+  -
+    description: "Rank sectors by percentage of stocks in Stage 2."
+    sql: "SELECT sector, AVG(stage2_pct) as avg_stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 90 DAY) GROUP BY sector ORDER BY avg_stage2_pct DESC;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sector ranking considers both 5-day breadth change and Stage 2 participation."
+  - "Identify stocks with improving technical and relative strength indicators from top sectors."
+synthesis_guidance: "['Highlight sectors with the most significant breadth improvements and Stage 2 participation.', 'Address any data gaps for sectors or stocks by pointing out missing information.', 'Curate a list of potential candidate symbols for trading insights on TradingView.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:27"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.avg_stage2_pct is not approved"
+  - "breadth.ma_pct_above.curdate is not approved"
+  - "breadth.ma_pct_above.date_sub is not approved"
+  - "breadth.ma_pct_above.day is not approved"
+  - "breadth.ma_pct_above.sector is not approved"
+  - "breadth.sector_daily.avg_change_5d is not approved"
+  - "breadth.sector_daily.curdate is not approved"
+  - "breadth.sector_daily.date_sub is not approved"
+  - "breadth.sector_daily.day is not approved"

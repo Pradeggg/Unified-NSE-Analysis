@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:45:55"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: quarter to date; response style: exceptions and gaps first."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0354_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    name: "find_quality_breakouts"
+    template: "SELECT symbol, close, market_cap_cr, change_pct FROM market.equity_eod WHERE trade_date = CURRENT_DATE AND (close = week52_high OR change_pct > 5) AND market_cap_cr > 500;"
+status: "validated"
+synthesis_guidance: "Focus on detecting stocks with breakout potential and existing high performance, ensuring fundamental strength and capturing any analytical gaps."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+title: "VCP Breakouts With Fundamentals Variant 0354"
+tool_plan_template: "Python tool usage allowed if SQL becomes complex; SQL to gather stocks based on criteria: new highs, VCP, strong fundamentals from approved tables."
+validation_errors:
+  - "market.equity_eod.company_name is not approved"
+validation_rules:
+  - "Ensure all symbols have valid price movements."
+  - "Year to date performance must be positive."
+  - "Highlight any gaps in fundamental data."
+version: 1
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"

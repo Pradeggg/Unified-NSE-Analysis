@@ -1,0 +1,70 @@
+id: "company_360_research_report_1728_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1728"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: position-sizing context; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "position-sizing context for last 5 sessions: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as QA checklist"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    step: "Fetch latest stage and technical context for RELIANCE."
+    sql_template: "SELECT * FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 1;"
+  -
+    step: "Compile latest financial results from quarterly and annual data."
+    sql_template: "WITH latest_quarter AS (SELECT DISTINCT ON (symbol) * FROM scores.quarterly_results WHERE symbol = 'RELIANCE' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC), latest_annual AS (SELECT DISTINCT ON (symbol) * FROM scores.annual_results WHERE symbol = 'RELIANCE' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC) SELECT * FROM latest_quarter, latest_annual;"
+  -
+    step: "Analyze technical price movements for the last 5 sessions."
+    sql_template: "SELECT * FROM market.equity_eod WHERE symbol = 'RELIANCE' AND trade_date <= (SELECT MAX(trade_date) FROM market.equity_eod) AND trade_date > (SELECT MAX(trade_date) FROM market.equity_eod) - INTERVAL '5 days' ORDER BY trade_date DESC;"
+  -
+    step: "Evaluate integrated reports analysis and narrative evidence."
+    sql_template: "SELECT * FROM scores.results_analysis WHERE symbol = 'RELIANCE' AND period_end = (SELECT MAX(period_end) FROM scores.results_analysis WHERE symbol = 'RELIANCE') LIMIT 1;"
+sql_templates:
+  - "SELECT * FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 1;"
+  - "WITH latest_quarter AS (SELECT DISTINCT ON (symbol) * FROM scores.quarterly_results WHERE symbol = 'RELIANCE' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC), latest_annual AS (SELECT DISTINCT ON (symbol) * FROM scores.annual_results WHERE symbol = 'RELIANCE' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC) SELECT * FROM latest_quarter, latest_annual;"
+  - "SELECT * FROM market.equity_eod WHERE symbol = 'RELIANCE' AND trade_date <= (SELECT MAX(trade_date) FROM market.equity_eod) AND trade_date > (SELECT MAX(trade_date) FROM market.equity_eod) - INTERVAL '5 days' ORDER BY trade_date DESC;"
+  - "SELECT * FROM scores.results_analysis WHERE symbol = 'RELIANCE' AND period_end = (SELECT MAX(period_end) FROM scores.results_analysis WHERE symbol = 'RELIANCE') LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL queries are strictly read-only."
+  - "Validate response alignment with QA checklist format."
+synthesis_guidance: "['Integrate financial data with technical trends for a holistic view.', 'Highlight key insights on position-sizing and risk factors.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:45"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

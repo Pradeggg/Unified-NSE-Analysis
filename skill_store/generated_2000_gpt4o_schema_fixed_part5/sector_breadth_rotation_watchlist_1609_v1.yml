@@ -1,0 +1,63 @@
+id: "sector_breadth_rotation_watchlist_1609_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1609"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: today; response style: debug trace."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for today: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as debug trace"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "today"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Query sector performance based on the latest breadth and stage metrics."
+  - "Rank sectors by improvement signals and identify stocks with positive momentum for TradingView."
+sql_templates:
+  -
+    name: "sector_performance"
+    description: "Determine sector breadth and stage participation ranks."
+    sql: "WITH latest_stage AS (SELECT sector, COUNT(*) AS stage2_count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector), latest_breadth AS (SELECT sd.sector, sd.breadth_signal, sd.divergence_alert, ma.stage2_pct FROM breadth.sector_daily sd JOIN breadth.ma_pct_above ma ON sd.snapshot_date = ma.snapshot_date AND sd.sector = ma.sector WHERE sd.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)) SELECT lb.sector, lb.breadth_signal, lb.divergence_alert, ls.stage2_count FROM latest_breadth lb JOIN latest_stage ls ON lb.sector = ls.sector ORDER BY ls.stage2_count DESC, lb.breadth_signal DESC;"
+  -
+    name: "candidate_symbols"
+    description: "Select stocks with strong buy signals within improving sectors."
+    sql: "SELECT ss.symbol, ss.company_name, ss.trading_signal FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.sector IN (SELECT sector FROM sector_performance WHERE breadth_signal = 'IMPROVING') AND ss.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure SQL queries use correct join conditions and latest date logic."
+  - "Check that candidate symbols have valid trading signals and sector alignment."
+  - "Maintain output limits to prevent oversized result sets."
+synthesis_guidance: "['Translate sector and stock analytics into actionable watchlist items.', 'Validate source data trails to ensure robustness and accuracy.', 'Extend debug trace for clarity on decision metrics.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:56"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.sector is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "breadth.ma_pct_above.sector is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

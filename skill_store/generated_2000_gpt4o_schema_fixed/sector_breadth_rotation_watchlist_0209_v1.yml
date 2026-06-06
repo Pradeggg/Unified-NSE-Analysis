@@ -1,0 +1,55 @@
+id: "sector_breadth_rotation_watchlist_0209_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0209"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: today; response style: ranked candidates."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for today: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as ranked candidates"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "today"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    template: "WITH latest_sector AS (SELECT sector, pct_above_50dma, change_5d, stage2_pct FROM breadth.sector_daily INNER JOIN breadth.ma_pct_above ON breadth.sector_daily.snapshot_date = breadth.ma_pct_above.snapshot_date WHERE breadth.sector_daily.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) ORDER BY stage2_pct DESC, change_5d DESC LIMIT 5), latest_stocks AS (SELECT DISTINCT symbol FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY')), final_candidates AS (SELECT latest_stocks.symbol, market.equity_eod.close FROM market.equity_eod INNER JOIN latest_stocks ON market.equity_eod.symbol = latest_stocks.symbol WHERE market.equity_eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) ORDER BY market.equity_eod.close DESC LIMIT 10) SELECT * FROM final_candidates;"
+    description: "Fetch top sectors with latest stage 2 stocks."
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Use the latest data to present a ranked list of sectors and stocks showing improving trends. Provide evidence for source-trail validation."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:13"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

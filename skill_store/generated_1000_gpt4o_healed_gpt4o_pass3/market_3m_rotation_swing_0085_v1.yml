@@ -1,0 +1,144 @@
+created_at: "2026-06-06T12:41:45"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: intraday context; response style: concise table."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0085_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+output_contract:
+  - "as_of_date"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  status: "needs_heal"
+  findings:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    query: "SELECT index_symbol, AVG(change_pct) AS average_change_pct FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol"
+  -
+    query: "SELECT sector, COUNT(symbol) AS count FROM scores.stage_snapshots WHERE stage = '2' AND snapshot_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY count DESC LIMIT 5"
+  -
+    query: "SELECT symbol, company_name FROM scores.stage2_vcp_picks WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months' ORDER BY vcp_score DESC LIMIT 10"
+status: "test_failed"
+synthesis_guidance:
+  - "Focus on delivering concise findings for traders."
+  - "Highlight risk factors using existing data."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "intraday_context"
+  - "concise_table"
+title: "3M Market Rotation Swing Assessment Variant 0085"
+tool_plan_template:
+
+validation_errors:
+  - "description is required"
+  - "domain is required"
+  - "evidence_required is required"
+  - "id is required"
+  - "input_patterns is required"
+  - "output_contract is required"
+  - "tags is required"
+  - "title is required"
+  - "validation_rules is required"
+  - "version is required"
+  - "version must be a positive integer"
+validation_rules:
+  - "Ensure all output fields have corresponding data."
+  - "Check date formats and numerical accuracy in returns."
+version: 1
+card:
+  created_at: "2026-06-06T12:41:45"
+  created_by: "llm_generated"
+  description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: intraday context; response style: concise table."
+  domain: "market_analysis"
+  evidence_required:
+    tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "market_3m_rotation_swing_0085_v1"
+  input_patterns:
+    - "last 3 months market analysis"
+    - "find swing candidates from recent sector rotation"
+    - "market regime and stage 2 leadership over 3 months"
+    - "risk-first review for intraday context: last 3 months market analysis"
+    - "market regime and stage 2 leadership over 3 months as concise table"
+  output_contract:
+    - "as_of_date"
+    - "stage_distribution_change"
+    - "leading_sectors"
+    - "primary_candidates"
+    - "risks"
+  python_tools:
+    -
+      name: "MarketAnalysisTool"
+      description: "Tool for analyzing market trends."
+      run_function: "run(context)"
+  review:
+    attempts: 3
+    findings:
+
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "generated"
+  sql_templates:
+    -
+      query: "SELECT index_symbol, AVG(change_pct) AS average_change_pct FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol"
+    -
+      query: "SELECT sector, COUNT(symbol) AS count FROM scores.stage_snapshots WHERE stage = '2' AND snapshot_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY count DESC LIMIT 5"
+    -
+      query: "SELECT symbol, company_name FROM scores.stage2_vcp_picks WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months' ORDER BY vcp_score DESC LIMIT 10"
+  status: "generated"
+  synthesis_guidance:
+    - "Focus on delivering concise findings for traders."
+    - "Highlight risk factors using existing data."
+  tags:
+    - "market_regime"
+    - "sector_rotation"
+    - "stage_analysis"
+    - "swing_trading"
+    - "risk-first_review"
+    - "intraday_context"
+    - "concise_table"
+  title: "3M Market Rotation Swing Assessment Variant 0085"
+  tool_plan_template:
+
+  validation_errors:
+
+  validation_rules:
+    - "Ensure all output fields have corresponding data."
+    - "Check date formats and numerical accuracy in returns."
+  version: 1

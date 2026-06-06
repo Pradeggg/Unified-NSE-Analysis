@@ -1,0 +1,65 @@
+created_at: "2026-06-06T12:42:20"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: last 20 sessions; response style: narrative plus evidence."
+domain: "report_qa"
+evidence_required:
+  columns:
+    - "run_id"
+    - "run_ts"
+    - "analysis_date"
+    - "universe_size"
+    - "stocks_analyzed"
+    - "stocks_filtered"
+    - "market_composite_score"
+    - "market_sentiment"
+    - "rank"
+    - "symbol"
+    - "score"
+    - "current_price"
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0136_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as narrative plus evidence"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= (SELECT MAX(run_ts) FROM report.enhanced_runs) - INTERVAL '20 SESSIONS';"
+  -
+    template: "SELECT run_id, rank, symbol, score, current_price FROM report.enhanced_filtered_stocks WHERE rank <= 10 AND run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= (SELECT MAX(run_ts) FROM report.enhanced_runs) - INTERVAL '20 SESSIONS');"
+status: "validated"
+synthesis_guidance: "Create a coherent narrative that integrates data validation findings, highlight broken links and missing data, and suggest remediation steps."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "narrative_plus_evidence"
+title: "Enhanced Report Data Validation Variant 0136"
+tool_plan_template: "Utilize the approved SQL templates to gather metadata and stock data. Organize results matching narrative plus evidence requirements."
+validation_rules:
+  - "Ensure all report run entries for the last 20 sessions are retrieved."
+  - "Verify top 10 filtered stocks for each session are available."
+  - "Check metadata consistency for timeframes."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

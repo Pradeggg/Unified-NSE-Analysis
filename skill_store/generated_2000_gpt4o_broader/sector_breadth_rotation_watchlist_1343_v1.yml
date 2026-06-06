@@ -1,0 +1,60 @@
+id: "sector_breadth_rotation_watchlist_1343_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1343"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: exceptions and gaps first."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for last 3 months: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as exceptions and gaps first"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "{id}.{language}(inputs)"
+sql_templates:
+  -
+    name: "sector_breadth_query"
+    query: "SELECT sector, AVG(pct_above_50dma) as avg_pct_above_50dma, AVG(change_5d) as avg_change_5d, AVG(breadth_signal) as avg_breadth_signal FROM breadth.sector_daily WHERE snapshot_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE GROUP BY sector ORDER BY avg_breadth_signal DESC;"
+  -
+    name: "stage_participation_query"
+    query: "SELECT sector, AVG(stage2_pct) as avg_stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE GROUP BY sector ORDER BY avg_stage2_pct DESC;"
+  -
+    name: "sector_stage_analysis_query"
+    query: "SELECT s.symbol, s.company_name, s.sector, s.stage FROM scores.stage_snapshots s INNER JOIN (SELECT sector, AVG(stage2_pct) as avg_stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE GROUP BY sector) m ON s.sector = m.sector WHERE s.snapshot_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE AND s.stage = 2 ORDER BY s.stage_score DESC;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all required evidence tables are queried."
+  - "Sector ranks should emphasize improvements in breadth and stage participation."
+  - "Symbols included must meet predefined criteria related to RS and momentum."
+synthesis_guidance: "{'prioritize': 'Exceptions and gaps in sector trends show trends before ranking sectors.', 'highlight': 'Sectors showing significant Stage 2 increases and positive breadth must be prioritized.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:21"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.avg_stage2_pct is not approved"
+  - "breadth.ma_pct_above.sector is not approved"
+  - "breadth.sector_daily.avg_breadth_signal is not approved"
+  - "breadth.sector_daily.avg_change_5d is not approved"
+  - "breadth.sector_daily.avg_pct_above_50dma is not approved"

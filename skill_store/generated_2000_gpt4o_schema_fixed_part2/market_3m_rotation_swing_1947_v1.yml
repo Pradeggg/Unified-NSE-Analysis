@@ -1,0 +1,56 @@
+id: "market_3m_rotation_swing_1947_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1947"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Generate a comparison matrix detailing sector performance and identifying leading sectors along with primary swing candidates from the last three months."
+sql_templates:
+  -
+    template_id: "index_performance"
+    sql: "SELECT index_symbol, AVG(change_pct) AS avg_return FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol ORDER BY avg_return DESC;"
+  -
+    template_id: "stage2_leaders"
+    sql: "SELECT sector, COUNT(symbol) AS leader_count FROM scores.stage_snapshots WHERE stage = 'STAGE_2' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY leader_count DESC;"
+  -
+    template_id: "swing_candidates"
+    sql: "SELECT symbol, company_name, sector, relative_strength FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY relative_strength DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure index data covers a full three-month period."
+  - "Validate Stage 2 filters for each sector."
+  - "Confirm primary candidates align with swing trading criteria."
+synthesis_guidance: "Focus on clear and actionable insights for traders seeking to understand sector rotations and identify high-potential swing trades."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:56"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_return is not approved"

@@ -1,0 +1,59 @@
+id: "portfolio_incremental_add_trim_0339_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0339"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for last 20 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  approach: "Use source-trail validation to identify and evaluate current portfolio positions. Determine add/trim candidates based on holding performance metrics and market conditions from the last 20 sessions."
+  steps:
+    - "Query current portfolio holdings."
+    - "Retrieve performance data for the last 20 sessions for each holding."
+    - "Identify underperforming sectors or stocks for trim consideration."
+    - "Spot opportunities based on technical and fundamental scores for potential additions."
+sql_templates:
+  -
+    purpose: "Retrieve performance for portfolio holdings for last 20 sessions."
+    template: "SELECT h.symbol, ss.snapshot_date, ss.price, ss.change_1d_pct, ss.change_1w_pct, ss.change_1m_pct FROM portfolio.holdings h JOIN scores.stage_snapshots ss ON h.symbol = ss.symbol WHERE ss.snapshot_date >= (SELECT MAX(snapshot_date) - INTERVAL '20 days' FROM scores.stage_snapshots)"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Verify data retrieval correctness and completeness."
+  - "Ensure alignment with current market conditions."
+  - "Assess anomalies or exceptional patterns first."
+synthesis_guidance: "{'priority': 'Highlight exceptions or gaps in portfolio performance.', 'emphasis': 'Use quantitative metrics for informed decision making.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:45:44"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table h.symbol"
+  - "unknown table ss.change_1d_pct"
+  - "unknown table ss.change_1m_pct"
+  - "unknown table ss.change_1w_pct"
+  - "unknown table ss.price"
+  - "unknown table ss.snapshot_date"
+  - "unknown table ss.symbol"

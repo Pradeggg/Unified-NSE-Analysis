@@ -1,0 +1,54 @@
+id: "sector_breadth_rotation_watchlist_0027_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0027"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: concise table."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for last 5 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as concise table"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "return sector_ranks, improving_sectors, candidate_symbols, tradingview_symbols, evidence"
+sql_templates:
+  -
+    template_name: "sector_ranks"
+    sql: "\n                WITH latest_breadth AS (\n                    SELECT * \n                    FROM breadth.sector_daily \n                    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)\n                ),\n                sector_stage AS (\n                    SELECT sector, COUNT(*) AS stage2_count \n                    FROM scores.stage_snapshots\n                    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2'\n                    GROUP BY sector\n                )\n                SELECT lb.sector, lb.change_5d, lb.breadth_signal, ss.stage2_count\n                FROM latest_breadth lb\n                JOIN sector_stage ss ON lb.sector = ss.sector\n                ORDER BY change_5d DESC\n                LIMIT 10\n                "
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure SQL pulls the latest data using snapshot_date max filters."
+  - "Limit candidate_symbols to avoid overwhelming users."
+  - "Produce a concise table of ranked sectors."
+synthesis_guidance: "['Rank sectors based on 5-day change and stage 2 participation.', 'Identify sectors with improving breadth signals.', 'Select top candidate symbols for potential addition to TradingView.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:17:55"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

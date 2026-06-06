@@ -1,0 +1,51 @@
+id: "portfolio_lab_paper_trading_review_0138_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0138"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "position-sizing context for last 20 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze strategy performance with respect to position size and market factors over the past 20 sessions using the available tables."
+sql_templates:
+  - "WITH trading_signals AS (SELECT symbol, date_issued, entry_low, entry_high, stop_loss, target_1, target_2, return_pct FROM signals.signal_log WHERE date_issued >= DATE_SUB(CURRENT_DATE, INTERVAL 20 DAY)), recent_trades AS (SELECT symbol, trade_date, close FROM market.equity_eod WHERE trade_date >= DATE_SUB(CURRENT_DATE, INTERVAL 20 DAY)) SELECT ts.symbol, ts.date_issued, ts.entry_low, ts.entry_high, ts.stop_loss, ts.target_1, ts.target_2, ts.return_pct, rt.close FROM trading_signals ts JOIN recent_trades rt ON ts.symbol = rt.symbol;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Check that SQL queries execute without errors against the schema."
+  - "Ensure all required data columns are used as per description."
+synthesis_guidance: "Summarize the paper trading strategy's performance by highlighting key entries, exits, and any patterns observed in position-sizing and market influence. Look for any deviations or compliance with set strategy metrics."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:45"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

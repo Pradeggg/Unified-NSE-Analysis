@@ -1,0 +1,51 @@
+id: "corporate_events_results_watchlist_1255_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1255"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: risk-first review; timeframe: quarter to date; response style: ranked candidates."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "risk-first review for quarter to date: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as ranked candidates"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "risk-first_review"
+  - "quarter_to_date"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze corporate events and results within a quarter to date timeframe. Identify upcoming events and recently filed results for a risk-first review to generate a ranked watchlist."
+sql_templates:
+  -
+    template: "WITH recent_events AS (SELECT id, symbol, event_type, event_date, detail FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '3 months'), latest_results AS (SELECT DISTINCT ON (symbol) symbol, period_end, verdict FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC), latest_stages AS (SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT re.symbol, re.event_type, re.event_date, ra.verdict, ss.stage, ss.trading_signal FROM recent_events re JOIN latest_results ra ON re.symbol = ra.symbol JOIN latest_stages ss ON re.symbol = ss.symbol WHERE re.event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM') AND ss.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY re.event_date ASC LIMIT 10;"
+    description: "Select recent corporate events along with the latest results and stage details for symbols that meet specific criteria."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure output adheres to the schema of event_calendar, symbol_watchlist, result_context, action_bucket, and source_trail."
+  - "Verify that all symbols present in the output meet the risk-first review criteria."
+synthesis_guidance: "Combine data from corporate events, results analysis, and stage snapshots to produce a concise, ranked list focused on risk and event analysis."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

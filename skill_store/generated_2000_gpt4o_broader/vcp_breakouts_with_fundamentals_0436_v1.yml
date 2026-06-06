@@ -1,0 +1,73 @@
+id: "vcp_breakouts_with_fundamentals_0436_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0436"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    task: "extract_fundamental_stocks"
+    tables:
+      - "scores.stage_snapshots"
+    logic: "SELECT symbol, company_name, sector, price, enhanced_fund_score FROM scores.stage_snapshots WHERE price_date > (CURRENT_DATE - INTERVAL '20 days') AND enhanced_fund_score > 80"
+  -
+    task: "identify_vcp_stocks"
+    tables:
+      - "scores.stage2_vcp_picks"
+    logic: "SELECT symbol, company_name FROM scores.stage2_vcp_picks WHERE vcp_score > 70 AND vcp_breakout_pct > 5"
+sql_templates:
+
+python_tools:
+  -
+    id: "calculate_trend_strength"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "price_data"
+    outputs:
+      - "trend_strength"
+    approved_tables:
+
+    code: "def run(context): return {'trend_strength': max(context['price_data'])}"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "check_fundamentals"
+  - "check_vcp_conditions"
+synthesis_guidance: "Combine results from fundamental and VCP stock extraction to recommend stocks meeting both technical and fundamental criteria."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:25"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_trend_strength: execution failed: KeyError: 'price_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_trend_strength: execution failed: KeyError: 'price_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

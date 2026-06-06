@@ -1,0 +1,95 @@
+id: "data_freshness_readiness_audit_0735_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0735"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: risk-first review; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "risk-first review for last 20 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "risk-first_review"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  tool_type: "SQL/Python"
+  steps:
+    -
+      tool: "SQL"
+      task: "Fetch the latest trade dates from all tables to compare freshness."
+    -
+      tool: "Python"
+      task: "Compare fetched dates against freshness thresholds to identify gaps."
+sql_templates:
+  -
+    description: "Fetch the latest trade date from market.index_eod"
+    template: "SELECT MAX(trade_date) AS latest_trade_date FROM market.index_eod;"
+  -
+    description: "Fetch the latest trade date from market.equity_eod"
+    template: "SELECT MAX(trade_date) AS latest_trade_date FROM market.equity_eod WHERE series = 'EQ';"
+  -
+    description: "Fetch the latest snapshot date from scores.stage_snapshots"
+    template: "SELECT MAX(snapshot_date) AS latest_snapshot_date FROM scores.stage_snapshots;"
+  -
+    description: "Fetch the latest trade date from breadth.market_daily"
+    template: "SELECT MAX(trade_date) AS latest_trade_date FROM breadth.market_daily;"
+  -
+    description: "Fetch the latest snapshot date from breadth.ma_pct_above"
+    template: "SELECT MAX(snapshot_date) AS latest_snapshot_date FROM breadth.ma_pct_above;"
+  -
+    description: "Fetch the latest run timestamp from report.enhanced_runs"
+    template: "SELECT MAX(run_ts) AS latest_run_ts FROM report.enhanced_runs;"
+python_tools:
+  -
+    id: "data_freshness_evaluator"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "latest_dates"
+      - "thresholds"
+    outputs:
+      - "freshness_matrix"
+      - "blocking_gaps"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "breadth.market_daily"
+      - "breadth.ma_pct_above"
+      - "report.enhanced_runs"
+    code: "def run(context):\n    freshness_matrix = {}\n    blocking_gaps = []\n    # Threshold comparison logic\n    for table_name, latest_date in context['latest_dates'].items():\n        if latest_date < context['thresholds'][table_name]:\n            blocking_gaps.append(table_name)\n        freshness_matrix[table_name] = latest_date\n    return freshness_matrix, blocking_gaps"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "rules"
+synthesis_guidance: "Construct a QA checklist summarizing the freshness status for each data source. Highlight critical gaps and suggest actions to remedy the deficiencies."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:03"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.latest_snapshot_date is not approved"
+  - "breadth.market_daily.latest_trade_date is not approved"
+  - "market.equity_eod.latest_trade_date is not approved"
+  - "market.index_eod.latest_trade_date is not approved"
+  - "report.enhanced_runs.latest_run_ts is not approved"
+  - "scores.stage_snapshots.latest_snapshot_date is not approved"

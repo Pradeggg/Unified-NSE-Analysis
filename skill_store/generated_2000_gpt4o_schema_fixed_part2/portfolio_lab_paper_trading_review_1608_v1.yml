@@ -1,0 +1,72 @@
+id: "portfolio_lab_paper_trading_review_1608_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1608"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: position-sizing context; timeframe: today; response style: debug trace."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "position-sizing context for today: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as debug trace"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "position-sizing_context"
+  - "today"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  status: "generated"
+sql_templates:
+  -
+    description: "Select latest paper trading signals and outcomes."
+    template: "SELECT symbol, date_issued, signal, setup_class, price_at_issue, entry_low, entry_high, stop_loss, target_1, target_2, action_bucket, action_reason FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log);"
+  -
+    description: "Fetch current EOD market prices."
+    template: "SELECT symbol, close, change_pct, volume FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND series = 'EQ';"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "analysis"
+    approved_tables:
+      - "portfolio.holdings"
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "# Example Python tool for data analysis\n# Read-only and contained within the query context\ndef run(context):\n    # Placeholder for complex Python logic if required\n    pass"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure trading signals data is for the latest issue date."
+  - "Filter market prices to the latest available EOD data."
+synthesis_guidance: "['Focus on position-sizing and trade execution accuracy.', 'Differentiate paper trading from actual portfolio strategies.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:09"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "run: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

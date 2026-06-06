@@ -1,0 +1,64 @@
+id: "company_360_research_report_0160_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0160"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: TradingView export; timeframe: quarter to date; response style: narrative plus evidence."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "TradingView export for quarter to date: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as narrative plus evidence"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  tool_plan_instructions: "Generate research focused on quarter-to-date performance."
+sql_templates:
+  -
+    description: "Fetch latest stage snapshot for narrative."
+    template: "SELECT symbol, company_name, sector, stage, stage_score, narrative FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' ORDER BY snapshot_date DESC LIMIT 1;"
+  -
+    description: "Calculate financial trends from quarterly results."
+    template: "SELECT period_label, revenue, operating_profit, eps FROM scores.quarterly_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 2;"
+  -
+    description: "Fetch technical context from EOD market data."
+    template: "SELECT trade_date, close, volume, week52_high, week52_low FROM market.equity_eod WHERE symbol = 'RELIANCE' ORDER BY trade_date DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "sql_safety"
+  - "python_safety"
+synthesis_guidance: "{'narrative_strengths': 'Combine evidence into a clear narrative.', 'quarter_to_date_focus': 'Emphasize recent data from the quarter.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:57"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

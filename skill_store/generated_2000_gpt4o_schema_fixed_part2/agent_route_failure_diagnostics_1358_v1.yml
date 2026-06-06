@@ -1,0 +1,68 @@
+id: "agent_route_failure_diagnostics_1358_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1358"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for quarter to date: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as exceptions and gaps first"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  steps:
+    - "Identify recent failures by analyzing the latest runs and their respective stocks."
+    - "Evaluate missing tool occurrences and symbol mismatches."
+    - "Identify potential fallback loops and position-sizing context using stage snapshots."
+sql_templates:
+  - "WITH latest_run AS (SELECT run_id FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)), missing_tools AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal NOT IN ('BUY', 'STRONG_BUY')) SELECT efs.run_id, efs.symbol, efs.score FROM report.enhanced_filtered_stocks efs JOIN latest_run lr ON efs.run_id = lr.run_id WHERE efs.symbol NOT IN (SELECT symbol FROM missing_tools)"
+python_tools:
+  -
+    id: "diagnostic_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+      - "symbol"
+    outputs:
+      - "diagnostic_report"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    code: "def run(context): pass"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all symbols from enhanced_filtered_stocks are accounted from latest_run."
+  - "Validate missing tool logs against known stage snapshots."
+synthesis_guidance: "Focus on gaps and exceptions first. Emphasize diagnostics of route failure and tool validation gaps."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:32"
+generation_model: "gpt-4o"
+validation_errors:
+  - "diagnostic_analysis_tool: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "diagnostic_analysis_tool: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

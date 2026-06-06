@@ -1,0 +1,76 @@
+id: "signal_outcome_feedback_review_1481_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1481"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: quick scan; timeframe: intraday context; response style: portfolio-aware output."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for intraday context: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as portfolio-aware output"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "Review Hit Targets and Stops"
+    operation: "SELECT"
+    statement: "SELECT id, symbol, date_issued, price_at_issue, target_1, target_2, stop_loss, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_issued > CURRENT_DATE - INTERVAL '3 months' AND (hit_target = TRUE OR hit_stop = TRUE);"
+python_tools:
+  -
+    id: "analyze_signal_outcomes"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      symbols:
+        - "list of trading symbols from SQL result"
+    outputs:
+      summary:
+        - "overall performance summary"
+      winners:
+        - "patterns among successful signals"
+      failures:
+        - "patterns among failed signals"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+    code: "# Implement analysis logic based on symbols input\ndef run(context):\n    results = context['symbols']  # Analyzing symbols\n    # ... analysis logic\n    return {'summary': 'Analysis complete'}"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:20"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analyze_signal_outcomes: inputs must be a list"
+  - "analyze_signal_outcomes: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "analyze_signal_outcomes: inputs must be a list"
+    - "analyze_signal_outcomes: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,76 @@
+id: "signal_outcome_feedback_review_1243_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1243"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: ranked candidates."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for last 3 months: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as ranked candidates"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  title: "Candidate Evaluation Tool"
+  steps:
+    - "Extract relevant signals from the last 3 months."
+    - "Filter signals that have hit their target or stop loss."
+    - "Create a ranked list of signals based on performance metrics."
+  expected_outcomes:
+    - "A ranked list of successful and failed signals with insights."
+sql_templates:
+  -
+    template_id: "signal_selection"
+    query: "SELECT symbol, signal, date_issued, price_at_issue, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_issued >= (CURRENT_DATE - INTERVAL '3 months') AND (hit_target OR hit_stop);"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      parameters:
+        - "SQL_query_results"
+    outputs:
+      processed_data: "List of ranked candidates"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Extract and process SQL query results\n    results = context['SQL_query_results']\n    ranked_candidates = sorted(results, key=lambda x: x['return_pct'], reverse=True)\n    return ranked_candidates[:10]"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure sql_templates uses only SELECT queries."
+  - "Verify evidence_required.table usage aligns with approved_schema."
+synthesis_guidance: "['Focus on providing actionable insights derived from historic signal evaluations within the past 3 months.', 'Particularly highlight improvement areas and successful strategies.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:14"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

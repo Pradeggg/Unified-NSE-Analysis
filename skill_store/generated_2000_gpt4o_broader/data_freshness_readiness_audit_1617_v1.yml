@@ -1,0 +1,70 @@
+id: "data_freshness_readiness_audit_1617_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1617"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: debug trace."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for latest EOD: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as debug trace"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  steps:
+    - "Gather latest EOD data from evidence tables."
+    - "Compare sector-relative data freshness."
+    - "Identify missing histories essential for narratives."
+sql_templates:
+  -
+    query_template: "SELECT MAX(trade_date) as latest_trade_date FROM market.index_eod"
+    description: "Fetch the last updated date for index data."
+  -
+    query_template: "SELECT sector, COUNT(*) as outdated_sources FROM scores.stage_snapshots WHERE DATEDIFF(CURRENT_DATE, snapshot_date) > 1 GROUP BY sector"
+    description: "Count outdated data sources by sector."
+python_tools:
+  -
+    id: "run_freshness_check"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "trade_dates"
+    outputs:
+      - "outdated_count_by_sector"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run_freshness_check(trade_dates):\n    current_date = max(trade_dates)\n    outdated_sources = {sector: count for sector, count in trade_dates.items() if (current_date - count.date()).days > 1}\n    return outdated_sources"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "All evidence must be from the latest EOD."
+  - "Sector comparison must highlight at least one outdated source."
+synthesis_guidance: "{'focus': 'Identify patterns in data staleness relative to sectors.', 'output_style': 'Present a debug trace format for discrepancies.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:23"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.latest_trade_date is not approved"
+  - "scores.stage_snapshots.datediff is not approved"
+  - "scores.stage_snapshots.outdated_sources is not approved"

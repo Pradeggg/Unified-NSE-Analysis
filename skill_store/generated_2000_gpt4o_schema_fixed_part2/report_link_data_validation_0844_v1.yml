@@ -1,0 +1,59 @@
+id: "report_link_data_validation_0844_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation"
+description: "This skill card allows validation of report run metadata and filtered stock data over the last three months. It's particularly focused on generating a watchlist from recent analysis."
+input_patterns:
+  - "review report links not working"
+  - "validate generated report links and missing data"
+  - "watchlist creation for last 3 months"
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "watchlist_creation"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Analyze report links and stock data for the last three months to identify issues in data generation or report links."
+sql_templates:
+  -
+    name: "validate_report_data"
+    template: "SELECT e.run_id, e.run_ts, e.stocks_filtered, s.symbol, s.score FROM report.enhanced_runs e JOIN report.enhanced_filtered_stocks s ON e.run_id = s.run_id WHERE e.run_ts > CURRENT_DATE - INTERVAL '3 months';"
+    description: "Fetches report runs and filtered stock data for the last three months."
+python_tools:
+  -
+    id: "validate_report_links_0844"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+      - "report_links"
+    outputs:
+      - "validated_links"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    results = []\n    # Simulated code to validate report links\n    for link in context['report_links']:\n        if 'invalid' in link:\n            results.append({'link': link, 'valid': False})\n        else:\n            results.append({'link': link, 'valid': True})\n    return {'validated_links': results}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure run_ts is within the last three months."
+  - "Check that each report has matching filtered stock data."
+synthesis_guidance: "Focus on compiling a clear list of findings and suggested actions. Highlight any repeated issues or patterns in report generation."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:31"
+generation_model: "gpt-4o"
+validation_errors:
+  - "validate_report_links_0844: execution failed: KeyError: 'report_links'"
+review:
+  status: "needs_heal"
+  findings:
+    - "validate_report_links_0844: execution failed: KeyError: 'report_links'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

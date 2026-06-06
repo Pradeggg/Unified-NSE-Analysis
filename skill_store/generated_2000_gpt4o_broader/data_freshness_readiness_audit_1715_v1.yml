@@ -1,0 +1,59 @@
+id: "data_freshness_readiness_audit_1715_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1715"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: risk-first review; timeframe: latest EOD; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "risk-first review for latest EOD: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "risk-first_review"
+  - "latest_EOD"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  - "Verify data freshness for each evidence source against EOD readiness thresholds."
+  - "Identify sources with missing historical data."
+  - "Compile actions required by DB loaders based on freshness and completeness."
+sql_templates:
+  -
+    description: "Check data freshness for market.index_eod."
+    query: "SELECT MAX(trade_date) AS last_update FROM market.index_eod WHERE trade_date = CURRENT_DATE"
+  -
+    description: "Check completeness of scores.stage_snapshots."
+    query: "SELECT COUNT(*) AS missing_entries FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "Verify all temporal checks use CURRENT_DATE."
+  - "Check for null or missing fields in key data freshness dimensions."
+synthesis_guidance: "['Summarize freshness checks into a QA checklist format.', 'Highlight any major gaps or risk areas in data readiness.', 'Provide actionable loader steps for identified issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:23"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.last_update is not approved"
+  - "scores.stage_snapshots.missing_entries is not approved"

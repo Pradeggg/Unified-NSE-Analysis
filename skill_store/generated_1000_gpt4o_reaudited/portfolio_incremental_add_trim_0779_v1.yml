@@ -1,0 +1,60 @@
+created_at: "2026-06-06T12:51:23"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: pre market; response style: QA checklist."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0779_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for pre market: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+  -
+    name: "fetch_portfolio_holdings"
+    query: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+  -
+    name: "fetch_stage_snapshots"
+    query: "SELECT symbol, sector, stage, stage_score, trend_signal, trading_signal, relative_strength, can_slim_score FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+status: "validated"
+synthesis_guidance: "['Highlight how current market signals influence add/trim decisions.', 'Provide a balanced view considering both fundamental and technical indicators.', 'Ensure recommendations align with pre market data assumptions.']"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "pre_market"
+  - "QA_checklist"
+title: "Portfolio Incremental Add Trim Review Variant 0779"
+tool_plan_template:
+  - "Acquire current portfolio holdings from 'portfolio.holdings'."
+  - "Analyze sector exposure and stage indications using 'scores.stage_snapshots'."
+  - "Identify potential add or trim candidates based on technical and fundamental indicators."
+  - "Assess risk flags and confirm source-trail validation."
+validation_rules:
+  - "Ensure all holdings are listed in the portfolio_state."
+  - "Sector exposure should reflect the sum of quantities per sector."
+  - "Add candidates must have positive trend and CAN SLIM scores."
+  - "Trim candidates typically have negative trend signals."
+  - "Risk flags should highlight any high volatility sectors."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

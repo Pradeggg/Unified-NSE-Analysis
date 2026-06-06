@@ -1,0 +1,63 @@
+id: "signal_outcome_feedback_review_0235_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0235"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for last 20 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as ranked candidates"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  plan_id: "signal_outcome_analysis_plan"
+  description: "Plan to analyze signals based on prior outcomes."
+  steps:
+    - "Analyze signals from the last 20 sessions using signal_log."
+    - "Correlate signal outcomes with latest technical scores from stage_snapshots."
+    - "Evaluate price movements from equity_eod data."
+sql_templates:
+  -
+    template_id: "latest_signal_outcomes"
+    description: "Fetch outcome details of signals from the last 20 sessions."
+    sql: "SELECT id, symbol, signal, date_issued, price_at_issue, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_issued >= (CURRENT_DATE - INTERVAL '20 days') LIMIT 100;"
+  -
+    template_id: "latest_technical_scores"
+    description: "Fetch technical scores from the latest stage snapshots."
+    sql: "SELECT symbol, stage, technical_score, rsi FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "rule_id"
+  - "description"
+synthesis_guidance: "{'guide_id': 'sg1', 'description': 'Aggregate data to form concise outcome summary reports.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

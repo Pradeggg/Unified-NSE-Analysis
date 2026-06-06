@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:51:11"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 3 months; response style: QA checklist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0746_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    query: "WITH high_potential AS (SELECT symbol, MAX(high) AS max_high FROM market.equity_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY symbol), fundamentals AS (SELECT symbol, enhanced_fund_score, earnings_quality, sales_growth, financial_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT v.symbol, e.company_name, e.sector, e.price FROM scores.stage2_vcp_picks v JOIN high_potential h ON v.symbol = h.symbol JOIN fundamentals f ON v.symbol = f.symbol WHERE v.vcp_breakout_pct > 5 AND f.enhanced_fund_score > 70;"
+status: "validated"
+synthesis_guidance: "Focus on identifying the strongest breakout candidates with recent VCP signals and strong fundamentals in the Indian market."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_3_months"
+  - "QA_checklist"
+title: "VCP Breakouts With Fundamentals Variant 0746"
+tool_plan_template:
+  goal: "Identify stocks meeting criteria using provided tables."
+  lang: "SQL/Python"
+  type: "read-only"
+validation_rules:
+  - "Ensure recent trade_date filtering within the last 3 months."
+  - "Validate enhanced_fund_score is above threshold."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

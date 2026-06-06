@@ -1,0 +1,1 @@
+def run(context): return context.query('SELECT symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct, verdict FROM scores.results_analysis WHERE period_end >= CURRENT_DATE - INTERVAL '1 month' AND growth_yoy_revenue_pct > 0')

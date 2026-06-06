@@ -1,0 +1,59 @@
+id: "sector_breadth_rotation_watchlist_0867_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0867"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for post results: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as action watchlist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "1. Retrieve sector breadth data to assess current performance."
+  - "2. Identify sectors with improving breadth and stage 2 migration."
+  - "3. Rank sectors based on improvement and stage participation."
+  - "4. List candidate stocks for the watchlist from improving sectors."
+  - "5. Provide TradingView symbols for action watchlist setup."
+sql_templates:
+  -
+    id: "sector_breadth_improvement"
+    query: "SELECT sector, pct_above_50dma, change_5d FROM breadth.sector_daily WHERE snapshot_date = CURRENT_DATE AND breadth_signal = 'Improving';"
+  -
+    id: "stage2_participation"
+    query: "SELECT sector, stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date = CURRENT_DATE ORDER BY stage2_pct DESC;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure breadth data reflects current market date."
+  - "Validate improving sector calculations."
+  - "Confirm stage 2 sectors are prioritized."
+  - "Cross-check candidate stocks with sector ranks."
+synthesis_guidance: "['Prioritize sectors with both high breadth improvement and stage 2 participation.', 'Include stocks exhibiting strong relative strength and momentum metrics.', 'Suggest forward-looking action for traders using TradingView.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:54"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.sector is not approved"

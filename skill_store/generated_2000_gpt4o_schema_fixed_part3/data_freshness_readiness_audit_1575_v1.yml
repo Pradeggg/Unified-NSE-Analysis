@@ -1,0 +1,62 @@
+id: "data_freshness_readiness_audit_1575_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1575"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: risk-first review; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "risk-first review for pre market: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as research-only summary"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "risk-first_review"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Research analyzer for data freshness applying risk-focused rules."
+sql_templates:
+  -
+    name: "Check latest index EOD freshness"
+    template: "SELECT trade_date FROM market.index_eod ORDER BY trade_date DESC LIMIT 1;"
+  -
+    name: "Verify latest equity EOD data"
+    template: "SELECT trade_date FROM market.equity_eod WHERE series = 'EQ' ORDER BY trade_date DESC LIMIT 1;"
+  -
+    name: "Evaluate stage snapshot currency"
+    template: "SELECT snapshot_date FROM scores.stage_snapshots ORDER BY snapshot_date DESC LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

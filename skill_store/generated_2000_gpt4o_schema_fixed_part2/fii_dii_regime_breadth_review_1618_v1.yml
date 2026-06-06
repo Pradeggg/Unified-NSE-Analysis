@@ -1,0 +1,52 @@
+id: "fii_dii_regime_breadth_review_1618_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1618"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: latest EOD; response style: debug trace."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for latest EOD: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as debug trace"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    template: "WITH latest_date AS ( SELECT MAX(trade_date) AS trade_date FROM market.index_eod ) SELECT rh.regime, rh.confidence, rh.days_in_regime, fdf.fii_net_today, fdf.dii_net_today, fdf.flow_signal, md.ad_signal, ieod.trend_signal FROM signals.regime_history rh JOIN signals.fii_dii_flows fdf ON rh.trade_date = fdf.trade_date JOIN breadth.market_daily md ON rh.trade_date = md.trade_date JOIN market.index_eod ieod ON rh.trade_date = ieod.trade_date WHERE rh.trade_date = (SELECT trade_date FROM latest_date) AND ieod.index_symbol = 'NIFTY_50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure SQL only uses approved tables/columns."
+  - "SQL must not perform data modification."
+synthesis_guidance: "['Focus on explaining how FII/DII flows, market regime, breadth, and index align to a risk-on or risk-off context.', 'Provide position-sizing insights based on this alignment.', 'Deliver explanations in a debug trace style.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

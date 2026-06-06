@@ -1,0 +1,46 @@
+id: "report_link_data_validation_1964_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Validate Enhanced Report Data"
+description: "This skill card provides enhanced report data validation focusing on missing data and broken links, specifically for post-results watchlist creation."
+input_patterns:
+  - "validate generated report links and missing data"
+  - "watchlist creation for post results: review report links not working"
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "links"
+  - "watchlist_creation"
+  - "post_results"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    description: "Analyze broken internal report links and identify missing data in the enhanced reports."
+sql_templates:
+  -
+    description: "Check for broken links and missing stock data."
+    query: "SELECT er.run_id, er.run_ts, efs.symbol, er.notes FROM report.enhanced_runs er LEFT JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id WHERE efs.symbol IS NULL ORDER BY er.run_ts DESC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure no stock symbols are missing from the enhanced_filtered_stocks table for recent runs."
+synthesis_guidance: "Focus on recent data from the past three months and ensure the reports have no missing entries or faulty links."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:47"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

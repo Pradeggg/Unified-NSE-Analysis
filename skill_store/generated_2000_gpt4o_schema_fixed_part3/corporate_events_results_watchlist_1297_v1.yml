@@ -1,0 +1,65 @@
+id: "corporate_events_results_watchlist_1297_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1297"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: weekly review; response style: ranked candidates."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as ranked candidates"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "{use available score and signal methods for evidence analysis.}"
+sql_templates:
+  -
+    description: "Fetch upcoming events and relevant scores for watchlist construction."
+    sql: "SELECT ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, ss.stage, ss.trading_signal, ra.verdict FROM signals.corporate_events ce LEFT JOIN scores.stage_snapshots ss ON ce.symbol = ss.symbol LEFT JOIN scores.results_analysis ra ON ce.symbol = ra.symbol WHERE ce.event_date >= CURRENT_DATE AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY ce.event_date LIMIT 50;"
+python_tools:
+  -
+    id: "filter_event_positions"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "event_list"
+      - "score_threshold"
+    outputs:
+      - "filtered_events"
+    approved_tables:
+      - "signals.corporate_events"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    events = context['event_list']\n    threshold = context['score_threshold']\n    return [event for event in events if event['score'] > threshold]"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure events are upcoming."
+  - "Join must satisfy conditions using _join_rules."
+synthesis_guidance: "Integrate corporate event data with stage snapshots for a sector-relative watchlist compilation."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "filter_event_positions: execution failed: KeyError: 'event_list'"
+review:
+  status: "needs_heal"
+  findings:
+    - "filter_event_positions: execution failed: KeyError: 'event_list'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

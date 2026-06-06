@@ -1,0 +1,52 @@
+id: "vcp_breakouts_with_fundamentals_0198_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0198"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: weekly review; response style: narrative plus evidence."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Scan for stocks achieving new highs or patterns indicative of VCP and breakouts, coupled with solid fundamental scores, ensuring liquidity. Use SQL templates for initial evidence gathering and Python tools where complexity increases. Focus on weekly review with position-sizing context."
+sql_templates:
+  -
+    description: "Select latest VCP picks with strong fundamentals"
+    sql: "WITH latest_vcp AS (SELECT symbol, company_name, sector, price, investment_score, enhanced_fund_score, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 20) SELECT v.symbol, v.company_name, v.price, v.investment_score, v.enhanced_fund_score, e.week52_high, e.market_cap_cr FROM latest_vcp AS v JOIN market.equity_eod AS e ON v.symbol = e.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all symbols are from the 'EQ' series."
+  - "Ensure all VCP candidates have an investment score above a specified threshold (e.g., >70)."
+synthesis_guidance: "Summarize findings in terms of potential breakout candidates, focusing on narrative that includes the financial strength and market potential of each symbol."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:14"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

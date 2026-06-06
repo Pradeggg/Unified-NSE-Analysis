@@ -1,0 +1,71 @@
+id: "signal_outcome_feedback_review_1817_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1817"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for latest EOD: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as action watchlist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  outcome_summary: "Summarize the performance of recent signals based on hit_target and hit_stop."
+  winner_patterns: "Identify common attributes among successful signals and their sector context."
+  failure_patterns: "Highlight common factors in unsuccessful signals."
+  route_improvements: "Suggest changes in strategy based on identified patterns."
+  next_checks: "Recommend next steps for review or further analysis."
+sql_templates:
+  -
+    description: "Retrieve outcomes of signals issued in the latest period with sector context."
+    sql: "WITH latest_signals AS (SELECT MAX(date_issued) AS latest_date FROM signals.signal_log) SELECT sl.symbol, sl.sector, sl.signal, sl.hit_target, sl.hit_stop, sl.return_pct FROM signals.signal_log sl JOIN latest_signals ls ON sl.date_issued = ls.latest_date WHERE sl.date_resolved IS NOT NULL ORDER BY sl.return_pct DESC LIMIT 100;"
+python_tools:
+  -
+    id: "calculate_return_statistics"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "list of return_pct values from the SQL query"
+    outputs:
+      - "average_return"
+      - "median_return"
+      - "return_distribution"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context): # Calculate statistics from return percentages return {}"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure outcome summary includes hit_target and hit_stop analysis."
+  - "Cross-verify pattern insights with sector context from scores.stage_snapshots."
+synthesis_guidance: "['Focus on actionable insights that can be added to skill stores.', 'Emphasize learning and adaptations for future signal generation.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_return_statistics: python syntax error: expected an indented block after function definition on line 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_return_statistics: python syntax error: expected an indented block after function definition on line 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

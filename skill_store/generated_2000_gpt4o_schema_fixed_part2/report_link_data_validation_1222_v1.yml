@@ -1,0 +1,52 @@
+id: "report_link_data_validation_1222_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Validate Report Links and Missing Data"
+description: "Identify and validate issues with report links and data presence for the last 5 sessions with a deep institutional review."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    plan: "Identify broken report links and missing data within the last 5 sessions."
+sql_templates:
+  -
+    template_name: "recent_run_data_check"
+    template: "WITH recent_runs AS (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '5 days') SELECT efs.run_id, efs.symbol, efs.current_price FROM report.enhanced_filtered_stocks efs JOIN recent_runs rr ON efs.run_id = rr.run_id WHERE efs.current_price IS NULL OR efs.symbol IS NULL LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure run_id mapping between tables."
+  - "Validate data presence in filtered stock outputs for recent runs."
+synthesis_guidance: "['Use findings from SQL queries to summarize common issues.', 'Provide a ranked list of affected stocks or links.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

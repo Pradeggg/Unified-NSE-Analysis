@@ -1,0 +1,63 @@
+id: "data_freshness_readiness_audit_0763_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0763"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: post results; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for post results: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  - "1. Assess data freshness for each evidence table using the latest_date_column."
+  - "2. Identify missing data by checking for gaps between expected and available data."
+  - "3. Provide a QA checklist for verifying loader completeness and readiness."
+  - "4. Offer loader action recommendations if freshness expectations are unmet."
+sql_templates:
+  -
+    title: "Latest EOD Data Availability"
+    query: "SELECT MAX(trade_date) AS last_trade_date, COUNT(*) AS record_count FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+  -
+    title: "Latest Stage Snapshots"
+    query: "SELECT MAX(snapshot_date) AS last_snapshot_date, COUNT(*) AS snapshot_count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all tables are checked for the latest data availability."
+  - "Verify record consistency in corresponding date columns across tables."
+  - "Document any tables not meeting the freshness threshold."
+synthesis_guidance: "['Summarize the findings with respect to data availability and freshness.', 'Highlight any discrepancies or missing data sources.', 'Provide actionable recommendations for data loader improvements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:21"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

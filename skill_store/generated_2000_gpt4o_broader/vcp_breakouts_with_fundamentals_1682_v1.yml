@@ -1,0 +1,71 @@
+id: "vcp_breakouts_with_fundamentals_1682_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1682"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: intraday context; response style: debug trace."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters:
+    - "New 52-week highs"
+    - "VCP patterns"
+    - "Breakouts with strong fundamentals"
+  candidates:
+    - "Evaluate VCP breakout scores"
+    - "Check institutional backing"
+    - "Review fundamental scores"
+  tradingview_symbols:
+    - "Retrieve TradingView compatible symbols"
+  evidence:
+    - "Use market.equity_eod for price data"
+    - "Use scores.stage_snapshots for fundamental assessment"
+    - "Use scores.stage2_vcp_picks for VCP information"
+  risks:
+    - "Consider liquidity risk"
+    - "High volatility in intraday context"
+    - "Dependency on current snapshot data"
+sql_templates:
+  new_highs: "SELECT symbol, high, week52_high FROM market.equity_eod WHERE trade_date = CURRENT_DATE AND high = week52_high;"
+  vcp_candidates: "SELECT symbol, vcp_score, vcp_breakout_pct FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE AND vcp_score > 80;"
+  strong_fundamentals: "SELECT symbol, enhanced_fund_score FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE AND enhanced_fund_score > 70;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure symbols match across datasets"
+  - "Verify date alignment for snapshot and EOD data"
+  - "Check liquidity metrics for each candidate"
+synthesis_guidance: "['Prioritize high VCP scores with breakout potential', 'Align with institutional preferences as per fundamentals', 'Present results in a format ready for TradingView import']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

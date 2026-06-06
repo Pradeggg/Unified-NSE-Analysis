@@ -1,0 +1,54 @@
+id: "report_link_data_validation_0886_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0886"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for intraday context: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Validate report data by checking link functionality and data availability in enhanced report runs. Focus on intraday context for action watchlist creation."
+sql_templates:
+  freshness_audit_check:
+    query: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE AND universe_size > 0"
+    description: "Verify the freshness of the latest report runs within the current day."
+  missing_data_check:
+    query: "SELECT run_id, symbol FROM report.enhanced_filtered_stocks WHERE current_price IS NULL"
+    description: "Identify stocks with missing current price in the latest report."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all report links are functional."
+  - "All required stock data must be populated."
+  - "Identify missing data promptly for intraday relevance."
+synthesis_guidance: "Concentrate on detecting and resolving link and data integrity issues. Prioritize maintaining up-to-date information for actionable insights."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,1 @@
+def run(context): return analyze_signals(context['signals'], context['stage_snapshots'])

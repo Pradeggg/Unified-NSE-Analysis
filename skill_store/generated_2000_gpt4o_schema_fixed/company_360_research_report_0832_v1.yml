@@ -1,0 +1,83 @@
+id: "company_360_research_report_0832_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0832"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: deep institutional review; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "deep institutional review for last 20 sessions: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as action watchlist"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "deep_institutional_review"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Obtain latest stage and technical scores from scores.stage_snapshots."
+  - "Fetch most recent quarterly and annual results from scores.quarterly_results and scores.annual_results."
+  - "Analyze price movements over the last 20 sessions from market.equity_eod."
+  - "Integrate narrative and expert insights using scores.results_analysis."
+sql_templates:
+  -
+    description: "Retrieve latest stage and technical scores."
+    template: "SELECT * FROM scores.stage_snapshots WHERE symbol = $1 AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 1;"
+  -
+    description: "Fetch recent quarterly results."
+    template: "SELECT * FROM scores.quarterly_results WHERE symbol = $1 ORDER BY period_end DESC NULLS LAST, fetched_at DESC LIMIT 1;"
+  -
+    description: "Fetch recent annual results."
+    template: "SELECT * FROM scores.annual_results WHERE symbol = $1 ORDER BY period_end DESC NULLS LAST, fetched_at DESC LIMIT 1;"
+  -
+    description: "Analyze EOD price history over the last 20 sessions."
+    template: "SELECT * FROM market.equity_eod WHERE symbol = $1 AND trade_date > CURRENT_DATE - INTERVAL '20 days' ORDER BY trade_date DESC;"
+python_tools:
+  -
+    id: "run_financial_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "financial_data"
+    outputs:
+      - "analysis_summary"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.annual_results"
+      - "scores.balance_sheet"
+      - "scores.cash_flow"
+    code: "def run(context):\n    financial_data = context['financial_data']\n    summary = analyze_financials(financial_data)\n    return {'analysis_summary': summary}"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Verify latest data inclusion using MAX date filters."
+  - "Ensure the report is comprehensive, covering overview to risks."
+synthesis_guidance: "['Compile data into a cohesive narrative targeting institutional investors.', 'Highlight actionable insights for inclusion on watchlists.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:26"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_financial_analysis: execution failed: KeyError: 'financial_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_financial_analysis: execution failed: KeyError: 'financial_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

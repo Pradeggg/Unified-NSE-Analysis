@@ -1,0 +1,63 @@
+id: "agent_route_failure_diagnostics_1428_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1428"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: last 5 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for last 5 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as portfolio-aware output"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "{Framing of the diagnostic approach based on evidence.}"
+sql_templates:
+  - "SELECT run_id, run_ts, market_sentiment, universe_size FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '5 days' ORDER BY run_ts DESC LIMIT 100"
+  - "SELECT symbol, recommendation, current_price FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '5 days')"
+python_tools:
+  -
+    id: "evidence_gap_extractor"
+    language: "python"
+    mode: "read_only"
+    inputs:
+
+    outputs:
+      - "evidence_gaps"
+    approved_tables:
+
+    code: "# Extract gaps from evidence\n def run(context):\n pass"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "{'latest_stage_data_rule': 'snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)'}"
+synthesis_guidance: "{Provide insights from the latest reports over the last 5 sessions regarding position-sizing with route and resolution context.}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:34"
+generation_model: "gpt-4o"
+validation_errors:
+  - "evidence_gap_extractor: python syntax error: unexpected indent"
+review:
+  status: "needs_heal"
+  findings:
+    - "evidence_gap_extractor: python syntax error: unexpected indent"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

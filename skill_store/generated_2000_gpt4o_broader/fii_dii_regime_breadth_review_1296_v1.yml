@@ -1,0 +1,54 @@
+id: "fii_dii_regime_breadth_review_1296_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1296"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: weekly review; response style: ranked candidates."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as ranked candidates"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  sql_templates:
+    weekly_fii_dii_flows: "SELECT trade_date, fii_net_5d, dii_net_5d, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= DATE_SUB(CURRENT_DATE, INTERVAL 7 DAY);"
+    current_regime: "SELECT trade_date, regime, confidence FROM signals.regime_history ORDER BY trade_date DESC LIMIT 1;"
+    market_breadth: "SELECT trade_date, adv_oscillator, market_sentiment FROM breadth.market_daily WHERE trade_date >= DATE_SUB(CURRENT_DATE, INTERVAL 7 DAY);"
+    index_confirmation: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= DATE_SUB(CURRENT_DATE, INTERVAL 7 DAY);"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "status"
+synthesis_guidance: "{'candidates_ranking': 'Prioritize based on the combination of flow stability, regime confidence, breadth oscillations, and index confirmations that support a risk-on or risk-off categorization.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:40"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

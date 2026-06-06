@@ -1,0 +1,58 @@
+created_at: "2026-06-06T12:48:28"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: intraday context; response style: portfolio-aware output."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0482_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Identify VCP breakout stocks with strong fundamentals."
+    query: "SELECT snapshot_date, symbol, company_name, sector, live_price, change_1d_pct, technical_score, fundamental_score FROM scores.stage_snapshots WHERE stage = 2 AND fundamental_score > 70 ORDER BY change_1d_pct DESC"
+status: "validated"
+synthesis_guidance:
+  - "Focus on selecting stocks that align with institutional trading behaviors."
+  - "Consider liquidity and trading volume as potential additional filters."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "portfolio-aware_output"
+title: "VCP Breakouts With Fundamentals Variant 0482"
+tool_plan_template:
+  - "Analyze VCP, breakout, and new-high stocks to identify candidates with strong fundamentals."
+  - "Use provided tables and columns to filter stocks based on market conditions and technical scores."
+validation_errors:
+
+validation_rules:
+  - "Ensure result includes stocks with high VCP scores and strong fundamentals."
+  - "Verify all used columns exist within the approved schema."
+version: 1
+review:
+  attempts: 3
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"

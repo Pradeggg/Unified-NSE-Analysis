@@ -1,0 +1,73 @@
+id: "sector_breadth_rotation_watchlist_1021_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1021"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: last 5 sessions; response style: concise table."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for last 5 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as concise table"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "last_5_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    id: "01"
+    title: "Identify Improving Sectors"
+    evidence:
+      -
+        table: "breadth.sector_daily"
+        description: "Use to determine sectors with increasing 5D change and positive breadth_signal."
+  -
+    id: "02"
+    title: "Select Top Stocks from Improving Sectors"
+    evidence:
+      -
+        table: "scores.stage_snapshots"
+        description: "Use for selecting stocks based on stage score and relative strength in improving sectors."
+sql_templates:
+  -
+    id: "select_improving_sectors"
+    name: "Select Improving Sectors with Breadth"
+    sql: "SELECT DISTINCT sector, change_5d, breadth_signal FROM breadth.sector_daily WHERE breadth_signal = 'positive' AND change_5d > 0 ORDER BY change_5d DESC, sector ASC LIMIT 10;"
+    description: "Query to fetch the top 10 improving sectors based on 5D change and positive breadth signal."
+  -
+    id: "select_top_stocks"
+    name: "Select Candidate Symbols"
+    sql: "SELECT symbol, company_name, stage_score, relative_strength FROM scores.stage_snapshots WHERE sector IN (SELECT sector FROM [subquery for improving sectors]) AND stage_score > 80 AND relative_strength > 70 ORDER BY stage_score DESC, relative_strength DESC LIMIT 10;"
+    description: "Query to fetch top stocks from the improving sectors based on their stage score and relative strength."
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all evidence acquired comes from approved tables."
+  - "All SQL must be read-only and adhere to the approved schema."
+synthesis_guidance: "['Summarize sector and stock performance in a tabular format.', 'Highlight sectors with the strongest breadth indicators.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:33"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.for is not approved"
+  - "scores.stage_snapshots.improving is not approved"
+  - "scores.stage_snapshots.sectors is not approved"
+  - "scores.stage_snapshots.subquery is not approved"

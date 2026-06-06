@@ -1,0 +1,53 @@
+id: "signal_outcome_feedback_review_1089_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Analysis"
+description: "Analyze and review the outcomes of prior trading signals to improve recommendation strategies with a focus on source-trail validation in the Indian market."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for intraday context: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as concise table"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "Signal Outcome Review"
+    query: "WITH outcomes AS (SELECT id, symbol, date_issued, price_at_issue, price_at_resolution, target_1, target_2, stop_loss, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_resolved IS NOT NULL) SELECT symbol, COUNT(*) AS total_signals, SUM(CASE WHEN hit_target THEN 1 ELSE 0 END) AS successful_signals, SUM(CASE WHEN hit_stop THEN 1 ELSE 0 END) AS stopped_signals FROM outcomes GROUP BY symbol"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates must be read-only SELECT/WITH templates."
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

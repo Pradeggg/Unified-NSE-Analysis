@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:43:58"
+created_by: "llm_generated"
+description: "Validate links and data in enhanced reports focusing on TradingView exports for the Indian market, covering quarter-to-date data."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "enhanced_report_validation_0260_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for quarter to date: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  check_broken_links: "SELECT run_id FROM report.enhanced_runs WHERE analysis_date > CURRENT_DATE - INTERVAL '3 months' AND universe_size = 0;"
+  find_missing_data: "SELECT run_id, symbol, recommendation FROM report.enhanced_filtered_stocks WHERE current_price IS NULL OR open_price IS NULL;"
+  get_recent_runs: "SELECT run_id, run_ts FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 5;"
+status: "validated"
+synthesis_guidance: "Cross-reference SQL results with report export logs to generate ranked candidate issues in the Indian market context."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "ranked_candidates"
+title: "Enhanced Report Validation for TradingView Export"
+tool_plan_template: "Utilize provided evidence tables to check links and data related to TradingView exports for enhanced report validation."
+validation_errors:
+  - "Ensure all recent runs have a non-null universe size."
+  - "Verify no stock entries are missing essential data fields such as current_price and open_price."
+  - "Check for any broken report links by analyzing run metadata."
+validation_rules:
+  - "Ensure all recent runs have a non-null universe size."
+  - "Verify no stock entries are missing essential data fields such as current_price and open_price."
+  - "Check for any broken report links by analyzing run metadata."
+version: 1
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"

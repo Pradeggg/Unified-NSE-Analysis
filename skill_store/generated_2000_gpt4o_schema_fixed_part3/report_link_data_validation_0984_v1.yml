@@ -1,0 +1,56 @@
+id: "report_link_data_validation_0984_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0984"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for intraday context: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  steps:
+    - "Extract enhanced report run metadata from report.enhanced_runs."
+    - "Extract filtered stocks details from report.enhanced_filtered_stocks."
+    - "Join the tables on run_id to correlate report metadata with stock details."
+    - "Perform validation checks to identify broken links and missing data."
+sql_templates:
+  -
+    query: "SELECT er.run_id, er.run_ts, er.analysis_date, ers.symbol, ers.current_price, ers.open_price FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks ers ON er.run_id = ers.run_id WHERE ers.run_id IS NOT NULL"
+    description: "Retrieve run metadata and stock details for validation."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure extracted data from tables match the schema constraints."
+  - "Verify the completeness of report data against expected outputs."
+  - "Identify and log any discrepancies or anomalies discovered."
+synthesis_guidance: "Synthesize findings into a comparison matrix, detailing actionable insights on watchlist creation and report link integrity."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:55"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

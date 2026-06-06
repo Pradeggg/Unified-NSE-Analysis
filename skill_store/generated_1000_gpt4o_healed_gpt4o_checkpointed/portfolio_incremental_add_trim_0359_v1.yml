@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:45:52"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: quarter to date; response style: exceptions and gaps first."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0359_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as exceptions and gaps first"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  holdings_analysis:
+    description: "Analyze current holdings alongside sector and stage information to guide add/trim decisions."
+    statement: "SELECT p.symbol, p.qty, s.sector, s.stage, s.stage_score, s.trading_signal FROM portfolio.holdings p JOIN scores.stage_snapshots s ON p.symbol = s.symbol WHERE s.snapshot_date >= DATE_SUB(CURRENT_DATE, INTERVAL 90 DAY)"
+status: "validated"
+synthesis_guidance: "['Prioritize gaps and exceptions in portfolio exposure.', 'Ensure coherence between technical signals and actions.']"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+title: "Portfolio Incremental Add Trim Review Variant 0359"
+tool_plan_template:
+  context: "Run source-trail validation across portfolio holdings and stage snapshots to determine incremental add or trim actions."
+  response_style: "Exceptions and gaps first"
+  timing: "Quarter to date"
+validation_rules:
+  - "Check for discrepancies between holdings and stage snapshot dates."
+  - "Ensure sector exposure is balanced."
+  - "Identify anomalies in trading signals."
+version: 1

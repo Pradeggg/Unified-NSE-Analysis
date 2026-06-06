@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:44:20"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: today; response style: exceptions and gaps first."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0310_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Filter VCP breakout candidates based on enhanced fund score and liquidity metrics."
+    template: "WITH candidates AS (SELECT s.symbol, s.company_name, v.price, v.vcp_score FROM scores.stage2_vcp_picks AS v JOIN scores.stage_snapshots AS s ON v.symbol = s.symbol WHERE v.vcp_score > ? AND s.enhanced_fund_score > ?), filtered_candidates AS (SELECT c.symbol, c.company_name FROM candidates AS c JOIN market.equity_eod AS e ON c.symbol = e.symbol WHERE e.volume > ? AND e.turnover_cr > ?) SELECT * FROM filtered_candidates;"
+status: "validated"
+synthesis_guidance: "Focus on exceptions and gaps in fundamental and breakout metrics."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "today"
+  - "exceptions_and_gaps_first"
+title: "VCP Breakouts With Fundamentals Variant 0310"
+tool_plan_template: "Identify VCP breakouts using scores.stage2_vcp_picks and correlate with fundamentals in scores.stage_snapshots; filter against market.equity_eod for liquidity metrics."
+validation_rules:
+  - "Ensure candidates have positive VCP score."
+  - "Check liquidity based on volume and turnover."
+version: 1

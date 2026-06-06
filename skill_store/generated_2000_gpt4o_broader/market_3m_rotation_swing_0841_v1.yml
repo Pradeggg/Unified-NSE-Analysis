@@ -1,0 +1,75 @@
+id: "market_3m_rotation_swing_0841_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0841"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: last 3 months; response style: action watchlist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "last_3_months"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  steps:
+    - "Extract last 3 months data for market indices and equities."
+    - "Analyze sector rotation based on stage snapshots."
+    - "Identify leading sectors and stage 2 leadership."
+    - "Select primary swing candidates from VCP picks."
+sql_templates:
+  -
+    name: "extract_index_data"
+    type: "SELECT"
+    query: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+    description: "Extract closing prices and percentage change of indices for the last 3 months."
+  -
+    name: "extract_equity_data"
+    type: "SELECT"
+    query: "SELECT trade_date, symbol, close, change_pct, volume FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+    description: "Extract closing prices and percentage change of equities for the last 3 months."
+  -
+    name: "analyze_stage_snapshots"
+    type: "SELECT"
+    query: "SELECT snapshot_date, symbol, sector, stage, change_1m_pct FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months';"
+    description: "Analyze stage distribution and sector rotation over the last 3 months."
+  -
+    name: "identify_vcp_candidates"
+    type: "SELECT"
+    query: "SELECT symbol, company_name, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months';"
+    description: "Identify VCP candidates for swing trading from the last 3 months."
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL queries return expected data columns."
+  - "Check date range filtering aligns with 3-month window."
+synthesis_guidance: "{'points': ['Summarize key market regime characteristics.', 'Highlight shifts in sector leadership.', 'List potential swing trading candidates with high VCP scores.', 'Address any risks identified in recent market trends.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:37"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

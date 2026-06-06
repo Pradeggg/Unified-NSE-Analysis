@@ -1,0 +1,56 @@
+id: "quarterly_results_quality_review_1923_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1923"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: comparison matrix."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "daily refresh follow-up for last 5 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as comparison matrix"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "daily_refresh_follow-up"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  filing_window: "Check freshness and timeframe over the last 5 sessions."
+  beat_miss_summary: "Summarize companies with beat/miss results using the verdict label."
+  margin_drivers: "Assess margin changes by examining opm_pct and opm_delta_pp."
+  ranked_companies: "Rank based on score and growth metrics."
+  risks: "Identify key_risks and any adverse trends."
+sql_templates:
+  -
+    query: "WITH latest_results AS (SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.period_end, qr.revenue, qr.pat, qr.opm_pct FROM scores.quarterly_results qr WHERE qr.period_type = 'quarter' ORDER BY qr.symbol, qr.period_end DESC, qr.fetched_at DESC) SELECT lr.symbol, ra.company_name, ra.verdict, ra.growth_yoy_revenue_pct, ra.growth_yoy_pat_pct, lr.revenue, lr.pat, lr.opm_pct FROM latest_results lr JOIN scores.results_analysis ra ON lr.symbol = ra.symbol AND lr.period_end = ra.period_end ORDER BY ra.verdict DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure quarterly results and analysis are aligned by period_end and symbol."
+  - "Limit to the latest reporting periods per symbol."
+  - "Check for filing freshness within the last 5 sessions."
+synthesis_guidance: "Create a comparison matrix focusing on beat/miss, revenue and PAT growth, and margin movement."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:16"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

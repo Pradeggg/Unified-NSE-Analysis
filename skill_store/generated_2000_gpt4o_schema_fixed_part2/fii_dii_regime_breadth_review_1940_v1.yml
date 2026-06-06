@@ -1,0 +1,66 @@
+id: "fii_dii_regime_breadth_review_1940_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1940"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as comparison matrix"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    summary: "Extract necessary data for analysis of market regime, FII/DII flows, breadth, and index."
+    steps:
+      - "Retrieve FII/DII flows and trends for the last 20 sessions."
+      - "Acquire regime history and regime confidence."
+      - "Obtain breadth indicators and signals."
+      - "Fetch index-level data for confirmation."
+    notes: "Ensure data is aligned by trade date for comparison."
+sql_templates:
+  -
+    name: "flow_regime_breadth_index_analysis"
+    description: "Fetch FII/DII flows, market regime, breadth, and index data for last 20 sessions."
+    parameters:
+
+    presentations:
+      - "comparison_matrix"
+    statement: "WITH latest_flows AS (\n    SELECT trade_date, fii_net_today, dii_net_today,\n           fi_trend, di_trend\n    FROM signals.fii_dii_flows\n    WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days'\n),\nlatest_regime AS (\n    SELECT trade_date, regime, confidence\n    FROM signals.regime_history\n    WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days'\n),\nlatest_breadth AS (\n    SELECT trade_date, adv_volume, dec_volume, ad_signal\n    FROM breadth.market_daily\n    WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days'\n),\nlatest_index AS (\n    SELECT trade_date, close, change_pct, trend_signal\n    FROM market.index_eod\n    WHERE index_symbol = 'Nifty 50' AND trade_date >= CURRENT_DATE - INTERVAL '20 days'\n)\nSELECT f.trade_date, f.fii_net_today, f.dii_net_today,\n       r.regime, r.confidence,\n       b.adv_volume, b.dec_volume, b.ad_signal,\n       i.close, i.change_pct, i.trend_signal\nFROM latest_flows f\nJOIN latest_regime r ON f.trade_date = r.trade_date\nJOIN latest_breadth b ON f.trade_date = b.trade_date\nJOIN latest_index i ON f.trade_date = i.trade_date\nORDER BY f.trade_date DESC;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all output fields align with approved_schema descriptions."
+  - "Cross-verify FII/DII flow trends with market breadth signals."
+  - "Validate market regime using both regime confidence and index confirmations."
+synthesis_guidance: "['Create a matrix comparing each factor (flows, regime, breadth, index) over 20 sessions.', 'Highlight any persistent trends indicating risk-on or risk-off contexts.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

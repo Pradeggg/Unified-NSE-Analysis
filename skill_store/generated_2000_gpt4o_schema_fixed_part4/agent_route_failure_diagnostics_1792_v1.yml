@@ -1,0 +1,75 @@
+id: "agent_route_failure_diagnostics_1792_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1792"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for weekly review: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as QA checklist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "Validate evidence availability for all input patterns."
+  - "Run route diagnostics to detect and log failures."
+  - "Identify required tool gaps using report.enhanced_runs and report.enhanced_filtered_stocks."
+  - "Check symbol resolution issues using scores.stage_snapshots."
+sql_templates:
+  -
+    name: "validate_tool_gaps"
+    description: "Identify missing tools in report by cross-referencing report tools."
+    sql: "SELECT run_id, analysis_date, universe_size, stocks_analyzed, indices_analyzed FROM report.enhanced_runs WHERE run_ts >= (CURRENT_DATE - INTERVAL '7 days');"
+  -
+    name: "symbol_resolution_check"
+    description: "Check for symbol resolution loop issues in stage snapshots."
+    sql: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT symbol, stage, trading_signal FROM latest_snapshots WHERE stage = 'UNKNOWN';"
+python_tools:
+  -
+    id: "run_route_diagnostics"
+    language: "python"
+    mode: "read_only"
+    inputs:
+
+    outputs:
+
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Code to run route diagnostics based on context\n    pass"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all input patterns are valid for evidence match."
+  - "Confirm existence of tool gaps and resolution issues."
+  - "Ensure SQL queries are read-only and adhere to schema rules."
+synthesis_guidance: "['Combine evidence from all sources to diagnose route failures.', 'Provide clear and actionable QA checklist for diagnostics.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:12"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_route_diagnostics: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_route_diagnostics: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

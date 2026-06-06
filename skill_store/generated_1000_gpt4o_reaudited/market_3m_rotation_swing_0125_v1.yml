@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:42:14"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: last 5 sessions; response style: narrative plus evidence."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0125_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for last 5 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as narrative plus evidence"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    query: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+    template_name: "IndexPerformance"
+  -
+    query: "SELECT snapshot_date, symbol, sector, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' AND stage = 2;"
+    template_name: "StageSnapshots"
+  -
+    query: "SELECT sector, AVG(change_1m_pct) as avg_monthly_change FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_monthly_change DESC LIMIT 5;"
+    template_name: "LeadingSectors"
+status: "test_failed"
+synthesis_guidance: "Synthesize insights from sector performance and stage snapshots to narrate market trends. Highlight leading sectors and potential swing candidates. Provide a risk overview based on recent session analysis."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "last_5_sessions"
+  - "narrative_plus_evidence"
+title: "3M Market Rotation Swing Assessment Variant 0125"
+tool_plan_template: "Perform an analysis of the market's broad regime, identifying sector leadership and relevant stage 2 conditions. Provide a risk-first review over the last five sessions, assessing swing candidates from sector rotations."
+validation_rules:
+  - "Ensure all index symbols have corresponding returns."
+  - "Leading sectors must have at least three entries."
+  - "Stage distribution changes should reference at least two different time points."
+version: 1
+validation_errors:
+  - "scores.stage_snapshots.avg_monthly_change is not approved"

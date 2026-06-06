@@ -1,0 +1,1 @@
+def run(context): risk_flags = []; for row in context['data']: if row['stage_score'] < 50: risk_flags.append({'symbol': row['symbol'], 'risk': 'high_stage_score_risk'}); elif row['technical_score'] < 50: risk_flags.append({'symbol': row['symbol'], 'risk': 'high_technical_score_risk'}); return {'risk_flags': risk_flags};

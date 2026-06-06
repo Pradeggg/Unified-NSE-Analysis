@@ -1,0 +1,145 @@
+card:
+  created_at: "2026-06-06T12:43:54"
+  created_by: "llm_generated"
+  description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: last 3 months; response style: ranked candidates."
+  domain: "market_analysis"
+  evidence_required:
+    tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "market_3m_rotation_swing_0241_v1"
+  input_patterns:
+    - "last 3 months market analysis"
+    - "find swing candidates from recent sector rotation"
+    - "market regime and stage 2 leadership over 3 months"
+    - "quick scan for last 3 months: last 3 months market analysis"
+    - "market regime and stage 2 leadership over 3 months as ranked candidates"
+  output_contract:
+    - "as_of_date"
+    - "index_returns"
+    - "stage_distribution_change"
+    - "leading_sectors"
+    - "primary_candidates"
+    - "risks"
+  python_tools:
+    -
+      approved_tables:
+        - "market.equity_eod"
+        - "scores.stage2_vcp_picks"
+      code: "def run(context):\n    vcp_data = context['scores.stage2_vcp_picks']\n    equity_data = context['market.equity_eod']\n    filtered_candidates = vcp_data.sort_values(by='vcp_score', ascending=False).head(10)\n    return filtered_candidates[['symbol', 'company_name', 'vcp_score']].to_dict(orient='records')"
+      id: "swing_candidate_ranking"
+      inputs:
+        - "market.equity_eod"
+        - "scores.stage2_vcp_picks"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "primary_candidates"
+  sql_templates:
+    index_returns: "SELECT index_symbol, AVG(change_pct) AS avg_change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 MONTHS' GROUP BY index_symbol;"
+    leading_sectors: "SELECT sector, AVG(stage_score) AS avg_score FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 MONTHS' GROUP BY sector ORDER BY avg_score DESC LIMIT 5;"
+  status: "generated"
+  synthesis_guidance:
+    - "Combine SQL analysis and Python tool output to rank candidates."
+    - "Validate using both quantitative scores and recent performance trends."
+  tags:
+    - "market_regime"
+    - "sector_rotation"
+    - "stage_analysis"
+    - "swing_trading"
+    - "quick_scan"
+    - "last_3_months"
+    - "ranked_candidates"
+  title: "3M Market Rotation Swing Assessment Variant 0241"
+  tool_plan_template:
+    primary_analysis: "Use SQL to calculate returns, sector performance, and leadership."
+    secondary_analysis: "Python for swing candidate ranking based on curated scores."
+  validation_rules:
+    - "Ensure index returns contain data for all major indices."
+    - "Leading sectors should be top-performing based on stage score."
+    - "Primary candidates are well-ranked VCP picks over the last 3 months."
+  version: 1
+created_at: "2026-06-06T12:43:54"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: last 3 months; response style: ranked candidates."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0241_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    # Extract necessary data\n    vcp_data = context['scores.stage2_vcp_picks']\n    equity_data = context['market.equity_eod']\n    # Process and filter top VCP candidates\n    filtered_candidates = vcp_data.sort_values(by='vcp_score', ascending=False).head(10)\n    return filtered_candidates[['symbol', 'company_name', 'vcp_score']].to_dict(orient='records')"
+    id: "swing_candidate_ranking"
+    inputs:
+      - "market.equity_eod"
+      - "scores.stage2_vcp_picks"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "primary_candidates"
+review:
+  status: "needs_heal"
+  findings:
+    - "market.index_eod.avg_return is not approved"
+    - "market.index_eod.curdate is not approved"
+    - "market.index_eod.month is not approved"
+    - "scores.stage_snapshots.avg_stage_score is not approved"
+    - "scores.stage_snapshots.curdate is not approved"
+    - "scores.stage_snapshots.month is not approved"
+    - "swing_candidate_ranking: execution failed: KeyError: 'scores.stage2_vcp_picks'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  index_returns: "SELECT index_symbol, AVG(change_pct) AS avg_return FROM market.index_eod WHERE trade_date >= CURDATE() - INTERVAL 3 MONTH GROUP BY index_symbol;"
+  leading_sectors: "SELECT sector, AVG(stage_score) AS avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date >= CURDATE() - INTERVAL 3 MONTH GROUP BY sector ORDER BY avg_stage_score DESC LIMIT 5;"
+status: "test_failed"
+synthesis_guidance: "['Combine SQL analysis and Python tool output to rank candidates.', 'Validate using both quantitative scores and recent performance trends.']"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "last_3_months"
+  - "ranked_candidates"
+title: "3M Market Rotation Swing Assessment Variant 0241"
+tool_plan_template:
+  primary_analysis: "Use SQL to calculate returns, sector performance, and leadership."
+  secondary_analysis: "Python for swing candidate ranking based on curated scores."
+validation_errors:
+  - "market.index_eod.avg_return is not approved"
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage_snapshots.avg_stage_score is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.month is not approved"
+  - "swing_candidate_ranking: execution failed: KeyError: 'scores.stage2_vcp_picks'"
+validation_rules:
+  - "Ensure index returns contain data for all major indices."
+  - "Leading sectors should be top-performing based on stage score."
+  - "Primary candidates are well-ranked VCP picks over the last 3 months."
+version: 1

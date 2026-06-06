@@ -1,0 +1,50 @@
+id: "agent_route_failure_diagnostics_1036_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1036"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: last 20 sessions; response style: concise table."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as concise table"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze data from the last 20 sessions, focusing on inconsistencies and symbol resolution issues. Evaluate tool gaps and provide potential fixes."
+sql_templates:
+  -
+    description: "Retrieve the last 20 agent run sessions for diagnostic analysis."
+    template: "SELECT run_id, run_ts, notes FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 20;"
+  -
+    description: "Check for missing tools or incorrect symbol resolutions in recent sessions."
+    template: "WITH latest_runs AS (SELECT run_id FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 20) SELECT rf.symbol, rf.recommendation, rf.notes FROM report.enhanced_filtered_stocks rf JOIN latest_runs lr ON rf.run_id = lr.run_id WHERE rf.recommendation IS NULL OR rf.symbol = '';"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all evidence is from approved tables."
+  - "Check all SQL templates are read-only."
+synthesis_guidance: "Compile findings into concise format, highlighting major failure modes and suggesting actionable improvements."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_filtered_stocks.notes is not approved"

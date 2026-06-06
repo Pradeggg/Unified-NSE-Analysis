@@ -1,0 +1,64 @@
+id: "agent_route_failure_diagnostics_1806_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1806"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for today: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as action watchlist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Focus on checking today's data freshness and identifying missing or failing elements."
+sql_templates:
+  -
+    description: "Select the latest run data for freshness audit."
+    sql: "SELECT run_id, run_ts, analysis_date, stocks_analyzed FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)"
+python_tools:
+  -
+    id: "symbol_resolution_check"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol_list"
+    outputs:
+      - "resolution_status"
+    approved_tables:
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    symbols = context['symbol_list']\n    result = {'resolution_status': []}\n    # Logic to check symbol resolution goes here (Read-only operation)\n    return result"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "{'sql_safety': 'Ensure SQL uses only SELECT/WITH templates.', 'status': \"Must be set to 'generated'\", 'date_filters': \"Use 'run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)' for latest data.\"}"
+synthesis_guidance: "Compile findings into an action watchlist focused on immediate diagnosis and resolution options."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "symbol_resolution_check: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "symbol_resolution_check: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

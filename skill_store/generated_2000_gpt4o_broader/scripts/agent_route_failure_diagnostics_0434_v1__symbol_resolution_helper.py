@@ -1,0 +1,1 @@
+def run(context):\n    # This function would help in resolving symbols based on available data.\n    pass

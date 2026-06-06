@@ -1,0 +1,57 @@
+id: "insider_bulk_deal_signal_review_1690_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1690"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: intraday context; response style: debug trace."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for intraday context: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as debug trace"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze bulk deals and insider alerts using technical confirmations to identify accumulation signals."
+sql_templates:
+  -
+    description: "Select latest insider alerts with a high insider score."
+    read_only: true
+    template: "SELECT symbol, entity, qty, value_cr, insider_score \nFROM signals.insider_alerts \nWHERE alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts) \nAND insider_score > 75 \nORDER BY insider_score DESC;"
+  -
+    description: "Fetch recent bulk deals with technical confirmation for accumulation signals."
+    read_only: true
+    template: "WITH recent_bulk_deals AS (\n    SELECT symbol, entity, qty, price, deal_type\n    FROM signals.bulk_block_deals\n    WHERE deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals)\n),\nlatest_stage_data AS (\n    SELECT symbol, trading_signal, stage \n    FROM scores.stage_snapshots \n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n    AND trading_signal IN ('BUY', 'STRONG_BUY')\n    AND stage = 'STAGE_2'\n)\nSELECT rbd.symbol, rbd.entity, rbd.qty, rbd.price, rbd.deal_type, lsd.trading_signal\nFROM recent_bulk_deals rbd\nJOIN latest_stage_data lsd ON rbd.symbol = lsd.symbol\nORDER BY rbd.qty DESC;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "symbol"
+  - "deal_date"
+synthesis_guidance: "Aggregate insider and bulk deal signals with technical scores for potential accumulation opportunities."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:58"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

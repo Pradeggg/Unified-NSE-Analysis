@@ -1,0 +1,50 @@
+id: "quarterly_results_quality_review_1223_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1223"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: ranked candidates."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "daily refresh follow-up for last 5 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as ranked candidates"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "daily_refresh_follow-up"
+  - "last_5_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze the latest quarterly results and identify companies with strong performance."
+sql_templates:
+  -
+    name: "quarterly_results_analysis"
+    sql: "WITH latest_snapshots AS (SELECT DISTINCT ON (symbol) symbol, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY')), latest_results AS (SELECT DISTINCT ON (symbol) symbol, revenue, pat, opm_pct FROM scores.quarterly_results WHERE period_type = 'quarter' AND period_end = (SELECT MAX(period_end) FROM scores.quarterly_results WHERE period_type = 'quarter') ORDER BY symbol, period_end DESC), results_with_stage AS (SELECT r.symbol, r.revenue, r.pat, r.opm_pct, s.stage FROM latest_results r JOIN latest_snapshots s ON r.symbol = s.symbol) SELECT * FROM results_with_stage LIMIT 10"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "rule_set"
+synthesis_guidance: "{response} should be aligned with the queried data, showing top-performing companies based on the latest results. Emphasize the metrics that resulted in a positive assessment."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:41"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

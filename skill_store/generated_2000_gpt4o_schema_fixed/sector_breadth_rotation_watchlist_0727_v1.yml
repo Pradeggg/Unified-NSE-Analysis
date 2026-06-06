@@ -1,0 +1,70 @@
+id: "sector_breadth_rotation_watchlist_0727_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0727"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for last 5 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as QA checklist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "..."
+sql_templates:
+  -
+    name: "latest_sector_breadth"
+    description: "Fetch latest sector breadth data for the top sectors."
+    sql: "SELECT sector, pct_above_50dma, change_5d, breadth_signal FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) AND breadth_signal = 'POSITIVE' ORDER BY change_5d DESC LIMIT 5;"
+  -
+    name: "stage_2_stocks"
+    description: "Identify top stocks in Stage 2."
+    sql: "SELECT symbol, company_name, sector FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+python_tools:
+  -
+    id: "calculate_strength"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_data"
+    outputs:
+      - "strength_scores"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Example calculation logic\n    return [{'sector': d['sector'], 'strength_score': d['pct_above_50dma']} for d in context['sector_data']]"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Check if sectors listed are in top 5 by five-session change."
+  - "Ensure candidate symbols have a Stage 2 label and positive trading signals."
+synthesis_guidance: "{'method': 'QA checklist', 'focus': 'Comparison of top sectors and Stage 2 stock candidates based on breadth and trading signals.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:09"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_strength: execution failed: KeyError: 'sector_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_strength: execution failed: KeyError: 'sector_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,52 @@
+id: "corporate_events_results_watchlist_0751_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0751"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: quarter to date; response style: QA checklist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for quarter to date: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as QA checklist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  -
+    template_name: "Fetch_Recent_Corporate_Events"
+    query: "SELECT ce.symbol, ce.event_type, ce.event_date, ce.detail, ss.stage_score, ra.verdict FROM signals.corporate_events AS ce JOIN scores.stage_snapshots AS ss ON ce.symbol = ss.symbol AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) JOIN scores.results_analysis AS ra ON ce.symbol = ra.symbol WHERE ce.event_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY ce.event_date DESC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure data coherence between tables."
+  - "Verify event dates are within the specified timeframe."
+synthesis_guidance: "['Summarize key upcoming events with focus on significant market impact.', 'Highlight stocks with positive results and strong stage scores.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:31"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

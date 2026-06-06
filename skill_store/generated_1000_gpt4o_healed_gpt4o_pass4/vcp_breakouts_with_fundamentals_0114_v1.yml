@@ -1,0 +1,133 @@
+card:
+  created_at: "2026-06-06T12:42:03"
+  created_by: "llm_generated"
+  description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: latest EOD; response style: narrative plus evidence."
+  domain: "screening"
+  evidence_required:
+    tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "vcp_breakouts_with_fundamentals_0114_v1"
+  input_patterns:
+    - "stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "VCP breakout stocks for TradingView"
+    - "quality breakouts with strong fundamentals"
+    - "watchlist creation for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "quality breakouts with strong fundamentals as narrative plus evidence"
+  output_contract:
+    - "filters"
+    - "candidates"
+    - "tradingview_symbols"
+    - "evidence"
+    - "risks"
+  python_tools:
+    -
+      description: "A tool to process stock data and evaluate criteria for new highs, VCP, and breakout stocks."
+      function: "def run(context):\n    # Process context data using read-only operations to evaluate stocks\n    pass"
+      name: "run"
+      read_only: true
+  review:
+    attempts: 3
+    findings:
+
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "generated"
+  sql_templates:
+    -
+      description: "Fetch stocks hitting new 52-week highs or showing VCP breakouts with strong fundamentals as of the latest EOD."
+      template: "SELECT eod.symbol, eod.high, s.fundamental_score, v.vcp_score FROM market.equity_eod eod JOIN scores.stage_snapshots s ON eod.symbol = s.symbol JOIN scores.stage2_vcp_picks v ON eod.symbol = v.symbol WHERE eod.trade_date = CURRENT_DATE AND (eod.high = eod.week52_high OR v.vcp_breakout_pct > 0) AND s.fundamental_score > 75 ORDER BY v.vcp_score DESC;"
+  status: "generated"
+  synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+  tags:
+    - "vcp"
+    - "breakout"
+    - "new_high"
+    - "fundamentals"
+    - "tradingview"
+    - "watchlist_creation"
+    - "latest_EOD"
+    - "narrative_plus_evidence"
+  title: "VCP Breakouts With Fundamentals Variant 0114"
+  validation_rules:
+    - "version must be a positive integer"
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+  version: 1
+created_at: "2026-06-06T12:42:03"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: latest EOD; response style: narrative plus evidence."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0114_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    description: "A tool to process stock data and evaluate criteria for new highs, VCP, and breakout stocks."
+    function: "def run(context):\n    # Process context data using read-only operations to evaluate stocks\n    pass"
+    name: "run"
+    read_only: true
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: code is required"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: language must be python"
+    - "<missing-id>: mode must be read_only"
+    - "<missing-id>: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    description: "Fetch stocks hitting new 52-week highs or showing VCP breakouts with strong fundamentals as of the latest EOD."
+    template: "SELECT eod.symbol, eod.high, s.fundamental_score, v.vcp_score FROM market.equity_eod eod JOIN scores.stage_snapshots s ON eod.symbol = s.symbol JOIN scores.stage2_vcp_picks v ON eod.symbol = v.symbol WHERE eod.trade_date = CURRENT_DATE AND (eod.high = eod.week52_high OR v.vcp_breakout_pct > 0) AND s.fundamental_score > 75 ORDER BY v.vcp_score DESC;"
+status: "test_failed"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "narrative_plus_evidence"
+title: "VCP Breakouts With Fundamentals Variant 0114"
+tool_plan_template:
+
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: language must be python"
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: outputs must be a non-empty list"
+validation_rules:
+  - "status"
+version: 1

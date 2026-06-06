@@ -1,0 +1,59 @@
+id: "data_freshness_readiness_audit_1589_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1589"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: intraday context; response style: research-only summary."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for intraday context: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as research-only summary"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  goal: "Audit the freshness of market data sources in the Agent Adda system."
+  steps:
+    - "Collect the latest trading date from each required table."
+    - "Identify any discrepancies or missing data in the tables comparing them with the current date."
+    - "Analyze the summaries from past enhanced runs for any inconsistencies."
+sql_templates:
+  freshness_check: "SELECT MAX(market.index_eod.trade_date) AS latest_index_date, MAX(market.equity_eod.trade_date) AS latest_equity_date FROM market.index_eod, market.equity_eod;"
+  missing_analysis: "SELECT symbol FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND close IS NULL;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure dates align with current trading day."
+  - "Validate data availability across tables."
+  - "Cross-check loader timestamps in enhanced runs."
+synthesis_guidance: "['Summarize readiness based on the latest available dates.', 'Highlight data gaps and potential impact on Indian market technical narratives.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.equity_eod is not approved"
+  - "market.index_eod.latest_equity_date is not approved"
+  - "market.index_eod.latest_index_date is not approved"
+  - "market.index_eod.market is not approved"

@@ -1,0 +1,68 @@
+id: "data_freshness_readiness_audit_0903_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0903"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: today; response style: comparison matrix."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for today: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as comparison matrix"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  tools:
+    - "freshness_matrix"
+    - "missing_sources"
+    - "blocking_gaps"
+    - "loader_actions"
+    - "verification_queries"
+sql_templates:
+  -
+    name: "Check Latest Market Index EOD Freshness"
+    template: "SELECT MAX(trade_date) AS latest_date FROM market.index_eod;"
+    description: "Verifies the latest date in the market index EOD table."
+  -
+    name: "Check Latest Equity EOD Freshness"
+    template: "SELECT MAX(trade_date) AS latest_date FROM market.equity_eod;"
+    description: "Verifies the latest date in the market equity EOD table."
+  -
+    name: "Check Latest Stage Snapshots Freshness"
+    template: "SELECT MAX(snapshot_date) AS latest_date FROM scores.stage_snapshots;"
+    description: "Verifies the latest date in the scores stage_snapshots table."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all used tables are among evidence_required.tables."
+  - "All SQL queries must be read-only and adhere to approved_schema guidelines."
+synthesis_guidance: "Create a comparison matrix that clearly outlines the freshness of each data source, highlighting any missing or outdated components that could impede daily refresh follow-up. Ensure the response is aligned with today's data freshness readiness thresholds."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:34"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_date is not approved"
+  - "market.index_eod.latest_date is not approved"
+  - "scores.stage_snapshots.latest_date is not approved"

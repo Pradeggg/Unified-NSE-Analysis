@@ -1,0 +1,69 @@
+id: "corporate_events_results_watchlist_0597_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0597"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as research-only summary"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Generate a research-oriented analysis of upcoming or recent corporate events and results. Focus on sector-relative comparison to provide a weekly review summary."
+sql_templates:
+  -
+    description: "Retrieve recent corporate events."
+    template: "SELECT symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '7 days';"
+    status: "generated"
+  -
+    description: "Retrieve results analysis for stocks."
+    template: "SELECT symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct FROM scores.results_analysis WHERE filing_date >= CURRENT_DATE - INTERVAL '7 days';"
+    status: "generated"
+python_tools:
+  -
+    id: "run_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_data"
+    outputs:
+      - "analysis_summary"
+    approved_tables:
+      - "signals.corporate_events"
+      - "scores.results_analysis"
+    code: "def run(context):\n    # Process sector data for comparison\n    analysis_summary = \"Perform sector-relative analysis.\"\n    return analysis_summary"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure templates are read-only SELECT statements."
+  - "Do not modify approved tables/columns."
+synthesis_guidance: "Use retrieved data to create a sector-relative analysis for watched corporate events and results."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:58:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_analysis: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_analysis: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

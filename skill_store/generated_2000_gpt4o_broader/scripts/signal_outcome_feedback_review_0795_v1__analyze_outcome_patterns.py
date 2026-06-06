@@ -1,0 +1,1 @@
+def run(context): outcome_data = context['outcome_data'] # Analysis logic here return {'outcome_summary': {}, 'winner_patterns': {}, 'failure_patterns': {}, 'route_improvements': {}}

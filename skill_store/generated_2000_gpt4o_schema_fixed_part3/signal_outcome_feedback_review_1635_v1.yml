@@ -1,0 +1,53 @@
+id: "signal_outcome_feedback_review_1635_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1635"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for last 20 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as debug trace"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Identify signals issued within the last 20 sessions and review outcomes. Analyze whether targets were hit or stop-losses were triggered. Synthesize lessons learned to refine strategies."
+sql_templates:
+  -
+    template: "WITH recent_signals AS (SELECT id, date_issued, symbol, signal, setup_class, price_at_issue, entry_low, entry_high, stop_loss, target_1, target_2, regime_at_issue, date_resolved, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_issued >= (SELECT MAX(date_issued) FROM signals.signal_log) - INTERVAL '20 sessions' AND date_resolved IS NOT NULL) SELECT rs.id, rs.symbol, rs.signal, rs.price_at_issue, rs.price_at_resolution, rs.return_pct, rs.hit_target, rs.hit_stop FROM recent_signals rs ORDER BY rs.date_issued DESC;"
+    type: "read_only"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure result summaries are clear and actionable."
+  - "Focus on risk management lessons."
+  - "Identify high-impact patterns."
+synthesis_guidance: "['Emphasize actionable insights.', 'Leverage debug trace for clarity in route improvements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:17"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

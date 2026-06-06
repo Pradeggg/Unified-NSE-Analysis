@@ -1,0 +1,63 @@
+created_at: "2026-06-06T12:50:42"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: intraday context; response style: debug trace."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0681_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 3
+  findings:
+    - "market.index_eod.index_return is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    description: "Get index returns for the last three months"
+    sql: "SELECT index_symbol, AVG(change_pct) as index_return FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 months') GROUP BY index_symbol"
+  -
+    description: "Assess stage distribution change for sectors"
+    sql: "SELECT sector, stage, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '3 months') GROUP BY sector, stage"
+  -
+    description: "Identify leading sectors"
+    sql: "SELECT sector, AVG(technical_score) as technical_score FROM scores.stage_snapshots WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '3 months') GROUP BY sector ORDER BY technical_score DESC LIMIT 5"
+  -
+    description: "Find primary swing trading candidates"
+    sql: "SELECT symbol, company_name FROM scores.stage2_vcp_picks WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '3 months') AND vcp_score > 80"
+status: "test_failed"
+synthesis_guidance: "Synthesize findings into a clean and actionable summary highlighting current market regime, sector leadership, and prospective swing candidates."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "intraday_context"
+  - "debug_trace"
+title: "3M Market Rotation Swing Assessment Variant 0681"
+tool_plan_template: "Utilize approved evidence tables to uncover market regime and sector rotation insights. Focus on retrieving Stage 2 opportunities and swing candidates."
+validation_errors:
+  - "market.index_eod.index_return is not approved"
+validation_rules:
+  - "All SQL must be read-only and return aggregated insights fitting the output contract."
+version: 1

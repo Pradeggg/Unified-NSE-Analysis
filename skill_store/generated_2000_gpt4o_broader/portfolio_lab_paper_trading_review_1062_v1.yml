@@ -1,0 +1,69 @@
+id: "portfolio_lab_paper_trading_review_1062_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1062"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: post results; response style: concise table."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for post results: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as concise table"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "post_results"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review the paper trading strategies using the approved tables and provide a concise table with entries, exits, stop loss, targets, and exposure analysis."
+sql_templates:
+  -
+    type: "SELECT"
+    template: "WITH latest_signals AS (SELECT symbol, MAX(date_issued) AS max_date FROM signals.signal_log GROUP BY symbol) SELECT ss.snapshot_date, ss.symbol, ss.stage, ss.stage_score, sl.signal, sl.entry_low, sl.entry_high, sl.stop_loss, sl.target_1, sl.target_2, sl.price_at_resolution, sl.return_pct FROM scores.stage_snapshots AS ss JOIN signals.signal_log AS sl ON ss.symbol = sl.symbol AND sl.date_issued = (SELECT max_date FROM latest_signals WHERE symbol = sl.symbol) WHERE sl.date_resolved IS NOT NULL;"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs: "context"
+    outputs: "result_table"
+    approved_tables:
+      - "portfolio.holdings"
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Intended for creating a concise review by analyzing properties of paper trading strategies\n    # Gather recent snapshots and match with signal outcomes\n    result_table = context['scores.stage_snapshots'].merge(\n        context['signals.signal_log'],\n        how='inner',\n        left_on=['symbol'],\n        right_on=['symbol']\n    )\n    # Filter resolved trades and return as concise table format\n    result_table = result_table[result_table['date_resolved'].notnull()]\n    return result_table[['snapshot_date', 'symbol', 'stage', 'stage_score', 'signal', 'entry_low', 'entry_high', 'stop_loss', 'target_1', 'target_2', 'price_at_resolution', 'return_pct']]"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "check_sql_only_read"
+  - "ensure_status_generated"
+  - "validate_output_structures"
+synthesis_guidance: "Integrate data from approved evidence tables; focus on combining trading signal outcomes with stage snapshots to create a comprehensive summary table."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:56"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run: inputs must be a list"
+  - "run: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "run: inputs must be a list"
+    - "run: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

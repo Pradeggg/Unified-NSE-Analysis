@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:50:22"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: debug trace."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0643_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for last 3 months: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+  -
+    context: "Determine top performing stocks in the portfolio for possible addition."
+    description: "Identify stocks with over 5% increase in the last month."
+    template: "SELECT symbol, company_name, sector, change_1m_pct, stage, stage_score, rsi FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND change_1m_pct > 5;"
+  -
+    context: "Identify stocks for potential trimming due to poor performance."
+    description: "Highlight stocks with over 5% decrease in the last month."
+    template: "SELECT symbol, company_name, sector, change_1m_pct, stage, stage_score, rsi FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND change_1m_pct < -5;"
+status: "test_failed"
+synthesis_guidance: "Focus on recent performance trends and sector exposure, leveraging technical indicators to inform incremental add/trim decisions."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "debug_trace"
+title: "Portfolio Incremental Add Trim Review Variant 0643"
+tool_plan_template: "Analyze portfolio for potential add/trim actions based on recent performance and sector exposure."
+validation_rules:
+  - "Ensure stocks identified align with portfolio strategy and risk tolerance."
+  - "Verify data consistency for the selected timeframe."
+version: 1
+validation_errors:
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"

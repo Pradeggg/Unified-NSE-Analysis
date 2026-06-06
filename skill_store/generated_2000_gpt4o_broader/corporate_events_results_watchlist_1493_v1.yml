@@ -1,0 +1,54 @@
+id: "corporate_events_results_watchlist_1493_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1493"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze corporate events and results to generate watchlist actions."
+sql_templates:
+  -
+    name: "upcoming_events"
+    query: "SELECT symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date >= CURRENT_DATE AND event_type IN ('dividend', 'split', 'bonus', 'AGM') ORDER BY event_date"
+  -
+    name: "recent_results_analysis"
+    query: "SELECT symbol, period_end, growth_yoy_revenue_pct, growth_qoq_revenue_pct FROM scores.results_analysis WHERE period_end >= CURRENT_DATE - INTERVAL '30 days'"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event dates are future dates for 'upcoming_events'"
+  - "Only include stocks with significant YOY or QOQ growth from 'recent_results_analysis'"
+synthesis_guidance: "Focus on upcoming events and results with high impact potential, relevant to Indian market portfolios."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:09:17"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

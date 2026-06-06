@@ -1,0 +1,53 @@
+id: "corporate_events_results_watchlist_0037_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0037"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: concise table."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for last 20 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as concise table"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Select the necessary information on corporate events, results, and stage snapshots to build a sector-relative watchlist for the last 20 sessions."
+sql_templates:
+  -
+    template: "WITH latest_stage AS (\n    SELECT DISTINCT ON (symbol) symbol, sector, market_cap_cat, price, change_1m_pct, stage, trading_signal\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) \n),\nrecent_events AS (\n    SELECT symbol, event_type, event_date, detail\n    FROM signals.corporate_events\n    WHERE event_date >= CURRENT_DATE - INTERVAL '20 days'\n)\nSELECT le.symbol, le.event_type, le.event_date, le.detail, ls.sector, ls.market_cap_cat, ls.price, ls.change_1m_pct, ls.stage, ls.trading_signal\nFROM recent_events le\nJOIN latest_stage ls ON le.symbol = ls.symbol\nWHERE le.event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM')\nORDER BY le.event_date DESC\nLIMIT 50;"
+    description: "Create a concise table for recent corporate events and results with market context."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event_date is within the last 20 sessions."
+  - "Filter for major event types like RESULTS, DIVIDEND, SPLIT, BONUS, and AGM."
+  - "Join with stage snapshots for current market indicators."
+  - "Limit results to 50 for concise output."
+synthesis_guidance: "Present the output as a concise table highlighting symbols with recent or upcoming events, categorized by their sector and current market metrics."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

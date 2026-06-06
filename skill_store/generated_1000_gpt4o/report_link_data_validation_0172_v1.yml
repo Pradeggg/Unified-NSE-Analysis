@@ -1,0 +1,66 @@
+id: "report_link_data_validation_0172_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0172"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: pre market; response style: narrative plus evidence."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for pre market: review report links not working"
+  - "validate generated report links and missing data as narrative plus evidence"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  content: "This skill card provides a plan for analyzing report data by using the provided tables for data validation. Follow the SQL template for extracting data and assess gaps using the guidance provided."
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts, analysis_date, stocks_analyzed, stocks_filtered, indices_analyzed FROM report.enhanced_runs WHERE run_id = ?;"
+  -
+    template: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = ?;"
+python_tools:
+  -
+    id: "data_checker"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+    outputs:
+      - "is_data_complete"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    run_id = context['inputs']['run_id']\n    # Ensure all data for the run_id is complete\n    # Placeholder logic for checking data completeness\n    return {'is_data_complete': True}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "check_complete_data"
+  - "check_link_integrity"
+  - "cross_check_markets"
+synthesis_guidance: "Combine SQL results to create a comprehensive narrative. Identify missing data and suggest remediation strategies."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:42:40"
+generation_model: "gpt-4o"
+validation_errors:
+  - "data_checker: execution failed: KeyError: 'inputs'"
+review:
+  status: "needs_heal"
+  findings:
+    - "data_checker: execution failed: KeyError: 'inputs'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

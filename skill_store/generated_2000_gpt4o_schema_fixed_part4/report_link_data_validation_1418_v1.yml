@@ -1,0 +1,54 @@
+id: "report_link_data_validation_1418_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1418"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: latest EOD; response style: portfolio-aware output."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for latest EOD: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    description: "To validate report links and identify missing data, join tables using `report.enhanced_runs.run_id = report.enhanced_filtered_stocks.run_id`. Apply latest date filter using `run_ts`. Ensure SQL read-only templates are used for data extraction."
+sql_templates:
+  -
+    name: "validate_enhanced_report_data"
+    template: "WITH latest_runs AS (SELECT * FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)) SELECT er.run_id, er.analysis_date, ef.symbol, ef.recommendation FROM latest_runs er LEFT JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id WHERE ef.symbol IS NULL OR ef.recommendation IS NULL;"
+    description: "Identify missing stock data or recommendations in latest enhanced report runs."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure joins are based on approved schema join rules."
+  - "Check for use of latest EOD logic to capture relevant data."
+  - "Use SQL read-only templates; avoid data modifications."
+synthesis_guidance: "['Focus on providing actionable insights into report data integrity.', 'Clarify any missing data segments with a focus on enhancing report quality.', 'Leverage position-sizing context to frame findings with portfolio awareness.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:22"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

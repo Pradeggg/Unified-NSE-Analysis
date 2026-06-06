@@ -1,0 +1,56 @@
+id: "portfolio_incremental_add_trim_0003_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0003"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: today; response style: concise table."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for today: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as concise table"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Review current portfolio holdings; analyze by sector, stage, and score to identify add/trim candidates based on daily changes."
+sql_templates:
+  -
+    description: "Select current holdings with relevant stage and score data."
+    template: "SELECT h.symbol, h.qty, h.avg_cost, s.stage, s.stage_score, s.trend_signal, s.trading_signal, s.change_1d_pct, s.sector FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure only current date data is used."
+  - "Limit analysis to approved tables and columns."
+synthesis_guidance: "Create a concise table summarizing potential add/trim actions focusing on stage and trend signals."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:40:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table h.avg_cost"
+  - "unknown table h.qty"
+  - "unknown table h.symbol"
+  - "unknown table s.change_1d_pct"
+  - "unknown table s.sector"
+  - "unknown table s.snapshot_date"
+  - "unknown table s.stage"
+  - "unknown table s.stage_score"
+  - "unknown table s.symbol"
+  - "unknown table s.trading_signal"
+  - "unknown table s.trend_signal"

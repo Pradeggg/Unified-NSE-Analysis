@@ -1,0 +1,67 @@
+id: "corporate_events_results_watchlist_1311_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1311"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: latest EOD; response style: exceptions and gaps first."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for latest EOD: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as exceptions and gaps first"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  name: "Corporate Events and Results Watchlist Plan"
+  steps:
+    -
+      name: "Identify recent or upcoming corporate events"
+      action: "Use signals.corporate_events to list events within the past week or upcoming within a week."
+      details: "Filter by event_date relative to CURRENT_DATE for quick scan."
+    -
+      name: "Analyze results associated with events"
+      action: "Use scores.results_analysis for detailed results metrics."
+      details: "Align based on symbols and fetch latest results using period_end."
+    -
+      name: "Add stage and technical context"
+      action: "Join results with scores.stage_snapshots to augment with stage-level data."
+      details: "Join symbols and use latest snapshot_date for context."
+sql_templates:
+  -
+    title: "Corporate Event and Results Context"
+    description: "Select symbols with recent or upcoming corporate events and results."
+    sql: "WITH recent_events AS (\n  SELECT symbol, event_type, event_date, detail, source\n  FROM signals.corporate_events\n  WHERE event_date >= CURRENT_DATE - INTERVAL '1 week'\n  AND event_date <= CURRENT_DATE + INTERVAL '1 week'\n), recent_results AS (\n  SELECT DISTINCT ON (symbol) symbol, period_end, verdict, score\n  FROM scores.results_analysis\n  ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC\n), symbol_context AS (\n  SELECT s.symbol, s.company_name, s.stage, s.trading_signal\n  FROM scores.stage_snapshots s\n  WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n)\nSELECT e.symbol, e.event_type, e.event_date, r.verdict, r.score, sc.stage, sc.trading_signal\nFROM recent_events e\nLEFT JOIN recent_results r ON e.symbol = r.symbol\nLEFT JOIN symbol_context sc ON e.symbol = sc.symbol\nLIMIT 50;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Event dates must be within one week of current date."
+  - "Result context should include the most recent verdict and score."
+  - "Stage and trading signal context must reflect the latest snapshot."
+synthesis_guidance: "{'guidelines': ['Focus on exceptions and gaps first in the output.', 'Ensure the output reflects the latest EOD data with quick actionable insights.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,52 @@
+id: "report_link_data_validation_0760_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0760"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: quarter to date; response style: QA checklist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for quarter to date: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Select the latest enhanced runs and their respective filtered stocks for potential data validation."
+    template: "WITH latest_runs AS (SELECT * FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '3 months'), filtered_data AS (SELECT er.run_id, er.run_ts, er.analysis_date, es.symbol, es.current_price FROM report.enhanced_filtered_stocks es JOIN latest_runs er ON es.run_id = er.run_id) SELECT * FROM filtered_data;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure that all generated report links are accessible."
+  - "Verify that the underlying HTML files contain necessary data."
+  - "Validate that all necessary data for TradingView export exists within the selected timeframe."
+synthesis_guidance: "['Use the join between report.enhanced_runs and report.enhanced_filtered_stocks for cross-referencing validation.', 'Focus on identifying any missing stock data in the quarter-to-date timeframe.', 'Ensure validation rules match the response style of a QA checklist.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:31"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

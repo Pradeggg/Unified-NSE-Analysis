@@ -1,0 +1,57 @@
+id: "signal_outcome_feedback_review_1733_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Analysis"
+description: "Analyze the outcomes of past signals to improve strategy. Focus is on daily refresh follow-up, examining the last 20 sessions."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "identify successful and unsuccessful recommendations"
+  - "analyze outcomes for insights"
+tags:
+  - "signal_log"
+  - "outcome_analysis"
+  - "strategy_improvement"
+  - "daily_review"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  python_tools:
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+    outputs:
+      - "insights"
+      - "strategy_recommendations"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+    code: "# Analyze signals to gather insights\n\ndef run(context):\n    signals = context['signals.signal_log']\n    snapshots = context['scores.stage_snapshots']\n    # Example analysis logic\n    successful_signals = signals[signals['hit_target'] == 1]\n    failed_signals = signals[signals['hit_stop'] == 1]\n    insights = {\n        'successful_count': len(successful_signals),\n        'failed_count': len(failed_signals)\n    }\n    strategy_recommendations = []\n    return insights, strategy_recommendations"
+sql_templates:
+  -
+    name: "fetch_outcomes"
+    template: "SELECT id, date_issued, symbol, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= DATEADD(day, -20, GETDATE());"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "success_patterns"
+  - "failure_patterns"
+  - "strategy_improvements"
+  - "next_step_checks"
+validation_rules:
+  - "Ensure data integrity"
+  - "Validate signal outcomes for proper categorization"
+synthesis_guidance: "['Provide clear summary of outcomes', 'Identify key patterns in successful and failed signals', 'Suggest strategic improvements based on data']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:29"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.dateadd is not approved"
+  - "signals.signal_log.day is not approved"
+  - "signals.signal_log.getdate is not approved"

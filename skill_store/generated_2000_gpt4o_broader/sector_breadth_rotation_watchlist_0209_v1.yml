@@ -1,0 +1,73 @@
+id: "sector_breadth_rotation_watchlist_0209_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0209"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: today; response style: ranked candidates."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for today: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as ranked candidates"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "today"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  status: "generated"
+  plan:
+    - "Rank sectors by change_5d and breadth_signal from breadth.sector_daily."
+    - "Validate stage 2 participation using stage2_pct from breadth.ma_pct_above."
+    - "Identify symbols with highest stage_score and relative_strength for each sector from scores.stage_snapshots."
+    - "Compile TradingView symbols based on improving sectors and candidate symbols."
+sql_templates:
+  -
+    name: "RankSectors"
+    status: "generated"
+    query: "SELECT sector, change_5d, breadth_signal FROM breadth.sector_daily WHERE snapshot_date = CURRENT_DATE ORDER BY change_5d DESC;"
+  -
+    name: "Stage2Participation"
+    status: "generated"
+    query: "SELECT sector, stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date = CURRENT_DATE AND stage2_pct > 0.5 ORDER BY stage2_pct DESC;"
+python_tools:
+  -
+    id: "sector_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_data"
+      - "stage_data"
+    outputs:
+      - "ranked_sectors"
+      - "candidate_symbols"
+    approved_tables:
+      - "breadth.sector_daily"
+      - "breadth.ma_pct_above"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    sector_ranks = context['sector_data'].sort_values(by='change_5d', ascending=False)\n    improving_sectors = sector_ranks[sector_ranks['stage2_pct'] > 0.5]\n    candidate_symbols = context['stage_data'][(context['stage_data']['stage'] == 2) & (context['stage_data']['relative_strength'] > 50)]['symbol']\n    return {'ranked_sectors': improving_sectors, 'candidate_symbols': candidate_symbols}"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "rule_set"
+synthesis_guidance: "{'guidance': ['Combine sector and symbol insights to generate comprehensive watchlist.', 'Prioritize symbols with high relative_strength in improving sectors.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:39"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.sector is not approved"

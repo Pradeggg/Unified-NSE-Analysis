@@ -1,0 +1,76 @@
+id: "vcp_breakouts_with_fundamentals_0286_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0286"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+  conditions:
+    - "market_cap_cr > 1000"
+    - "vcp_score > 75"
+    - "enhanced_fund_score > 80"
+tool_plan_template: "Plan the query process focusing on freshness audit, especially targeting intraday metrics. Use snapshot_date and live_price from the approved tables."
+sql_templates:
+  -
+    description: "Identify VCP breakout stocks meeting fundamental criteria."
+    template: "SELECT vcp.symbol, vcp.company_name, vcp.price, vcp.live_price, vcp.vcp_score, ss.enhanced_fund_score FROM scores.stage2_vcp_picks vcp JOIN scores.stage_snapshots ss ON vcp.symbol = ss.symbol WHERE vcp.vcp_breakout_pct > 5 AND ss.enhanced_fund_score > 80 AND vcp.live_price > (SELECT MAX(ep.prev_close) FROM market.equity_eod ep WHERE ep.symbol = vcp.symbol AND ep.trade_date > current_date - interval '10 days')"
+python_tools:
+  -
+    id: "run_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "equity_eod_data"
+      - "stage_snapshots_data"
+      - "vcp_picks_data"
+    outputs:
+      - "ranked_candidates"
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    vcp_candidates = context['vcp_picks_data']\n    vcp_candidates = sorted(vcp_candidates, key=lambda x: (x['vcp_score'], x['enhanced_fund_score']), reverse=True)\n    ranked_candidates = [{'symbol': v['symbol'], 'score': v['vcp_score']} for v in vcp_candidates]\n    return ranked_candidates"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure market_cap_cr, vcp_score, and enhanced_fund_score are considered."
+  - "Check intraday context with live_price accuracy."
+synthesis_guidance: "Rank the stocks based on vcp_score and enhanced_fund_score. Ensure intraday analysis is evident in the results."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:44:15"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table ep.prev_close"
+  - "unknown table ep.symbol"
+  - "unknown table ep.trade_date"
+  - "unknown table ss.enhanced_fund_score"
+  - "unknown table ss.symbol"
+  - "unknown table vcp.company_name"
+  - "unknown table vcp.live_price"
+  - "unknown table vcp.price"
+  - "unknown table vcp.symbol"
+  - "unknown table vcp.vcp_breakout_pct"
+  - "unknown table vcp.vcp_score"

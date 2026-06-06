@@ -1,0 +1,70 @@
+id: "fii_dii_regime_breadth_review_0162_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0162"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: post results; response style: narrative plus evidence."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for post results: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as narrative plus evidence"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "post_results"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  regime: "Analyze the latest regime from `signals.regime_history` with the confidence level and days in regime."
+  flow_context: "Examine FII/DII net flows from `signals.fii_dii_flows` and identify the flow trend labels."
+  breadth_context: "Evaluate market breadth using `breadth.market_daily` with key metrics like advances, declines, and TRIN."
+  index_confirmation: "Cross-verify the market context through `market.index_eod` for major indices with technical indicators."
+  risk_flags: "Identify potential risk flags by integrating data from all tables."
+sql_templates:
+  -
+    name: "base_regime_analysis"
+    query: "SELECT trade_date, regime, confidence, days_in_regime FROM signals.regime_history ORDER BY trade_date DESC LIMIT 1;"
+    description: "Fetch the latest regime details."
+  -
+    name: "base_fii_dii_flows"
+    query: "SELECT trade_date, fii_net_today, dii_net_today, flow_signal, fii_trend, dii_trend FROM signals.fii_dii_flows ORDER BY trade_date DESC LIMIT 1;"
+    description: "Fetch the latest FII/DII flows and trends."
+  -
+    name: "base_market_breadth"
+    query: "SELECT trade_date, advances, declines, ad_signal, market_sentiment FROM breadth.market_daily ORDER BY trade_date DESC LIMIT 1;"
+    description: "Fetch the latest market breadth indicators."
+  -
+    name: "base_index_eod_analysis"
+    query: "SELECT trade_date, index_symbol, close, change_pct, rsi FROM market.index_eod WHERE index_symbol = 'NIFTY' ORDER BY trade_date DESC LIMIT 1;"
+    description: "Fetch the latest EOD data for the NIFTY index."
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "Do not create or modify database records."
+synthesis_guidance: "['Integrate regime, flow, breadth, and index data to narratively assess market risk conditions.', 'Highlight key trends and contextual evidence in the narrative.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

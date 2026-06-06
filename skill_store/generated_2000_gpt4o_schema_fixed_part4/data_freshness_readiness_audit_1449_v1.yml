@@ -1,0 +1,57 @@
+id: "data_freshness_readiness_audit_1449_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit"
+description: "Assess if Agent Adda sources are current for workflows over the last 3 months, focusing on source-trail validation."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "source-trail_validation"
+  - "last_3_months"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    inputs:
+      -
+        name: "Timeframe"
+        type: "interval"
+        description: "Last 3 months"
+    steps:
+      - "Query the latest data from specified tables for the past 3 months."
+      - "Identify missing or outdated records."
+      - "Generate recommendations for maintaining data freshness."
+sql_templates:
+  -
+    template: "SELECT * FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+    description: "Fetch index EOD data for the last 3 months."
+  -
+    template: "SELECT * FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+    description: "Fetch equity EOD data for the last 3 months."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "verification_queries"
+validation_rules:
+  - "Data should not be older than 3 months."
+  - "All required tables must have recent entries."
+synthesis_guidance: "['Summarize freshness status.', 'Highlight any critical missing data issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

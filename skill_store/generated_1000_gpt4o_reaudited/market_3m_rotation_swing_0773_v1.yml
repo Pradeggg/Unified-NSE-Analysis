@@ -1,0 +1,68 @@
+created_at: "2026-06-06T12:51:25"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: pre market; response style: QA checklist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0773_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Get the most recent trading date"
+    query: "SELECT MAX(trade_date) as as_of_date FROM market.index_eod;"
+  -
+    description: "Calculate index returns over the last 3 months"
+    query: "SELECT index_symbol, (MAX(close)/MIN(close) - 1) * 100 as change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol;"
+  -
+    description: "Identify changes in distribution of market stages"
+    query: "WITH recent_stages AS (SELECT stage, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY stage) SELECT * FROM recent_stages;"
+  -
+    description: "Identify leading sectors in Stage 2"
+    query: "SELECT sector, COUNT(*) as count FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY count DESC LIMIT 5;"
+  -
+    description: "Identify top swing trade candidates"
+    query: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 5;"
+status: "test_failed"
+synthesis_guidance: "Integrate quantitative findings with qualitative market conditions to provide a comprehensive QA checklist format. Highlight key movements and risks."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "QA_checklist"
+title: "3M Market Rotation Swing Assessment Variant 0773"
+tool_plan_template:
+  as_of_date: "what was the most recent trading date available?"
+  index_returns: "what were the index returns over the last 3 months?"
+  leading_sectors: "which sectors emerged as leaders in Stage 2 over the last 3 months?"
+  primary_candidates: "who are the top swing trade candidates based on Stage 2 VCP characteristics?"
+  risks: "what are the prevailing risks in the current market environment?"
+  stage_distribution_change: "how did the distribution of market stages change over the last 3 months?"
+validation_rules:
+  - "Ensure all calculations are based on the most recent data."
+  - "Verify that index returns calculations are accurate and account for splits or other adjustments."
+  - "Ensure sector leadership is determined by the number of Stage 2 occurrences."
+version: 1
+validation_errors:
+  - "market.index_eod.as_of_date is not approved"

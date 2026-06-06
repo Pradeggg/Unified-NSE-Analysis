@@ -1,0 +1,73 @@
+id: "signal_outcome_feedback_review_0627_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0627"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: debug trace."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for last 5 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as debug trace"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  evidence_gathering:
+    inputs:
+      symbol: "<symbol_input>"
+      session_limit: 5
+    steps:
+      -
+        SQL:
+          query: "SELECT symbol, date_issued, sector, company, price_at_issue, hit_target, hit_stop FROM signals.signal_log WHERE date_issued >= (SELECT MAX(date_issued) FROM signals.signal_log) - INTERVAL '5 sessions' ORDER BY date_issued DESC;"
+          tables:
+            - "signals.signal_log"
+      -
+        SQL:
+          query: "SELECT symbol, snapshot_date, stage, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+          tables:
+            - "scores.stage_snapshots"
+      -
+        SQL:
+          query: "SELECT symbol, trade_date, close FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+          tables:
+            - "market.equity_eod"
+sql_templates:
+  -
+    description: "Retrieve signal log data for the last 5 sessions."
+    template: "SELECT * FROM signals.signal_log WHERE date_issued >= (SELECT MAX(date_issued) - INTERVAL '5 sessions' FROM signals.signal_log) FOR UPDATE NOWAIT;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure that the date filtering is limited to the last 5 sessions."
+  - "Check if any missing symbols or dates are in evidence_gaps."
+  - "Verify outcome categorization between hit_target and hit_stop."
+synthesis_guidance: "Construct a debug trace summarizing signal successes and failures in a sector-relative context for the past 5 trading sessions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

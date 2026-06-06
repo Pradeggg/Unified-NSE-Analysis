@@ -1,0 +1,67 @@
+created_at: "2026-06-06T12:49:18"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: research-only summary."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0583_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for intraday context: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as research-only summary"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze stages and signals to suggest add/trim\n    add_candidates = []\n    trim_candidates = []\n    for record in context['stage_snapshots']:\n        if record['trend_signal'] == 'bullish' and record['stage_score'] > 7:\n            add_candidates.append(record['symbol'])\n        elif record['trend_signal'] == 'bearish' and record['stage_score'] < 3:\n            trim_candidates.append(record['symbol'])\n    return {'add_candidates': add_candidates, 'trim_candidates': trim_candidates}"
+    id: "stage_analysis"
+    inputs:
+      - "stage_snapshots"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "add_candidates"
+      - "trim_candidates"
+sql_templates:
+  -
+    query: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+    template_name: "current_holdings"
+  -
+    query: "SELECT symbol, stage, stage_score, trend_signal, sector FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+    template_name: "stage_snapshots"
+status: "test_failed"
+synthesis_guidance: "Use stage and trend signals from 'scores.stage_snapshots' combined with current holdings data to develop a research-focused summary on add/trim actions."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh-follow-up"
+  - "intraday_context"
+  - "research-only_summary"
+title: "Portfolio Incremental Add Trim Review Variant 0583"
+tool_plan_template:
+
+validation_rules:
+  - "Ensure all symbols in 'portfolio.holdings' are covered in 'scores.stage_snapshots'."
+  - "Correlate stage and trend signals to identify add/trim candidates."
+version: 1
+validation_errors:
+  - "stage_analysis: execution failed: KeyError: 'stage_snapshots'"
+review:
+  status: "needs_heal"
+  findings:
+    - "stage_analysis: execution failed: KeyError: 'stage_snapshots'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

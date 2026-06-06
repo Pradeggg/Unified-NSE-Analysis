@@ -1,0 +1,64 @@
+id: "sector_breadth_rotation_watchlist_1805_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1805"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: risk-first review; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "risk-first review for today: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as action watchlist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "risk-first_review"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  summary: "Generate a ranked list of sectors and stocks for the watchlist by evaluating sector breadth, stage migration, and technical scores."
+  steps:
+    - "Rank sectors based on percentage above 50DMA and breadth signal."
+    - "Identify sectors with significant Stage 2 participation."
+    - "Select stocks with high stage score and relative strength in improving sectors."
+    - "Prepare TradingView symbols from selected stocks."
+sql_templates:
+  -
+    name: "RankSectorsByBreadth"
+    query: "SELECT sector, pct_above_50dma, change_5d, breadth_signal FROM breadth.sector_daily WHERE snapshot_date = CURRENT_DATE ORDER BY pct_above_50dma DESC, change_5d DESC"
+  -
+    name: "IdentifyStage2Participation"
+    query: "SELECT sector, stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date = CURRENT_DATE AND stage2_pct > 20 ORDER BY stage2_pct DESC"
+  -
+    name: "SelectTopStocks"
+    query: "SELECT symbol, company_name, sector, stage_score, relative_strength FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE AND stage_score > 80 AND relative_strength > 70 ORDER BY stage_score DESC, relative_strength DESC"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+synthesis_guidance: "{'contextual_factors': ['Market conditions and volatility.', 'Sector-specific news and developments.'], 'interpretation_notes': ['Focus on sectors with upward momentum and strong technical indicators.', 'Prioritize stocks with robust stage scores and relative strength.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:15"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.sector is not approved"

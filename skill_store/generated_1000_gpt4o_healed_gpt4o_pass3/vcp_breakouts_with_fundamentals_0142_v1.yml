@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:42:19"
+created_by: "llm_generated"
+description: "Find VCP breakout stocks and those creating new highs with strong fundamentals and liquidity. Focus on deep institutional review over the last 3 months; response includes narrative with evidence."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0142_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Filter stocks that have reached new highs or experienced VCP breakouts with strong fundamentals in the last 3 months."
+    template: "WITH recent_highs AS (SELECT symbol, MAX(close) AS recent_high FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY symbol) SELECT a.symbol, a.company_name, a.sector, a.enhanced_fund_score, a.vcp_score FROM scores.stage2_vcp_picks a JOIN recent_highs b ON a.symbol = b.symbol WHERE a.snapshot_date >= CURRENT_DATE - INTERVAL '3 months' AND (a.vcp_score > 80 OR b.recent_high = a.price) AND a.enhanced_fund_score > 75"
+status: "validated"
+synthesis_guidance: "Use SQL templates to identify stocks matching criteria, ensuring strong foundational analysis with institutional review insights. Provide narrative with evidence."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+title: "VCP Breakouts With Fundamentals Variant 0142"
+tool_plan_template:
+
+validation_errors:
+
+validation_rules:
+  - "All SQL statements must be read-only."
+  - "Evidence gathering should leverage only approved tables."
+  - "Output must provide narrative and evidence."
+version: 1

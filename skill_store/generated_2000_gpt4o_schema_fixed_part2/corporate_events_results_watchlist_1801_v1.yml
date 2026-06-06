@@ -1,0 +1,55 @@
+id: "corporate_events_results_watchlist_1801_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1801"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for today: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as action watchlist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Extract current corporate event data with recent results for actionable watchlist."
+sql_templates:
+  -
+    template_name: "event_watchlist_query"
+    description: "Retrieve upcoming or recent corporate events along with analysis and stage details."
+    sql: "SELECT ce.symbol, ce.event_type, ce.event_date, sa.stage, sa.trading_signal, ra.verdict, ra.growth_yoy_revenue_pct FROM signals.corporate_events AS ce JOIN scores.stage_snapshots AS sa ON ce.symbol = sa.symbol JOIN scores.results_analysis AS ra ON ce.symbol = ra.symbol WHERE ce.event_date = CURRENT_DATE AND sa.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY ce.event_date DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "type"
+  - "scope"
+  - "expected_frequency"
+  - "check_completeness"
+  - "check_freshness"
+synthesis_guidance: "{'type': 'event_summary', 'style': 'brief_analysis'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

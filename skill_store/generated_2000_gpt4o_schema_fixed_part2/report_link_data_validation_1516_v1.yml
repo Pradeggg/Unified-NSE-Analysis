@@ -1,0 +1,52 @@
+id: "report_link_data_validation_1516_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1516"
+description: "Validate enhanced report run metadata and stock data for freshness and accuracy. Focus on latest EOD data in the Indian market context."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for latest EOD: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "latest_EOD"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  problem: "Identifying issues with report links and missing stock data for the latest report."
+  solution: "Utilize SQL queries to inspect the integrity and freshness of the data linked to reports."
+sql_templates:
+  -
+    query: "SELECT r.run_id, r.run_ts, r.analysis_date, f.symbol, f.recommendation FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks f ON r.run_id = f.run_id WHERE r.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) LIMIT 100"
+    description: "Fetch latest report run with stock symbols and recommendations."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure the latest run timestamp is used."
+  - "Check for missing stock entries within the latest datasets."
+synthesis_guidance: "Summarize findings on report link integrity and stock data availability at the latest end-of-day, emphasizing research context only."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

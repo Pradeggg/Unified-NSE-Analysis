@@ -1,0 +1,66 @@
+id: "fii_dii_regime_breadth_review_0386_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0386"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: intraday context; response style: exceptions and gaps first."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for intraday context: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as exceptions and gaps first"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "intraday_context"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Use the given evidence tables to audit the market regime and institutional flows. Focus on identifying exceptions and gaps in the latest intraday context."
+sql_templates:
+  -
+    template: "WITH latest_flows AS (SELECT * FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows)), latest_regime AS (SELECT * FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history)), latest_breadth AS (SELECT * FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily)), latest_index AS (SELECT * FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod AND index_symbol = 'NIFTY 50')) SELECT fl.trade_date, fl.flow_signal, fl.fii_trend, fl.dii_trend, rg.regime, rg.confidence, br.ad_signal, br.market_sentiment, ix.trend_signal FROM latest_flows fl JOIN latest_regime rg ON fl.trade_date = rg.trade_date JOIN latest_breadth br ON fl.trade_date = br.trade_date JOIN latest_index ix ON fl.trade_date = ix.trade_date;"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "audited_context"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context):\n    # Analyze latest market regime, flows, breadth, and index data\n    # Audit for exceptions and gaps\n    audited_context = {'status': 'audit_complete', 'context': context}\n    return audited_context"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "intraday_context_check"
+  - "exceptions_and_gaps_highlight"
+synthesis_guidance: "{'focus': 'Assess the combination of flow trends, market regime, and breadth against intraday signals for a comprehensive market risk analysis, with a focus on anomalies or unexpected trends.', 'style': 'Present explanations clearly with an emphasis on exceptions and unaddressed gaps in data.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run: missing output audited_context"
+review:
+  status: "needs_heal"
+  findings:
+    - "run: missing output audited_context"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

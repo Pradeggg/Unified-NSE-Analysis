@@ -1,0 +1,52 @@
+id: "fii_dii_regime_breadth_review_1366_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1366"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: post results; response style: exceptions and gaps first."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for post results: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as exceptions and gaps first"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "post_results"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Evaluate latest regime, flow, and breadth evidence; identify risk flags and data exceptions."
+sql_templates:
+  -
+    query: "WITH latest_flow AS (SELECT * FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows)), latest_regime AS (SELECT * FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history)), latest_breadth AS (SELECT * FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily)), latest_index AS (SELECT * FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND index_symbol = 'Nifty 50') SELECT latest_flow.trade_date, latest_flow.fii_net_today, latest_flow.dii_net_today, latest_flow.flow_signal, latest_regime.regime, latest_regime.confidence, latest_breadth.advances, latest_breadth.declines, latest_breadth.market_sentiment, latest_index.close, latest_index.trend_signal FROM latest_flow JOIN latest_regime ON latest_flow.trade_date = latest_regime.trade_date JOIN latest_breadth ON latest_flow.trade_date = latest_breadth.trade_date JOIN latest_index ON latest_flow.trade_date = latest_index.trade_date;"
+    description: "Fetches the latest readings across FII/DII flows, regime, market breadth, and index data."
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure no schema violations."
+  - "Messages should highlight exceptions and gaps."
+synthesis_guidance: "Combine evidence to deduce the current market risk context; prioritize exception reporting."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:40"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

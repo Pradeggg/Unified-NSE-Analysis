@@ -1,0 +1,67 @@
+id: "market_3m_rotation_swing_0001_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0001"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: today; response style: concise table."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  type: "evidence_gathering"
+  tasks:
+    - "Assess market regime and returns for indexes over the last 3 months."
+    - "Identify sectors leading in Stage 2 advancement using snapshots."
+    - "Pinpoint liquid swing candidates from VCP picks."
+sql_templates:
+  -
+    description: "Fetch index returns over the last 3 months"
+    sql: "SELECT index_symbol, AVG(change_pct) as average_return FROM market.index_eod WHERE trade_date >= DATEADD(month, -3, CURRENT_DATE) GROUP BY index_symbol"
+  -
+    description: "Identify sectors leading in Stage 2 advances"
+    sql: "SELECT sector, COUNT(*) as count FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= DATEADD(month, -3, CURRENT_DATE) GROUP BY sector ORDER BY count DESC"
+  -
+    description: "Fetch swing candidates from VCP picks"
+    sql: "SELECT symbol, company_name, price, live_price, rsi, relative_strength FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATEADD(month, -3, CURRENT_DATE) ORDER BY vcp_score DESC LIMIT 10"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure index_returns table includes all major indexes."
+  - "Verify leading sectors calculation reflects recent data correctly."
+  - "Primary candidates must have valid current market data."
+synthesis_guidance: "['Present a concise table summarizing the findings.', 'Highlight key takeaways and actionable insights focused on liquidity and momentum.', 'Capture any qualitative insights or evident data gaps.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.average_return is not approved"
+  - "market.index_eod.dateadd is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage2_vcp_picks.dateadd is not approved"
+  - "scores.stage2_vcp_picks.month is not approved"
+  - "scores.stage_snapshots.dateadd is not approved"
+  - "scores.stage_snapshots.month is not approved"

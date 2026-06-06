@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:52:27"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: pre market; response style: action watchlist."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0879_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for pre market: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as action watchlist"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select portfolio holdings with bullish trend signals and strong scores for potential addition."
+    template: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), holding_details AS (SELECT h.symbol, h.qty, h.avg_cost, s.stage, s.stage_score, s.technical_score, s.trend_signal, s.price, s.live_price FROM portfolio.holdings h LEFT JOIN latest_snapshots s ON h.symbol = s.symbol) SELECT symbol, qty, avg_cost, stage, stage_score, technical_score, trend_signal, price, live_price FROM holding_details WHERE trend_signal = 'bullish' AND stage_score > 7 and technical_score > 75;"
+  -
+    description: "Select portfolio holdings with bearish trend signals and a weekly decline for potential trimming."
+    template: "WITH holding_trends AS (SELECT h.symbol, s.trend_signal, s.change_1w_pct FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT symbol FROM holding_trends WHERE trend_signal = 'bearish' AND change_1w_pct < -5;"
+status: "validated"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "pre_market"
+  - "action_watchlist"
+title: "Portfolio Incremental Add Trim Review Variant 0879"
+tool_plan_template:
+
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

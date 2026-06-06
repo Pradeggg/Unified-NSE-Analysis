@@ -1,0 +1,71 @@
+id: "data_freshness_readiness_audit_1393_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1393"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for weekly review: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as exceptions and gaps first"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    steps:
+      -
+        step: "Check latest trade dates for EOD data in all tables."
+      -
+        step: "Identify any missing tables or stale data points."
+      -
+        step: "Assess loader actions to catch up the data if stale."
+      -
+        step: "Surface exceptions and blocking gaps for attention."
+      -
+        step: "Generate queries for data verification."
+sql_templates:
+  -
+    description: "Find the latest trade date for equity EOD data"
+    query: "SELECT MAX(trade_date) AS latest_equity_trade_date FROM market.equity_eod"
+  -
+    description: "Find stale data if the Equity EOD is not updated"
+    query: "SELECT symbol FROM market.equity_eod WHERE trade_date < CURRENT_DATE - INTERVAL '1 week'"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "{'rules': ['Ensure freshness_matrix reflects up-to-date data status.', 'Validate missing_sources list incomplete data context.', 'Identify loader_actions needed for stale data resolution.']}"
+synthesis_guidance: "['Focus on identifying and highlighting stale data first.', 'Provide actionable insights on loader adjustments.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:25"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_equity_trade_date is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "market.equity_eod.latest_equity_trade_date is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

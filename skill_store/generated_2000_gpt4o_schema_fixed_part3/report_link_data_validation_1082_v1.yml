@@ -1,0 +1,54 @@
+id: "report_link_data_validation_1082_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Link Validation"
+description: "Agent Adda skill card for validating enhanced report links and identifying missing data, tailored for the Indian market, focusing on deep institutional review within an intraday context."
+input_patterns:
+  - "validate generated report links and missing data"
+  - "deep institutional review for intraday context: review report links not working"
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "intraday_context"
+  - "india_market"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  description: "Validates report links and data by querying relevant database tables."
+  inputs:
+    - "run_id"
+  outputs:
+    - "findings"
+    - "broken_links"
+    - "missing_data"
+    - "remediation"
+    - "verification"
+sql_templates:
+  -
+    template_id: "validate_data_presence"
+    description: "Check for missing stock data in enhanced reports."
+    sql: "SELECT r.run_id, COUNT(s.symbol) AS missing_count FROM report.enhanced_runs r LEFT JOIN report.enhanced_filtered_stocks s ON r.run_id = s.run_id WHERE s.symbol IS NULL GROUP BY r.run_id;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "status"
+  - "constraints"
+synthesis_guidance: "Summarize findings in a concise table focusing on missing data and broken links for intraday analysis."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:58"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

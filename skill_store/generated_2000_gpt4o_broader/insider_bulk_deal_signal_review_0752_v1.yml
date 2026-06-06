@@ -1,0 +1,58 @@
+id: "insider_bulk_deal_signal_review_0752_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0752"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: quarter to date; response style: QA checklist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for quarter to date: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as QA checklist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  sql_templates:
+    -
+      description: "Fetch recent insider alerts and bulk/block deals."
+      sql: "SELECT ia.symbol, ia.entity, ia.qty, ia.value_cr, ia.alert_date, bb.deal_date, bb.side, bb.price FROM signals.insider_alerts AS ia INNER JOIN signals.bulk_block_deals AS bb ON ia.symbol = bb.symbol WHERE ia.created_at >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND bb.created_at >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH);"
+    -
+      description: "Retrieve technical confirmation for symbols."
+      sql: "SELECT ss.symbol, ss.trend_signal, ss.supertrend_state, ss.rsi, ss.technical_score FROM scores.stage_snapshots AS ss WHERE ss.snapshot_date = (SELECT MAX(ss2.snapshot_date) FROM scores.stage_snapshots AS ss2 WHERE ss2.symbol = ss.symbol);"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure strict compliance with evidence_required tables."
+  - "Do not exceed read-only operations in SQL templates."
+  - "Implement output structure to match output_contract."
+synthesis_guidance: "Focus on deriving insights from structured data using read-only operations. Utilize SQL for data retrieval, and if complexity arises, propose a Python tool with restricted capabilities. Interpret results in the context of the Indian market for institutional insights."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,83 @@
+id: "sector_breadth_rotation_watchlist_1651_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1651"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for quarter to date: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as debug trace"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Combine sector breadth metrics with stage migration data to rank sectors. Identify improving sectors and potential stocks for TradingView."
+sql_templates:
+  -
+    select_sectors: "SELECT s.sector, s.pct_above_50dma, s.change_5d, m.stage2_pct FROM breadth.sector_daily s JOIN breadth.ma_pct_above m ON s.snapshot_date = m.snapshot_date WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) ORDER BY m.stage2_pct DESC, s.pct_above_50dma DESC LIMIT 5;"
+  -
+    select_stocks: "SELECT ss.symbol, ss.company_name, ss.price, ss.trading_signal FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.stage = 'STAGE_2' AND ss.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+python_tools:
+  -
+    run:
+      id: "sector_analysis_tool"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "sector_data"
+        - "stage_snapshots"
+      outputs:
+        - "sector_ranks"
+        - "candidate_symbols"
+      approved_tables:
+        - "breadth.sector_daily"
+        - "scores.stage_snapshots"
+      code: "def run(context):\n    # Analyze sector data and stage snapshots\n    sector_ranks = sorted(context['sector_data'], key=lambda x: x['stage2_pct'], reverse=True)\n    candidate_symbols = [s for s in context['stage_snapshots'] if s['trading_signal'] in ('BUY', 'STRONG_BUY')]\n    return {'sector_ranks': sector_ranks, 'candidate_symbols': candidate_symbols[:10]}"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure unique sectors in sector_ranks."
+  - "Limit candidate_symbols to 10 stocks."
+  - "Improving_sectors should match input_patterns."
+synthesis_guidance: "['Use debugging trace to understand sector performance shifts.', 'Emphasize sectors with high stage 2 participation and momentum.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:48"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: language must be python"
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: code is required"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: language must be python"
+    - "<missing-id>: mode must be read_only"
+    - "<missing-id>: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

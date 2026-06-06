@@ -1,0 +1,49 @@
+id: "corporate_events_results_watchlist_1451_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1451"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for quarter to date: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Retrieve and analyze corporate event data for Indian markets, focusing on relevant actions for watchlists and summarizing findings with evidence trails."
+sql_templates:
+  -
+    name: "Upcoming_Corporate_Events"
+    template: "SELECT id, symbol, event_type, event_date, detail, source FROM signals.corporate_events WHERE event_date BETWEEN CURRENT_DATE AND DATE_ADD(CURRENT_DATE, INTERVAL 1 MONTH) AND event_type IN ('Results', 'Dividends', 'Splits', 'Bonus', 'AGM');"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event_date is within the current quarter."
+  - "Verify all source_trail links are valid."
+  - "Check that symbols have corresponding results analysis."
+synthesis_guidance: "Focus on delivering actionable insights with a clear connection to portfolio strategies. Prioritize significant events with robust source-trail documentation."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.corporate_events.date_add is not approved"
+  - "signals.corporate_events.month is not approved"

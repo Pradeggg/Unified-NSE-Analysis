@@ -1,0 +1,60 @@
+id: "fii_dii_regime_breadth_review_1380_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1380"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: pre market; response style: exceptions and gaps first."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for pre market: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as exceptions and gaps first"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    context_extraction: "Extract and validate FII/DII flows, market regime, breadth, and index contexts for the latest trade date."
+    output_format: "exceptions_and_gaps_first"
+    response_style: "Provide context exceptions and identify evidence gaps."
+    constraints:
+      - "Use approved schema for tables and join rules."
+      - "Adhere to global SQL rules using PostgreSQL syntax."
+sql_templates:
+  flows_and_regime: "SELECT f.trade_date, f.fii_net_today, f.dii_net_today, r.regime, r.confidence FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date WHERE f.trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+  breadth_analysis: "SELECT b.trade_date, b.advances, b.declines, b.market_sentiment FROM breadth.market_daily b JOIN signals.fii_dii_flows f ON b.trade_date = f.trade_date WHERE b.trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+  index_confirmation: "SELECT i.trade_date, i.index_symbol, i.close, i.trend_signal FROM market.index_eod i WHERE i.trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND i.index_symbol IN ('Nifty 50', 'Nifty Bank');"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data completeness for the trade date."
+  - "Verify regime and flow context consistency."
+  - "Check for discrepancies in breadth and index confirmations."
+synthesis_guidance: "['Focus on highlighting exceptions in regime and flow contexts.', 'Identify gaps where breadth signals contradict flow or regime evidence.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

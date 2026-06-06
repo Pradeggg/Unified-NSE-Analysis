@@ -1,0 +1,91 @@
+id: "insider_bulk_deal_signal_review_1466_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1466"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for post results: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as portfolio-aware output"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  required_function: "run(context)"
+  language: "python"
+  mode: "read_only"
+  inputs:
+    - "symbol"
+    - "deal_date"
+    - "alert_date"
+  outputs:
+    - "deal_summary"
+    - "insider_context"
+    - "technical_confirmation"
+    - "ranked_symbols"
+    - "risk_notes"
+  approved_tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+  code: "# Example read-only Python logic for complex aggregation\n# This is a placeholder for actual logic\n\nimport datetime\n\ndef run(context):\n    deal_summary = {}\n    insider_context = {}\n    technical_confirmation = {}\n    ranked_symbols = []\n    risk_notes = []\n    # Read-only processing would occur here\n    return {\n        'deal_summary': deal_summary,\n        'insider_context': insider_context,\n        'technical_confirmation': technical_confirmation,\n        'ranked_symbols': ranked_symbols,\n        'risk_notes': risk_notes\n    }"
+sql_templates:
+  -
+    description: "Retrieve latest insider alerts with technical confirmation"
+    sql: "SELECT ia.symbol, ia.alert_date, ia.entity, ia.qty, ia.value_cr, ia.insider_score, ss.stage, ss.technical_score FROM signals.insider_alerts AS ia JOIN scores.stage_snapshots AS ss ON ia.symbol = ss.symbol WHERE ia.alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts) AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 100"
+  -
+    description: "List bulk deals with price and volume details"
+    sql: "SELECT bd.symbol, bd.deal_date, bd.qty, bd.price, ss.technical_score FROM signals.bulk_block_deals AS bd JOIN scores.stage_snapshots AS ss ON bd.symbol = ss.symbol WHERE bd.deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals)"
+python_tools:
+  -
+    id: "calculate_deal_impact"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "deal_date"
+      - "qty"
+      - "price"
+    outputs:
+      - "impact_score"
+    approved_tables:
+      - "signals.bulk_block_deals"
+      - "scores.stage_snapshots"
+    code: "# Sample snippet\n# Calculate the impact of a deal on price movement\n\ndef calculate(symbol, deal_date, qty, price):\n    # Assume a calculation here\n    impact_score = (qty * price) / 10000\n    return impact_score"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Output symbols must match input symbols if provided."
+  - "Dates in results should be verified to be the latest according to each dataset."
+  - "Ranked symbols should be ordered by insider_score or technical_score."
+synthesis_guidance: "['Combine data for a holistic view of the security.', 'Ensure the data reflects the latest market trends and signals.', 'Balance insider alerts against technical indicators for confirmation.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_deal_impact: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_deal_impact: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

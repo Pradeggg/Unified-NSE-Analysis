@@ -1,0 +1,80 @@
+id: "vcp_breakouts_with_fundamentals_1220_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1220"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: latest EOD; response style: ranked candidates."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+  filters:
+    - "latest EOD data"
+    - "Stage 2 VCP picks"
+    - "strong fundamentals"
+tool_plan_template:
+  -
+    steps:
+      - "Use SQL to filter latest EOD and VCP data."
+      - "Rank candidates based on VCP and fundamental scores."
+sql_templates:
+  -
+    id: "latest_eod_vcp_query"
+    template:
+      - "WITH latest_eod AS ("
+      - "  SELECT symbol, high, close"
+      - "  FROM market.equity_eod"
+      - "  WHERE trade_date = ("
+      - "    SELECT MAX(trade_date) FROM market.equity_eod"
+      - "  )"
+      - "  AND series = 'EQ'"
+      - "),"
+      - "vcp_candidates AS ("
+      - "  SELECT s.symbol, s.vcp_score, s.enhanced_fund_score"
+      - "  FROM scores.stage2_vcp_picks s"
+      - "  WHERE s.snapshot_date = ("
+      - "    SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks"
+      - "  )"
+      - "  ORDER BY s.vcp_score DESC"
+      - "  LIMIT 10"
+      - ")"
+      - "SELECT e.symbol, e.high, e.close, v.enhanced_fund_score"
+      - "FROM latest_eod e"
+      - "JOIN vcp_candidates v ON e.symbol = v.symbol"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Verify all candidates have non-null enhanced_fund_score."
+  - "Ensure the total number of candidates does not exceed the limit."
+synthesis_guidance: "['Frame results with references to the Indian market context.', 'Highlight fundamental and technical strengths.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

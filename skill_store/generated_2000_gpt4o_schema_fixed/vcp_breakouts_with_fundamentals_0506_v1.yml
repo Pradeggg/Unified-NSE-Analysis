@@ -1,0 +1,52 @@
+id: "vcp_breakouts_with_fundamentals_0506_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0506"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: today; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "today"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Identify stocks that have reached new highs, exhibit VCP or breakout patterns, and have strong fundamentals. Use only the latest data for screening."
+sql_templates:
+  -
+    template: "SELECT e.symbol, e.close, e.high, e.volume, s.enhanced_fund_score, s.trading_signal FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND e.close > e.week52_high - (e.week52_high * 0.02) AND s.stage = 'STAGE_2' AND s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY s.enhanced_fund_score DESC, e.volume DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure latest EOD and snapshot data is being used."
+  - "Stocks must be in Stage 2 with strong buy signals."
+  - "Enhanced fundamental score should be high."
+synthesis_guidance: "['Focus on stocks with recent breakouts and strong fundamentals.', 'Use volume and fundamental data to rank breakouts.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

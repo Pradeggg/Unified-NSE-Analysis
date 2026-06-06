@@ -1,0 +1,53 @@
+id: "corporate_events_results_watchlist_1969_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1969"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: post results; response style: comparison matrix."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for post results: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as comparison matrix"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "post_results"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Generate a report including a comparison matrix for upcoming or recent corporate events with a focus on results. Include source-trail validation for all selected entries."
+sql_templates:
+  -
+    id: "event_watchlist_query"
+    query: "WITH latest_events AS (SELECT * FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '3 months'), latest_results AS (SELECT DISTINCT ON (symbol) * FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC), watchlist AS (SELECT e.symbol, e.event_type, e.event_date, e.purpose_raw, e.detail, e.source FROM latest_events e JOIN latest_results r ON e.symbol = r.symbol) SELECT * FROM watchlist LIMIT 50;"
+    purpose: "Generate a list of recent or upcoming corporate events and results-related actions."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "{'rules': ['Ensure the response includes at least one entry with a correctly resolved source-trail.', 'Validate the SQL result set size is bounded by the LIMIT clause.']}"
+synthesis_guidance: "Deep dive into the source-trail validation and emphasize differences in event-driven contexts."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:19"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

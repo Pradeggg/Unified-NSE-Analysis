@@ -1,0 +1,67 @@
+id: "quarterly_results_quality_review_0789_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0789"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: source-trail validation; timeframe: intraday context; response style: QA checklist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "source-trail validation for intraday context: latest quarterly results analysis"
+  - "which companies had strong quarterly results as QA checklist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Process quarterly results to validate narratives using SQL and Python tooling."
+sql_templates:
+  -
+    template_name: "latest_quarterly_results"
+    query: "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.period_label, qr.revenue, qr.pat, ra.growth_yoy_revenue_pct, ra.growth_yoy_pat_pct, ra.opm_delta_pp, ra.verdict FROM scores.quarterly_results qr JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end WHERE qr.period_type = 'quarter' AND qr.period_end = (SELECT MAX(period_end) FROM scores.quarterly_results WHERE period_type = 'quarter') ORDER BY qr.symbol, qr.period_end DESC NULLS LAST, qr.fetched_at DESC LIMIT 50;"
+python_tools:
+  -
+    id: "run_evaluation"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      context: "latest_quarterly_results_dataset"
+    outputs:
+      summary: "Evaluation summary report"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+    code: "def run(context):\n    # Analyze and summarize the latest quarterly results\n    summary = {}\n    for record in context:\n        symbol = record['symbol']\n        verdict = record['verdict']\n        summary[symbol] = verdict\n    return {'summary': summary}"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure all columns in SELECT are within the approved schema."
+  - "Verify the template is compliant with global and join rules."
+  - "Limit the result set to avoid performance issues."
+synthesis_guidance: "['Focus on clarity and precision in reporting the analysis.', 'Provide action-oriented insights based on data trends.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:53"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_evaluation: inputs must be a list"
+  - "run_evaluation: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_evaluation: inputs must be a list"
+    - "run_evaluation: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,71 @@
+id: "sector_breadth_rotation_watchlist_1637_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1637"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for last 20 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as debug trace"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+  freshness:
+    max_eod_age_days: 3
+tool_plan_template:
+  - "Identify sectors with improving breadth and Stage 2 participation over the last 20 sessions."
+  - "Focus on sectors with high pct_above_50dma and increasing change_5d."
+  - "Select stocks from improving sectors with positive Stage 2 and strong buying signals."
+  - "Generate TradingView symbols for selected stocks."
+sql_templates:
+  -
+    sql: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), sector_breadth AS (SELECT sd.sector, AVG(sd.pct_above_50dma::NUMERIC) AS avg_pct_above_50dma, SUM(CASE WHEN sd.change_5d::NUMERIC > 0 THEN 1 ELSE 0 END) AS improving_days FROM breadth.sector_daily sd WHERE sd.snapshot_date >= CURRENT_DATE - INTERVAL '20 days' GROUP BY sd.sector) SELECT lb.sector, lb.avg_pct_above_50dma, lb.improving_days FROM sector_breadth lb JOIN latest_snapshots ls ON lb.sector = ls.sector WHERE ls.stage = 'STAGE_2' AND ls.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY lb.improving_days DESC, lb.avg_pct_above_50dma DESC LIMIT 5;"
+    description: "Select top performing sectors with improving breadth and buy signals."
+python_tools:
+  -
+    id: "calculate_tradingview_symbols"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "candidate_symbols"
+    outputs:
+      - "tradingview_symbols"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    return [symbol + '.NS' for symbol in context['candidate_symbols']]"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure only sectors with significant improvements and signals are included."
+  - "Verify all returned stocks align with buy thresholds."
+synthesis_guidance: "['When generating TradingView symbols, ensure mapping aligns with NSE symbols.', \"Provide a clear debug trace of decision points within the tool's logic.\"]"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:37"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_tradingview_symbols: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_tradingview_symbols: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

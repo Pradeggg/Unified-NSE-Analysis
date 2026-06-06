@@ -1,0 +1,63 @@
+id: "sector_breadth_rotation_watchlist_0993_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0993"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: comparison matrix."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for weekly review: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as comparison matrix"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "weekly_review"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+    -
+      id: "calculate_sector_breadth_trends"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "sector_data"
+        - "stage_data"
+      outputs:
+        - "sector_trends"
+      approved_tables:
+        - "breadth.sector_daily"
+        - "scores.stage_snapshots"
+      code: "def run(context):\n    # Assume sector_data and stage_data are extracted from the context\n    pass  # Implementation would go here"
+sql_templates:
+  sector_breadth_query: "SELECT snapshot_date, sector, pct_above_50dma, change_5d FROM breadth.sector_daily WHERE snapshot_date = CURRENT_DATE;"
+  stage_participation_query: "SELECT sector, COUNT(*) as stage2_count FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date = CURRENT_DATE GROUP BY sector;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "status"
+  - "sql_templates"
+  - "python_tools"
+synthesis_guidance: "{'strategy': 'merge sector breadth and stage analysis to generate rankings', 'focus': 'use daily data for weekly review preparation', 'style': 'comparison matrix'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:11"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.stage2_count is not approved"

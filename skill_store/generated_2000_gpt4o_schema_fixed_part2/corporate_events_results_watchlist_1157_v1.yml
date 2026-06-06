@@ -1,0 +1,50 @@
+id: "corporate_events_results_watchlist_1157_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1157"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: narrative plus evidence."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for quarter to date: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as narrative plus evidence"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze the upcoming or recent corporate events for watchlist-worthy actions using a sector-relative comparison for the current quarter."
+sql_templates:
+  -
+    description: "Retrieve upcoming or recent corporate events with relevant details for the specified symbols."
+    sql: "SELECT ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, ce.detail, rs.verdict, ss.stage, ss.trading_signal FROM signals.corporate_events ce JOIN scores.results_analysis rs ON ce.symbol = rs.symbol JOIN scores.stage_snapshots ss ON ce.symbol = ss.symbol WHERE ce.event_date >= CURRENT_DATE - INTERVAL '3 months' AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "status"
+synthesis_guidance: "Generate a narrative that highlights the key corporate events and results, providing a sector-relative comparison for the quarter to date."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:55"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

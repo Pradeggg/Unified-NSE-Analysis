@@ -1,0 +1,68 @@
+id: "insider_bulk_deal_signal_review_0164_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0164"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: post results; response style: narrative plus evidence."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for post results: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as narrative plus evidence"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "post_results"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Agent Adda skill plan to detect significant insider and bulk deal activity with technical confirmation signals."
+sql_templates:
+  insider_bulk_deals_alerts:
+    select_insider_alerts: "SELECT symbol, entity, alert_date, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '3 months' AND source = 'Insider' ORDER BY alert_date DESC LIMIT 100"
+    select_bulk_deals: "SELECT symbol, entity, deal_date, qty, price, side FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '3 months' AND deal_type = 'Bulk Deal' ORDER BY deal_date DESC LIMIT 100"
+    select_stage_snapshot: "SELECT symbol, stage, stage_score, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY')"
+python_tools:
+  -
+    id: "technical_ranking_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "trading_signal"
+      - "stage_score"
+    outputs:
+      - "ranked_symbols"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n\t# Sample Python tool to rank symbols based on scores and signals\n\tdata = context['scores.stage_snapshots']\n\tranked = data.sort_values(by=['stage_score', 'trading_signal'], ascending=[False, True])\n\treturn ranked['symbol'].tolist()[:10]"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all symbols align across tables."
+  - "Verify trading signals align with expected setup."
+  - "Check timestamps coincide with expected date ranges."
+synthesis_guidance: "Combine alerts and deal data with technical confirmations to narratively identify potential accumulation across symbols."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:37"
+generation_model: "gpt-4o"
+validation_errors:
+  - "technical_ranking_analysis: execution failed: KeyError: 'scores.stage_snapshots'"
+review:
+  status: "needs_heal"
+  findings:
+    - "technical_ranking_analysis: execution failed: KeyError: 'scores.stage_snapshots'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

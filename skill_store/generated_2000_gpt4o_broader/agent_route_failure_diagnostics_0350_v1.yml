@@ -1,0 +1,51 @@
+id: "agent_route_failure_diagnostics_0350_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0350"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: last 3 months; response style: exceptions and gaps first."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for last 3 months: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as exceptions and gaps first"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  source: "Agent Adda API"
+  diagnostic_approach: "Sequential Route Analysis"
+  exception_handling: "Capture and Isolate Failures"
+sql_templates:
+  select_runs: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= date('now', '-3 months');"
+  select_filtered_stocks: "SELECT run_id, symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE rank <= 50;"
+  select_stage_snapshots: "SELECT snapshot_date, symbol, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date >= date('now', '-3 months');"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure table join consistency."
+  - "Validate date ranges."
+synthesis_guidance: "Focus on identifying gaps in tool support and inconsistencies between expected and actual data flows first."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:13"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.date is not approved"
+  - "scores.stage_snapshots.date is not approved"

@@ -1,0 +1,67 @@
+id: "vcp_breakouts_with_fundamentals_0994_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0994"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: weekly review; response style: comparison matrix."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  steps:
+    - "extract potential breakout stocks from approved evidence"
+    - "filter stocks based on strong fundamentals and liquidity"
+    - "aggregate data for comparison matrix"
+    - "create watchlist for weekly review"
+sql_templates:
+  - "SELECT e.symbol, e.trade_date, e.close, s.fundamental_score, s.enhanced_fund_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.close = e.week52_high AND s.fundamental_score > 80 AND s.enhanced_fund_score > 85"
+python_tools:
+  -
+    id: "run_vcp_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol_data"
+    outputs:
+      - "vcp_breakout_candidates"
+    approved_tables:
+      - "scores.stage2_vcp_picks"
+    code: "def run(symbol_data):\n    return [s for s in symbol_data if s['vcp_score'] > 70 and s['vcp_breakout_pct'] > 5]"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all selected stocks meet both technical and fundamental criteria."
+  - "Check if trading signals are consistent with VCP theory."
+synthesis_guidance: "['Create a comparison matrix for easier decision-making.', 'Prioritize stocks with both strong fundamentals and marked VCP signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:53:30"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table e.close"
+  - "unknown table e.symbol"
+  - "unknown table e.trade_date"
+  - "unknown table e.week52_high"
+  - "unknown table s.enhanced_fund_score"
+  - "unknown table s.fundamental_score"
+  - "unknown table s.symbol"

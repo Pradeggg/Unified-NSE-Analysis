@@ -1,0 +1,77 @@
+created_at: "2026-06-06T12:44:27"
+created_by: "llm_generated"
+description: "Analyzes and identifies market trends using generated datasets and schemas."
+domain: "market_intelligence"
+evidence_required: true
+generation_model: "gpt-4o"
+id: "agent-adda-skill-card"
+input_patterns:
+  - "analyze trends"
+  - "identify market signals"
+  - "evaluate stocks"
+output_contract:
+  -
+    market.equity_eod:
+      - "trade_date"
+      - "symbol"
+      - "open"
+      - "high"
+      - "low"
+      - "close"
+      - "change_pct"
+      - "volume"
+  -
+    market.index_eod:
+      - "trade_date"
+      - "index_symbol"
+      - "close"
+      - "change_pct"
+      - "rsi"
+      - "momentum_50d"
+  -
+    scores.stage_snapshots:
+      - "snapshot_date"
+      - "symbol"
+      - "technical_score"
+      - "rsi"
+      - "trend_signal"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    holdings = context.get('holdings_data', [])\n    trends = context.get('trend_signals', {})\n    add_candidates = [h['symbol'] for h in holdings if trends.get(h['symbol'], {}).get('trend_signal') == 'Strong Uptrend']\n    trim_candidates = [h['symbol'] for h in holdings if trends.get(h['symbol'], {}).get('trend_signal') == 'Downtrend']\n    return {'add_candidates': add_candidates, 'trim_candidates': trim_candidates}"
+    id: "trend_analysis_tool"
+    inputs:
+      - "holdings_data"
+      - "trend_signals"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "add_candidates"
+      - "trim_candidates"
+review:
+  attempts: 3
+  findings:
+    - "evidence_required is required"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    SQL: "WITH recent_snapshots AS (SELECT symbol, stage, trend_signal, stage_score FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '5 days') SELECT ph.symbol, ph.qty, rs.trend_signal, rs.stage_score FROM portfolio.holdings ph INNER JOIN recent_snapshots rs ON ph.symbol = rs.symbol"
+    id: "select_holdings_with_trend"
+    purpose: "Retrieve holdings with their current trend signals and scores from the last 5 sessions."
+status: "test_failed"
+synthesis_guidance: "Highlight exceptions (symbols with weakest trend signals) first."
+tags:
+  - "trend_analysis"
+  - "market_signals"
+  - "data_evaluation"
+title: "Agent Adda Skill Card"
+tool_plan_template: "Generate recommendations based on holdings vs. market signals."
+validation_errors:
+  - "evidence_required is required"
+validation_rules:
+  - "Ensure compliance with approved schema"
+  - "Validate data integrity and accuracy"
+version: 1

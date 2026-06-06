@@ -1,0 +1,57 @@
+id: "agent_route_failure_diagnostics_0252_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0252"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for quarter to date: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as ranked candidates"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Diagnose route failures by analyzing enhanced run reports, filtered stocks, and stage snapshots for discrepancies and missing data. Prioritize missing tool issues and symbol resolution errors."
+sql_templates:
+  -
+    query: "SELECT e.run_id, e.run_ts, e.notes, ef.symbol, ef.recommendation FROM report.enhanced_runs e JOIN report.enhanced_filtered_stocks ef ON e.run_id = ef.run_id WHERE e.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) AND ef.recommendation IS NULL ORDER BY e.run_id;"
+    description: "Identify enhanced report runs with missing recommendations for filtered stocks."
+    notes: "Check for data integrity and missing information in recent runs."
+  -
+    query: "SELECT s.snapshot_date, s.symbol, s.trading_signal FROM scores.stage_snapshots s WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal IS NULL LIMIT 10;"
+    description: "Extract recent stage snapshots with null trading signals."
+    notes: "Focus on unresolved symbol issues affecting trading recommendations."
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure run_id exists before aggregation."
+  - "Validate joins where run_id and symbol must match."
+  - "Template uses limit to control result set size."
+synthesis_guidance: "Review results to determine common causes for failures within recent quarter. Focus on resolving tool and symbol issues and preparing regression tests based on prominent failure modes."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

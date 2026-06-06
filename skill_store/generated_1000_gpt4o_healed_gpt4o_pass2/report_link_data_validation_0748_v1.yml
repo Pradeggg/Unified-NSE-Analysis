@@ -1,0 +1,66 @@
+created_at: "2026-06-06T12:51:12"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: last 3 months; response style: QA checklist."
+domain: "report_qa"
+evidence_required:
+  columns:
+    - "run_id"
+    - "run_ts"
+    - "analysis_date"
+    - "symbol"
+    - "recommendation"
+    - "current_price"
+    - "trading_value_cr"
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0748_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for last 3 months: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 3
+  findings:
+    - "report.enhanced_runs.date_sub is not approved"
+    - "report.enhanced_runs.month is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    purpose: "Fetch recent run activities for position-sizing context."
+    template: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE analysis_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH);"
+  -
+    purpose: "Retrieve stock data for a specific report run."
+    template: "SELECT symbol, current_price, recommendation FROM report.enhanced_filtered_stocks WHERE run_id=:run_id;"
+status: "test_failed"
+synthesis_guidance: "Compile QA findings into a comprehensive checklist with actionable steps for remediation."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "last_3_months"
+  - "QA_checklist"
+title: "Enhanced Report Data Validation Variant 0748"
+tool_plan_template: "To validate the position-sizing context over the last 3 months, assess both the metadata and stock rows. Focus on the links' integrity and data completeness for QA review."
+validation_errors:
+  - "report.enhanced_runs.date_sub is not approved"
+  - "report.enhanced_runs.month is not approved"
+validation_rules:
+  - "Ensure all report links are functioning."
+  - "Verify that data for all required stock symbols is present."
+  - "Highlight discrepancies between expected and actual data volume."
+version: 1

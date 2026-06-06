@@ -1,0 +1,89 @@
+id: "signal_outcome_feedback_review_1663_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1663"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: post results; response style: debug trace."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for post results: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as debug trace"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    sql_templates:
+      -
+        name: "evaluate_signals"
+        description: "Retrieve signals with outcomes and related metrics."
+        sql: "SELECT id, date_issued, symbol, company, signal, price_at_issue, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months';"
+    output_contract:
+      - "outcome_summary"
+      - "winner_patterns"
+      - "failure_patterns"
+      - "route_improvements"
+      - "next_checks"
+    validation_rules:
+      - "Ensure all retrieved signals have valid outcome entries."
+      - "Cross-verify outcome analysis with additional context from stage and market data."
+    synthesis_guidance:
+      - "Focus on identifying patterns in winning signals vs. signals hitting stop loss."
+      - "Include actionable insights for improving future signal accuracy."
+sql_templates:
+
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      sql_result: "data from evaluate_signals SQL template"
+    outputs:
+      outcome_summary: "summary data"
+      winner_patterns: "key patterns of successful signals"
+      failure_patterns: "root causes of signal failures"
+      route_improvements: "suggested improvements"
+      next_checks: "future action items"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    results = context['sql_result']\n    # Analyze results to extract actionable insights\n    # [ ...code to process results... ]\n    return {\n        'outcome_summary': \"Summary of signal outcomes\",\n        'winner_patterns': \"Identified patterns from successful signals\",\n        'failure_patterns': \"Analysis of failed signals\",\n        'route_improvements': \"Proposed strategy adjustments\",\n        'next_checks': \"Suggested follow-up actions\"\n    }"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:59"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run: inputs must be a list"
+  - "run: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "run: inputs must be a list"
+    - "run: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

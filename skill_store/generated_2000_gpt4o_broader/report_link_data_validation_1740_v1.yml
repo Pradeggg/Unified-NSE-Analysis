@@ -1,0 +1,56 @@
+id: "report_link_data_validation_1740_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1740"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  steps:
+    - "Validate report run metadata integrity."
+    - "Check filtered stock entries for completeness."
+    - "Identify broken report links from the last 20 sessions."
+    - "Summarize missing data instances in generated reports."
+    - "Prepare a QA checklist for comprehensive verification."
+sql_templates:
+  -
+    name: "validate_run_metadata"
+    template: "SELECT * FROM report.enhanced_runs WHERE run_ts >= (CURRENT_TIMESTAMP - INTERVAL '20 sessions');"
+  -
+    name: "check_filtered_stocks"
+    template: "SELECT * FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= (CURRENT_TIMESTAMP - INTERVAL '20 sessions'));"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure report metadata and stock rows have consistent run_id."
+  - "Confirm availability of required data fields for all filtered stocks."
+  - "Examine report links and validate their accessibility status."
+synthesis_guidance: "{'include_findings_summary': True, 'prioritize_critical_links_and_data_gaps': True}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:29"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.current_timestamp is not approved"

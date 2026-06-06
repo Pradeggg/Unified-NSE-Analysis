@@ -1,0 +1,69 @@
+id: "portfolio_lab_paper_trading_review_0166_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Strategy Lab Paper Trading Review"
+description: "Review paper trading strategies to evaluate entry, exit, stop-loss, and target execution in the Indian market."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for post results: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "post_results"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Gather paper trading execution records from signals.signal_log."
+  - "Fetch corresponding market data from market.equity_eod for context."
+  - "Analyze entry and exit effectiveness with scores.stage_snapshots."
+sql_templates:
+  -
+    operation: "fetch_strategy_logs"
+    template: "SELECT id, symbol, date_issued, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_resolved IS NOT NULL;"
+  -
+    operation: "fetch_market_data"
+    template: "SELECT trade_date, symbol, open, high, low, close FROM market.equity_eod WHERE trade_date BETWEEN {start_date} AND {end_date};"
+python_tools:
+  -
+    id: "evaluate_strategy_performance_0166"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "strategy_logs"
+      - "market_data"
+    outputs:
+      - "strategy_performance_summary"
+      - "exceptions_report"
+    approved_tables:
+      - "signals.signal_log"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Logic to evaluate strategy performance\n    strategy_logs = context['strategy_logs']\n    market_data = context['market_data']\n    # Process and return performance summary\n    return {'strategy_performance_summary': {}, 'exceptions_report': {}}"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure SQL templates do not modify data."
+  - "Review focuses on paper trading only, not real holdings."
+synthesis_guidance: "['Emphasize a narrative form when presenting findings.', 'Highlight gaps in data and suggest further research opportunities.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.end_date is not approved"
+  - "market.equity_eod.start_date is not approved"

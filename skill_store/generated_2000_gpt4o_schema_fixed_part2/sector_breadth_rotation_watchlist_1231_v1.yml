@@ -1,0 +1,54 @@
+id: "sector_breadth_rotation_watchlist_1231_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1231"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for last 20 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as ranked candidates"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Rank sectors by breadth and stage 2 participation."
+    template: "WITH latest_snapshot AS (SELECT MAX(snapshot_date) AS snapshot_date FROM breadth.sector_daily), sector_ranking AS (SELECT sd.sector, sd.breadth_signal, sd.pct_above_50dma, ma.stage2_pct FROM breadth.sector_daily sd JOIN breadth.ma_pct_above ma ON sd.snapshot_date = ma.snapshot_date WHERE sd.snapshot_date = (SELECT snapshot_date FROM latest_snapshot) AND sd.breadth_signal = 'POSITIVE' ORDER BY ma.stage2_pct DESC, sd.pct_above_50dma DESC LIMIT 10) SELECT sr.sector, sr.breadth_signal, sr.pct_above_50dma, sr.stage2_pct FROM sector_ranking sr;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all required columns are represented."
+  - "Validate latest snapshot extraction utilizes the correct maximum date filtering."
+synthesis_guidance: "['Combine sector breadth analysis results with stage 2 participation to assess improving sectors.', 'Identify sector trends for potential integration into TradingView platforms.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:13"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

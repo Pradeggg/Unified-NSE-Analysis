@@ -1,0 +1,70 @@
+created_at: "2026-06-06T12:52:35"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: weekly review; response style: action watchlist."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0891_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as action watchlist"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    weekly_performance_data = context.get('weekly_performance_data', [])\n    add_candidates = []\n    trim_candidates = []\n    for record in weekly_performance_data:\n        if record['change_1w_pct'] > 5:\n            add_candidates.append(record['symbol'])\n        elif record['change_1w_pct'] < -5:\n            trim_candidates.append(record['symbol'])\n    return {\n        'add_candidates': add_candidates,\n        'trim_candidates': trim_candidates\n    }"
+    id: "evaluate_candidates"
+    inputs:
+      - "weekly_performance_data"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "add_candidates"
+      - "trim_candidates"
+review:
+  attempts: 3
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  current_exposure:
+    description: "Aggregate current exposure by sector."
+    template: "SELECT sector, SUM(qty) AS total_qty FROM portfolio.holdings INNER JOIN scores.stage_snapshots ON portfolio.holdings.symbol = scores.stage_snapshots.symbol GROUP BY sector"
+  weekly_performance:
+    description: "Select symbols and their weekly performance percentage."
+    template: "SELECT symbol, change_1w_pct FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+status: "validated"
+synthesis_guidance: "Focus on quickly identifying trends for action watchlist, ensuring timely and data-driven portfolio adjustments."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "weekly_review"
+  - "action_watchlist"
+title: "Portfolio Incremental Add Trim Review Variant 0891"
+tool_plan_template: "Assess portfolio for incremental add/trim actions based on sector exposure and market conditions."
+validation_errors:
+
+validation_rules:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+version: 1

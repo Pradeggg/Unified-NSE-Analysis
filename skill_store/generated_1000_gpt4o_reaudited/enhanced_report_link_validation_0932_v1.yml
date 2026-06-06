@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:52:59"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: last 20 sessions; response style: comparison matrix."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "enhanced_report_link_validation_0932_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    id: "fetch_run_metadata"
+    template: "SELECT run_id, run_ts, analysis_date, stocks_analyzed, stocks_filtered, market_composite_score, notes FROM report.enhanced_runs WHERE run_ts > (CURRENT_DATE - INTERVAL '20 days')"
+    type: "SELECT"
+  -
+    id: "fetch_filtered_stocks"
+    template: "SELECT run_id, symbol, current_price, volume, daily_signal FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts > (CURRENT_DATE - INTERVAL '20 days'))"
+    type: "SELECT"
+status: "validated"
+synthesis_guidance: "Analyze the fetched report metadata and stock data to identify broken links and missing data. Present findings in a structured comparison matrix format."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "last_20_sessions"
+  - "comparison_matrix"
+title: "Enhanced Report Link Data Validation Variant 0932"
+tool_plan_template: "To validate report links and data for the last 20 sessions, gather metadata and filtered stock rows. Identify inconsistencies in data population and track report trails."
+validation_rules:
+  - "Ensure all run_ids have corresponding filtered stock entries."
+  - "Check for missing stock symbols or invalid price data."
+  - "Verify timestamp gaps in run metadata."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

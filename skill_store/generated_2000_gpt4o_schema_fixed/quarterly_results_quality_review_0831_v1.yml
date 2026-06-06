@@ -1,0 +1,58 @@
+id: "quarterly_results_quality_review_0831_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0831"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for last 20 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as action watchlist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  layout: "sequential"
+  steps:
+    - "Fetch the latest quarterly results for companies from scores.quarterly_results."
+    - "Extract narrative analysis from scores.results_analysis for the same period."
+    - "Merge company stage data from scores.stage_snapshots."
+sql_templates:
+  -
+    purpose: "Fetch latest quarterly results with filters."
+    query: "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.period_label, qr.revenue, qr.pat, qr.opm_pct FROM scores.quarterly_results qr WHERE qr.period_type = 'quarter' ORDER BY qr.symbol, qr.period_end DESC, qr.fetched_at DESC LIMIT 50;"
+  -
+    purpose: "Fetch latest analysis narratives."
+    query: "SELECT DISTINCT ON (ra.symbol) ra.symbol, ra.verdict, ra.opm_delta_pp, ra.pl_commentary FROM scores.results_analysis ra WHERE ra.period_end = qr.period_end ORDER BY ra.symbol, ra.period_end DESC, ra.updated_at DESC;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure at least one company with a 'beat' verdict to notify strong results."
+  - "Verify margin drivers are calculated using latest opm_pct and opm_delta_pp."
+  - "Rank companies based on latest 'score' from results_analysis and 'stage' from stage_snapshots."
+synthesis_guidance: "{'type': 'radial-cluster', 'focus': 'Create an action watchlist based on revenue growth, PAT growth, and margin improvement.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:23"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.quarterly_results.qr is not approved"
+  - "scores.results_analysis.qr is not approved"
+  - "scores.results_analysis.ra is not approved"

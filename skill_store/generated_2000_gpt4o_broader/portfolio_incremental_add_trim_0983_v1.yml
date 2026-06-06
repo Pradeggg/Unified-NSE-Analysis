@@ -1,0 +1,51 @@
+id: "portfolio_incremental_add_trim_0983_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0983"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for intraday context: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Evaluate current portfolio holdings using market signals and decide on incremental add or trim actions."
+sql_templates:
+  -
+    template_name: "CurrentExposure"
+    sql: "SELECT p.symbol, p.qty, s.sector, s.stage, s.stage_score, s.trend_signal FROM portfolio.holdings p INNER JOIN scores.stage_snapshots s ON p.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE;"
+    description: "Fetch the current exposure and market signals for each holding."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure current exposure calculation uses up-to-date market signals."
+  - "Enable comparison matrix for sector and stock decisions."
+synthesis_guidance: "['Use comparison matrices to decide between adding or trimming positions.', 'Prioritize actions based on sector exposure and potential market signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:59"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

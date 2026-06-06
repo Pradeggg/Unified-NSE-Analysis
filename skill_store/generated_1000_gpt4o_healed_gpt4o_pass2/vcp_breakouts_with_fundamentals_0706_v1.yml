@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:50:59"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: today; response style: QA checklist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0706_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  read_only:
+    -
+      description: "Select potential VCP breakout stocks based on fundamental analysis and technical signals."
+      sql: "WITH recent_vcp AS (SELECT symbol, company_name, sector, vcp_score, fundamental_score, volume, turnover_cr FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE), recent_highs AS (SELECT symbol, high FROM market.equity_eod WHERE trade_date = CURRENT_DATE AND high >= week52_high) SELECT rv.symbol, rv.company_name, rv.sector FROM recent_vcp rv JOIN recent_highs rh ON rv.symbol = rh.symbol WHERE rv.vcp_score > 70 AND rv.fundamental_score > 80 AND rv.volume > 100000 AND rv.turnover_cr > 1.0;"
+status: "validated"
+synthesis_guidance: "['Combine technical signals and fundamental scores to identify top breakout candidates.', 'Use QA checklist format to facilitate easy decision-making for traders.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "today"
+  - "QA_checklist"
+title: "VCP Breakouts With Fundamentals Variant 0706"
+tool_plan_template: "Identify stocks with new highs, VCP characteristics, or breakout patterns using strong fundamental scores and liquidity context. Ensure results are fresh (as of today) and provide them as a QA checklist suitable for TradingView."
+validation_rules:
+  - "Ensure the symbols listed in candidates are available in tradingview_symbols."
+  - "Check that candidates meet the fundamental criteria specified in the SQL templates."
+version: 1

@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:42:01"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: today; response style: narrative plus evidence."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0107_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for today: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+  -
+    query: "SELECT s.symbol, s.sector, s.stage, s.relative_strength, p.qty FROM scores.stage_snapshots s JOIN portfolio.holdings p ON s.symbol = p.symbol WHERE s.snapshot_date = CURRENT_DATE"
+    type: "read-only"
+status: "validated"
+synthesis_guidance: "['Describe the current sector performance context.', 'Narrate the rationale for identifying add and trim candidates.', \"Highlight any risk flags based on today's market environment.\"]"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "today"
+  - "narrative_plus_evidence"
+title: "Portfolio Incremental Add Trim Review Variant 0107"
+tool_plan_template:
+  steps:
+    - "Gather today's stage, technical, and relative strength data for all portfolio symbols."
+    - "Identify sectors with the strongest performance."
+    - "Compare current holdings against sector performance to identify add and trim candidates."
+validation_rules:
+  - "Ensure all symbols have stage and technical data available for today."
+  - "Verify that sector-relative comparisons are based on today's data."
+  - "Ensure output candidates are supported by quantitative evidence."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

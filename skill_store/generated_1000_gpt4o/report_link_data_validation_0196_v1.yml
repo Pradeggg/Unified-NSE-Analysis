@@ -1,0 +1,53 @@
+id: "report_link_data_validation_0196_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0196"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: weekly review; response style: narrative plus evidence."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for weekly review: review report links not working"
+  - "validate generated report links and missing data as narrative plus evidence"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "weekly_review"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  observational_scope: "Indian market; report metadata and stock rows"
+  generative_scope: "emphasis on narrative synthesis aligned with evidence"
+sql_templates:
+  -
+    title: "Validate Report Run Freshness"
+    query: "SELECT run_id, run_ts FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '7 days'"
+    description: "Retrieve report runs from the last week to check freshness."
+  -
+    title: "Identify Missing Stock Data"
+    query: "SELECT run_id, symbol FROM report.enhanced_filtered_stocks WHERE rs_score IS NULL"
+    description: "Find stocks with missing RS scores to identify incomplete data entries."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure report run metadata includes 'run_ts' for recent records."
+  - "All filtered stocks should have complete scoring data to avoid data inconsistencies."
+synthesis_guidance: "['Integrate findings with a focus on the Indian market context.', 'Provide detailed narrative linking evidence to validation outcomes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:43:21"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.now is not approved"

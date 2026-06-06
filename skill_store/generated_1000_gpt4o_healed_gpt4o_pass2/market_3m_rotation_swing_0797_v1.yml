@@ -1,0 +1,135 @@
+card:
+  created_at: "2026-06-06T12:51:40"
+  created_by: "llm_generated"
+  description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: weekly review; response style: QA checklist."
+  domain: "market_analysis"
+  evidence_required:
+    tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "market_3m_rotation_swing_0797_v1"
+  input_patterns:
+    - "last 3 months market analysis"
+    - "find swing candidates from recent sector rotation"
+    - "market regime and stage 2 leadership over 3 months"
+    - "sector-relative comparison for weekly review: last 3 months market analysis"
+    - "market regime and stage 2 leadership over 3 months as QA checklist"
+  output_contract:
+    - "as_of_date"
+    - "index_returns"
+    - "stage_distribution_change"
+    - "leading_sectors"
+    - "primary_candidates"
+    - "risks"
+  python_tools:
+
+  sql_templates:
+    -
+      description: "Fetch index performance over the last 3 months."
+      template: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - 90);"
+    -
+      description: "Analyze sector leadership and stages."
+      template: "SELECT symbol, sector, stage, change_1w_pct FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  status: "generated"
+  synthesis_guidance:
+    - "Summarize findings into a QA checklist format."
+    - "Highlight key insights from sector-relative comparison."
+  tags:
+    - "market_regime"
+    - "sector_rotation"
+    - "stage_analysis"
+    - "swing_trading"
+    - "sector-relative_comparison"
+    - "weekly_review"
+    - "QA_checklist"
+  title: "3M Market Rotation Swing Assessment Variant 0797"
+  tool_plan_template:
+
+  validation_errors:
+
+  validation_rules:
+    - "Ensure all output fields are populated."
+    - "Check the data integrity and consistency against approved tables."
+  version: 1
+created_at: "2026-06-06T12:51:40"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: weekly review; response style: QA checklist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0797_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for weekly review: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 3
+  findings:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    description: "Fetch index performance over the last 3 months."
+    template: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= DATE(NOW()) - INTERVAL '3 months';"
+  -
+    description: "Analyze sector leadership and stages."
+    template: "SELECT symbol, sector, stage, change_1w_pct FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+status: "test_failed"
+synthesis_guidance: "['Summarize findings into a QA checklist format.', 'Highlight key insights from sector-relative comparison.']"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "QA_checklist"
+title: "3M Market Rotation Swing Assessment Variant 0797"
+tool_plan_template:
+
+validation_errors:
+  - "description is required"
+  - "domain is required"
+  - "evidence_required is required"
+  - "id is required"
+  - "input_patterns is required"
+  - "output_contract is required"
+  - "tags is required"
+  - "title is required"
+  - "validation_rules is required"
+  - "version is required"
+  - "version must be a positive integer"
+validation_rules:
+  - "Ensure all output fields are populated."
+  - "Check the data integrity and consistency against approved tables."
+version: 1

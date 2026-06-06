@@ -1,0 +1,73 @@
+id: "agent_route_failure_diagnostics_0588_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0588"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: intraday context; response style: research-only summary."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for intraday context: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as research-only summary"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Investigate using available diagnostic data focusing on position-sizing within an intraday context."
+sql_templates:
+  -
+    description: "Select enhanced run log with latest execution details."
+    sql: "SELECT run_id, run_ts, stocks_analyzed, stocks_filtered, notes FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+  -
+    description: "Check for missing or broken stock data in enhanced reports."
+    sql: "SELECT efs.symbol, efs.score FROM report.enhanced_filtered_stocks efs LEFT JOIN report.enhanced_runs er ON efs.run_id = er.run_id WHERE er.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) AND efs.symbol IS NULL;"
+  -
+    description: "Retrieve latest stage snapshot for stock symbol diagnostics."
+    sql: "SELECT symbol, stage, trading_signal, rsi FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+  -
+    id: "python_tool_001"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+      - "symbol"
+    outputs:
+      - "diagnostic_report"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    code: "def run(context): return 'Perform research-only diagnostics using the approved schema data.'"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize findings by correlating enhanced run logs, filtered stock data, and stage snapshots for comprehensive diagnostics. Focus on identifying possible route failures, tool gaps, and resolution loops. No operational recommendations; provide research-only insights."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:25:34"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python_tool_001: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "python_tool_001: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

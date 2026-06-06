@@ -1,0 +1,1 @@
+def run(context): data = context['data']; result = {}; # Custom logic to evaluate the context; return result;

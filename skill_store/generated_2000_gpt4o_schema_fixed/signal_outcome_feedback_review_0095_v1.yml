@@ -1,0 +1,61 @@
+id: "signal_outcome_feedback_review_0095_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0095"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: weekly review; response style: concise table."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for weekly review: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as concise table"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "weekly_review"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    step: "Review prior signals"
+    description: "Check signals that hit their target or stop within the last week."
+  -
+    step: "Analyze performance"
+    description: "Evaluate performance metrics for each signal to determine success and failure patterns."
+  -
+    step: "Summarize findings"
+    description: "Create a concise table summarizing successful and failed signals, focusing on risk management."
+sql_templates:
+  -
+    query_name: "signal_outcome_review"
+    sql: "SELECT id, date_issued, symbol, signal, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE (hit_target = true OR hit_stop = true) AND date_resolved >= CURRENT_DATE - INTERVAL '7 days';"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure only read-only operations occur."
+  - "Confirm output matches concise table contract."
+synthesis_guidance: "['Provide insights on improving skill selections based on historical outcomes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

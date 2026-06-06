@@ -1,0 +1,59 @@
+id: "insider_bulk_deal_signal_review_0864_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0864"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for post results: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as action watchlist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+  usage: "Retrieve data related to insider alerts, bulk deals, and technical scores to create a watchlist."
+tool_plan_template:
+  steps:
+    - "Retrieve insider alerts and bulk/block deals related to symbols with insider score."
+    - "Join these symbols with the latest technical scores and stage snapshots."
+    - "Filter for positive accumulation or distribution signals using trading_signal and stage."
+    - "Compile a ranked list of symbols based on insider and technical scores."
+sql_templates:
+  insider_bulk_deal_query:
+    template: "WITH latest_stage AS (SELECT symbol, stage, trading_signal, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage IN ('STAGE_1', 'STAGE_2')), insider_data AS (SELECT symbol, insider_score, alert_date FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '3 months') SELECT bd.symbol, bd.deal_date, bd.qty, st.stage, st.trading_signal, id.insider_score FROM signals.bulk_block_deals bd JOIN latest_stage st ON bd.symbol = st.symbol JOIN insider_data id ON bd.symbol = id.symbol WHERE bd.deal_type = 'BULK' AND st.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY id.insider_score DESC, st.stage_score DESC LIMIT 10;"
+    description: "Retrieve symbols with bulk deals and positive technical scores along with insider scores."
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Check if the SQL retrieves only the latest snapshot data."
+  - "Ensure the ranked_symbols list is based on insider_score and stage_score."
+  - "Confirm that only BUY and STRONG_BUY signals are included."
+synthesis_guidance: "['Create an action-oriented watchlist focused on symbols with strong insider and technical indicators.', 'Summarize the technical and insider context for each symbol in ranked_symbols.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

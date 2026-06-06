@@ -1,0 +1,68 @@
+id: "quarterly_results_quality_review_1307_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1307"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: sector-relative comparison; timeframe: today; response style: exceptions and gaps first."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "sector-relative comparison for today: latest quarterly results analysis"
+  - "which companies had strong quarterly results as exceptions and gaps first"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "sector-relative_comparison"
+  - "today"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Use the SQL templates to extract data from the provided tables. Focus on identifying exceptions and gaps."
+sql_templates:
+  -
+    title: "Latest Quarterly Results Analysis"
+    query: "WITH latest_results AS (SELECT DISTINCT ON (symbol) symbol, period_end, period_label, revenue, pat, opm_pct FROM scores.quarterly_results WHERE period_type = 'quarter' AND period_end = (SELECT MAX(period_end) FROM scores.quarterly_results WHERE period_type = 'quarter') ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC), sector_comparison AS (SELECT sr.symbol, sr.company_name, sr.industry, sr.growth_yoy_revenue_pct, sr.growth_yoy_pat_pct, sr.opm_delta_pp, sr.verdict FROM scores.results_analysis sr JOIN latest_results lr ON sr.symbol = lr.symbol AND sr.period_end = lr.period_end) SELECT * FROM sector_comparison WHERE verdict IN ('beat', 'miss') ORDER BY industry, verdict DESC;"
+python_tools:
+  -
+    id: "compute_sector_relative_ranking"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "industry"
+      - "growth_yoy_revenue_pct"
+      - "growth_yoy_pat_pct"
+      - "opm_delta_pp"
+    outputs:
+      - "ranked_companies"
+    approved_tables:
+      - "scores.results_analysis"
+    code: "def run(context):\n    # Example read-only logic for sector-relative rankings\n    industry_groups = {}\n    for company in context:\n        symbol = company['symbol']\n        industry = company['industry']\n        rank_metric = (company['growth_yoy_revenue_pct'] + company['growth_yoy_pat_pct'] + float(company['opm_delta_pp'])) / 3\n        if industry not in industry_groups:\n            industry_groups[industry] = []\n        industry_groups[industry].append({'symbol': symbol, 'rank_metric': rank_metric})\n    # Sort each industry group by the rank_metric\n    ranked_companies = {industry: sorted(companies, key=lambda x: x['rank_metric'], reverse=True) for industry, companies in industry_groups.items()}\n    return ranked_companies"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure symbols correlate with the latest periods."
+  - "Validate revenue and PAT growth percentages are calculated."
+  - "Confirm margin movements are accurately reported."
+synthesis_guidance: "Focus on identifying significant exceptions and gaps relative to industry norms, emphasizing companies with notable increases or declines in key metrics."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "compute_sector_relative_ranking: missing output ranked_companies"
+review:
+  status: "needs_heal"
+  findings:
+    - "compute_sector_relative_ranking: missing output ranked_companies"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,52 @@
+id: "portfolio_lab_paper_trading_review_1552_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1552"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: quarter to date; response style: research-only summary."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for quarter to date: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as research-only summary"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Evaluate portfolio strategy effectiveness using given historical data for entries, exits, risk management, and target achievement."
+sql_templates:
+  -
+    purpose: "Fetch open trades from the signal log that are unresolved."
+    template: "SELECT id, symbol, date_issued, price_at_issue, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_resolved IS NULL;"
+  -
+    purpose: "Calculate the exposure from holdings."
+    template: "SELECT symbol, qty, (qty * avg_cost) AS exposure FROM portfolio.holdings;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all open trades are correctly identified in the logs."
+  - "Verify exposure calculation matches current holdings."
+synthesis_guidance: "Combine collected evidence into a cohesive review focusing on strategy effectiveness, separating paper trading insights distinctly from real portfolio analysis."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:49"
+generation_model: "gpt-4o"
+validation_errors:
+  - "portfolio.holdings.exposure is not approved"

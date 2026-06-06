@@ -1,0 +1,61 @@
+id: "insider_bulk_deal_signal_review_1620_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1620"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: latest EOD; response style: debug trace."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for latest EOD: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as debug trace"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Evaluate insider alerts combined with bulk deal data to determine signal strength and corroborate with technical confirmation from market equity EOD and stage snapshots."
+sql_templates:
+  -
+    name: "fetch_insider_alerts"
+    description: "Retrieve recent insider alerts for potential accumulation."
+    query: "SELECT symbol, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date = CURRENT_DATE;"
+  -
+    name: "fetch_bulk_block_deals"
+    description: "Get details of bulk and block deals for today."
+    query: "SELECT symbol, entity, side, qty, price FROM signals.bulk_block_deals WHERE deal_date = CURRENT_DATE;"
+  -
+    name: "fetch_technical_score"
+    description: "Extract technical confirmation for listed symbols."
+    query: "SELECT symbol, stage, technical_score, rsi FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Verify that insider alerts match today's bulk deals"
+  - "Ensure technical scores are above the threshold for positive confirmation"
+synthesis_guidance: "Evaluate the correlation between insider alerts, bulk deals, and technical confirmations to construct an actionable watchlist. Cross-reference with EOD data for holistic insights."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:22"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,50 @@
+id: "quarterly_results_quality_review_1293_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1293"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: ranked candidates."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "daily refresh follow-up for weekly review: latest quarterly results analysis"
+  - "which companies had strong quarterly results as ranked candidates"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "daily_refresh_follow-up"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Retrieve latest quarterly result snapshots, analyze YoY and QoQ growth, and identify margin and earnings trends."
+sql_templates:
+  -
+    description: "Fetch latest quarterly results with ranking."
+    sql: "WITH latest_quarters AS (SELECT DISTINCT ON (symbol) symbol, period_end, period_label, revenue, pat, opm_pct FROM scores.quarterly_results WHERE period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC) SELECT sq.symbol, sq.company_name, sq.industry, sr.verdict, sr.growth_yoy_revenue_pct, sr.growth_qoq_revenue_pct, sr.growth_yoy_pat_pct, sr.growth_qoq_pat_pct, sr.opm_delta_pp FROM latest_quarters lq JOIN scores.results_analysis sr ON lq.symbol = sr.symbol AND lq.period_end = sr.period_end JOIN scores.stage_snapshots sq ON sq.symbol = lq.symbol WHERE sr.verdict IN ('beat', 'inline', 'miss') ORDER BY sr.verdict, sr.growth_yoy_revenue_pct DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+synthesis_guidance: "Use evidence to analyze and rank companies based on quarterly performances, considering revenue growth, PAT growth, and margins."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:57"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.industry is not approved"

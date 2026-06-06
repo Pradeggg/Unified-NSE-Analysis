@@ -1,0 +1,66 @@
+id: "signal_outcome_feedback_review_0977_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0977"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: pre market; response style: comparison matrix."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for pre market: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as comparison matrix"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Assess prior signals and outcomes in the sector context to develop a comparison matrix that improves future route decisions."
+sql_templates:
+  -
+    template: "SELECT s.symbol, s.sector, s.company, s.signal, s.price_at_issue, s.stop_loss, s.target_1, s.target_2, s.hit_target, s.hit_stop, s.return_pct, e.close, ss.relative_strength FROM signals.signal_log s JOIN market.equity_eod e ON s.symbol = e.symbol AND s.date_issued = e.trade_date JOIN scores.stage_snapshots ss ON s.symbol = ss.symbol AND s.date_issued = ss.snapshot_date WHERE s.date_resolved IS NOT NULL"
+    description: "Retrieve resolved signals with outcomes, comparing them to sector data."
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "resolved_signals_data"
+    outputs:
+      - "comparison_matrix"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    resolved_signals = context['resolved_signals_data']\n    comparison_matrix = {}\n    # Analyze sector-relative performance\n    for entry in resolved_signals:\n        sector = entry['sector']\n        symbol_performance = {\n            'symbol': entry['symbol'],\n            'company': entry['company'],\n            'return_pct': entry['return_pct'],\n            'hit_target': entry['hit_target'],\n            'hit_stop': entry['hit_stop']\n        }\n        if sector not in comparison_matrix:\n            comparison_matrix[sector] = []\n        comparison_matrix[sector].append(symbol_performance)\n    return comparison_matrix"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure correct joins between tables based on date and symbol."
+  - "Validate that resolved signals are used."
+synthesis_guidance: "Use the extracted data to generate patterns of successful and unsuccessful signals, focusing on a sector-relative approach."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: execution failed: KeyError: 'resolved_signals_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: execution failed: KeyError: 'resolved_signals_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,81 @@
+id: "data_freshness_readiness_audit_0315_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0315"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: risk-first review; timeframe: latest EOD; response style: exceptions and gaps first."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "risk-first review for latest EOD: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as exceptions and gaps first"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "risk-first_review"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  - "Identify latest trade_dates across evidence tables using _global_rules."
+  - "Check if latest trade_dates meet the readiness thresholds for EOD workflows."
+  - "Report any tables where data freshness is below the threshold as exceptions or gaps."
+  - "Use _join_rules only when multi-table alignment is needed."
+  - "Utilize python_tool_policy for tasks that can't be managed with SQL based templates."
+sql_templates:
+  -
+    template: "SELECT MAX(trade_date) AS latest_trade_date FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod)"
+    description: "Get the latest trade date for index EOD data."
+  -
+    template: "SELECT MAX(trade_date) AS latest_trade_date FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+    description: "Fetch the latest trade date for equity EOD data."
+  -
+    template: "SELECT MAX(snapshot_date) AS latest_snapshot_date FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+    description: "Retrieve the latest snapshot date from stage snapshots."
+python_tools:
+  -
+    id: "data_freshness_checker"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "freshness_issues"
+      - "timestamp_violations"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Read-only logic to find data freshness issues\n    pass"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all MAX(date) queries align with the latest-date filters in _global_rules."
+  - "Check that no invented columns or conditions appear in SQL templates."
+synthesis_guidance: "['Prioritize freshness gaps and loader issues over complete readiness.', 'Explicitly mention tables or workflows delayed due to data recency.', 'Gather insight into repeated freshness issues, highlight systemic causes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:47"
+generation_model: "gpt-4o"
+validation_errors:
+  - "data_freshness_checker: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "data_freshness_checker: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

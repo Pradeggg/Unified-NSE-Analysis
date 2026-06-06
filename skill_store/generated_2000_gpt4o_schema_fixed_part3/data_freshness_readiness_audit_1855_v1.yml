@@ -1,0 +1,59 @@
+id: "data_freshness_readiness_audit_1855_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1855"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: risk-first review; timeframe: quarter to date; response style: action watchlist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "risk-first review for quarter to date: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as action watchlist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "risk-first_review"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "For assessing data freshness, verify maximum trade or snapshot dates across evidence tables and ensure they are within the expected range for live and periodic updates."
+sql_templates:
+  -
+    description: "Fetch latest trade date from the index EOD table."
+    sql: "SELECT MAX(trade_date) AS latest_index_date FROM market.index_eod;"
+  -
+    description: "Fetch latest trade date from the equity EOD table."
+    sql: "SELECT MAX(trade_date) AS latest_equity_date FROM market.equity_eod WHERE series = 'EQ';"
+  -
+    description: "Fetch latest snapshot date from the stage snapshots table."
+    sql: "SELECT MAX(snapshot_date) AS latest_stage_date FROM scores.stage_snapshots;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all fetched dates are within the quarter-to-date range."
+  - "Verify no mandatory evidence source is missing for risk assessment."
+synthesis_guidance: "Synthesize findings into an actionable watchlist of missing or stale sources, prioritized by potential risk impact."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:22"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_equity_date is not approved"
+  - "market.index_eod.latest_index_date is not approved"
+  - "scores.stage_snapshots.latest_stage_date is not approved"

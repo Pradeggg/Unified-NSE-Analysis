@@ -1,0 +1,58 @@
+created_at: "2026-06-06T12:52:09"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: last 3 months; response style: action watchlist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0845_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for last 3 months"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Get index performance over the last 3 months."
+    query: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    description: "Identify leading sectors with positive Stage 2 movements over the last 3 months."
+    query: "SELECT sector, COUNT(symbol) AS num_leaders FROM scores.stage_snapshots WHERE stage = 'Stage 2' AND snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY COUNT(symbol) DESC;"
+status: "test_failed"
+synthesis_guidance: "Summarize the results in terms of index performance, sector leadership, and any key risks identified from the assessment over the last 3 months."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "last_3_months"
+  - "action_watchlist"
+title: "3M Market Rotation Swing Assessment Variant 0845"
+tool_plan_template:
+
+validation_errors:
+  - "scores.stage_snapshots.num_leaders is not approved"
+validation_rules:
+  - "status"
+version: 1
+review:
+  attempts: 3
+  findings:
+    - "scores.stage_snapshots.num_leaders is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"

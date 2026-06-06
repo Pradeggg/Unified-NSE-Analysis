@@ -1,0 +1,78 @@
+id: "insider_bulk_deal_signal_review_1354_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1354"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for quarter to date: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as exceptions and gaps first"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    name: "GenerateWatchlistFromInsiderAndBulkDeals"
+    inputs:
+      - "insider_buying_signals"
+      - "bulk_deals_signals"
+      - "technical_confirmation_signals"
+      - "current_quarter"
+    outputs:
+      - "ranked_symbols"
+      - "deal_summary"
+      - "insider_context"
+      - "technical_confirmation"
+      - "risk_notes"
+sql_templates:
+  -
+    id: "quarter_to_date_insider_bulk_deals_watchlist"
+    template: "WITH latest_stage AS ( SELECT symbol, stage, stage_score, technical_score, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') ), insider_alerts_qtd AS ( SELECT symbol, SUM(qty) AS total_qty, SUM(value_cr) AS total_value_cr FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY symbol ), bulk_deals_qtd AS ( SELECT symbol, SUM(qty) AS total_qty, AVG(price) AS avg_price FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY symbol ) SELECT la.symbol, ia.total_qty AS insider_qty, ia.total_value_cr AS insider_value_cr, bd.total_qty AS bulk_deal_qty, bd.avg_price AS bulk_deal_avg_price, ls.stage, ls.stage_score, ls.technical_score FROM latest_stage la JOIN insider_alerts_qtd ia ON la.symbol = ia.symbol JOIN bulk_deals_qtd bd ON la.symbol = bd.symbol ORDER BY ls.technical_score DESC LIMIT 50;"
+    description: "Selects a ranked list of symbols with insider buying, bulk deals, and positive technical validation."
+python_tools:
+  -
+    id: "CalculateTechnicalScore"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "snapshot_date"
+    outputs:
+      - "technical_score"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Read only calculation for technical score\n    symbol = context['symbol']\n    snapshot_date = context['snapshot_date']\n    # Mock calculation\n    technical_score = 80  # Placeholder for real calculation\n    return {'technical_score': technical_score}"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "rule_sets"
+synthesis_guidance: "['Highlight exceptional insider and bulk deal findings with technical support.', 'Focus on critical gaps and exceptions in accumulation signals.', 'Rank symbols based on technical confirmation and insider activity strength.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:33"
+generation_model: "gpt-4o"
+validation_errors:
+  - "CalculateTechnicalScore: execution failed: KeyError: 'symbol'"
+review:
+  status: "needs_heal"
+  findings:
+    - "CalculateTechnicalScore: execution failed: KeyError: 'symbol'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,58 @@
+id: "company_360_research_report_1462_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Agent Adda Skill Card: Company Research"
+description: "Comprehensive company research card integrating various dimensions of financial and technical analysis."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+tags:
+  - "research"
+  - "financials"
+  - "analysis"
+  - "portfolio"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "market.equity_eod"
+  join_rules:
+    -
+      left_table: "market.equity_eod"
+      right_table: "scores.stage_snapshots"
+      condition: "market.equity_eod.symbol = scores.stage_snapshots.symbol"
+tool_plan_template:
+  - "1. Extract the latest financial indicators from scores.stage_snapshots."
+  - "2. Cross-reference recent quarterly results from scores.quarterly_results."
+  - "3. Integrate annual results factors from scores.annual_results."
+  - "4. Contextualize with recent market observations from market.equity_eod."
+sql_templates:
+  - "WITH latest_stage AS ("
+  - "  SELECT *"
+  - "  FROM scores.stage_snapshots"
+  - "  WHERE snapshot_date = ("
+  - "    SELECT MAX(snapshot_date) FROM scores.stage_snapshots"
+  - "  ) AND symbol = '{{symbol}}'"
+  - ")"
+  - "SELECT stage, fundamental_score, technical_score"
+  - "FROM latest_stage"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+validation_rules:
+  - "Ensure the results are for the latest periods using the max date functions."
+  - "Verify the alignment between stage snapshots and market data using approved join rules."
+synthesis_guidance: "Create a narrative that explains the company's performance using both fundamental and technical indicators."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:29"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

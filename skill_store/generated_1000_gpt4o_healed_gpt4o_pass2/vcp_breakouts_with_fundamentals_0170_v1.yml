@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:42:35"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: post results; response style: narrative plus evidence."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0170_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Select high volume VCP breakout stocks with strong fundamentals and creating new highs."
+    select: "SELECT p.symbol, p.company_name, p.price, p.rsi, p.trading_signal, p.vcp_score, e.week52_high, e.close, s.fundamental_score FROM scores.stage2_vcp_picks p JOIN market.equity_eod e ON p.symbol = e.symbol JOIN scores.stage_snapshots s ON p.symbol = s.symbol WHERE e.trade_date = CURRENT_DATE AND e.close > e.week52_high * 0.99 AND p.vcp_score > 80 AND s.fundamental_score > 70;"
+    tables_used:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+status: "validated"
+synthesis_guidance: "Focus on creating a narrative with strong market evidence and clear presentation for TradingView exports."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "post_results"
+  - "narrative_plus_evidence"
+title: "VCP Breakouts With Fundamentals Variant 0170"
+tool_plan_template: "Find VCP breakouts with strong fundamentals using latest snapshots and EOD data."
+validation_rules:
+  - "status"
+version: 1

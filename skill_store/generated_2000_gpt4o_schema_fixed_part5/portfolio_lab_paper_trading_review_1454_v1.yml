@@ -1,0 +1,58 @@
+id: "portfolio_lab_paper_trading_review_1454_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1454"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for quarter to date: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Reviewing paper trading strategies for the quarter to date involves creating a watchlist based on strategy entries, exits, stop losses, targets, and exposures. Generate analysis without mixing real holdings and aim for a portfolio-aware output style."
+sql_templates:
+  -
+    name: "latest_stage_snapshot"
+    template: "SELECT symbol, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2';"
+  -
+    name: "portfolio_price_history"
+    template: "SELECT h.symbol, h.qty, h.avg_cost, e.close FROM portfolio.holdings h JOIN market.equity_eod e ON h.symbol = e.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure that data is sourced only from approved tables."
+  - "Validate that joins adhere strictly to _join_rules defined conditions."
+synthesis_guidance: "['Focus analysis around paper trading strategies only and separate from real holdings.', 'Construct the watchlist based on latest signals and avoid unexpected mixing of data sets.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:11"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

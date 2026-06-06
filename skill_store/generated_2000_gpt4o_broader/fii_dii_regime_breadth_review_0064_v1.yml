@@ -1,0 +1,52 @@
+id: "fii_dii_regime_breadth_review_0064_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0064"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: post results; response style: concise table."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for post results: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as concise table"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "post_results"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  type: "use evidence"
+  process: "combine FII/DII flows, regime history, market breadth, and index metrics to determine current market context"
+sql_templates:
+  - "WITH recent_flows AS (SELECT trade_date, fii_net_5d, dii_net_5d, flow_signal, fii_trend, dii_trend FROM signals.fii_dii_flows ORDER BY trade_date DESC LIMIT 1), recent_regime AS (SELECT trade_date, regime, confidence FROM signals.regime_history ORDER BY trade_date DESC LIMIT 1), recent_breadth AS (SELECT trade_date, adv_volume, dec_volume, bearish_pct, bullish_pct FROM breadth.market_daily ORDER BY trade_date DESC LIMIT 1), recent_index AS (SELECT trade_date, close, change_pct, trend_signal FROM market.index_eod WHERE index_symbol = 'NIFTY 50' ORDER BY trade_date DESC LIMIT 1) SELECT rf.flow_signal, rf.fii_trend, rf.dii_trend, rr.regime, rr.confidence, rb.bullish_pct, rb.bearish_pct, ri.trend_signal FROM recent_flows rf, recent_regime rr, recent_breadth rb, recent_index ri WHERE rf.trade_date = rr.trade_date AND rf.trade_date = rb.trade_date AND rf.trade_date = ri.trade_date;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure results are concise and formatted as a table."
+  - "Explain market in terms of risk-on or risk-off context."
+synthesis_guidance: "Use combined evidence to provide a clear market outlook with respect to institutional flows and breadth."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:54"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

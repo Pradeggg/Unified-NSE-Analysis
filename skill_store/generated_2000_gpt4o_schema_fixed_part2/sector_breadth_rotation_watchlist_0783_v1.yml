@@ -1,0 +1,54 @@
+id: "sector_breadth_rotation_watchlist_0783_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0783"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: QA checklist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for intraday context: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as QA checklist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "{}"
+sql_templates:
+  -
+    description: "Retrieve sectors with the highest stage 2 participation and significant breadth."
+    sql: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2'), sector_breadth AS (SELECT sector, AVG(breadth_signal) AS avg_breadth_signal FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) GROUP BY sector) SELECT s.sector, b.avg_breadth_signal FROM latest_snapshots s JOIN sector_breadth b ON s.sector = b.sector ORDER BY b.avg_breadth_signal DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all columns in SQL queries exist within the approved schema."
+  - "Verify read-only operations in SQL queries."
+  - "Use correct joins based on defined _join_rules."
+synthesis_guidance: "['Focus on intraday context and daily refresh as a QA checklist.', 'Identify improving sectors for intraday trading signals.', 'Capture stage 2 participation and sector breadth effectively.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:47"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

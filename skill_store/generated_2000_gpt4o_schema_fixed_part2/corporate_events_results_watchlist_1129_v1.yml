@@ -1,0 +1,58 @@
+id: "corporate_events_results_watchlist_1129_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1129"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: last 5 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for last 5 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as narrative plus evidence"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "tool for scanning recent corporate events related to results, dividends, splits, bonus issues, and AGMs in last 5 sessions."
+  - "tool for compiling watchlist with event-driven stocks impacted by recent results"
+sql_templates:
+  corporate_events_query:
+    -
+      template: "SELECT se.symbol, se.event_type, se.event_date, se.purpose_raw, se.detail, se.source, se.created_at FROM signals.corporate_events AS se WHERE se.event_date > CURRENT_DATE - INTERVAL '5 days' AND se.event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM') ORDER BY se.event_date DESC LIMIT 50;"
+      comment: "Retrieve recent corporate events within the last 5 days impacting stocks."
+  results_analysis_join:
+    -
+      template: "SELECT DISTINCT ON (ra.symbol) ra.symbol, ra.period_end, ra.verdict, ra.score, ra.source_trail FROM scores.results_analysis AS ra JOIN signals.corporate_events AS ce ON ra.symbol = ce.symbol WHERE ce.event_date > CURRENT_DATE - INTERVAL '5 days' ORDER BY ra.symbol, ra.period_end DESC NULLS LAST, ra.updated_at DESC LIMIT 50;"
+      comment: "Join results analysis with corporate events for source-trail validation."
+  stage_snapshots_join:
+    -
+      template: "SELECT ss.symbol, ss.stage, ss.trading_signal, ss.change_1d_pct, ss.change_1w_pct FROM scores.stage_snapshots AS ss JOIN signals.corporate_events AS ce ON ss.symbol = ce.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ce.event_date > CURRENT_DATE - INTERVAL '5 days' ORDER BY ss.symbol LIMIT 50;"
+      comment: "Join stage snapshots for latest trading and stage context."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure SQL templates are bounded with LIMIT to prevent large result sets."
+  - "Validate join conditions comply with _join_rules."
+synthesis_guidance: "{'narrative': 'Provide a brief summary of significant corporate events and their outcomes from the perspectives of event watchlists and result analyses, while ensuring fidelity to actual sources and evidence trails.', 'evidence': 'Highlight key source-trail validations and filter results where corporate event impacts align with stage and trading signals.', 'interpretation': 'Explain event impacts in the context of market reactions using evidence from results analysis and stage snapshots.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:34"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.corporate_events.se is not approved"

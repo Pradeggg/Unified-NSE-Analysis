@@ -1,0 +1,122 @@
+id: "data_freshness_readiness_audit_0833_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0833"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for last 20 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as action watchlist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "report.enhanced_runs"
+tool_plan_template:
+  write_summary: "Assess data freshness for last 20 sessions using provided evidence tables."
+  prepare_evidence:
+    -
+      table: "market.index_eod"
+      filters:
+        - "trade_date >= (CURRENT_DATE - INTERVAL '20 days')"
+      fields:
+        - "trade_date"
+        - "index_symbol"
+        - "close"
+    -
+      table: "market.equity_eod"
+      filters:
+        - "trade_date >= (CURRENT_DATE - INTERVAL '20 days')"
+        - "series = 'EQ'"
+      fields:
+        - "trade_date"
+        - "symbol"
+        - "close"
+    -
+      table: "scores.stage_snapshots"
+      filters:
+        - "snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+      fields:
+        - "snapshot_date"
+        - "symbol"
+        - "stage"
+    -
+      table: "breadth.market_daily"
+      filters:
+        - "trade_date >= (CURRENT_DATE - INTERVAL '20 days')"
+      fields:
+        - "trade_date"
+        - "advances"
+        - "declines"
+    -
+      table: "report.enhanced_runs"
+      filters:
+        - "run_ts >= (CURRENT_DATE - INTERVAL '20 days')"
+      fields:
+        - "run_id"
+        - "analysis_date"
+        - "stocks_analyzed"
+  apply_filters:
+
+  combine_results:
+
+sql_templates:
+  -
+    name: "latest_equity_eod"
+    template: "SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND series = 'EQ';"
+  -
+    name: "latest_stage_snapshots"
+    template: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+  -
+    id: "data_freshness_checker"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "trade_date"
+      - "snapshot_date"
+      - "run_ts"
+    outputs:
+      - "freshness_status"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "breadth.market_daily"
+      - "report.enhanced_runs"
+    code: "def run(context):\n    # Function to check data freshness for the last 20 sessions\n    pass"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all data entries are from the last 20 market sessions."
+  - "Validate the presence of the indices reported in market.equity_eod and market.index_eod for each date."
+synthesis_guidance: "['Focus on evaluating the data freshness across all evidence tables.', 'Identify any missing or blocking data gaps that could impact analyses.', 'Prepare an action-oriented watchlist of necessary loader tasks.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:21"
+generation_model: "gpt-4o"
+validation_errors:
+  - "data_freshness_checker: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "data_freshness_checker: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

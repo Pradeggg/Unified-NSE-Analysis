@@ -1,0 +1,50 @@
+id: "report_link_data_validation_1376_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1376"
+description: "Validate enhanced report run metadata, filtered stock rows, and source trails with an emphasis on freshness audit for pre-market conditions. Provides insights on broken links, missing data, and exceptions."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for pre market: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    description: "Conduct a freshness audit and validate report data pre-market using metadata filters."
+sql_templates:
+  report_check: "SELECT r.run_id, r.run_ts, r.stocks_analyzed, f.symbol, f.score FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks f ON r.run_id = f.run_id WHERE r.run_ts > CURRENT_DATE - INTERVAL '1 day';"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Check for report runs that are more than 1 day old for freshness verification."
+  - "Identify stocks with missing data or improperly linked HTML files and review the report links."
+synthesis_guidance: "['Highlight exceptions and gaps in the data first.', 'Emphasize the freshness criterion for pre-market conditions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:49"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

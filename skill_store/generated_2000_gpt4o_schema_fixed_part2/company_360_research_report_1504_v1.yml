@@ -1,0 +1,63 @@
+id: "company_360_research_report_1504_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Skill Card for Company 360 Research Report Variant 1504"
+description: "Generates a comprehensive research report for a company with a focus on watchlist creation for the current day, providing detailed insights using Indian market evidence and research-only framing."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "watchlist creation for today: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as research-only summary"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "watchlist_creation"
+  - "today"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template: "Use the provided SQL templates to collect necessary data points from the approved tables, ensuring read-only access."
+sql_templates:
+  -
+    title: "Latest Company Snapshot"
+    sql: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol = 'RELIANCE';"
+  -
+    title: "Latest Quarterly Results"
+    sql: "SELECT DISTINCT ON (symbol) * FROM scores.quarterly_results WHERE symbol = 'RELIANCE' AND period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC;"
+  -
+    title: "Latest Annual Results"
+    sql: "SELECT DISTINCT ON (symbol) * FROM scores.annual_results WHERE symbol = 'RELIANCE' AND period_type = 'annual' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "type"
+  - "checks"
+synthesis_guidance: "Transform the gathered data into a research-only summary, focusing on providing institutional-grade insights with emphasis on fundamental and technical factors impacting the selected stock."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:54"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

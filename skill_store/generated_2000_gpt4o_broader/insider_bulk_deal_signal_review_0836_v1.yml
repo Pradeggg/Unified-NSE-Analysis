@@ -1,0 +1,52 @@
+id: "insider_bulk_deal_signal_review_0836_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0836"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for last 20 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as action watchlist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "{}"
+sql_templates:
+  bulk_deal_insight:
+    query: "WITH latest_bulk_deals AS (SELECT symbol, deal_date, side, qty, price FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '20 days'), insider_alert_sum AS (SELECT symbol, SUM(qty) as total_qty FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '20 days' GROUP BY symbol) SELECT b.symbol, b.deal_date, b.side, i.total_qty FROM latest_bulk_deals b LEFT JOIN insider_alert_sum i ON b.symbol = i.symbol WHERE b.side = 'Buy';"
+    description: "Fetch symbols with bulk deals and insider buying in the last 20 sessions."
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all symbols have recent insider or bulk deal activity."
+  - "Verify technical confirmation aligns with bulk deal signals."
+synthesis_guidance: "['Prioritize symbols with both insider buying and positive technical scores.', 'Include risk notes for symbols with volatile technical indicators.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:30"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

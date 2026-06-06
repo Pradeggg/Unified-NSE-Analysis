@@ -1,0 +1,68 @@
+created_at: "2026-06-06T12:44:22"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: latest EOD; response style: exceptions and gaps first."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0315_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for latest EOD: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as exceptions and gaps first"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "portfolio.holdings"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Sample read-only calculation to aggregate sector exposures\n    holdings = context['holdings']\n    snapshots = context['snapshots']\n    sector_exposure = {}\n    for holding in holdings:\n        symbol = holding['symbol']\n        qty = holding['qty']\n        snapshot = next((s for s in snapshots if s['symbol'] == symbol), None)\n        if snapshot:\n            sector = snapshot['sector']\n            sector_exposure[sector] = sector_exposure.get(sector, 0) + qty\n    return {'sector_exposure': [{'sector': k, 'exposure': v} for k, v in sector_exposure.items()]}"
+    id: "calculate_sector_exposure"
+    inputs:
+      holdings: "portfolio.holdings"
+      snapshots: "scores.stage_snapshots"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      sector_exposure: "list of sectors with total exposure"
+sql_templates:
+  -
+    query: "SELECT h.symbol, h.qty, s.sector, s.stage, s.stage_score, s.trend_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    title: "Current Holdings with Market Indicators"
+status: "test_failed"
+synthesis_guidance: "Focus on identifying high-risk stocks for trimming and potential growth stocks for adding based on the latest market data."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+title: "Portfolio Incremental Add Trim Review Variant 0315"
+tool_plan_template: "Research and review current holdings for add or trim decisions based on risk assessments and market conditions."
+validation_rules:
+  - "Ensure portfolio state includes sectors with significant exposure."
+  - "Identify stocks for incremental add based on positive trend signals."
+  - "Identify stocks for trim based on negative trend signals or low stage scores."
+  - "Highlight risk flags where applicable."
+version: 1
+validation_errors:
+  - "calculate_sector_exposure: inputs must be a list"
+  - "calculate_sector_exposure: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_sector_exposure: inputs must be a list"
+    - "calculate_sector_exposure: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

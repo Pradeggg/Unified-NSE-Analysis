@@ -1,0 +1,63 @@
+id: "data_freshness_readiness_audit_0917_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0917"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for latest EOD: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as comparison matrix"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  tools:
+    -
+      name: "Latest EOD freshness"
+      type: "sql"
+      template: "SELECT MAX(trade_date) AS latest_trade_date FROM market.index_eod;"
+    -
+      name: "Sector-relative comparison"
+      type: "sql"
+      template: "SELECT sector, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector;"
+sql_templates:
+  -
+    name: "Latest EOD Date Check"
+    template: "SELECT MAX(trade_date) AS latest_trade_date FROM market.index_eod;"
+  -
+    name: "Sector Snapshot Count"
+    template: "SELECT sector, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure sector counts align with expected market data."
+  - "Verify latest trade date matches Agent Adda operational standards."
+synthesis_guidance: "['Aggregate comparison data into a matrix format.', 'Highlight key sectors with potential freshness discrepancies.', 'Identify missing data sources or gaps that could block analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:44"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.latest_trade_date is not approved"

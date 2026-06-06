@@ -1,0 +1,64 @@
+created_at: "2026-06-06T12:49:56"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: weekly review; response style: research-only summary."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0597_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for weekly review: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as research-only summary"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Calculate index returns over the last 3 months."
+    query: "SELECT index_symbol, (SUM(close) - SUM(prev_close)) / SUM(prev_close) * 100 AS change_pct FROM market.index_eod WHERE trade_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE GROUP BY index_symbol"
+  -
+    description: "Determine leading sectors and stage distribution change."
+    query: "SELECT sector, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE AND stage = 2 GROUP BY sector ORDER BY count DESC"
+  -
+    description: "Identify top swing candidates based on VCP picks."
+    query: "SELECT symbol, company_name, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE AND vcp_score > 90 ORDER BY vcp_score DESC"
+status: "validated"
+synthesis_guidance: "Focus on presenting a balanced overview of the market based on sector rotations and potential swing opportunities. Highlight any visible market trends or anomalies."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "research-only_summary"
+title: "3M Market Rotation Swing Assessment Variant 0597"
+tool_plan_template:
+  description: "Plan for analyzing sector rotation, market stages, and swing candidates."
+  steps:
+    - "Analyze index EOD data for overall market trend."
+    - "Identify sector leadership by evaluating stage snapshots."
+    - "Select swing candidates using stage2 VCP picks."
+validation_rules:
+  - "status"
+  - "approved_tables"
+version: 1

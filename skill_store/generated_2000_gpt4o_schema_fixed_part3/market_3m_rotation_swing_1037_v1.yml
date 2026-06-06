@@ -1,0 +1,66 @@
+id: "market_3m_rotation_swing_1037_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1037"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: concise table."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for last 20 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze the latest swing candidates according to selected sector leadership, market regime, and relative performance over the last 20 sessions in the Indian market. Use descriptive statistics and relative comparisons."
+sql_templates:
+  index_returns:
+    description: "Retrieve index returns for the last 20 sessions."
+    template: "SELECT index_symbol, trade_date, change_pct FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '20 days') AND trade_date <= (SELECT MAX(trade_date) FROM market.index_eod) ORDER BY trade_date DESC;"
+  stage_distribution_change:
+    description: "Determine the change in stage distribution over the last 20 sessions."
+    template: "WITH latest_snapshot AS (SELECT MAX(snapshot_date) AS latest_date FROM scores.stage_snapshots), stage_counts AS (SELECT stage, COUNT(*) FROM scores.stage_snapshots WHERE snapshot_date IN (SELECT latest_date FROM latest_snapshot) GROUP BY stage) SELECT stage, COUNT(*) FROM scores.stage_snapshots WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '20 days') GROUP BY stage;"
+  leading_sectors:
+    description: "Fetch leading sectors based on relative strength and technical scores."
+    template: "SELECT sector, AVG(relative_strength) as avg_relative_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY avg_relative_strength DESC LIMIT 5;"
+  primary_candidates:
+    description: "Identify primary swing candidates in Stage 2 with strong buy signals."
+    template: "SELECT symbol, company_name, price, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY technical_score DESC LIMIT 10;"
+  risks:
+    description: "Highlight potential risks based on sector volatility."
+    template: "SELECT sector, COUNT(*) FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trend_signal = 'BEARISH' GROUP BY sector ORDER BY COUNT(*) DESC LIMIT 3;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "{'notes': 'Use the SQL templates to generate the desired output. Concentrate on the last 20 sessions and utilize relative performance metrics to extract key insights.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:24"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

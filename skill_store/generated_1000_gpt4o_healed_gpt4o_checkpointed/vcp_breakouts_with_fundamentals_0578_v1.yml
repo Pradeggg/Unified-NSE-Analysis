@@ -1,0 +1,64 @@
+created_at: "2026-06-06T12:49:19"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: pre market; response style: research-only summary."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0578_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "select_vcp_highs"
+    tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    template: "SELECT eod.symbol, eod.trade_date, eod.high, eod.volume FROM market.equity_eod AS eod JOIN scores.stage_snapshots AS ss ON eod.symbol = ss.symbol WHERE eod.high > 0.95 * eod.week52_high AND ss.enhanced_fund_score > 75 ORDER BY eod.trade_date DESC;"
+status: "validated"
+synthesis_guidance: "['Integrate findings into a coherent research summary.', 'Ensure evidence links back to approved schemas.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "pre_market"
+  - "research-only_summary"
+title: "VCP Breakouts With Fundamentals Variant 0578"
+tool_plan_template:
+  -
+    description: "Query evidence tables to find stocks meeting the criteria."
+    templates:
+      -
+        name: "select_vcp_picks"
+        tables:
+          - "scores.stage2_vcp_picks"
+        template: "SELECT DISTINCT symbol, company_name, vcp_score, enhanced_fund_score, financial_strength FROM scores.stage2_vcp_picks WHERE vcp_score > 70 AND enhanced_fund_score > 75 ORDER BY vcp_score DESC;"
+    tool: "evidence_query"
+validation_rules:
+  - "Results must include only evidence from approved tables."
+  - "SQL queries must be read-only and conform to templates."
+version: 1

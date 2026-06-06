@@ -1,0 +1,52 @@
+id: "vcp_breakouts_with_fundamentals_1136_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1136"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 20 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Find stocks with the latest breakout moves and strong fundamentals using approved tables and yielding narrative insights."
+sql_templates:
+  -
+    name: "latest_vcp_breakouts"
+    sql: "WITH latest_stage AS (SELECT symbol, enhanced_fund_score, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY')), latest_eod AS (SELECT symbol, trade_date, close, high, market_cap_cr FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)) SELECT e.symbol, e.high, e.close, s.enhanced_fund_score FROM latest_stage s JOIN latest_eod e ON e.symbol = s.symbol WHERE e.close > 0.9 * e.high ORDER BY s.enhanced_fund_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "sql_checks"
+  - "data_checks"
+synthesis_guidance: "['Provide a narrative summary based on top candidates.', 'Highlight key technical and fundamental metrics supporting selected stocks.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:40"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

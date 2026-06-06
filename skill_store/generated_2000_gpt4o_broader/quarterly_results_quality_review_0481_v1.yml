@@ -1,0 +1,49 @@
+id: "quarterly_results_quality_review_0481_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0481"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: intraday context; response style: portfolio-aware output."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for intraday context: latest quarterly results analysis"
+  - "which companies had strong quarterly results as portfolio-aware output"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Generate a quick scan of quarterly results highlighting revenue, PAT growth, and margin trends using the approved tables. Focus on generating portfolio-aware insights."
+sql_templates:
+  -
+    purpose: "Extract revenue and PAT growth along with margin trends."
+    template: "SELECT symbol, period_end, growth_yoy_revenue_pct, growth_yoy_pat_pct, opm_delta_pp FROM scores.results_analysis WHERE period_end >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) ORDER BY growth_yoy_revenue_pct DESC;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates, if any, must be read-only SELECT/WITH templates."
+synthesis_guidance: "Focus on identifying companies with strong revenue and PAT growth. Highlight major margin drivers and any associated risks. Ensure to provide a portfolio-aware summary for Indian market context."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:48"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.curdate is not approved"
+  - "scores.results_analysis.date_sub is not approved"
+  - "scores.results_analysis.month is not approved"

@@ -1,0 +1,52 @@
+id: "quarterly_results_quality_review_1377_v1"
+version: 1
+status: "review_pending"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1377"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: sector-relative comparison; timeframe: pre market; response style: exceptions and gaps first."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "sector-relative comparison for pre market: latest quarterly results analysis"
+  - "which companies had strong quarterly results as exceptions and gaps first"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Agent Adda skill card analysis requires assessing the latest quarterly results using approved evidence tables."
+sql_templates:
+  -
+    template: "WITH latest_quarterly AS (SELECT DISTINCT ON (symbol) symbol, revenue, opm_pct, pat FROM scores.quarterly_results WHERE period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC) SELECT q.symbol, q.revenue, q.opm_pct, r.verdict FROM latest_quarterly q JOIN scores.results_analysis r ON q.symbol = r.symbol AND q.revenue IS NOT NULL AND r.period_end = q.period_end WHERE r.verdict IN ('beat', 'miss') ORDER BY r.verdict DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Output must mention revenue, PAT growth, and OP margin trend."
+  - "Narrative quality should highlight sector-relative performance."
+synthesis_guidance: "Focus on identifying companies with exceptionally strong or weak quarterly results and place emphasis on sector-relative performance."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:49"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

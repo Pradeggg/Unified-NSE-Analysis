@@ -1,0 +1,54 @@
+id: "fii_dii_regime_breadth_review_1044_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1044"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: last 3 months; response style: concise table."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for last 3 months: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as concise table"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  sql_templates:
+    -
+      template_id: "flow_regime_breadth_index"
+      purpose: "Combine FII/DII flows, market regime, market breadth, and index data for the latest 3 months."
+      sql: "WITH latest_flows AS (SELECT * FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'),\n      latest_regime AS (SELECT * FROM signals.regime_history WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'),\n      latest_breadth AS (SELECT * FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'),\n      latest_index AS (SELECT * FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months')\nSELECT f.trade_date, r.regime, f.flow_signal, b.ad_signal, i.trend_signal\nFROM latest_flows f\nJOIN latest_regime r ON f.trade_date = r.trade_date\nJOIN latest_breadth b ON f.trade_date = b.trade_date\nJOIN latest_index i ON f.trade_date = i.trade_date\nWHERE i.index_symbol = 'Nifty 50'\nORDER BY f.trade_date DESC;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'guidance': ['Summarize the flow trends, regime state, breadth signals, and index confirmation succinctly.', 'Highlight any risk-on or risk-off implications based on combined evidence.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

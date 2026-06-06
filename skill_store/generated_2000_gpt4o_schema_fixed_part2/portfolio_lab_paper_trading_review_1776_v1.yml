@@ -1,0 +1,53 @@
+id: "portfolio_lab_paper_trading_review_1776_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1776"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: pre market; response style: QA checklist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for pre market: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as QA checklist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "pre_market"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review paper trading strategies using pre-market data from a separate tab. Include entries, exits, and calculated exposure."
+sql_templates:
+  -
+    description: "Find latest signals for paper trading review."
+    sql_string: "SELECT symbol, signal, setup_class, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log) AND symbol IN (SELECT symbol FROM portfolio.holdings);"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure data freshness by verifying the latest date in relevant tables."
+  - "Cross-check entry and exit rules for adherence with signals."
+synthesis_guidance: "Synthesize a QA checklist ensuring strategies are separated from real holdings, focusing on entry and exit adherence and exposure."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:54"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

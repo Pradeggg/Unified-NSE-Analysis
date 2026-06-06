@@ -1,0 +1,48 @@
+id: "report_link_data_validation_0956_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Quarter-to-Date Freshness Audit"
+description: "A skill card designed to perform a freshness audit on enhanced report links and data for the current quarter-to-date."
+input_patterns:
+  - "review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+tags:
+  - "report_qa"
+  - "links"
+  - "data_validation"
+  - "freshness_audit"
+  - "quarter_to_date"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  evidence_gathering: "Collect report run metadata and filtered stock data for the quarter-to-date."
+  analysis: "Cross-verify report timestamps, numbers of stocks analyzed, and filter criteria with the expected outcomes."
+  reporting: "Present findings, highlighting any broken links and identifying missing data in a comparison matrix."
+sql_templates:
+  -
+    template: "WITH latest_runs AS ( SELECT run_id, run_ts FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months' ) SELECT er.run_id, efs.symbol, efs.score FROM latest_runs er JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure coverage of all report metadata for the timeframe."
+  - "Validate that all required stock data is present and up-to-date."
+  - "Cross-reference findings with report metadata to confirm accuracy."
+synthesis_guidance: "Compile results into a clear matrix, focusing on completeness and timestamp validation."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:40"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

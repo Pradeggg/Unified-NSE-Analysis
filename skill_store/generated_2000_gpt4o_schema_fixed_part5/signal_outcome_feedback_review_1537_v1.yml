@@ -1,0 +1,71 @@
+id: "signal_outcome_feedback_review_1537_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1537"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: research-only summary."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for last 20 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as research-only summary"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    python_tool_policy:
+      required_function: "run(context)"
+      language: "python"
+      mode: "read_only"
+      blocked_capabilities:
+        - "network"
+        - "subprocess"
+        - "filesystem_write"
+        - "db_write"
+        - "broker_api"
+      required_fields:
+        - "id"
+        - "language"
+        - "mode"
+        - "inputs"
+        - "outputs"
+        - "approved_tables"
+        - "code"
+sql_templates:
+  -
+    template: "SELECT sl.symbol, sl.date_issued, sl.price_at_issue, sl.price_at_resolution, sl.return_pct, sl.hit_target, sl.hit_stop, ss.stage, ss.technical_score FROM signals.signal_log sl INNER JOIN scores.stage_snapshots ss ON sl.symbol = ss.symbol WHERE sl.date_resolved >= CURRENT_DATE - INTERVAL '20 days' AND sl.symbol IN (SELECT DISTINCT symbol FROM signals.signal_log) ORDER BY sl.symbol, sl.date_issued DESC;"
+    name: "SignalOutcomeReviewQuery"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure query returns columns matching expected schema definitions."
+  - "Check the alignment of resolved signals with the latest snapshot stage."
+synthesis_guidance: "['Focus on sector-relative performance over the last 20 sessions.', 'Summarize hit target and hit stop patterns in the context of stage labels.', 'Offer insights for potential route improvements and future checks.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:04"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

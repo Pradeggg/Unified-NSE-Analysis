@@ -1,0 +1,71 @@
+id: "signal_outcome_feedback_review_0249_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0249"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: last 3 months; response style: ranked candidates."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for last 3 months: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as ranked candidates"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    action: "query"
+    description: "Identify signals from the last 3 months that hit targets or stops."
+    inputs:
+
+    outputs:
+      - "resolved_signals"
+    sql_template: "SELECT id, symbol, date_issued, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months'"
+  -
+    action: "synthesize"
+    description: "Rank signals based on performance and insights from resolved outcomes."
+    inputs:
+      - "resolved_signals"
+    outputs:
+      - "outcome_summary"
+      - "winner_patterns"
+      - "failure_patterns"
+      - "route_improvements"
+      - "next_checks"
+sql_templates:
+  -
+    id: "resolved_signals_query"
+    template: "SELECT id, symbol, date_issued, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months'"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all outcomes are from the past 3 months."
+  - "Verify ranking logic follows historical return percentage."
+synthesis_guidance: "['Identify patterns of success or failure from signal logs.', 'Highlight routes and skill improvements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

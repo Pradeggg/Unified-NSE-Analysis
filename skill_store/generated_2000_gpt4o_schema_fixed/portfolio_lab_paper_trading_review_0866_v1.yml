@@ -1,0 +1,53 @@
+id: "portfolio_lab_paper_trading_review_0866_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0866"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for post results: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as action watchlist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Use SELECT queries for read-only reports of the paper trading strategies, focusing on freshness and trade conventions."
+sql_templates:
+  -
+    name: "Freshness_Audit"
+    description: "Audit the freshness of paper trading signals against the latest strategy lab data."
+    template: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT sl.symbol, sl.date_issued, sl.signal, ss.stage FROM signals.signal_log sl JOIN latest_snapshots ss ON sl.symbol = ss.symbol WHERE sl.date_resolved IS NULL ORDER BY sl.date_issued DESC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "rules"
+synthesis_guidance: "Create watchlists by synthesizing open trades and their strategies from the paper trading portfolio, ensuring clarity and separation from real holdings."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,67 @@
+id: "vcp_breakouts_with_fundamentals_0982_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0982"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Use data from approved tables to identify and analyze potential stocks meeting criteria for breakouts with strong fundamentals. Compare using specified scores and metrics."
+sql_templates:
+  -
+    description: "Fetch VCP breakout stocks with strong fundamentals."
+    sql: "SELECT p.symbol, p.company_name, p.price, p.vcp_score, p.enhanced_fund_score FROM scores.stage2_vcp_picks p WHERE p.vcp_score > 80 AND p.enhanced_fund_score > 70 ORDER BY p.vcp_score DESC;"
+python_tools:
+  -
+    id: "analyze_vcp_breakouts"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "analysis"
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    # Analyze potential VCP breakout stocks based on context\n    return {'analysis': 'Sample analysis based on read-only context data.'}"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Status must be generated."
+  - "Utilize only SELECT/WITH templates with approved tables and columns."
+  - "Do not create or use additional tables, aliases, or columns."
+  - "Place any missing schema concepts in evidence_gaps."
+synthesis_guidance: "Focus on providing a comprehensive view of stocks that meet the VCP breakout criteria with strong fundamentals. Information is for research and comparison purposes."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:53:24"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.p is not approved"
+  - "unknown table p.company_name"
+  - "unknown table p.enhanced_fund_score"
+  - "unknown table p.price"
+  - "unknown table p.symbol"
+  - "unknown table p.vcp_score"

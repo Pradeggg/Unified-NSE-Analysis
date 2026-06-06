@@ -1,0 +1,53 @@
+id: "fii_dii_regime_breadth_review_0442_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0442"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for last 3 months: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as portfolio-aware output"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Examine FII/DII trends alongside market regime and breadth to provide portfolio-aware insights for the last 3 months."
+sql_templates:
+  -
+    description: "Fetch FII/DII flows, regime, and breadth details for the last 3 months."
+    template: "WITH latest_flows AS (\n    SELECT trade_date, fii_net_today, dii_net_today, flow_signal\n    FROM signals.fii_dii_flows\n    WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'\n), latest_regime AS (\n    SELECT trade_date, regime, confidence\n    FROM signals.regime_history\n    WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'\n), latest_breadth AS (\n    SELECT trade_date, adv_signal, market_sentiment\n    FROM breadth.market_daily\n    WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'\n), latest_index AS (\n    SELECT trade_date, close, change_pct\n    FROM market.index_eod\n    WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'\n    AND index_symbol = 'Nifty 50'\n)\nSELECT \n    f.trade_date, \n    f.fii_net_today, \n    f.dii_net_today, \n    f.flow_signal, \n    r.regime, \n    r.confidence, \n    b.adv_signal, \n    b.market_sentiment, \n    i.close AS index_close,\n    i.change_pct AS index_change_pct\nFROM latest_flows f\nJOIN latest_regime r ON f.trade_date = r.trade_date\nJOIN latest_breadth b ON f.trade_date = b.trade_date\nJOIN latest_index i ON f.trade_date = i.trade_date\nORDER BY f.trade_date DESC;\n"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all evidence tables are correctly queried."
+  - "Verify the data is only from the last 3 months."
+  - "Check if JOIN conditions are appropriately used from approved_schema._join_rules."
+synthesis_guidance: "Integrate FII/DII flow analysis, regime trends, breadth diagnostics, and index movements to frame risk contexts, mindful of portfolio adjustments."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:45"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

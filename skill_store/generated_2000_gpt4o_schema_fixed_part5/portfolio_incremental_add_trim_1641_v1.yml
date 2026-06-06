@@ -1,0 +1,56 @@
+id: "portfolio_incremental_add_trim_1641_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions over the last 3 months. Focus: quick scan; response style: debug trace."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for last 3 months: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  -
+    description: "Agent Adda will use SQL to extract information on current portfolio holdings and evaluate their staging scores, technical scores, and other signals to determine add or trim actions."
+sql_templates:
+  -
+    name: "latest_stages"
+    description: "Fetch latest scores and signals for portfolio holdings for add/trim decisions."
+    template: "WITH latest_stages AS (SELECT MAX(snapshot_date) AS snapshot_date FROM scores.stage_snapshots) SELECT h.symbol, h.qty, h.avg_cost, s.sector, s.stage, s.trading_signal, s.stage_score, s.technical_score FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT snapshot_date FROM latest_stages) AND s.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure SQL results are read-only."
+  - "Restrict SQL to SELECT queries."
+  - "Use approved schema for joins and filters."
+  - "Limit candidate queries with LIMIT."
+  - "Apply latest date filters in the SQL."
+synthesis_guidance: "Use fetched data to identify potential add/trim actions. Focus on strong buy signals and stage improvement. Provide a debug trace explanation for users."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:19"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

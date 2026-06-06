@@ -1,0 +1,60 @@
+id: "data_freshness_readiness_audit_0707_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0707"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: today; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for today: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "today"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    steps:
+      - "Assess latest available `trade_date` across all evidence tables."
+      - "Determine sector-relative availability for today's data."
+    method: "SQL"
+sql_templates:
+  -
+    purpose: "Checking latest trade_date for data freshness."
+    template: "SELECT MAX(trade_date) AS latest_trade_date FROM market.index_eod UNION ALL SELECT MAX(trade_date) FROM market.equity_eod UNION ALL SELECT MAX(snapshot_date) FROM scores.stage_snapshots UNION ALL SELECT MAX(trade_date) FROM breadth.market_daily UNION ALL SELECT MAX(snapshot_date) FROM breadth.ma_pct_above UNION ALL SELECT MAX(run_ts) FROM report.enhanced_runs"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure the presence of latest rows for each table for today's date."
+  - "Confirm alignment with global freshness expectations."
+synthesis_guidance: "Aggregate per-sector data freshness status, highlight gaps for QA checklist."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:35:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

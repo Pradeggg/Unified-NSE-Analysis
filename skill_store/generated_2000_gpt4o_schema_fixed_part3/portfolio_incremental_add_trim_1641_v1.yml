@@ -1,0 +1,48 @@
+id: "portfolio_incremental_add_trim_1641_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1641"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for last 3 months: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Assess portfolio holdings against market signals and stage performance. Recommend potential incremental add/trim actions based on a debug trace output that highlights the decision pathway for the last 3 months."
+sql_templates:
+  add_candidates_query: "WITH latest_stage AS (SELECT symbol, stage_score, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT ph.symbol, ph.qty, ph.avg_cost, ss.stage_score FROM portfolio.holdings ph JOIN latest_stage ss ON ph.symbol = ss.symbol WHERE ss.trading_signal IN ('BUY', 'STRONG_BUY') AND ss.stage_score > 7 ORDER BY ss.stage_score DESC LIMIT 10;"
+  trim_candidates_query: "WITH latest_stage AS (SELECT symbol, stage_score, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT ph.symbol, ph.qty, ph.avg_cost, ss.stage_score FROM portfolio.holdings ph JOIN latest_stage ss ON ph.symbol = ss.symbol WHERE ss.trading_signal IN ('SELL') ORDER BY ss.stage_score ASC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "latest_stage_date"
+synthesis_guidance: "Provide a summary of recommended add/trim actions along with reasoning based on stage_score and trading_signal. Highlight any potential risk flags and sector-level insights."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

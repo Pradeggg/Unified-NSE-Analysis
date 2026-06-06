@@ -1,0 +1,67 @@
+id: "company_360_research_report_1518_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1518"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: position-sizing context; timeframe: latest EOD; response style: research-only summary."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "position-sizing context for latest EOD: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as research-only summary"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+
+  sql_templates:
+    -
+      description: "Fetch latest snapshot data for the specified company"
+      query: "SELECT * FROM scores.stage_snapshots WHERE symbol = '{{symbol}}' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots WHERE symbol = '{{symbol}}')"
+    -
+      description: "Get annual results for the specified company"
+      query: "SELECT * FROM scores.annual_results WHERE symbol = '{{symbol}}' ORDER BY period_end DESC LIMIT 1"
+    -
+      description: "Get latest technical data for the specified company"
+      query: "SELECT * FROM market.equity_eod WHERE symbol = '{{symbol}}' ORDER BY trade_date DESC LIMIT 1"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Must align with research-only summary format."
+  - "Ensure data consistency with the latest available evidence."
+synthesis_guidance: "['Combine financial and technical data to provide a holistic view.', 'Highlight position-sizing context using quantitative and narrative data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:09:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

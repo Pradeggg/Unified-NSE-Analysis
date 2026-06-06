@@ -1,0 +1,55 @@
+id: "vcp_breakouts_with_fundamentals_1472_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1472"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: pre market; response style: portfolio-aware output."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    type: "sql"
+    title: "Fetch VCP Breakout Candidates"
+    description: "Select stocks forming VCP and close to breakout with favorable fundamentals."
+    template: "SELECT\n  v.symbol,\n  v.company_name,\n  v.price,\n  v.vcp_score,\n  s.enhanced_fund_score,\n  s.trading_signal\nFROM\n  scores.stage2_vcp_picks v\nJOIN\n  scores.stage_snapshots s ON v.symbol = s.symbol\nWHERE\n  v.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND\n  s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND\n  s.stage = 'STAGE_2' AND\n  s.trading_signal IN ('BUY', 'STRONG_BUY')\nORDER BY\n  v.vcp_score DESC\nLIMIT 50;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure that all selected stocks have trading signals indicating 'BUY' or 'STRONG_BUY'."
+  - "Limit result set to 50 stocks."
+synthesis_guidance: "For synthesis, highlight stocks with highest VCP scores and ensure detailed context including enhanced fundamental scores."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:37"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

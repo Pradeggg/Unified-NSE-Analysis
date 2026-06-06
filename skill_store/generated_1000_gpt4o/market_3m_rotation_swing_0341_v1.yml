@@ -1,0 +1,58 @@
+id: "market_3m_rotation_swing_0341_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0341"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: last 3 months; response style: exceptions and gaps first."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as exceptions and gaps first"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  step1: "Evaluate index trends using market.index_eod table."
+  step2: "Identify sector leadership changes from scores.stage_snapshots."
+  step3: "Review stage 2 VCP candidates using scores.stage2_vcp_picks."
+sql_templates:
+  -
+    query: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'"
+    description: "Retrieve index performance over the last 3 months."
+  -
+    query: "SELECT sector, COUNT(*) as leading_count FROM scores.stage_snapshots WHERE stage = '2' AND snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY leading_count DESC"
+    description: "Identify leading sectors in stage 2 over the last 3 months."
+  -
+    query: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY vcp_score DESC LIMIT 10"
+    description: "Select top 10 stage 2 VCP candidates based on VCP score."
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure data accuracy for the last 3 months timeframe."
+  - "Validate sector categorization correlates with recent market changes."
+synthesis_guidance: "Focus on presenting exceptions and gaps first, followed by detailed insights."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:45:46"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.leading_count is not approved"

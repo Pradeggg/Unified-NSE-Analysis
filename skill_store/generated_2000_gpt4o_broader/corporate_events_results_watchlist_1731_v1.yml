@@ -1,0 +1,54 @@
+id: "corporate_events_results_watchlist_1731_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1731"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for last 20 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as QA checklist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  protocol: "1. Retrieve recent corporate events and results for the last 20 sessions. 2. Analyze results-driven stock actions based on event types. 3. Generate a QA checklist for watchlist updates."
+sql_templates:
+  -
+    query: "SELECT symbol, event_type, event_date, purpose_raw, source FROM signals.corporate_events WHERE event_date >= CURDATE() - INTERVAL 20 DAY"
+    description: "Fetch corporate events of interest for the last 20 sessions."
+  -
+    query: "SELECT symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct, verdict FROM scores.results_analysis WHERE updated_at >= CURDATE() - INTERVAL 20 DAY"
+    description: "Analyze financial growth and overall verdicts for stocks within the last 20 sessions."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "consistency_checks"
+  - "source_validation"
+synthesis_guidance: "Synthesize findings into a succinct QA checklist emphasizing any actionable insights. Ensure clarity for quick decision-making."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:29"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.curdate is not approved"
+  - "scores.results_analysis.day is not approved"
+  - "signals.corporate_events.curdate is not approved"
+  - "signals.corporate_events.day is not approved"

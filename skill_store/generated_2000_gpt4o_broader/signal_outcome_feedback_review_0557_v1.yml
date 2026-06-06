@@ -1,0 +1,54 @@
+id: "signal_outcome_feedback_review_0557_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0557"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: research-only summary."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for quarter to date: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as research-only summary"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  language: "en"
+sql_templates:
+  -
+    name: "fetch_signals_outcomes"
+    description: "Retrieve signals that hit target or stop, with associated outcomes."
+    template: "SELECT id, date_issued, symbol, sector, signal, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE (date_issued >= '2023-01-01' AND date_issued <= '2023-03-31') AND (hit_target = TRUE OR hit_stop = TRUE);"
+  -
+    name: "sector_performance_comparison"
+    description: "Compare sector performance based on signal outcomes for the quarter."
+    template: "SELECT sector, AVG(return_pct) as avg_return FROM signals.signal_log WHERE (date_issued >= '2023-01-01' AND date_issued <= '2023-03-31') GROUP BY sector;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Check that all required keys are present."
+  - "Ensure SQL templates are read-only."
+synthesis_guidance: "Summarize findings with a focus on sector relative performance, identifying patterns of success and failure in signals."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:58:28"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.avg_return is not approved"

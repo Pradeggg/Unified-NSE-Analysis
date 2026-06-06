@@ -1,0 +1,61 @@
+created_at: "2026-06-06T12:41:43"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: intraday context; response style: concise table."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0081_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    purpose: "Retrieve 3-month index performance summary."
+    template: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    purpose: "Find recent Stage 2 swing candidates."
+    template: "SELECT symbol, company_name, sector, price, stage FROM scores.stage_snapshots WHERE stage = 2 AND price_date >= CURRENT_DATE - INTERVAL '3 months';"
+status: "validated"
+synthesis_guidance: "['Summarize key findings in a concise table format for easy interpretation.', 'Focus on actionable insights for market rotation and swing trading.']"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "intraday_context"
+  - "concise_table"
+title: "3M Market Rotation Swing Assessment Variant 0081"
+tool_plan_template:
+  steps:
+    - "Gather index and equity data for the last 3 months."
+    - "Analyze sector stage distributions and identify Stage 2 candidates."
+    - "Summarize findings in a concise table format."
+  task: "Perform 3-month market analysis for rotation and swing candidates."
+validation_rules:
+  - "Ensure the data covers the full required 3-month period."
+  - "Confirm the presence of Stage 2 candidates in the results."
+version: 1

@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:43:45"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: quarter to date; response style: ranked candidates."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0255_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "Stage and Technical Score Assessment"
+    template: "SELECT symbol, sector, stage, stage_score, technical_score, relative_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    name: "Current Holdings and Performance"
+    template: "SELECT symbol, qty, avg_cost FROM portfolio.holdings;"
+status: "validated"
+synthesis_guidance: "{'approach': 'Focus on sector exposure and risk indicators to determine ranked add/trim candidates. Use stage and technical scores to support decisions.', 'evidence_usage': 'Scores and holdings data guide the selection of candidates and rank by risk assessment.'}"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "quarter_to_date"
+  - "ranked_candidates"
+title: "Portfolio Incremental Add Trim Review Variant 0255"
+tool_plan_template: "Using sector and stage data to assess incremental add/trim candidates based on risk assessment for the quarter-to-date. Identify and rank potential actions."
+validation_rules:
+  - "Ensure symbols in add and trim candidates are in current holdings."
+  - "Rank output contracts in order of importance based on risk flags."
+version: 1

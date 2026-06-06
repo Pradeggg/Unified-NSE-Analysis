@@ -1,0 +1,64 @@
+id: "fii_dii_regime_breadth_review_1114_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1114"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: latest EOD; response style: narrative plus evidence."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for latest EOD: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as narrative plus evidence"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  type: "python"
+  required_function: "run(context)"
+  inputs:
+    context: "Market context data"
+  outputs:
+    type: "dict"
+    example:
+      regime: "BULLISH"
+      flow_context: "Strong FII inflows"
+      breadth_context: "Widespread advances"
+      index_confirmation: "Nifty gaining momentum"
+      risk_flags:
+
+sql_templates:
+  -
+    query: "WITH recent_flows AS ( SELECT trade_date, fii_net_today, dii_net_today, flow_signal, fii_trend, dii_trend FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows) ), recent_regime AS ( SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history) ), recent_breadth AS ( SELECT trade_date, advances, declines, ad_signal, trin_signal FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily) ), recent_index AS ( SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND index_symbol = 'NIFTY 50' ) SELECT rf.trade_date, rf.fii_net_today, rf.dii_net_today, rf.flow_signal, rf.fii_trend, rf.dii_trend, rr.regime, rr.confidence, rb.advances, rb.declines, rb.ad_signal, rb.trin_signal, ri.close, ri.change_pct, ri.trend_signal FROM recent_flows rf JOIN recent_regime rr ON rf.trade_date = rr.trade_date JOIN recent_breadth rb ON rf.trade_date = rb.trade_date JOIN recent_index ri ON rf.trade_date = ri.trade_date;"
+    description: "Fetch latest FII/DII flows, regime history, market breadth, and Nifty index data for analysis."
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'notes': ['Provide a comprehensive market overview incorporating all data elements.', 'Narrative should describe the market sentiment as risk-on or risk-off based on evidence.', 'Highlight the alignment or divergence among flows, regime, breadth, and index signals.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:55:31"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,70 @@
+created_at: "2026-06-06T12:52:52"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: last 5 sessions; response style: comparison matrix."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0925_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for last 5 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.index_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    index_data = context.get('index_performance', {})\n    sector_data = context.get('sector_leadership', {})\n    # Logic to generate comparison matrix using provided data\n    return {'comparison_matrix': 'generated matrix data'}"
+    id: "generate_comparison_matrix"
+    inputs:
+      - "index_performance"
+      - "sector_leadership"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "comparison_matrix"
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "index_performance"
+    query: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 months')"
+  -
+    name: "sector_leadership"
+    query: "SELECT snapshot_date, sector, COUNT(*) AS count FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= (CURRENT_DATE - INTERVAL '3 months') GROUP BY snapshot_date, sector ORDER BY count DESC"
+status: "validated"
+synthesis_guidance: "Focus on trend and pattern recognition across sectors and market stages. Analyze potential risks systematically and identify strong contenders based on robust patterns over the short-term review period."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "last_5_sessions"
+  - "comparison_matrix"
+title: "3M Market Rotation Swing Assessment Variant 0925"
+tool_plan_template: "SELECT statements will gather data necessary for analysis across approved tables. Python tools will generate a comparison matrix focusing on risk and sector leadership, considering the last 5 sessions."
+validation_errors:
+
+validation_rules:
+  - "Ensure data integrity from the approved tables."
+  - "Verify completeness in the analysis of sector leadership."
+version: 1

@@ -1,0 +1,58 @@
+id: "insider_bulk_deal_signal_review_1228_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1228"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: last 5 sessions; response style: ranked candidates."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for last 5 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as ranked candidates"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze insider alerts and bulk deals from signals tables, cross-reference with technical scores for position-sizing insights over the past 5 sessions."
+sql_templates:
+  -
+    template_name: "fetch_recent_insider_alerts"
+    template: "SELECT symbol, entity, qty, value_cr, alert_date FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '5 days';"
+  -
+    template_name: "fetch_recent_bulk_deals"
+    template: "SELECT symbol, entity, side, qty, price, deal_date FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '5 days';"
+  -
+    template_name: "fetch_technical_confirmations"
+    template: "SELECT symbol, stage_score, technical_score, rsi, trend_signal FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE - INTERVAL '1 day';"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all output_contract fields are filled."
+  - "Ranked_symbols must be ordered by relevance from evidence."
+synthesis_guidance: "Synthesizing ranked candidates should balance insider and bulk deal evidence with positive technical confirmations."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

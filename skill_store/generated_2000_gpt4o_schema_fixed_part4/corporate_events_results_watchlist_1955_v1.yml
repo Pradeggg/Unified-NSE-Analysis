@@ -1,0 +1,62 @@
+id: "corporate_events_results_watchlist_1955_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1955"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: risk-first review; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "risk-first review for quarter to date: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as comparison matrix"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "risk-first_review"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    language: "postgresql"
+    sql_templates:
+      -
+        description: "Retrieve upcoming or recent corporate events."
+        template: "SELECT symbol, event_type, event_date, purpose_raw, detail FROM signals.corporate_events WHERE event_date >= (CURRENT_DATE - INTERVAL '3 months') ORDER BY event_date ASC LIMIT 50;"
+      -
+        description: "Retrieve the latest stage snapshot for the symbol."
+        template: "SELECT DISTINCT ON (symbol) symbol, stage, stage_score, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol IN (%symbols) ORDER BY symbol, snapshot_date DESC;"
+      -
+        description: "Retrieve result analysis for the latest quarter."
+        template: "SELECT symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct, eps_yoy_pct, verdict FROM scores.results_analysis WHERE period_end = (SELECT MAX(period_end) FROM scores.results_analysis) AND symbol IN (%symbols) ORDER BY period_end DESC;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure symbol consistency across all SQL templates."
+  - "Validate date ranges are applied correctly."
+  - "Verify all retrieved symbols have corresponding entries in stage snapshots and results analysis."
+synthesis_guidance: "{'approach': 'Assemble corporate event details and associated analysis into a coherent comparison matrix, emphasizing risk indicators and supporting actions.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

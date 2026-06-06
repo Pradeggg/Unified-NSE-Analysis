@@ -1,0 +1,73 @@
+id: "sector_breadth_rotation_watchlist_1399_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1399"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for weekly review: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as exceptions and gaps first"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    python_tool_policy:
+      required_function: "run(context)"
+      language: "python"
+      mode: "read_only"
+      blocked_capabilities:
+        - "network"
+        - "subprocess"
+        - "filesystem_write"
+        - "db_write"
+        - "broker_api"
+      required_fields:
+        - "id"
+        - "language"
+        - "mode"
+        - "inputs"
+        - "outputs"
+        - "approved_tables"
+        - "code"
+sql_templates:
+  -
+    description: "List sectors ranked by breadth and stage 2 participation."
+    template: "SELECT sd.sector, sd.breadth_signal, ma.stage2_pct FROM breadth.sector_daily sd INNER JOIN breadth.ma_pct_above ma ON sd.snapshot_date = ma.snapshot_date WHERE sd.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) ORDER BY ma.stage2_pct DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all SQL is read-only and conforms to the approved schema."
+  - "Outputs must align with the evidence_required tables."
+  - "Validate that all necessary tables and columns are utilized."
+synthesis_guidance: "['Focus on exceptions and gaps in sector participation.', 'Highlight sectors with strong stage 2 and breadth improvements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

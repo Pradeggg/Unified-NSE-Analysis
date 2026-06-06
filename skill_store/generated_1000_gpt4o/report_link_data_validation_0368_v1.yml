@@ -1,0 +1,53 @@
+id: "report_link_data_validation_0368_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0368"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: post results; response style: exceptions and gaps first."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for post results: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "post_results"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "To validate report links and data, analyze runs and stock rows in context of market positioning post-results. Highlight exceptions, reconciling data and integrity gaps."
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts, universe_size, stocks_filtered FROM report.enhanced_runs WHERE run_id = ?;"
+    description: "Fetch metadata for a specific report run."
+  -
+    template: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = ? ORDER BY rank;"
+    description: "Retrieve filtered stocks for a specific run, ordered by rank."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates must be read-only SELECT/WITH templates."
+synthesis_guidance: "Assess consistency between presented report metadata and stock data, focusing on exceptions and gaps within position-sizing context. Provide clear insights on any identified issues."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:46:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

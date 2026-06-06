@@ -1,0 +1,50 @@
+created_at: "2026-06-06T12:50:28"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: quarter to date; response style: debug trace."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0656_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for quarter to date: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  run_metadata: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs;"
+  stock_data: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks;"
+status: "validated"
+synthesis_guidance: "Integrate SQL results into a coherent validation report, mapping findings to input patterns. Highlight broken links and missing data with precise remediation steps and verification follow-ups."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "debug_trace"
+title: "Enhanced Report Data Validation Variant 0656"
+tool_plan_template: "Use SQL to extract report metadata and stock data for validation; cross-reference report links and data timelines to ensure linkage accuracy and timeliness for quarter-to-date."
+validation_rules:
+  - "Ensure all report links work and lead to valid data."
+  - "Check data freshness for the quarter-to-date timeframe."
+  - "Identify and log any missing or outdated data for remediation."
+version: 1

@@ -1,0 +1,62 @@
+id: "agent_route_failure_diagnostics_0182_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0182"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: intraday context; response style: narrative plus evidence."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for intraday context: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as narrative plus evidence"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  steps:
+    - "Identify recent report runs using latest date from enhanced runs."
+    - "Check for missing or broken tools by validating tool presence and symbol resolution."
+    - "Evaluate fallback loops by analyzing route diagnostics narrative."
+  context: "Use Indian market context and focus on deep institutional review."
+sql_templates:
+  -
+    id: "recent_runs_identification"
+    description: "Identify the most recent report runs within the last 3 months."
+    query: "SELECT run_id, run_ts, analysis_date, market_composite_score FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '3 months' ORDER BY run_ts DESC LIMIT 5;"
+  -
+    id: "symbol_resolution_validation"
+    description: "Validate if symbols have proper resolution and recommendations."
+    query: "SELECT efs.symbol, efs.recommendation FROM report.enhanced_filtered_stocks efs JOIN report.enhanced_runs er ON er.run_id = efs.run_id WHERE er.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) AND efs.recommendation IS NULL;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure that only SELECT queries are used."
+  - "Validate SQL against provided schema rules."
+  - "All SQL templates must be read-only and not modify the database."
+synthesis_guidance: "Combine SQL insights with narrative to describe route failures, tool gaps, and potential diagnostics improvements."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:57"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

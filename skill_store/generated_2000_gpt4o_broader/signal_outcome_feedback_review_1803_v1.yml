@@ -1,0 +1,69 @@
+id: "signal_outcome_feedback_review_1803_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1803"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for today: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as action watchlist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Assess captured signals from the past day."
+    - "Identify those hitting targets or stops."
+    - "Determine patterns in successes (winner_patterns) or failures (failure_patterns)."
+    - "Formulate improvements for future signaling."
+sql_templates:
+  -
+    id: "outcome_summary"
+    description: "Summarize signal outcomes."
+    template: "SELECT COUNT(id) AS total_signals, SUM(CASE WHEN hit_target = 1 THEN 1 ELSE 0 END) AS hits, SUM(CASE WHEN hit_stop = 1 THEN 1 ELSE 0 END) AS stops FROM signals.signal_log WHERE date_issued = CURRENT_DATE;"
+    template_type: "summary"
+  -
+    id: "winner_patterns"
+    description: "Identify patterns among successful signals."
+    template: "SELECT sector, COUNT(*) AS hit_count FROM signals.signal_log WHERE hit_target = 1 AND date_issued = CURRENT_DATE GROUP BY sector ORDER BY hit_count DESC;"
+    template_type: "pattern_analysis"
+  -
+    id: "failure_patterns"
+    description: "Identify patterns among failed signals."
+    template: "SELECT sector, COUNT(*) AS stop_count FROM signals.signal_log WHERE hit_stop = 1 AND date_issued = CURRENT_DATE GROUP BY sector ORDER BY stop_count DESC;"
+    template_type: "pattern_analysis"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure valid execution of SELECT SQL templates."
+  - "Outcome summaries and patterns must meet data consistency checks."
+synthesis_guidance: "['Focus on informatics: Signal outcomes are vital for strategic refinement.', 'Emphasize actionability: Resulting patterns should guide next steps.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:12"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.hit_count is not approved"
+  - "signals.signal_log.hits is not approved"
+  - "signals.signal_log.stop_count is not approved"
+  - "signals.signal_log.stops is not approved"
+  - "signals.signal_log.total_signals is not approved"

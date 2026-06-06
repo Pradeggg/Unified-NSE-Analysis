@@ -1,0 +1,53 @@
+id: "portfolio_lab_paper_trading_review_0992_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0992"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: weekly review; response style: comparison matrix."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for weekly review: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as comparison matrix"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "{ \"task\": \"Portfolio Lab Paper Trading Review\", \"priority\": \"high\" }"
+sql_templates:
+  -
+    name: "latest_holdings_with_signals"
+    template: "SELECT h.symbol, h.qty, h.avg_cost, s.signal, s.price_at_issue, s.entry_low, s.entry_high, s.stop_loss, s.target_1, s.target_2 FROM portfolio.holdings h JOIN signals.signal_log s ON h.symbol = s.symbol WHERE s.date_issued = (SELECT MAX(date_issued) FROM signals.signal_log s2 WHERE s2.symbol = h.symbol);"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure using latest date filters for signal logs."
+  - "All joins must respect approved schema join rules."
+synthesis_guidance: "Summarize paper trading strategy performance compared to real holdings in a comparison matrix format."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:51:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

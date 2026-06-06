@@ -1,0 +1,72 @@
+id: "data_freshness_readiness_audit_0847_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0847"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: action watchlist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for last 3 months: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as action watchlist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  inputs:
+    required:
+
+    optional:
+
+  process:
+    - "Assess the availability and recency of trading data from the last 3 months for each sector."
+    - "Identify any missing approved history data or recent data gaps across tables."
+    - "Place focus on the sector-relative comparison of data freshness using approved aggregations."
+  outputs:
+    - "freshness_matrix"
+    - "missing_sources"
+    - "blocking_gaps"
+    - "loader_actions"
+    - "verification_queries"
+sql_templates:
+  - "SELECT trade_date, close FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 months');"
+  - "WITH recent_data AS (SELECT MAX(trade_date) as max_date FROM market.equity_eod) SELECT * FROM market.equity_eod WHERE trade_date = (SELECT max_date FROM recent_data);"
+  - "SELECT snapshot_date, stage FROM scores.stage_snapshots WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '3 months');"
+  - "SELECT trade_date, advances, declines FROM breadth.market_daily WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 months');"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure that data freshness checks are performed for the given timeframe and all approved tables."
+  - "Identify gaps in the data and potential areas where data is not up-to-date."
+  - "Verify results using secondary queries when required."
+synthesis_guidance: "['Provide an aggregated view of data freshness status across different sectors.', 'Highlight critical areas that require immediate attention in terms of data readiness.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:37"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

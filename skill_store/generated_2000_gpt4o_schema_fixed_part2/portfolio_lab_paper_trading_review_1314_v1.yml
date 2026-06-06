@@ -1,0 +1,62 @@
+id: "portfolio_lab_paper_trading_review_1314_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1314"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: latest EOD; response style: exceptions and gaps first."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for latest EOD: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  tasks:
+    - "Identify entries, exits, stops and targets for paper trading strategies."
+    - "Separate paper trading from real holdings for clear analysis."
+    - "Generate a watchlist using criteria for the latest EOD data."
+    - "Present exceptions and data gaps before the results."
+sql_templates:
+  -
+    name: "latest_signals"
+    query: "SELECT s.symbol, s.signal, s.date_issued, s.price_at_issue, s.entry_low, s.entry_high, s.stop_loss, s.target_1, s.target_2 FROM signals.signal_log AS s WHERE s.date_issued = (SELECT MAX(date_issued) FROM signals.signal_log) AND s.symbol NOT IN (SELECT symbol FROM portfolio.holdings)"
+  -
+    name: "current_holdings_with_stage"
+    query: "SELECT h.symbol, h.qty, h.avg_cost, snapshot.stage, snapshot.stage_score FROM portfolio.holdings AS h JOIN scores.stage_snapshots AS snapshot ON h.symbol = snapshot.symbol WHERE snapshot.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure separation of paper trading signals and real holdings in reports."
+  - "Check if latest EOD data is used for watchlist creation."
+  - "Verify if exceptions and gaps are presented before the results."
+synthesis_guidance: "['Focus on generating a clear demarcation between paper trading and actual holdings.', 'Highlight any data inconsistencies or gaps upfront.', 'Use the latest data to form conclusions and recommendations.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:04"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

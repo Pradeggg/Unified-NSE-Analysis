@@ -1,0 +1,49 @@
+id: "portfolio_incremental_add_trim_1179_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1179"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: pre market; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for pre market: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "pre_market"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "{{ inputs }}"
+sql_templates:
+  -
+    action: "SELECT"
+    query: "WITH latest_snapshots AS (SELECT symbol, MAX(snapshot_date) as latest_date FROM scores.stage_snapshots GROUP BY symbol) SELECT hs.symbol, hs.company_name, hs.sector, hs.stage, hs.investment_score FROM scores.stage_snapshots hs JOIN latest_snapshots ls ON hs.symbol = ls.symbol AND hs.snapshot_date = ls.latest_date WHERE hs.stage IN ('Stage 2', 'Stage 3') AND hs.investment_score > 80;"
+  -
+    action: "SELECT"
+    query: "SELECT ph.symbol, ph.qty, ph.avg_cost FROM portfolio.holdings ph JOIN scores.stage_snapshots ss ON ph.symbol = ss.symbol WHERE ss.stage = 'Stage 4' AND ss.rfsi < 30;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "SQL queries must utilize approved tables only."
+  - "Stage 2 or 3 companies with investment_score > 80 for add_candidates."
+synthesis_guidance: "Analyze stage, trend signals, scores, and portfolio holdings; provide narrative on decisions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:08"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.rfsi is not approved"

@@ -1,0 +1,72 @@
+id: "agent_route_failure_diagnostics_1638_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1638"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as debug trace"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  -
+    template_id: "latest_runs_summary"
+    description: "Retrieve latest enhanced runs summary for the last 20 sessions."
+    sql: "WITH latest_runs AS (\n  SELECT run_id, run_ts, universe_size, stocks_analyzed, stocks_filtered \n  FROM report.enhanced_runs \n  ORDER BY run_ts DESC \n  LIMIT 20\n)\nSELECT * FROM latest_runs;"
+  -
+    template_id: "symbol_resolution_check"
+    description: "Check symbol presence in both filtered stocks and stage snapshots for latest state."
+    sql: "SELECT \n  es.symbol, \n  es.recommendation, \n  sn.stage, \n  sn.trading_signal \nFROM \n  report.enhanced_filtered_stocks es\nJOIN \n  scores.stage_snapshots sn \nON \n  es.symbol = sn.symbol \nAND sn.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nWHERE \n  es.run_id = (SELECT run_id FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 1);"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "summary"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    code: "# Provided function 'run' reads from context. Ensure it is read-only.\ndef run(context):\n    # Analyze data context to extract routes and potential issues\n    report_entries = context['report.enhanced_runs'][:20]\n    return {'summary': f'Analyzed {len(report_entries)} run entries.'}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure no mutable state changes."
+  - "Verify correct SQL and Python evidence use."
+  - "Check for compliance with approved schema and join rules."
+synthesis_guidance: "['Analyze failure modes in context of last 20 sessions.', 'Suggest evidence-backed routes and tools for diagnostics.', 'Consider symbol resolution and position-sizing for Agent Adda errors.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

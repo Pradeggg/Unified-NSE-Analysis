@@ -1,0 +1,66 @@
+id: "corporate_events_results_watchlist_0723_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0723"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for last 5 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as QA checklist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh-follow-up"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  title: "Event Analysis - Watchlist Preparation"
+  description: "Prepare a watchlist based on recent or upcoming corporate events and results for Indian market analysis."
+  steps:
+    - "Fetch recent corporate events and upcoming events from signals.corporate_events table."
+    - "Query the latest results from scores.results_analysis and match them with corporate events."
+    - "Use scores.stage_snapshots to provide context on current stage and technical signals."
+sql_templates:
+  -
+    name: "fetch_recent_events"
+    description: "Select recent corporate events from the last 5 sessions."
+    sql: "SELECT symbol, event_type, event_date, detail FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '5 days';"
+  -
+    name: "latest_results_analysis"
+    description: "Retrieve the latest results analysis for the symbols from recent events."
+    sql: "SELECT DISTINCT ON (symbol) symbol, period_end, company_name, verdict, pl_commentary FROM scores.results_analysis WHERE symbol IN (SELECT symbol FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '5 days') ORDER BY symbol, period_end DESC, updated_at DESC;"
+  -
+    name: "current_stage_context"
+    description: "Join corporate events with the latest snapshot to get current stage details."
+    sql: "SELECT a.symbol, a.event_type, a.event_date, a.detail, b.stage, b.trading_signal FROM signals.corporate_events a JOIN scores.stage_snapshots b ON a.symbol = b.symbol WHERE a.event_date >= CURRENT_DATE - INTERVAL '5 days' AND b.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "event_type_values"
+  - "verdict_values"
+synthesis_guidance: "{'response_style': 'QA_checklist', 'timeframe': 'last 5 sessions'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

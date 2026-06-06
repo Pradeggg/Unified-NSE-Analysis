@@ -1,0 +1,146 @@
+card:
+  created_at: "2026-06-06T12:48:31"
+  created_by: "llm_generated"
+  description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: portfolio-aware output."
+  domain: "market_analysis"
+  evidence_required:
+    tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "market_3m_rotation_swing_0493_v1"
+  input_patterns:
+    - "last 3 months market analysis"
+    - "find swing candidates from recent sector rotation"
+    - "market regime and stage 2 leadership over 3 months"
+    - "daily refresh follow-up for weekly review: last 3 months market analysis"
+    - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+  output_contract:
+    - "as_of_date"
+    - "index_returns"
+    - "stage_distribution_change"
+    - "leading_sectors"
+    - "primary_candidates"
+    - "risks"
+  python_tools:
+    -
+      code: "def run(context):\n    data = context['database'].fetch('SELECT * FROM market.index_eod')\n    summary = {'index_returns': calculate_index_returns(data)}\n    return summary"
+      description: "Read-only Python tool for running queries and summarizing results from approved schemas."
+      inputs:
+        - "context"
+      language: "python"
+      mode: "read_only"
+      name: "run"
+      outputs:
+        - "summary"
+  review:
+    attempts: 3
+    findings:
+
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "generated"
+  sql_templates:
+    -
+      name: "market_regime_analysis"
+      query: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 MONTH')"
+    -
+      name: "sector_leadership_identification"
+      query: "SELECT sector, AVG(change_1m_pct) as avg_change FROM scores.stage_snapshots WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '3 MONTH') GROUP BY sector ORDER BY avg_change DESC"
+    -
+      name: "stage2_leadership_candidates"
+      query: "SELECT symbol, company_name, sector, price, stage FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= (CURRENT_DATE - INTERVAL '3 MONTH') ORDER BY stage_score DESC"
+  status: "generated"
+  synthesis_guidance: "Integrate insights from SQL queries to recognize market trends and detect leadership sectors and candidates. Formulate comprehensive guidance for portfolio modifications, hedging strategies, and swing trade opportunities."
+  tags:
+    - "market_regime"
+    - "sector_rotation"
+    - "stage_analysis"
+    - "swing_trading"
+    - "daily_refresh_follow-up"
+    - "weekly_review"
+    - "portfolio-aware_output"
+  title: "3M Market Rotation Swing Assessment Variant 0493"
+  tool_plan_template: "Assess market regime and sector rotation over the last 3 months, focusing on stage 2 leadership and swing candidates. Prepare findings for portfolio-aware recommendations."
+  validation_rules:
+    - "Ensure all selected data is within the last 3 months."
+    - "Sector averages must be calculated accurately for leadership identification."
+    - "Select only stage 2 candidates for primary market adjustment recommendations."
+  version: 1
+created_at: "2026-06-06T12:48:31"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: portfolio-aware output."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0493_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for weekly review: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    description: "Read-only Python tool for running queries and summarizing results from approved schemas."
+    name: "run"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: code is required"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: language must be python"
+    - "<missing-id>: mode must be read_only"
+    - "<missing-id>: outputs must be a non-empty list"
+    - "scores.stage_snapshots.avg_change is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    name: "market_regime_analysis"
+    query: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 MONTH')"
+  -
+    name: "sector_leadership_identification"
+    query: "SELECT sector, AVG(change_1m_pct) as avg_change FROM scores.stage_snapshots WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '3 MONTH') GROUP BY sector ORDER BY avg_change DESC"
+  -
+    name: "stage2_leadership_candidates"
+    query: "SELECT symbol, company_name, sector, price, stage FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= (CURRENT_DATE - INTERVAL '3 MONTH') ORDER BY stage_score DESC"
+status: "test_failed"
+synthesis_guidance: "Integrate insights from SQL queries to recognize market trends and detect leadership sectors and candidates. Formulate comprehensive guidance for portfolio modifications, hedging strategies, and swing trade opportunities."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "weekly_review"
+  - "portfolio-aware_output"
+title: "3M Market Rotation Swing Assessment Variant 0493"
+tool_plan_template: "Assess market regime and sector rotation over the last 3 months, focusing on stage 2 leadership and swing candidates. Prepare findings for portfolio-aware recommendations."
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: language must be python"
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: outputs must be a non-empty list"
+  - "scores.stage_snapshots.avg_change is not approved"
+validation_rules:
+  - "Ensure all selected data is within the last 3 months."
+  - "Sector averages must be calculated accurately for leadership identification."
+  - "Select only stage 2 candidates for primary market adjustment recommendations."
+version: 1

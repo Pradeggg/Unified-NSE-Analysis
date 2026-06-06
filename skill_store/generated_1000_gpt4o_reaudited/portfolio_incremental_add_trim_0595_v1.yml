@@ -1,0 +1,66 @@
+created_at: "2026-06-06T12:49:57"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: weekly review; response style: research-only summary."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0595_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as research-only summary"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    risk_flags = []\n    for score in context['stage_scores']:\n        if score['stage_score'] < 2 and score['trend_signal'] == 'negative':\n            risk_flags.append({'symbol': score['symbol'], 'risk': 'high'})\n    return risk_flags"
+    id: "calculate_risk_flags"
+    inputs:
+      - "stage_scores"
+      - "trend_signals"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "risk_flags"
+sql_templates:
+  -
+    description: "Retrieve the latest stage_scores and trend signals for all symbols."
+    template: "SELECT symbol, sector, stage, stage_score, trend_signal FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+  -
+    description: "Fetch current portfolio holdings."
+    template: "SELECT symbol, qty, avg_cost FROM portfolio.holdings;"
+status: "test_failed"
+synthesis_guidance: "Focus on ensuring that candidate selections for add or trim are well-supported by current scores and trend analysis."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "weekly_review"
+  - "research-only_summary"
+title: "Portfolio Incremental Add Trim Review Variant 0595"
+tool_plan_template: "Assess current risk by evaluating stage scores and portfolio holdings. Identify sectors and stocks for potential incremental add or trim."
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "Criteria for add and trim must be based on stage_score and trend_signal."
+version: 1
+validation_errors:
+  - "calculate_risk_flags: execution failed: KeyError: 'stage_scores'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_risk_flags: execution failed: KeyError: 'stage_scores'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

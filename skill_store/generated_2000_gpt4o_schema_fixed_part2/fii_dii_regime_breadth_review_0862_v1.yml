@@ -1,0 +1,104 @@
+id: "fii_dii_regime_breadth_review_0862_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0862"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for post results: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as action watchlist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "fetch_latest_context"
+    description: "Fetch the latest market regime, FII/DII flows, market breadth, and index data for risk assessment."
+    template:
+      - "WITH latest_trade_date AS ("
+      - " SELECT MAX(trade_date) AS trade_date"
+      - " FROM signals.fii_dii_flows"
+      - ")"
+      - "SELECT"
+      - " rh.regime, rh.confidence, fdf.flow_signal,"
+      - " md.ad_signal, md.trin_signal,"
+      - " ind.index_symbol, ind.close,"
+      - " ind.change_pct"
+      - "FROM signals.regime_history rh"
+      - "JOIN latest_trade_date ltd ON rh.trade_date = ltd.trade_date"
+      - "JOIN signals.fii_dii_flows fdf ON rh.trade_date = fdf.trade_date"
+      - "JOIN breadth.market_daily md ON rh.trade_date = md.trade_date"
+      - "JOIN market.index_eod ind ON rh.trade_date = ind.trade_date"
+      - "WHERE ind.index_symbol = 'Nifty 50'"
+python_tools:
+  -
+    id: "run_context_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "regime"
+      - "flow_signal"
+      - "ad_signal"
+      - "trin_signal"
+      - "change_pct"
+    outputs:
+      - "flow_context"
+      - "breadth_context"
+      - "risk_flags"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code:
+      - "def run(context):"
+      - "    regime = context['regime']"
+      - "    flow_signal = context['flow_signal']"
+      - "    ad_signal = context['ad_signal']"
+      - "    trin_signal = context['trin_signal']"
+      - "    change_pct = context['change_pct']"
+      - "    flow_context = ''"
+      - "    breadth_context = ''"
+      - "    risk_flags = []"
+      - "    if flow_signal == 'BUY' and ad_signal == 'BULLISH':"
+      - "        flow_context = 'Positive FII/DII flows with strong breadth indication.'"
+      - "    if trin_signal == 'BEARISH' or change_pct < 0:"
+      - "        risk_flags.append('Caution: Index momentum shows potential weakness.')"
+      - "    return flow_context, breadth_context, risk_flags"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Focus on synthesizing the current state of FII/DII flows, market regime, breadth, and index levels to determine if the market is in a risk-on or risk-off state. Provide action-oriented insights."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:44"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_context_analysis: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_context_analysis: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

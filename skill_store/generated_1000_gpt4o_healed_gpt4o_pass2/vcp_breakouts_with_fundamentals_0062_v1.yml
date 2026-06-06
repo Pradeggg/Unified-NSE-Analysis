@@ -1,0 +1,64 @@
+created_at: "2026-06-06T12:41:36"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: post results; response style: concise table."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0062_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "Retrieve VCP and Breakout Candidates"
+    template: "WITH recent_vcp AS (SELECT symbol, company_name, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE vcp_score > 50 AND enhanced_fund_score > 70) SELECT a.symbol, a.company_name, b.market_cap_cr, a.enhanced_fund_score FROM recent_vcp a JOIN market.equity_eod b ON a.symbol = b.symbol WHERE b.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND b.market_cap_cr > 1000 ORDER BY a.enhanced_fund_score DESC;"
+  -
+    name: "Check Institutional Backing"
+    template: "SELECT symbol, company_name, institutional_backing FROM scores.stage_snapshots WHERE institutional_backing = 'High' ORDER BY snapshot_date DESC;"
+status: "validated"
+synthesis_guidance: "{'combine': 'Use SQL results to form candidates list with evidence of fundamentals and VCP properties. Highlight institutional backing.', 'validate': 'Ensure data integrity and adherence to validation rules.'}"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "post_results"
+  - "concise_table"
+title: "VCP Breakouts With Fundamentals Variant 0062"
+tool_plan_template:
+  -
+    action: "Fetch stocks based on VCP breakout scores and fundamental strength."
+    step: "Retrieve VCP and breakout stocks with strong fundamentals"
+    tool: "SQL"
+  -
+    action: "Analyze based on fundamental scores and institutional backing presence."
+    step: "Analyze for institutional backing"
+    tool: "SQL"
+validation_rules:
+  - "market_cap"
+  - "enhanced_fund_score"
+  - "vcp_score"
+version: 1

@@ -1,0 +1,54 @@
+id: "portfolio_incremental_add_trim_1361_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1361"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: post results; response style: exceptions and gaps first."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for post results: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "post_results"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Analyze current holdings and latest stage snapshots to identify potential add/trim candidates."
+sql_templates:
+  -
+    query: "SELECT h.symbol, h.qty, ss.company_name, ss.sector, ss.stage, ss.trading_signal, ss.change_1w_pct, ss.relative_strength FROM portfolio.holdings AS h JOIN scores.stage_snapshots AS ss ON h.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+    purpose: "Identify add candidates"
+  -
+    query: "SELECT h.symbol, h.qty, ss.company_name, ss.sector, ss.stage, ss.trading_signal, ss.change_1w_pct, ss.relative_strength FROM portfolio.holdings AS h JOIN scores.stage_snapshots AS ss ON h.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal = 'SELL' LIMIT 10;"
+    purpose: "Identify trim candidates"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure the data is from the latest snapshot date."
+  - "Verify that only approved tables and columns are used."
+  - "Check for the presence of required output fields."
+synthesis_guidance: "Focus on analysis of current holdings using stage snapshots. Highlight gaps and exceptions first."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:31"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

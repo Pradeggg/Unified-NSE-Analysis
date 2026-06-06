@@ -1,0 +1,56 @@
+id: "signal_outcome_feedback_review_1691_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1691"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: quick scan; timeframe: weekly review; response style: debug trace."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for weekly review: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as debug trace"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Gather insights from signal outcomes by examining performance metrics, focusing on targets hit and stops triggered. Analyze the data to identify consistent winner and failure patterns. Provide a debug-style trace for review."
+sql_templates:
+  -
+    description: "Fetch resolved signals from signal_log to evaluate targets and stops."
+    template: "SELECT date_issued, symbol, signal, price_at_issue, target_1, target_2, stop_loss, hit_target, hit_stop FROM signals.signal_log WHERE date_resolved IS NOT NULL;"
+  -
+    description: "Find the latest stage and score context for symbols in signal_log."
+    template: "WITH latest_stage AS (SELECT symbol, stage, technical_score, investment_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT sl.symbol, sl.signal, ls.stage, ls.technical_score, ls.investment_score FROM signals.signal_log sl JOIN latest_stage ls ON sl.symbol = ls.symbol;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure SQL templates strictly adhere to read-only fetch patterns."
+  - "Validate that the output captures summary insights for both successes and failures."
+  - "Confirm that recommendations for improvements are informed by data evidence."
+synthesis_guidance: "Focus on deriving actionable insights from historical signal outcomes, especially factors leading to successful trades, and identify areas for refinement in signal generation. Present findings as structured debugging logs for cognitive reinforcement."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:58"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

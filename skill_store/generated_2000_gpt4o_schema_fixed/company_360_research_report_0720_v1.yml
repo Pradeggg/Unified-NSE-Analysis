@@ -1,0 +1,62 @@
+id: "company_360_research_report_0720_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Reliance Comprehensive Research Report"
+description: "Construct a detailed report card for Reliance with a focus on fundamental and technical analysis based on the latest EOD data."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "TradingView export for latest EOD: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as QA checklist"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    query_name: "latest_technical_context"
+    query: "SELECT company_name, symbol, price, rsi, trend_signal, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol = 'RELIANCE';"
+  -
+    query_name: "latest_financials"
+    query: "SELECT period_label, revenue, pat, eps FROM scores.quarterly_results WHERE symbol = 'RELIANCE' AND period_end = (SELECT MAX(period_end) FROM scores.quarterly_results WHERE symbol = 'RELIANCE');"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:57"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

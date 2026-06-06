@@ -1,0 +1,55 @@
+id: "fii_dii_regime_breadth_review_1800_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1800"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    description: "Utilize SELECT SQL templates for extracting data that combine FII/DII flows, market regime, and breadth indicators. Prioritize PostgreSQL for date-related filters and ensure output variety adheres strictly to the approved output contract."
+sql_templates:
+  -
+    template_id: "recent_market_analysis"
+    query: "\n                SELECT \n                    f.trade_date, \n                    f.fii_net_5d, \n                    f.dii_net_5d, \n                    f.flow_signal,\n                    r.regime, \n                    r.confidence, \n                    m.ad_signal, \n                    m.trin, \n                    e.close, \n                    e.change_pct\n                FROM signals.fii_dii_flows AS f\n                JOIN signals.regime_history AS r ON f.trade_date = r.trade_date\n                JOIN breadth.market_daily AS m ON f.trade_date = m.trade_date\n                JOIN market.index_eod AS e ON f.trade_date = e.trade_date\n                WHERE f.trade_date = (\n                    SELECT MAX(trade_date) \n                    FROM signals.fii_dii_flows\n                )\n                AND e.index_symbol = 'Nifty 50'\n                LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure 'regime' contains BULL, BEAR, CHOP, or RECOVERY."
+  - "Verify 'flow_signal' aligns with the recent trend."
+  - "Check 'ad_signal' and 'trin' for breadth context reliability."
+synthesis_guidance: "Highlight the current market regime and institutional flows. Provide insights on market sentiment and breadth context with clarity. Format answers as a checklist."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:19"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

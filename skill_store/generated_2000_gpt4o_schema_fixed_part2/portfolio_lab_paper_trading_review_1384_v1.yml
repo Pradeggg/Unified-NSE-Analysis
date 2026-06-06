@@ -1,0 +1,53 @@
+id: "portfolio_lab_paper_trading_review_1384_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1384"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: intraday context; response style: exceptions and gaps first."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for intraday context: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "intraday_context"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review strategies using Agent Adda tools with a focus on paper trading exceptions and gaps. Ensure strategies like entries, exits, and exposure are validated separately from the actual portfolio."
+sql_templates:
+  -
+    template: "SELECT h.symbol, s.signal, s.entry_low, s.entry_high, s.stop_loss, s.target_1, s.target_2, e.close FROM portfolio.holdings h JOIN signals.signal_log s ON h.symbol = s.symbol JOIN market.equity_eod e ON h.symbol = e.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) LIMIT 10;"
+    description: "Fetch paper trading strategies including entry and exit signals and latest market data."
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "rule_1"
+  - "rule_2"
+synthesis_guidance: "Focus on separating paper trading analysis with thorough exceptions and gaps reporting."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:49"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

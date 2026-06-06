@@ -1,0 +1,64 @@
+created_at: "2026-06-06T12:42:28"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: post results; response style: narrative plus evidence."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0161_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as narrative plus evidence"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Gather last 3 months of index performance."
+    query: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= DATEADD(month, -3, GETDATE()) ORDER BY trade_date DESC"
+  -
+    description: "Identify sectors with stage 2 leadership over last 3 months."
+    query: "SELECT sector, COUNT(*) as leadership_count FROM scores.stage_snapshots WHERE stage = 'Stage 2' AND snapshot_date >= DATEADD(month, -3, GETDATE()) GROUP BY sector ORDER BY leadership_count DESC"
+  -
+    description: "Find high VCP score candidates over the last 3 months."
+    query: "SELECT symbol, company_name, price FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATEADD(month, -3, GETDATE()) AND vcp_score > 80 ORDER BY vcp_score DESC"
+status: "test_failed"
+synthesis_guidance: "['Combine SQL results into a coherent narrative.', 'Highlight key market movements and potential swing candidates.', 'Discuss sector leadership and changes in market regime.']"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "post_results"
+  - "narrative_plus_evidence"
+title: "3M Market Rotation Swing Assessment Variant 0161"
+tool_plan_template: "Run analysis on recent market conditions from approved tables for a comprehensive report."
+validation_rules:
+  - "Ensure timeframes for SQL queries are aligned with input patterns."
+  - "Output structures must match the specified contract."
+version: 1
+validation_errors:
+  - "market.index_eod.dateadd is not approved"
+  - "market.index_eod.getdate is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage2_vcp_picks.dateadd is not approved"
+  - "scores.stage2_vcp_picks.getdate is not approved"
+  - "scores.stage2_vcp_picks.month is not approved"
+  - "scores.stage_snapshots.dateadd is not approved"
+  - "scores.stage_snapshots.getdate is not approved"
+  - "scores.stage_snapshots.leadership_count is not approved"
+  - "scores.stage_snapshots.month is not approved"

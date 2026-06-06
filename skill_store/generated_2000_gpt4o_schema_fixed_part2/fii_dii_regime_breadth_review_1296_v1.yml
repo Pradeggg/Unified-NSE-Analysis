@@ -1,0 +1,59 @@
+id: "fii_dii_regime_breadth_review_1296_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1296"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: weekly review; response style: ranked candidates."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as ranked candidates"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  type: "sql"
+  description: "Fetch recent trends of FII/DII flows, market regime, breadth, and index confirmation for weekly review."
+  result_shape: "aligned"
+  parameters:
+    date:
+      type: "date"
+      description: "Date for which the data needs to be fetched. Typically CURRENT_DATE."
+sql_templates:
+  -
+    name: "fii_dii_regime_breadth_index_overview"
+    template: "WITH latest_date AS (SELECT MAX(trade_date) AS trade_date FROM signals.fii_dii_flows)\nSELECT f.trade_date, f.fii_net_today, f.dii_net_today, r.regime, r.confidence, b.market_sentiment, i.close AS index_close\nFROM signals.fii_dii_flows f\nJOIN signals.regime_history r ON f.trade_date = r.trade_date\nJOIN breadth.market_daily b ON f.trade_date = b.trade_date\nJOIN market.index_eod i ON f.trade_date = i.trade_date\nWHERE f.trade_date = (SELECT trade_date FROM latest_date)\nAND i.index_symbol = 'Nifty 50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure that the latest available data is returned for the given date."
+  - "Check that all required columns are included in the output."
+synthesis_guidance: "['Analyze the current market context by combining the retrieved data to identify risk-on or risk-off conditions.', 'Provide ranked interpretations based on the combined insights from FII/DII flows, market regime, breadth, and index movements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:57"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,67 @@
+created_at: "2026-06-06T12:52:51"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: comparison matrix."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0917_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    name: "index_performance_3m"
+    template: "SELECT index_symbol, AVG(change_pct) AS avg_return FROM market.index_eod WHERE trade_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) GROUP BY index_symbol"
+  -
+    name: "sector_leadership"
+    template: "SELECT sector, COUNT(DISTINCT symbol) AS count_leaders FROM scores.stage_snapshots WHERE stage = 'Stage 2' AND snapshot_date = CURRENT_DATE GROUP BY sector"
+  -
+    name: "vcp_candidates"
+    template: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE ORDER BY vcp_score DESC LIMIT 10"
+status: "test_failed"
+synthesis_guidance: "Use SQL results to compare sector performance and identify rotation patterns. Highlight potential swing trading opportunities based on Stage 2 VCP picks."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "comparison_matrix"
+title: "3M Market Rotation Swing Assessment Variant 0917"
+tool_plan_template: "Analyze market regime change and sector leadership using index and equity EOD data. Evaluate stage transitions and identify leading sectors and swing candidates using Stage 2 VCP picks."
+validation_errors:
+  - "market.index_eod.avg_return is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage_snapshots.count_leaders is not approved"
+validation_rules:
+  - "Ensure all required evidence tables are joined correctly."
+  - "Validate the relevance of sector leadership to index performance."
+version: 1
+review:
+  attempts: 3
+  findings:
+    - "market.index_eod.avg_return is not approved"
+    - "market.index_eod.date_sub is not approved"
+    - "market.index_eod.month is not approved"
+    - "scores.stage_snapshots.count_leaders is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"

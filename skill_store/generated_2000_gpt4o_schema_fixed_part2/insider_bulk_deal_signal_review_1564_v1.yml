@@ -1,0 +1,73 @@
+id: "insider_bulk_deal_signal_review_1564_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1564"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for post results: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as research-only summary"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "The plan involves validating the latest data from the approved tables, applying the necessary filters, and processing the outputs according to the research-only summary requirement."
+sql_templates:
+  -
+    type: "insider_deals_latest"
+    template: "SELECT * FROM signals.insider_alerts WHERE alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts) LIMIT 100"
+  -
+    type: "bulk_deals_latest"
+    template: "SELECT * FROM signals.bulk_block_deals WHERE deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals) LIMIT 100"
+  -
+    type: "stage_snapshot_latest"
+    template: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 100"
+python_tools:
+  -
+    id: "execute_query"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "query"
+    outputs:
+      - "data_frame"
+    approved_tables:
+      - "signals.insider_alerts"
+      - "signals.bulk_block_deals"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    import pandas as pd\n    # Simulate database connection and fetching\n    query = context['query']\n    # For the purpose of the example, let's assume fetching mock data\n    result_data = pd.DataFrame({'symbol': ['INFY', 'TCS'], 'insider_score': [85, 90]})\n    context['data_frame'] = result_data\n    return context"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all SQL executed is read-only and compliant with the approved schema."
+  - "Confirm data freshness using the latest date constraints."
+  - "Validate that the response adheres to the research-only summary format."
+synthesis_guidance: "['Summarize insider and bulk deal activity with focus on accumulation or distribution patterns.', 'Draw insights from stage snapshots to filter actionable watchlist candidates.', 'Respond with a research-only overview context suitable for analysis without actionable trade advice.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "import pandas is not allowed"
+review:
+  status: "needs_heal"
+  findings:
+    - "import pandas is not allowed"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

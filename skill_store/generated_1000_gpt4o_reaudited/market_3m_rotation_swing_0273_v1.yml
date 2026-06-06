@@ -1,0 +1,59 @@
+created_at: "2026-06-06T12:44:05"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: pre market; response style: ranked candidates."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0273_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    name: "sector_rotation_analysis"
+    query: "SELECT sector, AVG(change_pct) AS avg_sector_performance FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 month' GROUP BY sector ORDER BY avg_sector_performance DESC;"
+  -
+    name: "stage_2_leadership"
+    query: "SELECT symbol, stage, stage_score FROM scores.stage_snapshots WHERE stage = '2' AND snapshot_date >= CURRENT_DATE - INTERVAL '3 month' ORDER BY stage_score DESC;"
+status: "test_failed"
+synthesis_guidance: "{'prioritize': ['Recent sector leaders', 'Stage 2 swing candidates with high scores']}"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "ranked_candidates"
+title: "3M Market Rotation Swing Assessment Variant 0273"
+tool_plan_template:
+  steps:
+    - "Fetch recent 3-month data from approved tables."
+    - "Analyze market regime and sector rotation trends."
+    - "Identify leadership stages and promising swing candidates."
+    - "Rank swing candidates based on technical and fundamental scores."
+validation_rules:
+  - "Ensure the as_of_date is the current date in YYYY-MM-DD format."
+  - "Verify if sector performance and stage 2 leadership are ranked by descending order."
+  - "Check primary candidates for valid technical and fundamental scores."
+version: 1
+validation_errors:
+  - "market.index_eod.avg_sector_performance is not approved"
+  - "market.index_eod.sector is not approved"

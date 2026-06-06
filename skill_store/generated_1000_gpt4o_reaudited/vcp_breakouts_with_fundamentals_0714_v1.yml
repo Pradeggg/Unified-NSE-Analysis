@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:50:57"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: latest EOD; response style: QA checklist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0714_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  - "SELECT symbol, company_name, close, volume, market_cap_cr FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND (high > week52_high*0.95 OR close > prev_close*1.05) AND market_cap_cr > 1000"
+  - "SELECT symbol, company_name, sector, fundamental_score, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage='Stage 2' AND fundamental_score > 80 AND technical_score > 70"
+  - "SELECT symbol, company_name, vcp_score, vcp_breakout_pct FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND vcp_score > 80 AND vcp_breakout_pct > 5"
+status: "validated"
+synthesis_guidance: "Combine technical and fundamental evidence to provide a watchlist focus on VCP and breakout candidates."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "QA_checklist"
+title: "VCP Breakouts With Fundamentals Variant 0714"
+tool_plan_template: "Python evidence tools are allowed only when SQL would become complex; keep them read-only and quarantined."
+validation_rules:
+  - "Ensure all selected stocks have a market cap greater than 1000 cr."
+  - "Select only stocks that are in 'Stage 2' and have high fundamental and technical scores."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

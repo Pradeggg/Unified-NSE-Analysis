@@ -1,0 +1,57 @@
+id: "agent_route_failure_diagnostics_1974_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1974"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: pre market; response style: comparison matrix."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for pre market: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as comparison matrix"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "pre_market"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "Diagnose the failure mode using the latest data from scores.stage_snapshots."
+  - "Analyze the source trail of each failure from report.enhanced_runs."
+  - "Identify any missing tools or conditions from report.enhanced_filtered_stocks."
+sql_templates:
+  -
+    description: "Retrieve latest analysis dates and market sentiments from enhanced runs."
+    sql: "SELECT run_id, analysis_date, market_sentiment FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+  -
+    description: "List of stocks with buy or strong buy signals from the latest snapshots."
+    sql: "SELECT symbol, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY');"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure run_ts and snapshot_date filters are using the latest values."
+  - "Verify that trading_signal conditions are applied correctly."
+synthesis_guidance: "['Compare trends and derive insights on why certain failures occur regarding missing tools or wrong symbol resolutions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

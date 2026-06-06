@@ -1,0 +1,67 @@
+id: "portfolio_incremental_add_trim_1165_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1165"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: post results; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for post results: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "post_results"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Evaluate holdings for risk, stage, and sector exposure. Recommend incremental actions post results."
+sql_templates:
+  -
+    type: "read_only"
+    template: "SELECT symbol, sector, stage, stage_score, trend_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    type: "read_only"
+    template: "SELECT symbol, qty, avg_cost FROM portfolio.holdings;"
+python_tools:
+  -
+    id: "evaluate_risk_profile"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "stage_score"
+      - "trend_signal"
+    outputs:
+      - "risk_assessment"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Python logic for risk assessment\n    pass"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure analysis reflects risk-first principles."
+  - "Verify incremental actions consider post-result changes."
+synthesis_guidance: "['Align recommendations with Indian market trends and risks.', 'Structure narrative to clearly explain evidence-backed actions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "evaluate_risk_profile: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "evaluate_risk_profile: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

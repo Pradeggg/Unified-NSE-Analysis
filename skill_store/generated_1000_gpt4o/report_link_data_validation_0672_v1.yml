@@ -1,0 +1,54 @@
+id: "report_link_data_validation_0672_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0672"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: pre market; response style: debug trace."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for pre market: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "To validate report link data, employ SQL queries to fetch information from enhanced report runs and filtered stocks, and identify missing or broken data links."
+sql_templates:
+  -
+    description: "Fetch metadata for enhanced report runs."
+    query: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed FROM report.enhanced_runs;"
+  -
+    description: "Retrieve filtered stock information for reports."
+    query: "SELECT run_id, symbol, score, recommendation FROM report.enhanced_filtered_stocks;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all report links can be accessed."
+  - "Verify that relevant stock data is populated."
+  - "Trace data source completeness and accuracy."
+synthesis_guidance: "Analyze SQL results to determine missing or broken report data connections and provide a concise debug trace."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:50:33"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

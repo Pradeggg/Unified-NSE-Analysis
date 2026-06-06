@@ -1,0 +1,76 @@
+id: "fii_dii_regime_breadth_review_0106_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0106"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: today; response style: narrative plus evidence."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for today: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as narrative plus evidence"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "today"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+
+tool_plan_template: "Combine SQL templates to assess market context via FII/DII flows, regime history, breadth, and indices."
+sql_templates:
+  -
+    description: "Retrieve the latest FII/DII flow data."
+    sql: "SELECT trade_date, fii_net_today, dii_net_today, flow_signal FROM signals.fii_dii_flows ORDER BY trade_date DESC LIMIT 1;"
+  -
+    description: "Get the current market regime and confidence level."
+    sql: "SELECT trade_date, regime, confidence FROM signals.regime_history ORDER BY trade_date DESC LIMIT 1;"
+  -
+    description: "Obtain the latest market breadth and sentiment signals."
+    sql: "SELECT trade_date, advances, declines, ad_signal, market_sentiment FROM breadth.market_daily ORDER BY trade_date DESC LIMIT 1;"
+  -
+    description: "Fetch the latest index EOD values and trend signals for Nifty 500."
+    sql: "SELECT trade_date, close, change_pct, trend_signal FROM market.index_eod WHERE index_symbol = 'NIFTY 500' ORDER BY trade_date DESC LIMIT 1;"
+python_tools:
+  -
+    id: "calculate_risk_assessment"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "flow_signal"
+      - "regime"
+      - "ad_signal"
+      - "trend_signal"
+    outputs:
+      - "risk_assessment"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "# Calculate risk assessment based on input signals\ndef run(context):\n    flow_signal = context['flow_signal']\n    regime = context['regime']\n    ad_signal = context['ad_signal']\n    trend_signal = context['trend_signal']\n    # Implement logic to define risk as 'risk-on' or 'risk-off'\n    risk_assessment = 'risk-off' if 'negative' in [flow_signal, regime, ad_signal, trend_signal] else 'risk-on'\n    return {'risk_assessment': risk_assessment}"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all required data points are current as of the latest trade date."
+  - "Confirm consistency between regime and flow indicators."
+synthesis_guidance: "Synthesize a comprehensive view of market risk using the freshest FII/DII flow data, market regime, breadth signals, and index trends, presenting a narrative supported by evidence."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:28"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_risk_assessment: execution failed: KeyError: 'flow_signal'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_risk_assessment: execution failed: KeyError: 'flow_signal'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

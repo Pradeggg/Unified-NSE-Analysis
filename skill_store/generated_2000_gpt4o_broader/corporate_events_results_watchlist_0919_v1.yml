@@ -1,0 +1,53 @@
+id: "corporate_events_results_watchlist_0919_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0919"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for latest EOD: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as comparison matrix"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  response_type: "comparison_matrix"
+  focus: "source-trail validation"
+sql_templates:
+  -
+    query: "SELECT c.symbol, c.event_type, c.event_date, c.purpose_raw, a.growth_yoy_revenue_pct, a.growth_qoq_revenue_pct, s.price, s.change_1d_pct FROM signals.corporate_events c JOIN scores.results_analysis a ON c.symbol = a.symbol JOIN scores.stage_snapshots s ON c.symbol = s.symbol WHERE c.event_date >= CURRENT_DATE ORDER BY c.event_date;"
+    description: "Fetches upcoming corporate events with their results analysis and stock price changes for comparison."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event dates are latest EOD or upcoming."
+  - "Validate presence of source-trail for each result context."
+synthesis_guidance: "Create a comparison matrix showing the correlation between corporate events, results analysis, and market response based on latest EOD data."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:25"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

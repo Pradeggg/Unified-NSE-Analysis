@@ -1,0 +1,75 @@
+id: "agent_route_failure_diagnostics_1568_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1568"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for post results: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as research-only summary"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "analysis_date"
+      - "run_id"
+    outputs:
+      - "failure_mode"
+      - "source_trail"
+      - "route_fix"
+      - "tool_gap"
+      - "regression_tests"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Calculate failure mode based on evidence\n    failure_mode = 'Determine failure mode analysis using evidence'\n    source_trail = 'Analyze symbol routes to trace source issues'\n    route_fix = 'Proposal for resolving route discrepancies'\n    tool_gap = 'Identify missing tools in the diagnostics'\n    regression_tests = 'Outline tests for future regression prevention'\n    return (\n        failure_mode,\n        source_trail,\n        route_fix,\n        tool_gap,\n        regression_tests\n    )"
+sql_templates:
+  -
+    template_name: "latest_runs"
+    sql: "SELECT run_id, run_ts, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+  -
+    template_name: "filtered_stocks_analysis"
+    sql: "SELECT s.symbol, s.score, s.daily_signal FROM report.enhanced_filtered_stocks s JOIN report.enhanced_runs r ON s.run_id = r.run_id WHERE r.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure failure_mode is well-defined based on context inputs."
+  - "Verify source_trail analysis corresponds to existing evidence."
+  - "Check route_fix recommendations align with route diagnostics."
+  - "Ensure tool_gap includes missing diagnostics accurately."
+  - "Verify regression_tests are suitable and comprehensive."
+synthesis_guidance: "['Focus on route failures using post-analysis data.', 'Address missing tools in relation to position-sizing context.', 'Summarize findings and propose solutions in a clear manner.', 'Limit scope to research-only diagnostics.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:25"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

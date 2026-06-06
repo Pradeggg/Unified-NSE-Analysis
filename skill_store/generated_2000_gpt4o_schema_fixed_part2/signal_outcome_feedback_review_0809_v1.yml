@@ -1,0 +1,52 @@
+id: "signal_outcome_feedback_review_0809_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0809"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for today: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as action watchlist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Select signals resolved today, analyze outcomes, and summarize insights and patterns."
+sql_templates:
+  -
+    template_name: "SelectResolvedSignalsToday"
+    sql: "SELECT id, symbol, date_issued, signal, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_resolved = CURRENT_DATE;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure outcome summary includes all symbols resolved today."
+  - "Check that patterns are based on resolved signals only."
+synthesis_guidance: "['Use resolved signals to identify common characteristics of successes and failures.', 'Suggest actionable improvements based on observed outcome patterns.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,72 @@
+id: "portfolio_lab_paper_trading_review_1398_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1398"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: position-sizing context; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "position-sizing context for weekly review: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+  columns:
+
+tool_plan_template:
+  python_tools:
+    -
+      required_function: "run(context)"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "context"
+      outputs:
+        - "results"
+      approved_tables:
+        - "portfolio.holdings"
+        - "signals.signal_log"
+        - "scores.stage_snapshots"
+        - "market.equity_eod"
+      code: "# Sample Python code for data processing\n# def run(context):\n#     Process data from context and return results\n"
+  sql_templates:
+    -
+      template: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings WHERE buy_date = (SELECT MAX(buy_date) FROM portfolio.holdings);"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure strategy_state includes latest market context."
+  - "Check open_trades against resolved signals."
+  - "Validate entry_exit_rules with recorded market movements."
+synthesis_guidance: "Focus on exceptions and gaps in the strategy execution versus planned entries and exits. Highlight position sizing issues and exposure inconsistencies."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

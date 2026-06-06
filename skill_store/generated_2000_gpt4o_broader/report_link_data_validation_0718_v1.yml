@@ -1,0 +1,53 @@
+id: "report_link_data_validation_0718_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Agent Adda Report Data Validation"
+description: "Validate proper generation and linking of report data, focusing on position-sizing context for latest EOD data."
+input_patterns:
+  - "review report links not working"
+  - "validate generated report links and missing data"
+  - "position-sizing context for latest EOD: review report links not working"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "latest_EOD"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  insight_tasks:
+    - "Validate report generation metadata accuracy from enhanced_runs table."
+    - "Check for existence and accuracy of data in enhanced_filtered_stocks table."
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts, analysis_date, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_id = ?;"
+    description: "Retrieve metadata for the specific report run."
+  -
+    template: "SELECT symbol, recommendation, current_price, volume FROM report.enhanced_filtered_stocks WHERE run_id = ?;"
+    description: "Check stock data existence and validity for a specific run."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all required columns in evidence tables are present and accurate."
+  - "Verify that report data is consistent across evidence tables."
+synthesis_guidance: "Compile data validation report ensuring all links are functional and data is present."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:49"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

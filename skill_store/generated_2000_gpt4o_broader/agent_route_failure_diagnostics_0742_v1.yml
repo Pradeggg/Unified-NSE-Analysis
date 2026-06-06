@@ -1,0 +1,51 @@
+id: "agent_route_failure_diagnostics_0742_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0742"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: last 3 months; response style: QA checklist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for last 3 months: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as QA checklist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Implement QA methodologies focusing on Agent Adda route diagnostics, ensuring analysis of symbol resolution patterns and tool readiness over a three-month period."
+sql_templates:
+  -
+    name: "recent_runs_analysis"
+    query: "SELECT run_id, run_ts, universe_size, stocks_analyzed, market_sentiment FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '3 months';"
+  -
+    name: "symbol_resolution_check"
+    query: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = (SELECT MAX(run_id) FROM report.enhanced_runs);"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "rule_1"
+  - "rule_2"
+  - "rule_3"
+synthesis_guidance: "Combine SQL results with QA methodologies to outline clear diagnostic insights. Ensure a focus on trend patterns and potential issues."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:16"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.now is not approved"

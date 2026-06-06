@@ -1,0 +1,70 @@
+id: "portfolio_incremental_add_trim_1053_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1053"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: concise table."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as concise table"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "${SQL_SELECT}"
+sql_templates:
+  select_holdings_and_scores:
+    template: "SELECT h.symbol, h.qty, h.avg_cost, h.buy_date, s.sector, s.stage, s.stage_score, s.trend_signal, s.price, s.change_1m_pct FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.price_date = CURRENT_DATE ORDER BY s.stage_score DESC;"
+    description: "Retrieve current holdings with stage scores and sector information."
+python_tools:
+  -
+    id: "analyze_trend_signals"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "stage_score"
+      - "trend_signal"
+      - "sector"
+    outputs:
+      - "add_candidates"
+      - "trim_candidates"
+      - "risk_flags"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n  # Example code for analysis to be quarantined\n  add_candidates = []\n  trim_candidates = []\n  risk_flags = []\n  for row in context['data']:\n    if row['trend_signal'] == 'positive' and row['stage_score'] > 50:\n      add_candidates.append(row['symbol'])\n    elif row['trend_signal'] == 'negative' or row['stage'] < 2:\n      trim_candidates.append(row['symbol'])\n    if row['change_1m_pct'] < -10:\n      risk_flags.append(row['symbol'])\n  return {'add_candidates': add_candidates, 'trim_candidates': trim_candidates, 'risk_flags': risk_flags}"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+synthesis_guidance: "{'approach': 'Use the SQL result to formulate add/trim recommendations, ensuring alignment with the Indian market context. Focus on trend signals and stage scores to determine actions. Provide a concise table reflecting these insights.', 'response_style': 'Present the analysis as a clear and concise table, highlighting critical insights for portfolio adjustments.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:56"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analyze_trend_signals: execution failed: KeyError: 'data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "analyze_trend_signals: execution failed: KeyError: 'data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

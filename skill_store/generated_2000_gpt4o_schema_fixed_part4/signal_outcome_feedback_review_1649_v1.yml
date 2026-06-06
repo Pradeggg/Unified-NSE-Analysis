@@ -1,0 +1,57 @@
+id: "signal_outcome_feedback_review_1649_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1649"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for last 3 months: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as debug trace"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Review signal histories using tables such as signals.signal_log."
+  - "Identify winners and failures with hit_target and hit_stop columns."
+  - "Use scores.stage_snapshots for current context alignment."
+  - "Check technical and investment scores for correlation."
+  - "Frame outcome in debug trace format."
+sql_templates:
+  -
+    template: "WITH recent_signals AS (SELECT * FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months'), signal_performance AS (SELECT symbol, hit_target, hit_stop, COUNT(*) AS occurrences FROM recent_signals GROUP BY symbol, hit_target, hit_stop) SELECT symbol, SUM(CASE WHEN hit_target THEN 1 ELSE 0 END) AS targets_hit, SUM(CASE WHEN hit_stop THEN 1 ELSE 0 END) AS stops_hit, occurrences FROM signal_performance GROUP BY symbol ORDER BY occurrences DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Validate that summary includes a clear distinction of wins and losses in signals."
+  - "Correlate signal metrics with outcomes accurately using approved evidence tables."
+  - "Ensure that recommendations for improvements are evidence-based."
+synthesis_guidance: "Focus on analytically identifying patterns from past signals, emphasizing clarity in debug trace response."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

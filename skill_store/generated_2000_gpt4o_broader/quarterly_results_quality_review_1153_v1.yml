@@ -1,0 +1,53 @@
+id: "quarterly_results_quality_review_1153_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1153"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: narrative plus evidence."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "daily refresh follow-up for quarter to date: latest quarterly results analysis"
+  - "which companies had strong quarterly results as narrative plus evidence"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Assess latest quarterly results using evidence from structured scores and narrative fields, focusing on revenue, PAT growth, and margin trends."
+sql_templates:
+  -
+    description: "Select companies with strong quarterly revenue and PAT growth."
+    template: "SELECT company_name, symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct FROM scores.results_analysis WHERE period_label = 'latest' AND (growth_yoy_revenue_pct > 0 OR growth_qoq_revenue_pct > 0) AND (growth_yoy_pat_pct > 0 OR growth_qoq_pat_pct > 0) ORDER BY growth_yoy_revenue_pct DESC, growth_yoy_pat_pct DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure SQL templates are read-only."
+  - "Use only approved tables and columns."
+  - "Status must be 'generated'."
+  - "Do not invent tables or columns."
+synthesis_guidance: "Combine SQL-derived evidence with narrative analysis to offer a comprehensive review of quarterly results."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:49"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

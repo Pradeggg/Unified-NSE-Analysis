@@ -1,0 +1,73 @@
+id: "market_3m_rotation_swing_0373_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0373"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: pre market; response style: exceptions and gaps first."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as exceptions and gaps first"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  inputs:
+    - "latest_market_data"
+  output_contract:
+    - "as_of_date"
+    - "index_returns"
+    - "stage_distribution_change"
+    - "leading_sectors"
+    - "primary_candidates"
+    - "risks"
+sql_templates:
+  -
+    template_type: "SELECT"
+    template_query: "SELECT index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY trade_date DESC"
+  -
+    template_type: "SELECT"
+    template_query: "SELECT sector, COUNT(symbol) AS count FROM scores.stage2_vcp_picks WHERE change_1m_pct > 0 AND snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY count DESC"
+python_tools:
+  -
+    id: "data_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "latest_market_data"
+    outputs:
+      - "summary_statistics"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    return {'summary_statistics': 'Summary data'}"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure output includes all key metrics."
+  - "Confirm data freshness corresponds to pre market hours."
+synthesis_guidance: "['Focus on recent sector rotation patterns.', 'Highlight leading sectors and potential swing trading candidates.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:46:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.change_1m_pct is not approved"

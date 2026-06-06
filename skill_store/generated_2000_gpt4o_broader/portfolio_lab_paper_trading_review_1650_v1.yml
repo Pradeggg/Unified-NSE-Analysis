@@ -1,0 +1,70 @@
+id: "portfolio_lab_paper_trading_review_1650_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1650"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: TradingView export; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "TradingView export for last 3 months: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as debug trace"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "TradingView_export"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Implement review of paper trading strategies using approved schema."
+sql_templates:
+  -
+    description: "Retrieve all trading signals for the last 3 months"
+    sql: "SELECT id, date_issued, symbol, signal, entry_low, entry_high, stop_loss, target_1, target_2, date_resolved, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_issued >= NOW() - INTERVAL '3 months';"
+  -
+    description: "Retrieve portfolio holdings for integration into the review"
+    sql: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+python_tools:
+  -
+    id: "run_strategy_review"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "signal_data"
+    outputs:
+      - "strategy_state"
+      - "open_trades"
+      - "entry_exit_rules"
+      - "exposure"
+    approved_tables:
+      - "signals.signal_log"
+      - "portfolio.holdings"
+    code:
+      - "def run_strategy_review(context):"
+      - "    # Process signal_data to evaluate strategies"
+      - "    pass"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure query dates match evidence timeframe"
+  - "Validate all required outputs are produced"
+synthesis_guidance: "['Focus on separating paper trading analysis from real holdings', 'Ensure debug trace style']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:42"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.now is not approved"

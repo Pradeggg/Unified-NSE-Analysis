@@ -1,0 +1,73 @@
+id: "fii_dii_regime_breadth_review_1926_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1926"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: last 5 sessions; response style: comparison matrix."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for last 5 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as comparison matrix"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    python_tools:
+
+    python_tool_policy:
+      required_function: "run(context)"
+      language: "python"
+      mode: "read_only"
+      blocked_capabilities:
+        - "network"
+        - "subprocess"
+        - "filesystem_write"
+        - "db_write"
+        - "broker_api"
+      required_fields:
+        - "id"
+        - "language"
+        - "mode"
+        - "inputs"
+        - "outputs"
+        - "approved_tables"
+        - "code"
+sql_templates:
+  -
+    template: "SELECT f.trade_date, f.flow_signal, r.regime, r.confidence, b.ad_signal, m.trend_signal FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date JOIN breadth.market_daily b ON f.trade_date = b.trade_date JOIN market.index_eod m ON f.trade_date = m.trade_date WHERE f.trade_date >= (CURRENT_DATE - INTERVAL '5 days') ORDER BY f.trade_date DESC;"
+    description: "Fetches FII/DII flow signal, market regime, AD signal, and trend signal for the last 5 sessions."
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure that output contains data for the last 5 trading sessions."
+  - "Verify regime alignment with flow signals and breadth indicators."
+synthesis_guidance: "{'instructions': 'Compare FII/DII flow signals with regime and breadth indicators to derive market context as risk-on or risk-off. Use a comparison matrix to present findings.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:48"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:45:47"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: exceptions and gaps first."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0334_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Finds stocks with VCP and breakout characteristics and strong fundamentals over the last 20 sessions."
+    template: "SELECT e.symbol, e.trade_date, e.close, e.high, e.volume, s.stage_score, s.fundamental_score, s.relative_strength, v.vcp_score FROM market.equity_eod AS e JOIN scores.stage_snapshots AS s ON e.symbol = s.symbol JOIN scores.stage2_vcp_picks AS v ON e.symbol = v.symbol WHERE e.trade_date >= CURRENT_DATE - INTERVAL '20 days' AND v.vcp_score IS NOT NULL AND s.fundamental_score > 70 AND s.relative_strength > 60 ORDER BY v.vcp_score DESC;"
+    template_name: "vcp_breakout_selection"
+status: "validated"
+synthesis_guidance: "['Focus on high-impact candidates with exceptional breakout and VCP characteristics.', 'Emphasize data gaps first, followed by robust candidates fitting fundamental strength.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+title: "VCP Breakouts With Fundamentals Variant 0334"
+tool_plan_template: "{context}: Identify VCP and breakout stocks with strong fundamentals over last 20 sessions. Prioritize Trojan filtering and breakout pick analysis using proven Indian market strategies. Address missing evidence to inform gaps, trading risks, and opportunities."
+validation_rules:
+  - "Only include results with available vcp_score and fundamental_score > 70."
+  - "Ensure relative_strength > 60."
+  - "Limit to last 20 session trades."
+version: 1

@@ -1,0 +1,58 @@
+id: "report_link_data_validation_0724_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0724"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  python_tools:
+
+  sql_templates:
+    -
+      template: "SELECT run_id, run_ts, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '5 days';"
+      description: "Fetch report runs from the last 5 sessions"
+    -
+      template: "SELECT symbol, recommendation, current_price FROM report.enhanced_filtered_stocks WHERE run_id = ?;"
+      description: "Fetch filtered stocks for a specific report run"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure report links are functional."
+  - "Check that all stock HTML files contain data."
+  - "Confirm the watchlist includes appropriate stocks from the last 5 sessions."
+synthesis_guidance: "['Consolidate findings into a QA checklist.', 'Prioritize link issues and missing data for remediation.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:51:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

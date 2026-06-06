@@ -1,0 +1,57 @@
+id: "agent_route_failure_diagnostics_0644_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0644"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for last 3 months: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as debug trace"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "Assess the context of failures using historical data from evidence tables."
+  - "Identify missing symbols or unexpected filtering behavior."
+sql_templates:
+  -
+    query: "SELECT run_id, run_ts, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '3 months';"
+    purpose: "Retrieve recent runs to analyze filtering issues."
+  -
+    query: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = :run_id;"
+    purpose: "Examine stocks filtered in a specific run for analysis."
+  -
+    query: "SELECT symbol, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date >= NOW() - INTERVAL '3 months';"
+    purpose: "Review recent stage scores for discrepancies in symbol resolutions."
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure SQL queries are read-only."
+  - "All evidence comes from approved tables."
+  - "Output must match the contract structure."
+synthesis_guidance: "['Combine evidence insights to pinpoint failure causes.', 'Identify tool gaps based on evidence examination.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:09"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.now is not approved"
+  - "scores.stage_snapshots.now is not approved"

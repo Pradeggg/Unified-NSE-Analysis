@@ -1,0 +1,69 @@
+id: "company_360_research_report_0034_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0034"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: concise table."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "watchlist creation for last 20 sessions: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as concise table"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  sql_templates:
+    -
+      description: "Fetch overview of company including market cap and technical scores."
+      query: "SELECT symbol, company_name, market_cap_cat, price, change_1d_pct, change_1w_pct, stage, technical_score FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date >= (SELECT MAX(snapshot_date) - INTERVAL '20 days' FROM scores.stage_snapshots);"
+    -
+      description: "Fetch last quarter financials for company."
+      query: "SELECT period_label, revenue, expenses, operating_profit, pat, eps FROM scores.quarterly_results WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1;"
+    -
+      description: "Fetch technical setup based on last 20 sessions."
+      query: "SELECT trade_date, open, high, low, close, volume FROM market.equity_eod WHERE symbol = 'RELIANCE' AND trade_date >= (SELECT MAX(trade_date) - INTERVAL '20 days' FROM market.equity_eod);"
+    -
+      description: "Fetch balance sheet overview for valuation gaps."
+      query: "SELECT total_assets, net_debt FROM scores.balance_sheet WHERE symbol = 'RELIANCE' ORDER BY period_end DESC LIMIT 1;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "status"
+  - "schema_safe"
+  - "read_only"
+synthesis_guidance: "{'notes': 'Ensure overview, financials, and technicals are concise and well-structured. Prioritize official filings and validated data sources.', 'emphasis': 'Watchlist creation with focus on reliability and context from the last 20 sessions.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:33"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,57 @@
+id: "signal_outcome_feedback_review_1481_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1481"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: quick scan; timeframe: intraday context; response style: portfolio-aware output."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for intraday context: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as portfolio-aware output"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  inputs:
+    signal_log: "SELECT symbol, signal, target_1, target_2, stop_loss, return_pct FROM signals.signal_log WHERE date_resolved IS NOT NULL AND (hit_target OR hit_stop);"
+  outputs:
+    outcome_summary: "Provide a summary of signal outcomes including hit targets and stops."
+    winner_patterns: "Identify patterns in signals that hit targets."
+    failure_patterns: "Identify patterns in signals that hit stops."
+    route_improvements: "Suggest improvements to routes based on outcome data."
+    next_checks: "List of next steps in learning or adjustment."
+sql_templates:
+  winning_signals: "SELECT symbol, COUNT(*) AS win_count FROM signals.signal_log WHERE hit_target = true GROUP BY symbol ORDER BY win_count DESC LIMIT 10;"
+  failing_signals: "SELECT symbol, COUNT(*) AS fail_count FROM signals.signal_log WHERE hit_stop = true GROUP BY symbol ORDER BY fail_count DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:37"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.fail_count is not approved"
+  - "signals.signal_log.win_count is not approved"

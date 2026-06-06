@@ -1,0 +1,77 @@
+id: "fii_dii_regime_breadth_review_0834_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0834"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as action watchlist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "This skill summarizes market regime by integrating FII/DII flows, market regime state, breadth indicators, and index trends. Develop a watchlist for Indian markets based on this synthesis."
+sql_templates:
+  -
+    template: "WITH latest_flows AS ( SELECT * FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days' ), latest_regime AS ( SELECT * FROM signals.regime_history WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days' ), latest_breadth AS ( SELECT * FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days' ), latest_index AS ( SELECT * FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days' AND index_symbol = 'Nifty 50' ) SELECT f.trade_date, f.fii_net_today, f.dii_net_today, r.regime, r.confidence, b.advances, b.declines, b.ad_signal, i.close, i.change_pct FROM latest_flows f JOIN latest_regime r ON f.trade_date = r.trade_date JOIN latest_breadth b ON b.trade_date = f.trade_date JOIN latest_index i ON i.trade_date = f.trade_date ORDER BY f.trade_date DESC LIMIT 20;"
+    name: "fetch_regime_and_flows"
+python_tools:
+  -
+    id: "calculate_market_risk"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "trade_date"
+      - "fii_net_today"
+      - "dii_net_today"
+      - "regime"
+      - "confidence"
+      - "advances"
+      - "declines"
+      - "ad_signal"
+      - "close"
+      - "change_pct"
+    outputs:
+      - "risk_level"
+      - "watchlist"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context):\n    # Analyze market conditions\n    if context['regime'] == 'BULL' and context['fii_net_today'] > 0:\n        risk_level = 'Risk-On'\n    elif context['regime'] == 'BEAR' or context['change_pct'] < 0:\n        risk_level = 'Risk-Off'\n    else:\n        risk_level = 'Neutral'\n    watchlist = {'focus': 'blue-chip'} if risk_level == 'Risk-On' else {'focus': 'defensive'}\n    return {'risk_level': risk_level, 'watchlist': watchlist}"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure trade_date is aligned across all tables."
+  - "Limit results to last 20 trading sessions."
+synthesis_guidance: "Focus on integrating flow trends, regime confidence, breadth changes, and index patterns to assess current market conditions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:26"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_market_risk: execution failed: KeyError: 'regime'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_market_risk: execution failed: KeyError: 'regime'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,101 @@
+id: "data_freshness_readiness_audit_1799_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1799"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for weekly review: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    sql_templates:
+      -
+        name: "latest_index_eod_date_check"
+        query: "SELECT MAX(trade_date) AS latest_date FROM market.index_eod;"
+      -
+        name: "latest_equity_eod_date_check"
+        query: "SELECT MAX(trade_date) AS latest_date FROM market.equity_eod;"
+      -
+        name: "latest_stage_snapshots_date_check"
+        query: "SELECT MAX(snapshot_date) AS latest_date FROM scores.stage_snapshots;"
+    output_contract:
+      - "freshness_matrix"
+      - "missing_sources"
+      - "blocking_gaps"
+      - "loader_actions"
+      - "verification_queries"
+    validation_rules:
+      - "The freshness_matrix must include the latest dates from all mandatory sources."
+      - "Identify any missing_sources if MAX dates do not align with expected freshness thresholds."
+    synthesis_guidance:
+      - "Cross-check calculated dates against current archival guidelines."
+      - "Highlight any gaps indicating less than expected data availability."
+sql_templates:
+
+python_tools:
+  -
+    id: "data_freshness_checker"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "latest_index_date"
+      - "latest_equity_date"
+      - "latest_stage_date"
+    outputs:
+      - "freshness_status"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code:
+      - "def run(context):"
+      - "    expected_freshness = context.get('expected_freshness')"
+      - "    freshness_status = {}"
+      - "    for key, latest_date in context.items():"
+      - "        if key.startswith('latest_'):"
+      - "            freshness_status[key] = (latest_date -> expected_freshness)"
+      - "            # Ensure dates are 'fresh' compared to 'expected_freshness'"
+      - "    return {'freshness_status': freshness_status}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "data_freshness_checker: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "data_freshness_checker: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

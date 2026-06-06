@@ -1,0 +1,64 @@
+id: "quarterly_results_quality_review_0299_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0299"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: source-trail validation; timeframe: weekly review; response style: ranked candidates."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "source-trail validation for weekly review: latest quarterly results analysis"
+  - "which companies had strong quarterly results as ranked candidates"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "{response_style} companies showing strong {aspect} in {evidence_tables} {timeframe}"
+sql_templates:
+  get_quarterly_results: "SELECT symbol, period_end, revenue, pat, opm_pct FROM scores.quarterly_results WHERE period_label = 'Q1' ORDER BY period_end DESC LIMIT 10"
+  get_results_analysis: "SELECT symbol, growth_yoy_revenue_pct, growth_yoy_pat_pct, opm_delta_pp FROM scores.results_analysis WHERE period_label = 'Q1' AND audited = true ORDER BY growth_yoy_revenue_pct DESC LIMIT 10"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "results_data"
+      - "analysis_data"
+    outputs:
+      - "ranked_companies"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+    code: "def run(context):\n    results_data = context['results_data']\n    analysis_data = context['analysis_data']\n    ranked = sorted(results_data, key=lambda x: x['revenue'] + x['pat'], reverse=True)\n    return {'ranked_companies': ranked}"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Check that all metrics are current within the filing_window."
+  - "Confirm ranked_companies are correctly ordered by growth"
+synthesis_guidance: "['Synthesize rankings based on a combination of revenue growth, PAT growth, and margin drivers.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run: execution failed: KeyError: 'results_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "run: execution failed: KeyError: 'results_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,67 @@
+id: "portfolio_lab_paper_trading_review_1888_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1888"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: position-sizing context; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "position-sizing context for intraday context: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as action watchlist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Fetch active trading signals with entry, exit, stop, and target information."
+    template: "SELECT symbol, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_resolved IS NULL"
+python_tools:
+  -
+    id: "strategy_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signals_data"
+    outputs:
+      - "analysis_result"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context):\n    # Analyze strategy performance using signals_data.\n    signals_data = context['signals_data']\n    analysis_result = perform_analysis(signals_data)\n    return {'analysis_result': analysis_result}\n\n# Perform_analysis is assumed to be a function that analyzes the strategy."
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "strategy_analysis_tool: execution failed: KeyError: 'signals_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "strategy_analysis_tool: execution failed: KeyError: 'signals_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,62 @@
+id: "vcp_breakouts_with_fundamentals_0382_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0382"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: intraday context; response style: exceptions and gaps first."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  - "WITH vcp_candidates AS (SELECT ss.symbol, ss.company_name, ss.sector, ss.enhanced_fund_score, ss.institutional_backing, sv.vcp_score, e.close AS last_close FROM scores.stage_snapshots ss JOIN scores.stage2_vcp_picks sv ON ss.symbol = sv.symbol JOIN market.equity_eod e ON ss.symbol = e.symbol WHERE e.trade_date = CURRENT_DATE AND sv.trading_signal = 'Buy' AND ss.enhanced_fund_score > 70 AND sv.vcp_score > 80), new_high_candidates AS (SELECT symbol, max(high) AS latest_high FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '52 week' GROUP BY symbol HAVING max(high) = ANY (SELECT high FROM market.equity_eod WHERE trade_date = CURRENT_DATE)), breakout_candidates AS (SELECT symbol FROM scores.stage_snapshots WHERE stage_score > 80 AND change_1d_pct > 5) SELECT DISTINCT vc.symbol, vc.company_name, vc.sector FROM vcp_candidates vc UNION SELECT nh.symbol FROM new_high_candidates nh UNION SELECT bc.symbol FROM breakout_candidates bc;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure symbols are unique across all candidate lists."
+  - "Verify that selected symbols have a trading signal of Buy."
+synthesis_guidance: "['Focus on deep institutional analysis.', 'Include exceptions and gaps in the findings.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:46:06"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table bc.symbol"
+  - "unknown table e.close"
+  - "unknown table e.symbol"
+  - "unknown table e.trade_date"
+  - "unknown table nh.symbol"
+  - "unknown table ss.company_name"
+  - "unknown table ss.enhanced_fund_score"
+  - "unknown table ss.institutional_backing"
+  - "unknown table ss.sector"
+  - "unknown table ss.symbol"
+  - "unknown table sv.symbol"
+  - "unknown table sv.trading_signal"
+  - "unknown table sv.vcp_score"
+  - "unknown table vc.company_name"
+  - "unknown table vc.sector"
+  - "unknown table vc.symbol"

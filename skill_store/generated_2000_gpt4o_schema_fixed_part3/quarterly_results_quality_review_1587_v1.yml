@@ -1,0 +1,60 @@
+id: "quarterly_results_quality_review_1587_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1587"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: sector-relative comparison; timeframe: intraday context; response style: research-only summary."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "sector-relative comparison for intraday context: latest quarterly results analysis"
+  - "which companies had strong quarterly results as research-only summary"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  sql_templates:
+    -
+      name: "latest_quarterly_results"
+      template: "WITH latest_results AS (SELECT DISTINCT ON (symbol) symbol, period_end, revenue, operating_profit, pat, opm_pct FROM scores.quarterly_results WHERE period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC) SELECT * FROM latest_results"
+    -
+      name: "sector_relative_comparison"
+      template: "SELECT a.symbol, a.revenue, a.pat, b.industry FROM (SELECT symbol, MAX(period_end) as period_end FROM scores.quarterly_results GROUP BY symbol) as latest JOIN scores.quarterly_results as a ON latest.symbol = a.symbol AND latest.period_end = a.period_end JOIN scores.results_analysis as b ON a.symbol = b.symbol AND a.period_end = b.period_end WHERE b.verdict IN ('beat', 'mixed') ORDER BY b.industry"
+    -
+      name: "stage_snapshot_analysis"
+      template: "SELECT a.symbol, a.revenue, a.pat, c.stage, c.trading_signal FROM scores.quarterly_results a JOIN scores.stage_snapshots c ON a.symbol = c.symbol WHERE c.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND c.trading_signal IN ('BUY', 'STRONG_BUY')"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure latest quarterly data is used where applicable."
+  - "Results must be filtered for trading_signal IN ('BUY', 'STRONG_BUY')."
+  - "Order results by industry for sector-relative comparison."
+synthesis_guidance: "['Provide a research-only summary focused on sector-relative performance.', 'Highlight strong results based on revenue growth and margin improvement.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:45"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

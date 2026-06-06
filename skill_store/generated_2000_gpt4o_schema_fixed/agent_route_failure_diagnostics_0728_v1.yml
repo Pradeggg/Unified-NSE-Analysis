@@ -1,0 +1,62 @@
+id: "agent_route_failure_diagnostics_0728_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0728"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for last 5 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as QA checklist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  plan:
+    - "Validate the presence of required tools using tool metadata."
+    - "Check for symbol resolution loops and misconfigurations using the latest snapshot data."
+    - "Review position sizing context using enhanced runs and filtered stock data."
+sql_templates:
+  -
+    name: "latest_runs_check"
+    sql: "SELECT run_id, run_ts, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE run_ts >= (CURRENT_DATE - INTERVAL '5 days');"
+  -
+    name: "filtered_stocks_check"
+    sql: "SELECT symbol, recommendation FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= (CURRENT_DATE - INTERVAL '5 days'));"
+  -
+    name: "latest_stage_check"
+    sql: "SELECT symbol, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure latest runs cover the last 5 sessions using run_ts filter."
+  - "Symbol resolution involves analysis of symbols and stage data."
+  - "Tool gap diagnostics should focus on required tools missing in context."
+synthesis_guidance: "['Collate evidence from all sources to identify gaps and resolutions.', 'Focus synthesis on recurrent patterns across five sessions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,57 @@
+id: "sector_breadth_rotation_watchlist_0629_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0629"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: last 5 sessions; response style: debug trace."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for last 5 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as debug trace"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+
+  sql_templates:
+    -
+      name: "sector_rankings"
+      description: "Ranks sectors by breadth and Stage 2 participation over the last 5 sessions."
+      template: "WITH latest_snapshots AS (SELECT MAX(snapshot_date) AS latest_date FROM breadth.sector_daily), \nranked_sectors AS (\n    SELECT sd.sector,\n           AVG(sd.pct_above_50dma::numeric) as avg_50dma,\n           AVG(mpa.stage2_pct) as avg_stage2,\n           RANK() OVER (ORDER BY AVG(sd.pct_above_50dma::numeric) DESC) AS dma_rank,\n           RANK() OVER (ORDER BY AVG(mpa.stage2_pct) DESC) AS stage2_rank\n    FROM breadth.sector_daily sd\n    JOIN breadth.ma_pct_above mpa ON sd.snapshot_date = mpa.snapshot_date\n    WHERE sd.snapshot_date BETWEEN latest_snapshots.latest_date - INTERVAL '4 days' AND latest_snapshots.latest_date\n    GROUP BY sd.sector\n)\nSELECT * FROM ranked_sectors\nORDER BY dma_rank, stage2_rank\nLIMIT 10;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Status must be generated."
+synthesis_guidance: "['Focus on validating the source and trail of sectors improving over 5 sessions using breadth and stage analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

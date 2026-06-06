@@ -1,0 +1,62 @@
+id: "agent_route_failure_diagnostics_1330_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1330"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for last 5 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as exceptions and gaps first"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    inputs:
+
+    steps:
+      -
+        task: "Validate input patterns against the evidence schema."
+      -
+        task: "Use SQL templates to find mismatches or failures in recent data."
+sql_templates:
+  -
+    description: "Select the latest enhanced runs that encountered route failures."
+    statement: "SELECT run_id, run_ts, notes FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) AND notes LIKE '%failure%' LIMIT 5;"
+  -
+    description: "Identify missing symbols in the latest TradingView exports."
+    statement: "SELECT symbol FROM report.enhanced_filtered_stocks WHERE run_id = (SELECT MAX(run_id) FROM report.enhanced_filtered_stocks) AND symbol IS NULL LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure SQL templates are read-only."
+  - "Verify that joins comply with approved schema join rules."
+synthesis_guidance: "['Focus on exceptions and gaps in the diagnostic report.', 'Highlight any missing tools or unresolved symbols.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:24"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:52:17"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: post results; response style: action watchlist."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0868_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for post results: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select recent enhanced run metadata."
+    sql: "SELECT run_id, analysis_date, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '1 month';"
+  -
+    description: "Select high-ranking filtered stocks."
+    sql: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE rank <= 10;"
+status: "validated"
+synthesis_guidance: "Use findings to provide actionable insights for the validation of report data links and contents."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "post_results"
+  - "action_watchlist"
+title: "Enhanced Report Data Validation Variant 0868"
+tool_plan_template: "Analyze report data validation post results for position-sizing context."
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates must be read-only SELECT/WITH templates."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,54 @@
+id: "signal_outcome_feedback_review_0081_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0081"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: quick scan; timeframe: intraday context; response style: concise table."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for intraday context: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as concise table"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "intraday_context"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Retrieve the outcome summary data from signal logs."
+    template: "SELECT date_issued, symbol, signal, setup_class, price_at_issue, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '1 month' AND (hit_target = TRUE OR hit_stop = TRUE)"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "schema_validation"
+  - "pattern_validation"
+  - "constraint_checks"
+synthesis_guidance: "{'focus': 'Provide concise, actionable insights from signal outcomes.', 'format': 'Summarize in a tabular format for quick understanding.', 'perspective': 'Indian market context; short-term review emphasis.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

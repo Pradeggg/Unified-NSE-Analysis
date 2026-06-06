@@ -1,0 +1,93 @@
+id: "company_360_research_report_0916_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0916"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: freshness audit; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "freshness audit for latest EOD: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as comparison matrix"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "freshness_audit"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  task: "Conduct a 360-degree analysis of the company's financials, market position, and technical indicators."
+  steps:
+    - "Collect latest price and volume data from market.equity_eod."
+    - "Evaluate financial performance using scores.quarterly_results and scores.annual_results."
+    - "Analyze balance sheet and cash flow from scores.balance_sheet and scores.cash_flow."
+    - "Use scores.results_analysis for narrative context and key financial metrics."
+    - "Compile technical indicators from scores.stage_snapshots."
+  output_format: "comparison_matrix"
+sql_templates:
+  fetch_latest_eod_data:
+    query: "SELECT symbol, close, volume, market_cap_cr FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+    description: "Fetch the latest EOD price and volume data."
+  fetch_financial_performance:
+    query: "SELECT symbol, revenue, operating_profit, net_debt FROM scores.annual_results WHERE period_end = (SELECT MAX(period_end) FROM scores.annual_results)"
+    description: "Fetch the latest annual financial performance data."
+  fetch_balance_and_cash_flow:
+    query: "SELECT symbol, total_assets, equity_capital, operating_cf FROM scores.balance_sheet JOIN scores.cash_flow ON scores.balance_sheet.symbol = scores.cash_flow.symbol WHERE period_end = (SELECT MAX(period_end) FROM scores.balance_sheet)"
+    description: "Fetch the latest balance sheet and cash flow data."
+  fetch_technical_indicators:
+    query: "SELECT symbol, rsi, trend_signal, relative_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+    description: "Fetch the latest technical indicators."
+python_tools:
+  -
+    id: "data_synthesis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "company_snapshot"
+      - "financial_trends"
+      - "technical_setup"
+    outputs:
+      - "valuation_gaps"
+      - "thesis"
+      - "risks"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "scores.quarterly_results"
+      - "scores.annual_results"
+    code: "def run(context):\n    # Synthetic code to process input data\n    # Ensure only read operations\n    pass"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL queries only perform read-only operations."
+  - "Validate data freshness by checking latest available dates."
+  - "Ensure the comparison matrix accurately reflects collected data."
+synthesis_guidance: "['Compile data into a coherent narrative focusing on recent trends and potential outlook.', 'Present findings in a structured comparison matrix format.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:28"
+generation_model: "gpt-4o"
+validation_errors:
+  - "data_synthesis_tool: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "data_synthesis_tool: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

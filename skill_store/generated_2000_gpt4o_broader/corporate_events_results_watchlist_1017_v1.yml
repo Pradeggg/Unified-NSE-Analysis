@@ -1,0 +1,57 @@
+id: "corporate_events_results_watchlist_1017_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1017"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: concise table."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for latest EOD: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as concise table"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  preset: "EOD_Sector_Comparison"
+  steps:
+    - "Gather recent corporate events with focus on results, dividends, splits, AGMs."
+    - "Analyze results with sector-relative performance metrics."
+    - "Display concise watchlist of significant event-driven stocks."
+sql_templates:
+  corporate_events: "SELECT symbol, event_type, event_date, purpose_raw, detail FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY event_date ASC;"
+  results_analysis: "SELECT symbol, company_name, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct FROM scores.results_analysis WHERE created_at = (SELECT MAX(created_at) FROM scores.results_analysis);"
+  stage_snapshots: "SELECT symbol, sector, market_cap_cat, change_1d_pct, change_1w_pct, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all SQL templates are read-only."
+  - "Match input patterns to available data accurately."
+  - "All actions must produce a concise table format."
+synthesis_guidance: "{'goal': 'Integrate event and results data to produce actionable watchlists with sector-relative insights.', 'constraints': ['Responses must be timely and based on the latest end-of-day data.', 'Provide insights with a focus on sector comparison.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

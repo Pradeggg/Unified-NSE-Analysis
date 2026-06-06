@@ -1,0 +1,58 @@
+created_at: "2026-06-06T12:50:48"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: today; response style: QA checklist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0702_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select stocks with new highs and good fundamentals."
+    sql: "SELECT symbol, close, volume, market_cap_cr FROM market.equity_eod WHERE change_pct > 0 AND close = week52_high"
+  -
+    description: "Identify VCP breakout stocks with exemplary financial scores."
+    sql: "SELECT symbol, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE trading_signal = 'BUY' AND vcp_score > 80 AND enhanced_fund_score > 75"
+status: "validated"
+synthesis_guidance: "Aggregate evidence into a comprehensive view highlighting high-potential stocks."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "today"
+  - "QA_checklist"
+title: "VCP Breakouts With Fundamentals Variant 0702"
+tool_plan_template: "Evaluate and gather stocks meeting VCP and breakout conditions with strong fundamentals from approved tables."
+validation_errors:
+
+validation_rules:
+  - "Ensure SQL selects only from approved tables."
+  - "Do not write or manipulate databases."
+  - "Maintain query read-only state."
+version: 1
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"

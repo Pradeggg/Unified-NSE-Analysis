@@ -1,0 +1,68 @@
+id: "report_link_data_validation_1670_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Agent Adda Skill Card for Report Link Validation"
+description: "Validate the functionality of report links and ensure data integrity for TradingView exports post-report generation."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for post results: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "post_results"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  python_tools:
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    required_fields:
+      - "id"
+      - "language"
+      - "mode"
+      - "inputs"
+      - "outputs"
+      - "approved_tables"
+      - "code"
+sql_templates:
+  -
+    template: "SELECT r.run_id, f.symbol, f.current_price FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks f ON r.run_id = f.run_id WHERE r.run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+    notes: "Fetch recent report data with symbols where links might be broken or missing data."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure that run_ts is within the last three months."
+  - "Check that stocks_filtered is equal to stocks_analyzed if no filtering issues exist."
+synthesis_guidance: "Investigate report runs with missing or broken links and assess integrity for data post TradingView exports. Ensure all findings are verified against the evidence schema for accuracy."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:46"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

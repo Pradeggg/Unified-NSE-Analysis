@@ -1,0 +1,52 @@
+id: "fii_dii_regime_breadth_review_0162_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0162"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: post results; response style: narrative plus evidence."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for post results: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as narrative plus evidence"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "post_results"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Generate a comprehensive review of the current Indian market regime incorporating institutional flows (FII/DII), market breadth diagnostics, and index-level confirmations. Utilize the latest available market data and approved join rules."
+sql_templates:
+  latest_fii_dii_join: "SELECT f.trade_date, f.fii_net_today, f.dii_net_today, f.fii_trend, f.dii_trend, r.regime, r.confidence FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date WHERE f.trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows)"
+  market_breadth: "SELECT b.trade_date, b.advances, b.declines, b.net_ad, b.ad_signal, b.market_sentiment, i.close, i.trend_signal FROM breadth.market_daily b JOIN market.index_eod i ON b.trade_date = i.trade_date WHERE b.trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily) AND i.index_symbol = 'Nifty 50'"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data reflects the most recent trading day."
+  - "Confirm joins align data to the same-day context."
+  - "Validate that sentiment and regime indicators are consistent with recent trends."
+synthesis_guidance: "Synthesize the market context into a narrative format, emphasizing key indicators of risk-on or risk-off sentiment based on institutional flows, market breadth, and regime trends."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

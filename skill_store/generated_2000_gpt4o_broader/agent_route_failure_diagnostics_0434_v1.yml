@@ -1,0 +1,65 @@
+id: "agent_route_failure_diagnostics_0434_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0434"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as portfolio-aware output"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Diagnose the issue using SQL queries to extract relevant run details and stock analysis, focusing on entries from the last 20 sessions."
+sql_templates:
+  -
+    name: "Get_Last_20_Runs"
+    template: "SELECT * FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '20 days';"
+    description: "Fetch metadata of the last 20 enhanced report runs."
+  -
+    name: "Get_Failing_Runs"
+    template: "SELECT run_id, notes FROM report.enhanced_runs WHERE notes LIKE '%failure%' AND run_ts >= NOW() - INTERVAL '20 days';"
+    description: "Identify runs with noted failures."
+  -
+    name: "Filtered_Stocks_Analysis"
+    template: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '20 days');"
+    description: "Analyze filtered stocks from recent runs."
+python_tools:
+  -
+    id: "symbol_resolution_helper"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "resolved_symbols"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\\n    # This function would help in resolving symbols based on available data.\\n    pass"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all SQL templates conform to the read-only requirement."
+  - "Ensure mapping between problem descriptions and existing data structure."
+  - "Highlight any gaps in evidence or data structure."
+synthesis_guidance: "Use extracted data to map the sequence of events leading to failures and determine missing tools or incorrect resolutions, providing actionable insights for portfolio management."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:08"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.now is not approved"

@@ -1,0 +1,49 @@
+id: "sector_breadth_rotation_watchlist_1875_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1875"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: risk-first review; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "risk-first review for pre market: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as action watchlist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "risk-first_review"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  type: "plan"
+  details: "Identify improving sectors using breadth signals and, within those sectors, select stocks in Stage 2 with strong technical scores."
+sql_templates:
+  - "WITH latest_sector_data AS (SELECT sector, pct_above_50dma, breadth_signal FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)), upcoming_stocks AS (SELECT scores.symbol, scores.company_name, scores.stage, scores.technical_score FROM scores.stage_snapshots AS scores JOIN latest_sector_data AS sector_data ON scores.sector = sector_data.sector WHERE scores.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND scores.stage = 'STAGE_2' AND sector_data.breadth_signal IN ('BUY')), result AS (SELECT * FROM upcoming_stocks ORDER BY technical_score DESC LIMIT 10) SELECT * FROM result;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure no sectors with breadth_signal are missing from the improving_sectors output."
+  - "All candidate_symbols must align with Stage 2 stocks and show strong technical scores."
+synthesis_guidance: "Focus on identifying sectors first and then selecting stocks with high technical and stage scores within those sectors."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:54"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.stage_snapshots is not approved"

@@ -1,0 +1,55 @@
+id: "portfolio_incremental_add_trim_0185_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0185"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: intraday context; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for intraday context: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "intraday_context"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  steps:
+    - "1. Query portfolio.holdings to identify current portfolio symbols."
+    - "2. Use scores.stage_snapshots to fetch the latest stage, technical scores, and market signals."
+    - "3. Evaluate positions for potential add or trim based on technical scores and stage signals."
+sql_templates:
+  -
+    template: "SELECT h.symbol, h.qty, h.avg_cost, s.price, s.trading_signal, s.stage, s.stage_score FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    description: "Fetch latest price, trading signals, and stage scores for current holdings."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure symbols in add/trim candidates are from current holdings."
+  - "Validate trading_signal for add candidates is 'BUY' or 'STRONG_BUY'."
+  - "Check stage_score is above a threshold for add candidates."
+synthesis_guidance: "['Summarize findings with focus on risk and intraday context.', 'Present add/trim decisions aligned with narrative and evidence.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

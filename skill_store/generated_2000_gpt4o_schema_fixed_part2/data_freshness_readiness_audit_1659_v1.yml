@@ -1,0 +1,67 @@
+id: "data_freshness_readiness_audit_1659_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1659"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for quarter to date: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as debug trace"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  steps:
+    -
+      name: "Fetch Latest Dates"
+      description: "Get the most recent trade date for each relevant table."
+      sql:
+        statement: "SELECT MAX(trade_date) as latest_index_date FROM market.index_eod"
+    -
+      name: "Validate Data Freshness"
+      description: "Check if data is fresh enough for live and EOD workflows."
+      sql:
+        statement: "SELECT COUNT(*) as missing_days FROM market.equity_eod WHERE trade_date > (CURRENT_DATE - INTERVAL '3 months')"
+sql_templates:
+  -
+    name: "Check Freshness"
+    statement: "SELECT MAX(trade_date) FROM market.index_eod"
+    description: "Get the latest available index data date."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure at least one data freshness threshold is applied."
+  - "Validate all dates against the quarter-to-date timeframe."
+synthesis_guidance: "Summarize findings and recommend actions based on data freshness results."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:40"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

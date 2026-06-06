@@ -1,0 +1,49 @@
+id: "report_link_data_validation_1866_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1866"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for post results: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Assess report validation focusing on link functionality and data freshness."
+sql_templates:
+  fetch_runs: "SELECT run_id, run_ts, universe_size FROM report.enhanced_runs WHERE analysis_date > CURRENT_DATE - INTERVAL '30 days';"
+  fetch_stocks: "SELECT symbol, score FROM report.enhanced_filtered_stocks WHERE score > 75;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all report links are accessible."
+  - "Verify data availability in stock HTML files."
+synthesis_guidance: "Combine findings from enhanced_runs and enhanced_filtered_stocks to identify data validation gaps."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

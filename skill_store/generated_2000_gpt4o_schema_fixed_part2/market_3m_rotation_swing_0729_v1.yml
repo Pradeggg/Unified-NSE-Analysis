@@ -1,0 +1,63 @@
+id: "market_3m_rotation_swing_0729_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0729"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for last 5 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Use evidence to assess recent market rotation and sector trends. Identify leading sectors and top swing trading candidates, ensuring source-trail validation over the last 5 sessions."
+sql_templates:
+  -
+    template_id: "latest_index_returns"
+    template: "SELECT index_symbol, close, change_pct FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+  -
+    template_id: "stage_distribution_change"
+    template: "WITH current_stage AS (SELECT stage, COUNT(*) FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY stage), prior_stage AS (SELECT stage, COUNT(*) FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) - INTERVAL '1 month' FROM scores.stage_snapshots) GROUP BY stage) SELECT current_stage.stage, current_stage.count AS current_count, prior_stage.count AS prior_count FROM current_stage LEFT JOIN prior_stage ON current_stage.stage = prior_stage.stage;"
+  -
+    template_id: "leading_sectors"
+    template: "SELECT sector, AVG(relative_strength) AS avg_relative_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY avg_relative_strength DESC LIMIT 3;"
+  -
+    template_id: "primary_candidates"
+    template: "SELECT symbol, company_name, trading_signal FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY vcp_score DESC, rank ASC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure that 'as_of_date' matches the latest 'trade_date' and 'snapshot_date'."
+  - "Validate non-empty lists for 'leading_sectors' and 'primary_candidates'."
+  - "Check that the 'index_returns' include key indices such as Nifty 50."
+synthesis_guidance: "['Use plain language to describe market regime and sector leadership trends.', \"Explain swing trading candidates' signals in the context of stage and VCP metrics.\", 'Validate results with historical context, ensuring consistency with known patterns.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

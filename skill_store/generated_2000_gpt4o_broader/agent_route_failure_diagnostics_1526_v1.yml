@@ -1,0 +1,66 @@
+id: "agent_route_failure_diagnostics_1526_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1526"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: last 5 sessions; response style: research-only summary."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for last 5 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as research-only summary"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze available evidence tables to identify potential route failures, missing tools, and incorrect symbol resolutions across the last 5 sessions."
+sql_templates:
+  - "SELECT run_id, run_ts, notes FROM report.enhanced_runs WHERE run_ts >= (CURRENT_DATE - INTERVAL '5 days');"
+  - "SELECT run_id, symbol, score FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= (CURRENT_DATE - INTERVAL '5 days'));"
+  - "SELECT snapshot_date, symbol, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '5 days');"
+python_tools:
+  -
+    id: "evidence_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "analysis_results"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze the evidence and generate findings\n    return {'summary': 'Analysis complete'}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure run timestamps are within the last 5 sessions."
+  - "Validate symbols and scores align with reported anomalies."
+  - "Identify any missing tool or incorrect resolution noted in raw data."
+synthesis_guidance: "['Summarize the findings focusing on unexplained route variations.', 'Highlight potential tool deficiencies and symbol misalignments.', 'Provide a high-level overview suitable for research-only contexts.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:09:32"
+generation_model: "gpt-4o"
+validation_errors:
+  - "evidence_analysis_tool: missing output analysis_results"
+review:
+  status: "needs_heal"
+  findings:
+    - "evidence_analysis_tool: missing output analysis_results"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

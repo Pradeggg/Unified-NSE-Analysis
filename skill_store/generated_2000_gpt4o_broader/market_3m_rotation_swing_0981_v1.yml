@@ -1,0 +1,70 @@
+id: "market_3m_rotation_swing_0981_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0981"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    name: "Market Regime Analysis"
+    queries:
+      - "sql_templates"
+sql_templates:
+  -
+    template_id: "index_performance_template"
+    query: "SELECT index_symbol, AVG(change_pct) as avg_change_pct FROM market.index_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY index_symbol"
+  -
+    template_id: "sector_leadership_template"
+    query: "SELECT sector, COUNT(*) as sector_count FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND stage = 2 GROUP BY sector ORDER BY sector_count DESC"
+  -
+    template_id: "swing_candidates_template"
+    query: "SELECT symbol, company_name, price, rsi, relative_strength FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND vcp_score > 0.8"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all index symbols have performance data."
+  - "Check for sector leadership presence across required months."
+  - "Verify swing candidates align with stage 2 criteria."
+synthesis_guidance: "['Focus on compiling a comparison matrix for intraday opportunities.', 'Highlight sectors with consistent leadership change.', 'Identify top swing candidates based on VCP criteria.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:03:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_change_pct is not approved"
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage2_vcp_picks.curdate is not approved"
+  - "scores.stage2_vcp_picks.date_sub is not approved"
+  - "scores.stage2_vcp_picks.month is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"
+  - "scores.stage_snapshots.sector_count is not approved"

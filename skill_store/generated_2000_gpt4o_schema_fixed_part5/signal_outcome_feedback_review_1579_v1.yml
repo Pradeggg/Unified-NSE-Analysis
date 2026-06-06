@@ -1,0 +1,57 @@
+id: "signal_outcome_feedback_review_1579_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1579"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for pre market: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as research-only summary"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Variant: source-trail validation; Focus: pre market. Synthesize research-only summaries from signal outcomes."
+sql_templates:
+  -
+    name: "review_prior_signals"
+    query: "SELECT s.symbol, s.date_issued, s.signal, s.hit_target, s.hit_stop, s.return_pct FROM signals.signal_log s WHERE s.date_resolved IS NOT NULL;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Outcomes must be summarized based on historical data."
+  - "Identify clear patterns of success and failure."
+  - "Propose route improvements based on analysis."
+synthesis_guidance: "Focus on evaluating signal outcomes for improving future decisions. Summarize findings objectively."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:31"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.s is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "signals.signal_log.s is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

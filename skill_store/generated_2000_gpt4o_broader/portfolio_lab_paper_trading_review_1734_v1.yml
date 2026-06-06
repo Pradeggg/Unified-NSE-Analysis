@@ -1,0 +1,60 @@
+id: "portfolio_lab_paper_trading_review_1734_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1734"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for last 20 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as QA checklist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  strategy_state: "Assess current strategy effectiveness based on historical signals and performance."
+  open_trades: "Retrieve currently open trading positions from paper trades."
+  entry_exit_rules: "Identify primary entry and exit signals including stop losses and targets used over past 20 sessions."
+  exposure: "Evaluate overall market exposure and risk management in place."
+  exceptions: "Highlight any discrepancies or exceptions noted during review."
+sql_templates:
+  strategy_state: "SELECT symbol, COUNT(*) AS signal_count, AVG(return_pct) AS avg_return FROM signals.signal_log WHERE date_issued > CURRENT_DATE - INTERVAL '20' DAY GROUP BY symbol;"
+  open_trades: "SELECT symbol, qty, avg_cost FROM portfolio.holdings WHERE buy_date > CURRENT_DATE - INTERVAL '20' DAY;"
+  entry_exit_rules: "SELECT symbol, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued > CURRENT_DATE - INTERVAL '20' DAY;"
+  exposure: "SELECT symbol, SUM(qty * avg_cost) AS total_exposure FROM portfolio.holdings;"
+  exceptions: "SELECT id, symbol, action_reason FROM signals.signal_log WHERE action_reason IS NOT NULL AND date_issued > CURRENT_DATE - INTERVAL '20' DAY;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "numeric_rules"
+  - "categorical_rules"
+synthesis_guidance: "{'step_1': 'Initialize with a deep dive into the paper trading signals of the last 20 sessions.', 'step_2': 'Summarize the open positions and their market impact.', 'step_3': 'Detail the most prevalent trading rules and signals used.', 'step_4': 'Assess the total market exposure.', 'step_5': 'Note any exceptions or anomalies for review.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:29"
+generation_model: "gpt-4o"
+validation_errors:
+  - "portfolio.holdings.day is not approved"
+  - "portfolio.holdings.total_exposure is not approved"
+  - "signals.signal_log.avg_return is not approved"
+  - "signals.signal_log.day is not approved"
+  - "signals.signal_log.signal_count is not approved"

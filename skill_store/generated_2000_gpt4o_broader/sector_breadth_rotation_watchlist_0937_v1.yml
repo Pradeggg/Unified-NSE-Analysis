@@ -1,0 +1,70 @@
+id: "sector_breadth_rotation_watchlist_0937_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0937"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for last 20 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as comparison matrix"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  context: "Analyze sector breadth and stage dynamics over the last 20 sessions to identify improving sectors and top candidate stocks."
+  approach: "Utilize evidence from sector breadth, price momentum, and Weinstein stage analysis to rank sectors and identify stock candidates."
+  output: "Generate sector ranks, list improving sectors, candidate symbols, and produce TradingView format."
+  limitations: "Requires data availability for the last 20 sessions."
+  escapes:
+    python_tools: true
+    evidence_gaps:
+      - "Sector relative rank dynamics integration."
+sql_templates:
+  -
+    description: "Select sectors ranked by percentage above 50DMA and Stage 2 participation."
+    sql: "SELECT sector, AVG(pct_above_50dma) AS avg_pct_above_50dma, AVG(stage2_pct) AS avg_stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date BETWEEN CURRENT_DATE - INTERVAL '20 days' AND CURRENT_DATE GROUP BY sector ORDER BY avg_pct_above_50dma DESC, avg_stage2_pct DESC;"
+python_tools:
+  -
+    id: "sector_improvement_analysis_001"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_data"
+    outputs:
+      - "improvement_metrics"
+    approved_tables:
+      - "breadth.sector_daily"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze sector improvements using internal logic.\n    improvement_metrics = []\n    # Business logic\n    return improvement_metrics"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Results must include sectors with improving breadth and stocks in Stage 2."
+  - "Symbols must be valid NSE symbols."
+synthesis_guidance: "['Focus on sectors with the greatest increase in breadth.', 'Prioritize stocks that show positive price momentum and stage advancement.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.avg_pct_above_50dma is not approved"
+  - "breadth.ma_pct_above.avg_stage2_pct is not approved"
+  - "breadth.ma_pct_above.sector is not approved"

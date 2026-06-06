@@ -1,0 +1,67 @@
+created_at: "2026-06-06T12:41:22"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: last 20 sessions; response style: concise table."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0033_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for last 20 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Calculate average index returns over the last 3 months."
+    name: "Market_Index_Returns"
+    template: "SELECT index_symbol, AVG(change_pct) as avg_change_pct FROM market.index_eod WHERE trade_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 90 DAY) AND CURDATE() GROUP BY index_symbol;"
+  -
+    description: "Identify leading sectors based on Stage 2 counts over the last 3 months."
+    name: "Leading_Sectors"
+    template: "SELECT sector, COUNT(symbol) as count FROM scores.stage_snapshots WHERE stage = 'Stage 2' AND snapshot_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 90 DAY) AND CURDATE() GROUP BY sector ORDER BY count DESC;"
+status: "test_failed"
+synthesis_guidance: "Synthesize outputs to provide a concise table reflecting market regime analysis, sector leadership, and stage transition observations for swing trading. Align outputs with daily refresh context."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "last_20_sessions"
+  - "concise_table"
+title: "3M Market Rotation Swing Assessment Variant 0033"
+tool_plan_template:
+  inputs:
+    last_3_months_data_analysis:
+      description: "Fetch market data, sector trends, stage transformations over the last three months."
+  outputs:
+    analyzed_swing_candidates:
+      description: "Provide a concise table of identified swing candidates and sector observations."
+validation_rules:
+  - "Ensure all table references conform to evidence_required.tables."
+  - "All SQL queries must be read-only."
+  - "Do not infer table structures beyond the approved schema."
+version: 1
+validation_errors:
+  - "market.index_eod.avg_change_pct is not approved"
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.day is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.day is not approved"

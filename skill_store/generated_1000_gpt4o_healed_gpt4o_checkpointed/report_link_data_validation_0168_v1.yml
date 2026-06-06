@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:42:34"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: post results; response style: narrative plus evidence."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0168_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for post results: review report links not working"
+  - "validate generated report links and missing data as narrative plus evidence"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  - "SELECT run_id, run_ts, stocks_filtered FROM report.enhanced_runs WHERE run_ts > {startDate} AND run_ts < {endDate}"
+  - "SELECT symbol, current_price FROM report.enhanced_filtered_stocks WHERE run_id = {runId} AND recommendation = 'Buy'"
+status: "test_failed"
+synthesis_guidance: "Incorporate findings from SQL queries into a coherent narrative, addressing each element of the output contract."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "post_results"
+  - "narrative_plus_evidence"
+title: "Enhanced Report Data Validation Variant 0168"
+tool_plan_template: "Draft a detailed plan to identify and validate broken links, missing data, and relevant evidence using approved tables. Synthesize findings into a narrative with supporting evidence."
+validation_errors:
+  - "report.enhanced_filtered_stocks.runid is not approved"
+  - "report.enhanced_runs.enddate is not approved"
+  - "report.enhanced_runs.startdate is not approved"
+validation_rules:
+  - "Status must be generated."
+  - "Evaluate links and data consistency based on approved tables."
+version: 1
+review:
+  attempts: 3
+  findings:
+    - "report.enhanced_filtered_stocks.runid is not approved"
+    - "report.enhanced_runs.enddate is not approved"
+    - "report.enhanced_runs.startdate is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"

@@ -1,0 +1,77 @@
+created_at: "2026-06-06T12:43:35"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: last 20 sessions; response style: ranked candidates."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0240_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    findings = {}\n    last_20_runs = context['report.enhanced_runs']\n    filtered_stocks = context['report.enhanced_filtered_stocks']\n    run_ids_with_data = set(run['run_id'] for run in last_20_runs)\n    filtered_run_ids = set(stock['run_id'] for stock in filtered_stocks)\n    missing_run_ids = run_ids_with_data - filtered_run_ids\n    if missing_run_ids:\n        findings['missing_data'] = list(missing_run_ids)\n    empty_field_stocks = [stock for stock in filtered_stocks if any(value in (None, '') for value in stock.values())]\n    if empty_field_stocks:\n        findings['malformed_data'] = [stock['symbol'] for stock in empty_field_stocks]\n    return findings"
+    id: "discrepancy_analysis_tool"
+    inputs:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "findings"
+review:
+  status: "needs_heal"
+  findings:
+    - "discrepancy_analysis_tool: execution failed: KeyError: 'report.enhanced_runs'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    name: "fetch_last_20_sessions"
+    status: "generated"
+    template: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 20"
+    type: "SQL"
+  -
+    name: "fetch_filtered_stock_data"
+    status: "generated"
+    template: "SELECT * FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 20)"
+    type: "SQL"
+status: "test_failed"
+synthesis_guidance: "Compile the candidates by examining discrepancies in data consistency and completeness, focusing on the generated report links and any data that may be missing from expected TradingView exports for the last 20 sessions."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "ranked_candidates"
+title: "Enhanced Report Data Validation Variant 0240"
+tool_plan_template:
+  steps:
+    - "1. Fetch last 20 sessions of enhanced report runs from the report.enhanced_runs table."
+    - "2. Retrieve corresponding filtered stock data using run IDs from report.enhanced_filtered_stocks."
+    - "3. Analyze and identify missing data or broken links within the retrieved data."
+    - "4. Rank the findings for reporting with prioritization criteria."
+validation_errors:
+  - "discrepancy_analysis_tool: execution failed: KeyError: 'report.enhanced_runs'"
+validation_rules:
+  - "Ensure all gathered data adhere to expected schema."
+  - "Check for any run ID mismatches between tables."
+  - "Look for null or malformed data fields."
+version: 1

@@ -1,0 +1,65 @@
+id: "sector_breadth_rotation_watchlist_0671_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0671"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: pre market; response style: debug trace."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for pre market: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as debug trace"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "pre_market"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Use SQL to rank sectors by proactive patterns in breadth and momentum, highlight stocks aligning with these sectors."
+sql_templates:
+  -
+    template_id: "rank_sectors_by_breadth_stage_0671"
+    template: "WITH sector_rank AS (SELECT sector, AVG(pct_above_50dma) AS avg_above_50 FROM breadth.sector_daily WHERE snapshot_date = CURRENT_DATE GROUP BY sector ORDER BY avg_above_50 DESC), stage2_participation AS (SELECT sector, AVG(stage2_pct) AS avg_stage2 FROM breadth.ma_pct_above WHERE snapshot_date = CURRENT_DATE GROUP BY sector ORDER BY avg_stage2 DESC) SELECT sr.sector FROM sector_rank sr JOIN stage2_participation sp ON sr.sector = sp.sector ORDER BY sr.avg_above_50 DESC, sp.avg_stage2 DESC;"
+python_tools:
+  -
+    id: "run_evidence_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "analysis_result"
+    approved_tables:
+      - "breadth.sector_daily"
+      - "breadth.ma_pct_above"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Placeholder for complex logic that might be needed\n    return {'analysis_result': 'output_based_on_evidence'}"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sector breadth metrics align with pre-market conditions."
+  - "Validate relevant moving average and stage signals are present."
+synthesis_guidance: "['Focus on sectors with positive breadth momentum and strong Stage 2 signals.', 'Identify stocks with high relative strength within top-ranked sectors.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

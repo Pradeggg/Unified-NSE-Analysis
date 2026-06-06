@@ -1,0 +1,63 @@
+id: "portfolio_incremental_add_trim_0731_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0731"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for last 20 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Review current portfolio holdings, evaluate with recent technical and fundamental scores, and decide on add/trim actions."
+sql_templates:
+  latest_snapshot:
+    query: "SELECT h.symbol, h.qty, h.avg_cost, s.sector, s.stage, s.stage_score, s.trading_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 100;"
+    description: "Fetch latest portfolio holdings with positive buy signals."
+python_tools:
+  -
+    id: "calculate_sector_exposure"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "portfolio_data"
+    outputs:
+      - "sector_exposure"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    # Calculate sector exposure based on holdings and stage snapshots\n    portfolio = context['portfolio_data']\n    sector_exposure = {}\n    for holding in portfolio:\n        sector = holding['sector']\n        qty = holding['qty']\n        if sector not in sector_exposure:\n            sector_exposure[sector] = 0\n        sector_exposure[sector] += qty\n    return sector_exposure"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all symbols in output are part of the current portfolio."
+  - "Validate that selected add/trim candidates match expected trading signals."
+synthesis_guidance: "Summarize key add candidates with strong scores and trim candidates with weak signals. Highlight any sector imbalances or risk flags."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_sector_exposure: execution failed: KeyError: 'portfolio_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_sector_exposure: execution failed: KeyError: 'portfolio_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

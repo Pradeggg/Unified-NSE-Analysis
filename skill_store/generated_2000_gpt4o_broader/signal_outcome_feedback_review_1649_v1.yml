@@ -1,0 +1,65 @@
+id: "signal_outcome_feedback_review_1649_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1649"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for last 3 months: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as debug trace"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review and synthesis of signal outcomes. Analyze targets hit, stops triggered, and route durability. Identify learning opportunities by examining source-trail validation."
+sql_templates:
+  -
+    template: "WITH recent_signals AS (SELECT * FROM signals.signal_log WHERE date_issued >= NOW() - INTERVAL '3 months'), outcomes AS (SELECT symbol, COUNT(*) AS total_signals, SUM(CASE WHEN hit_target THEN 1 ELSE 0 END) AS targets_hit, SUM(CASE WHEN hit_stop THEN 1 ELSE 0 END) AS stops_hit FROM recent_signals GROUP BY symbol) SELECT symbol, total_signals, targets_hit, stops_hit, (targets_hit::FLOAT / NULLIF(total_signals, 0)) AS success_rate FROM outcomes ORDER BY success_rate DESC;"
+    type: "readonly"
+    description: "Retrieve and summarize signal outcomes from the last 3 months."
+python_tools:
+  -
+    id: "compute_success_rate"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signal_outcomes"
+    outputs:
+      - "success_rates"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context):\n    outcomes = context['signal_outcomes']\n    success_rates = {outcome['symbol']: outcome['targets_hit'] / outcome['total_signals'] if outcome['total_signals'] > 0 else 0 for outcome in outcomes}\n    return success_rates"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure the outcomes consider the timeframe of the last 3 months."
+  - "Verify that the success rates are calculated correctly."
+synthesis_guidance: "Use the data to improve signal accuracy and decision-making processes. Focus on understanding successful and failed signal patterns."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:42"
+generation_model: "gpt-4o"
+validation_errors:
+  - "compute_success_rate: execution failed: KeyError: 'signal_outcomes'"
+review:
+  status: "needs_heal"
+  findings:
+    - "compute_success_rate: execution failed: KeyError: 'signal_outcomes'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,48 @@
+id: "report_link_data_validation_0270_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "TradingView Post Results Report Validation"
+description: "Validate TradingView export report links and identify missing data post analysis in the Indian market context."
+input_patterns:
+  - "review report links not working"
+  - "TradingView export for post results: review report links not working"
+tags:
+  - "report_qa"
+  - "links"
+  - "data_validation"
+  - "TradingView_export"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Review the available data in the approved tables to identify any missing or broken report links. Use findings to inform the remediation strategies."
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts, stocks_filtered, notes FROM report.enhanced_runs WHERE universe_size > 0 AND stocks_analyzed > stocks_filtered;"
+  -
+    template: "SELECT symbol, recommendation, current_price FROM report.enhanced_filtered_stocks WHERE rs_score IS NULL OR rsi IS NULL;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all report links are functional and lead to the correct data."
+  - "Cross-check reported data with source tables to identify gaps."
+  - "Rank missing data issues based on impact severity."
+synthesis_guidance: "Provide a ranked list of identified link and data issues, suggest priority actions for remediation, and verify resolved issues against the evidence source."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:16"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

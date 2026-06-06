@@ -1,0 +1,51 @@
+id: "report_link_data_validation_1810_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1810"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for today: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Analyze the enhanced report metadata and filtered stock data for issues related to report generation, link validity, and data completeness using provided SQL templates."
+sql_templates:
+  -
+    description: "Check for broken report links and missing stock data."
+    template: "SELECT r.run_id, r.run_ts, s.symbol, s.current_price FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks s ON r.run_id = s.run_id WHERE r.run_ts = CURRENT_DATE AND (s.current_price IS NULL OR s.current_price = 0) LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure the report run timestamp matches today's date."
+  - "Check for NULL or zero current prices in filtered stock data."
+  - "Limit results to a manageable subset for review."
+synthesis_guidance: "[\"Focus on identifying immediate issues with today's report data.\", 'Prioritize findings that can directly impact TradingView exports.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

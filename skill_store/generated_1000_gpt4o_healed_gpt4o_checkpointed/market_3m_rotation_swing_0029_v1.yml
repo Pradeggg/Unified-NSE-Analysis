@@ -1,0 +1,102 @@
+created_at: "2026-06-06T12:41:07"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: last 5 sessions; response style: concise table."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0029_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for last 5 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.index_eod"
+      - "scores.stage2_vcp_picks"
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    code: "def run(context):\n    # Collate SQL results and provide a summarized analysis as required\n    return {'concise_analysis': ''}"
+    inputs:
+      - "sql_result_set"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "concise_analysis"
+    required_function: "run"
+review:
+  attempts: 3
+  findings:
+    - "market.index_eod.dateadd is not approved"
+    - "market.index_eod.month is not approved"
+    - "scores.stage2_vcp_picks.dateadd is not approved"
+    - "scores.stage2_vcp_picks.day is not approved"
+    - "scores.stage_snapshots.dateadd is not approved"
+    - "scores.stage_snapshots.month is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    description: "Fetch 3 months index changes"
+    sql: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= DATEADD(MONTH, -3, CURRENT_DATE)"
+  -
+    description: "Fetch stage distribution and leading sectors"
+    sql: "SELECT snapshot_date, sector, stage, COUNT(DISTINCT symbol) AS count FROM scores.stage_snapshots WHERE snapshot_date >= DATEADD(MONTH, -3, CURRENT_DATE) GROUP BY snapshot_date, sector, stage"
+  -
+    description: "Fetch swing candidates from Stage 2 VCP picks"
+    sql: "SELECT snapshot_date, symbol, company_name FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATEADD(DAY, -5, CURRENT_DATE) AND trend_signal > 0 AND trading_signal > 0"
+status: "test_failed"
+synthesis_guidance:
+  - "Synthesize index returns to capture major market trends."
+  - "Identify leading sectors from stage shifts and compile a concise summary."
+  - "Explicitly highlight market risks and primary swing candidates."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "concise_table"
+title: "3M Market Rotation Swing Assessment Variant 0029"
+tool_plan_template:
+  sql_templates:
+    -
+      description: "Fetch 3 months index changes"
+      sql: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= DATEADD(MONTH, -3, CURRENT_DATE)"
+    -
+      description: "Fetch stage distribution and leading sectors"
+      sql: "SELECT snapshot_date, sector, stage, COUNT(DISTINCT symbol) AS count FROM scores.stage_snapshots WHERE snapshot_date >= DATEADD(MONTH, -3, CURRENT_DATE) GROUP BY snapshot_date, sector, stage"
+    -
+      description: "Fetch swing candidates from Stage 2 VCP picks"
+      sql: "SELECT snapshot_date, symbol, company_name FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATEADD(DAY, -5, CURRENT_DATE) AND trend_signal > 0 AND trading_signal > 0"
+validation_errors:
+  - "market.index_eod.dateadd is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage2_vcp_picks.dateadd is not approved"
+  - "scores.stage2_vcp_picks.day is not approved"
+  - "scores.stage_snapshots.dateadd is not approved"
+  - "scores.stage_snapshots.month is not approved"
+validation_rules:
+  - "Ensure data integrity for trade_date and index_symbol in index returns."
+  - "Stage distribution changes must reflect sector leadership shifts."
+  - "Primary candidates should align with enhanced VCP scores."
+version: 1

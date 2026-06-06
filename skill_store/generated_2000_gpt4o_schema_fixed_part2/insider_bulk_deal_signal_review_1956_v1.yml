@@ -1,0 +1,58 @@
+id: "insider_bulk_deal_signal_review_1956_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1956"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for quarter to date: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as comparison matrix"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Collect insider alerts and bulk deals for the quarter-to-date period."
+  - "Join with the latest technical and fundamental scores."
+  - "Generate a comparison matrix for selected stocks."
+sql_templates:
+  -
+    description: "Select insider alerts with the latest snapshot date for quarter-to-date insider activity."
+    sql: "SELECT sa.symbol, sa.alert_date, sa.entity, sa.qty, sa.value_cr, ss.stage, ss.technical_score FROM signals.insider_alerts sa JOIN scores.stage_snapshots ss ON sa.symbol = ss.symbol WHERE sa.alert_date >= (SELECT DATE_TRUNC('quarter', CURRENT_DATE)) AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    description: "Select bulk and block deals with technical score data for quarter-to-date bulk deals."
+    sql: "SELECT bb.symbol, bb.deal_date, bb.qty, bb.price, bb.deal_type, ss.stage, ss.technical_score FROM signals.bulk_block_deals bb JOIN scores.stage_snapshots ss ON bb.symbol = ss.symbol WHERE bb.deal_date >= (SELECT DATE_TRUNC('quarter', CURRENT_DATE)) AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure results cover the quarter-to-date period."
+  - "Verify stage and technical scores match the latest snapshot."
+synthesis_guidance: "['Provide a concise comparison matrix.', 'Highlight key symbols with high accumulation indicators.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

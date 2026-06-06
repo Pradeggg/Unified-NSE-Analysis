@@ -1,0 +1,68 @@
+id: "vcp_breakouts_with_fundamentals_0450_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0450"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  python_tools:
+    -
+      id: "run"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        approved_tables:
+          - "market.equity_eod"
+          - "scores.stage_snapshots"
+          - "scores.stage2_vcp_picks"
+      outputs:
+        results: "list_of_symbols"
+      code: "# Example Python tool logic\n# Extract VCP breakout stocks with high scores\nresults = []\nfor each stock in get_data('scores.stage2_vcp_picks'):\n    if stock['vcp_score'] > threshold:\n        results.append(stock['symbol'])\n\nreturn results"
+sql_templates:
+  -
+    template: "SELECT e.symbol, e.high, e.close, e.volume, s.fundamental_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date > NOW() - INTERVAL '3 month' AND e.high = e.week52_high AND s.fundamental_score > 80 ORDER BY e.volume DESC;"
+    description: "Identify stocks reaching new 52-week highs with strong fundamentals over the last 3 months."
+  -
+    template: "WITH vcp_candidates AS (SELECT s.symbol, s.price, s.vcp_breakout_pct FROM scores.stage2_vcp_picks s WHERE s.vcp_breakout_pct > 0.1) SELECT c.symbol, c.price FROM vcp_candidates c JOIN scores.stage_snapshots ss ON c.symbol = ss.symbol WHERE ss.fundamental_score > 80;"
+    description: "Select VCP breakout candidates with strong fundamentals."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure tradingview_symbols correspond to valid symbols from the approved data sources."
+  - "Confirm all output candidates meet fundamental score criteria."
+synthesis_guidance: "['Prioritize high liquidity and solid fundamentals when selecting breakout stocks.', 'Include recent market trends and scores to provide context for each recommended stock.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

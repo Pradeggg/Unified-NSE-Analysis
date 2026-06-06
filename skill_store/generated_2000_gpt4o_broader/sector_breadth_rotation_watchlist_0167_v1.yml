@@ -1,0 +1,54 @@
+id: "sector_breadth_rotation_watchlist_0167_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0167"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: post results; response style: narrative plus evidence."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for post results: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as narrative plus evidence"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Generate sector-relative comparisons focusing on breadth and stage 2 participation post results. Present findings in a narrative style with evidence support."
+sql_templates:
+  -
+    description: "Retrieve sectors ranked by percentage above 50DMA and Stage 2 participation"
+    query: "SELECT sd.sector, AVG(sd.pct_above_50dma) as avg_pct_above_50dma, MAX(ma.stage2_pct) as max_stage2_pct FROM breadth.sector_daily sd JOIN breadth.ma_pct_above ma ON sd.snapshot_date = ma.snapshot_date GROUP BY sd.sector ORDER BY avg_pct_above_50dma DESC, max_stage2_pct DESC"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure output includes narrative explanation"
+  - "Sector ranking must use sector breadth and stage participation"
+  - "Symbols should be candidate additions for TradingView watchlists"
+synthesis_guidance: "Integrate sector ranking data with narrative analysis to identify improving sectors and candidate stocks."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:22"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

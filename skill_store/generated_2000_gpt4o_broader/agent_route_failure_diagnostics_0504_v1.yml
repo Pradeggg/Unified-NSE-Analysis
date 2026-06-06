@@ -1,0 +1,46 @@
+id: "agent_route_failure_diagnostics_0504_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0504"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: today; response style: research-only summary."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for today: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as research-only summary"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "today"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze evidence from enhanced runs, filtered stocks, and stage snapshots. Identify root causes of failures such as tool gaps and incorrect symbol resolution."
+sql_templates:
+  run_diagnostics: "SELECT DISTINCT e.run_id, e.notes FROM report.enhanced_runs e WHERE e.analysis_date = CURRENT_DATE;"
+  symbol_resolution: "SELECT es.symbol, es.recommendation FROM report.enhanced_filtered_stocks es WHERE es.run_id = (SELECT run_id FROM report.enhanced_runs WHERE analysis_date = CURRENT_DATE);"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure analysis date matches today."
+  - "Verify presence of symbol in filtered stocks."
+synthesis_guidance: "Focus on identifying missing tools and incorrect symbol resolutions. Generate a watchlist based on filtered stocks."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:58"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.e is not approved"

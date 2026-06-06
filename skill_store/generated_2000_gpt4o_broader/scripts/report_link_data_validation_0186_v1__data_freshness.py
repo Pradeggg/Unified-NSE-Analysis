@@ -1,0 +1,1 @@
+def run(context): return datetime.now() - context['run_ts'] < timedelta(hours=1)

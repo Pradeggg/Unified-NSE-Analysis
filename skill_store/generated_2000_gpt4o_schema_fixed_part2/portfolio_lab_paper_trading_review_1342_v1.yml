@@ -1,0 +1,68 @@
+id: "portfolio_lab_paper_trading_review_1342_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1342"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: last 3 months; response style: exceptions and gaps first."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for last 3 months: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "{output_contract} with exceptions and gaps highlighted."
+sql_templates:
+  -
+    template_name: "latest_paper_trades_review"
+    description: "Review paper trading signals and latest market context."
+    sql: "WITH latest_signals AS ( SELECT * FROM signals.signal_log WHERE date_issued >= (CURRENT_DATE - INTERVAL '3 months') ORDER BY date_issued DESC ), recent_snapshots AS ( SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ) SELECT ls.symbol, ls.signal, ls.entry_low, ls.entry_high, ls.stop_loss, ls.target_1, ls.target_2, rs.stage, rs.stage_score FROM latest_signals ls JOIN recent_snapshots rs ON ls.symbol = rs.symbol LIMIT 100;"
+python_tools:
+  -
+    id: "calculate_exposure"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+    outputs:
+      - "exposure_summary"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    from collections import defaultdict\n    exposure_summary = defaultdict(float)\n    for signal in context['signals.signal_log']:\n        exposure_summary[signal['symbol']] += float(signal['entry_low'])\n    return exposure_summary"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "ensure_paper_trading_context"
+  - "check_date_consistency"
+synthesis_guidance: "Highlight exceptions and strategy gaps first to identify potential improvements."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:22"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_exposure: execution failed: ImportError: __import__ not found"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_exposure: execution failed: ImportError: __import__ not found"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

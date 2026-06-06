@@ -1,0 +1,59 @@
+id: "fii_dii_regime_breadth_review_0414_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0414"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: latest EOD; response style: portfolio-aware output."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for latest EOD: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as portfolio-aware output"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  required_steps:
+    - "Query FII/DII flow information using fii_dii_flows."
+    - "Examine current market regime using regime_history."
+    - "Assess market breadth using market_daily."
+    - "Cross-reference with index EOD data using index_eod."
+  context_assimilation: "Synthesizing flow, regime, breadth, and index signals is essential for creating a portfolio-informed watchlist."
+sql_templates:
+  fii_dii_flows: "SELECT trade_date, fii_net_today, dii_net_today FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+  regime_history: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history);"
+  market_breadth: "SELECT trade_date, advances, declines, net_ad, market_sentiment FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+  index_eod: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure datasets are up-to-date, corresponding to latest EOD."
+  - "Verify internal consistency between flow, regime, breadth, and index data."
+synthesis_guidance: "Integrate SQL query outputs to construct a cohesive narrative about the market's risk posture, focusing on institutional flows, market regime, and breadth indicators. Craft insights for informing watchlist updates with portfolio context."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:57"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,65 @@
+id: "quarterly_results_quality_review_1839_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1839"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "source-trail validation for last 20 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as action watchlist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze latest quarterly results for revenue growth, PAT growth, margin movement, and narrative alignment. Construct an action watchlist based on results."
+sql_templates:
+  -
+    description: "Fetch latest results with revenue and PAT growth."
+    sql: "SELECT DISTINCT ON (qr.symbol) qr.symbol, ra.company_name, ra.industry, qr.period_label, qr.revenue, ra.growth_yoy_revenue_pct, ra.growth_yoy_pat_pct, ra.opm_delta_pp, ra.verdict FROM scores.quarterly_results qr JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end WHERE qr.period_type = 'quarter' ORDER BY qr.symbol, qr.period_end DESC NULLS LAST, qr.fetched_at DESC LIMIT 50;"
+python_tools:
+  -
+    id: "validate_results"
+    language: "python"
+    mode: "read_only"
+    inputs: "database results"
+    outputs: "validated_results"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Hypothetical validation logic for contextuality and freshness...\n    return validated_results"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure all symbols in the ranked_companies are part of the latest 20 sessions."
+  - "Verify the existence of source_trail in the output."
+synthesis_guidance: "Formulate an action watchlist based on the analyzed results focusing on recent performance and growth potential."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "validate_results: inputs must be a list"
+  - "validate_results: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "validate_results: inputs must be a list"
+    - "validate_results: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

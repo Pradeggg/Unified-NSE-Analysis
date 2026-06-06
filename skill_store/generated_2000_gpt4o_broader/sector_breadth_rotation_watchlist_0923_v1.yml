@@ -1,0 +1,56 @@
+id: "sector_breadth_rotation_watchlist_0923_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0923"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: comparison matrix."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for last 5 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as comparison matrix"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  sql_templates:
+    -
+      description: "Retrieve sector breadth and stage migration data."
+      template: "WITH recent_breadth AS (SELECT sector, snapshot_date, change_5d, breadth_signal FROM breadth.sector_daily WHERE snapshot_date >= CURRENT_DATE - INTERVAL '5 days'), stage_participation AS (SELECT sector, AVG(stage2_pct) as avg_stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date >= CURRENT_DATE - INTERVAL '5 days' GROUP BY sector) SELECT recent_breadth.sector, AVG(change_5d) as avg_change_5d, AVG(breadth_signal) as avg_breadth_signal, stage_participation.avg_stage2_pct FROM recent_breadth JOIN stage_participation ON recent_breadth.sector = stage_participation.sector GROUP BY recent_breadth.sector ORDER BY avg_change_5d DESC;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Check that output data includes sector rankings."
+  - "Ensure improving sectors are accurately identified."
+  - "Validate that all symbols are captured correctly."
+synthesis_guidance: "{'sector_ranks': 'Rank sectors based on average 5-day change and breadth signal.', 'improving_sectors': 'Identify sectors with improving averages over the last 5 days.', 'candidate_symbols': 'Extract symbols from top-ranking sectors for potential additions.', 'tradingview_symbols': 'Filter symbols suitable for TradingView setup.', 'evidence': 'Compile supporting evidence using approved tables only.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

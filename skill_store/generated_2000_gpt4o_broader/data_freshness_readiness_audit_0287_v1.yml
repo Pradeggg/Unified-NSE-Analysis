@@ -1,0 +1,59 @@
+id: "data_freshness_readiness_audit_0287_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0287"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for intraday context: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as ranked candidates"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Assess the databases using the evidence required. Verify data freshness and generate actionable insights."
+sql_templates:
+  -
+    description: "Check data freshness of market index EOD data."
+    query: "SELECT MAX(trade_date) AS latest_trade_date FROM market.index_eod WHERE index_symbol = 'NIFTY 50'"
+  -
+    description: "Assess the most recent update in market equity EOD."
+    query: "SELECT MAX(trade_date) AS latest_trade_date FROM market.equity_eod"
+  -
+    description: "Identify gaps in daily market breadth data."
+    query: "SELECT MAX(trade_date) AS latest_breadth_date FROM breadth.market_daily"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure dates are within the acceptable freshness threshold."
+  - "Identify any missing data sources or updates."
+synthesis_guidance: "Integrate SQL results to form a coherent picture of data freshness, identifying any sectors lagging in data updates."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:34"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.latest_breadth_date is not approved"
+  - "market.equity_eod.latest_trade_date is not approved"
+  - "market.index_eod.latest_trade_date is not approved"

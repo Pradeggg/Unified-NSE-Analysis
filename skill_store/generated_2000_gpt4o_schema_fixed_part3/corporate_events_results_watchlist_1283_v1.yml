@@ -1,0 +1,51 @@
+id: "corporate_events_results_watchlist_1283_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1283"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for intraday context: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as ranked candidates"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh-follow-up"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Rank event-driven stocks based on upcoming or recent results and corporate events."
+sql_templates:
+  -
+    name: "fetch_event_driven_stocks"
+    sql: "WITH latest_results AS (SELECT DISTINCT ON (symbol) symbol, period_end, filing_date, company_name, verdict FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC), latest_stage AS (SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT ce.symbol, ce.event_type, ce.event_date, lr.company_name, lr.verdict, ls.stage, ls.trading_signal FROM signals.corporate_events ce JOIN latest_results lr ON ce.symbol = lr.symbol JOIN latest_stage ls ON ce.symbol = ls.symbol WHERE ce.event_date >= CURRENT_DATE ORDER BY ce.event_date ASC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure the event_date is within the next 30 days."
+  - "Verify that symbols are valid NSE symbols."
+synthesis_guidance: "Focus on providing a ranked list of symbols based on upcoming corporate events and recent results with evidence trail."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

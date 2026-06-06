@@ -1,0 +1,65 @@
+id: "agent_route_failure_diagnostics_0896_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0896"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for weekly review: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as action watchlist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  steps:
+    - "Identify latest run data from report.enhanced_runs."
+    - "Check for missing or misaligned routes in enhanced_filtered_stocks using join rules."
+    - "Validate stage snapshots for up-to-date records using snapshot_date."
+    - "Generate an action watchlist based on diagnostics findings."
+sql_templates:
+  -
+    name: "latest_run_data"
+    description: "Fetch the latest enhanced run data for inspection."
+    template: "SELECT * FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+  -
+    name: "route_check"
+    description: "Identify any misaligned or missing routes in filtered stocks."
+    template: "SELECT fs.symbol, fs.current_price, fs.weekly_signal FROM report.enhanced_filtered_stocks fs JOIN report.enhanced_runs er ON er.run_id = fs.run_id WHERE er.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+  -
+    name: "stage_snapshots_freshness"
+    description: "Ensure stage snapshots are current."
+    template: "SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure evidence tables are queried only with approved columns and conditions."
+  - "Adhere to column join rules and latest date filters."
+synthesis_guidance: "['Focus on identifying gaps in data processing.', 'Provide actionable insights for correcting identified issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,67 @@
+id: "signal_outcome_feedback_review_1103_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1103"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: today; response style: narrative plus evidence."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for today: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as narrative plus evidence"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "For this review, analyze the outcome of trading signals issued, focusing on hits to targets or stops. Provide insights on which patterns or strategies led to successful outcomes."
+sql_templates:
+  -
+    description: "Query to retrieve signals and their outcomes."
+    sql: "SELECT signal_log.symbol, signal_log.date_issued, signal_log.signal, signal_log.hit_target, signal_log.hit_stop, signal_log.return_pct FROM signals.signal_log WHERE date_resolved = (SELECT MAX(date_resolved) FROM signals.signal_log) AND (hit_target = TRUE OR hit_stop = TRUE);"
+python_tools:
+  -
+    id: "evaluate_signal_outcomes"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signals"
+      - "stages"
+    outputs:
+      - "outcome_analysis"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Process context data to evaluate signal outcomes\n    # Return analysis results as a dictionary or structured data\n    signals = context['signals']\n    stages = context['stages']\n    results = {}  # Populate with analysis logic\n    return results"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "Check that evidence is available for all patterns identified."
+  - "Validate that narratives provide adequate insights based on gathered evidence."
+synthesis_guidance: "Combine the evidence from signal outcomes with narrative insights to suggest improvements or adaptations in trading strategies. Ensure the narrative is grounded in data."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:55:11"
+generation_model: "gpt-4o"
+validation_errors:
+  - "evaluate_signal_outcomes: execution failed: KeyError: 'signals'"
+review:
+  status: "needs_heal"
+  findings:
+    - "evaluate_signal_outcomes: execution failed: KeyError: 'signals'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

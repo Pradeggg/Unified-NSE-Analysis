@@ -1,0 +1,81 @@
+id: "signal_outcome_feedback_review_1425_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1425"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: last 5 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for last 5 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as portfolio-aware output"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "last_5_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  description: "Plan to review signal outcomes using a risk-first approach. Analyze successful and unsuccessful signals to derive improvement strategies."
+  steps:
+    - "Identify relevant signal logs from the last 5 sessions."
+    - "Assess signals' performance against targets and stop-loss triggers."
+    - "Extract patterns of successful outcomes (winner_patterns) and failures (failure_patterns)."
+    - "Determine possible route improvements."
+    - "Prepare a list of queries required for this evaluation."
+sql_templates:
+  -
+    name: "latest_5_sessions_outcomes"
+    sql: "WITH latest_sessions AS (SELECT date_issued FROM signals.signal_log ORDER BY date_issued DESC LIMIT 5) SELECT symbol, signal, date_issued, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued IN (SELECT date_issued FROM latest_sessions);"
+python_tools:
+  -
+    id: "outcome_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "signal"
+      - "date_issued"
+      - "hit_target"
+      - "hit_stop"
+      - "return_pct"
+    outputs:
+      - "outcome_summary"
+      - "winner_patterns"
+      - "failure_patterns"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context):\n    # Perform analysis on signal outcomes\n    pass"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all signal outcomes from the selected sessions are included in the outcome_summary."
+  - "Identify patterns contributing to high returns in winner_patterns."
+  - "Analyze common issues in failure_patterns."
+  - "Propose feasible route improvements based on identified patterns."
+  - "Outline next steps or checks for future evaluations."
+synthesis_guidance: "['Interpret the data to provide actionable insights for risk-first portfolio adjustments.', \"Maintain a focus on the overall portfolio's health and risk management when synthesizing information.\"]"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:08"
+generation_model: "gpt-4o"
+validation_errors:
+  - "outcome_analysis_tool: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "outcome_analysis_tool: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

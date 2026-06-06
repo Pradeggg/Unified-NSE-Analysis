@@ -1,0 +1,55 @@
+id: "vcp_breakouts_with_fundamentals_1374_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1374"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: pre market; response style: exceptions and gaps first."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  strategies:
+    - "Identify stocks making new highs or VCP or breakouts with strong fundamentals."
+    - "Use the scores.stage_snapshots table to filter for strong stocks, focusing on STAGE_2, BUY or STRONG_BUY signals."
+    - "Join with latest market.equity_eod data for liquidity and turnover context."
+sql_templates:
+  -
+    description: "Identify potential VCP or breakout candidates with fundamentals."
+    template: "WITH latest_stages AS (SELECT symbol, fundamental_score, trading_signal, max(snapshot_date) as snapshot_date\nFROM scores.stage_snapshots\nWHERE stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY')\nGROUP BY symbol, fundamental_score, trading_signal),\nlatest_vcp AS (SELECT symbol, vcp_score, vcp_breakout_pct, max(snapshot_date) as snapshot_date\nFROM scores.stage2_vcp_picks\nGROUP BY symbol, vcp_score, vcp_breakout_pct),\nlatest_eod AS (SELECT symbol, high, turnover_cr\nFROM market.equity_eod\nWHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod))\nSELECT ls.symbol\nFROM latest_stages ls\nJOIN latest_vcp lv ON ls.symbol = lv.symbol\nJOIN latest_eod le ON ls.symbol = le.symbol\nWHERE le.turnover_cr > 5\nORDER BY lv.vcp_score DESC, ls.fundamental_score DESC\nLIMIT 50;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "rules"
+synthesis_guidance: "['Frame responses to neatly capture exceptions and data gaps.', 'Answer in the context of the Indian market, emphasizing pre-market analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

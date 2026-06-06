@@ -1,0 +1,65 @@
+id: "signal_outcome_feedback_review_0445_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0445"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for last 3 months: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as portfolio-aware output"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Retrieve signal outcomes for the last 3 months with performance metrics."
+    template: "WITH recent_signals AS ( SELECT * FROM signals.signal_log WHERE date_issued > CURRENT_DATE - INTERVAL '3 months' ), outcomes AS ( SELECT symbol, AVG(return_pct) AS avg_return, SUM(CASE WHEN hit_target THEN 1 ELSE 0 END) AS hit_target_count, SUM(CASE WHEN hit_stop THEN 1 ELSE 0 END) AS hit_stop_count FROM recent_signals GROUP BY symbol ) SELECT * FROM outcomes ORDER BY avg_return DESC LIMIT 10;"
+python_tools:
+  -
+    id: "calculate_risk_metrics"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signal_outcome_data"
+    outputs:
+      - "risk_analysis"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context):\n    signal_outcome_data = context['signal_outcome_data']\n    risk_analysis = []\n    for data in signal_outcome_data:\n        risk_metric = calculate_risk(data['return_pct'], data['hit_target_count'], data['hit_stop_count'])\n        risk_analysis.append(risk_metric)\n    return risk_analysis\n\ndef calculate_risk(return_pct, hit_target_count, hit_stop_count):\n    # Risk calculation logic here\n    return {'risk_level': 'High' if hit_stop_count > hit_target_count else 'Low'}"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure outcome_summary provides a complete 3-month review."
+  - "Check that winner_patterns and failure_patterns reflect performed SQL analysis."
+synthesis_guidance: "['Highlight outcomes with specific attention to the risk-first approach.', 'Ensure portfolio-aware insights with concrete, data-backed recommendations.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_risk_metrics: execution failed: KeyError: 'signal_outcome_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_risk_metrics: execution failed: KeyError: 'signal_outcome_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

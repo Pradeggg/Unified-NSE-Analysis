@@ -1,0 +1,65 @@
+id: "vcp_breakouts_with_fundamentals_1234_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1234"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Identify stocks with new highs, VCP patterns, or breakouts along with strong fundamental scores. Generate a ranked list based on specified criteria."
+sql_templates:
+  -
+    template_name: "vcp_breakouts_with_fundamentals"
+    template: "WITH recent_sessions AS (SELECT symbol, close, high, volume, market_cap_cr FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '20 day'), fundamentals AS (SELECT symbol, enhanced_fund_score, earnings_quality, sales_growth FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE), vcp_picks AS (SELECT symbol, vcp_score, rank FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE) SELECT r.symbol, f.enhanced_fund_score, v.vcp_score FROM recent_sessions r JOIN fundamentals f ON r.symbol = f.symbol JOIN vcp_picks v ON r.symbol = v.symbol WHERE r.close >= r.high * 0.95 AND f.enhanced_fund_score > 75 ORDER BY v.rank ASC;"
+python_tools:
+  -
+    id: "calculate_price_trend"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "recent_sessions"
+    outputs:
+      - "price_trend_analysis"
+    approved_tables:
+      - "market.equity_eod"
+    code: "def run(context):\n    # Analyze price trends for given sessions\n    pass"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all symbols have valid price data for the last 20 sessions."
+  - "Verify enhanced_fund_score is above 75 for inclusion."
+  - "Rank candidates by VCP score and fundamentals."
+synthesis_guidance: "Focus on stocks showing strong momentum and solid fundamentals, suitable for watchlist inclusion."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_price_trend: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_price_trend: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

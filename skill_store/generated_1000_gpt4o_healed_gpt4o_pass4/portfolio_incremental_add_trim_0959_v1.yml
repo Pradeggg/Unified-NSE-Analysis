@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:53:04"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: quarter to date; response style: comparison matrix."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0959_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "fetch_portfolio_holdings"
+    query: "SELECT h.symbol, h.qty, h.avg_cost, s.sector, s.stage, s.trend_signal FROM portfolio.holdings h LEFT JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+  -
+    name: "sector_exposure_analysis"
+    query: "SELECT sector, SUM(qty) as total_qty FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY total_qty DESC"
+status: "validated"
+synthesis_guidance: "Compare current holdings to market indicators to determine if adjustments are needed. Present findings in a structured comparison matrix."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "comparison_matrix"
+title: "Portfolio Incremental Add Trim Review Variant 0959"
+tool_plan_template: "Analyze the data from approved tables to identify sectors and stocks that are under or over-weighted compared to market trends and signals."
+validation_rules:
+  - "Ensure data integrity by cross-referencing with the latest available snapshot."
+  - "Focus on sectors with trend signals as potential add or trim candidates."
+version: 1

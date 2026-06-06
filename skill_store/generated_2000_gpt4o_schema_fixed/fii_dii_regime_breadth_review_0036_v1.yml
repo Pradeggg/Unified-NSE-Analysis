@@ -1,0 +1,52 @@
+id: "fii_dii_regime_breadth_review_0036_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0036"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: last 20 sessions; response style: concise table."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as concise table"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Evaluate the FII/DII flow trends, market regime, and breadth over the past 20 trading sessions, and create a concise table."
+sql_templates:
+  -
+    query: "WITH latest_dates AS (SELECT MAX(trade_date) AS max_date FROM signals.fii_dii_flows) SELECT a.trade_date, a.fii_net_today, a.dii_net_today, b.regime, b.confidence, c.advances, c.declines, d.index_symbol, d.close, d.trend_signal FROM signals.fii_dii_flows a JOIN signals.regime_history b ON a.trade_date = b.trade_date JOIN breadth.market_daily c ON a.trade_date = c.trade_date JOIN market.index_eod d ON a.trade_date = d.trade_date WHERE a.trade_date >= (CURRENT_DATE - INTERVAL '20 days') AND d.index_symbol = 'NIFTY 50' ORDER BY a.trade_date DESC;"
+    description: "Fetches data from the last 20 trading sessions regarding FII/DII flows, regime, market breadth, and index close values."
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure that the trade_date falls within the last 20 sessions."
+  - "Confirm that all join conditions are correctly applied based on approved join rules."
+synthesis_guidance: "Produce a clear, concise table summarizing the regime, flow trends, breadth metrics, and index confirmation."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

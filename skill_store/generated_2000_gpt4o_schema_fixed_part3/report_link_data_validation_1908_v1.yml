@@ -1,0 +1,50 @@
+id: "report_link_data_validation_1908_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Link and Data Validation"
+description: "Validation of enhanced report links and data integrity in Indian market reports."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for today: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "today"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Validate the integrity of report links and data by cross-checking metrics for enhanced reports. Check possible broken links or missing data for position-sizing context."
+sql_templates:
+  -
+    template_id: "validate_links_data"
+    template: "SELECT r.run_id, r.run_ts, COUNT(f.symbol) AS filtered_stocks_count FROM report.enhanced_runs r LEFT JOIN report.enhanced_filtered_stocks f ON r.run_id = f.run_id WHERE r.run_ts = CURRENT_DATE::date GROUP BY r.run_id, r.run_ts"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "All joins must follow approved_schema._join_rules."
+  - "Date filtering must use approved_schema._global_rules."
+synthesis_guidance: "Compare outputs with expectations for today\u2019s reports and identify discrepancies. Present as a comparison matrix."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:04"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

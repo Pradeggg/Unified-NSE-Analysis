@@ -1,0 +1,70 @@
+id: "report_link_data_validation_0970_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0970"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: post results; response style: comparison matrix."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for post results: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "post_results"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  steps:
+    - "Validate existence of report links in the enhanced reports."
+    - "Check for presence of data in corresponding html files."
+    - "Generate comparison matrix for missing data and broken links."
+    - "Review TradingView exports to ensure completeness post results."
+sql_templates:
+  -
+    description: "Select missing HTML data where the links are present but data is absent."
+    template: "SELECT ers.run_id, ers.symbol FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks ers ON er.run_id = ers.run_id WHERE ers.trading_value_cr IS NULL;"
+  -
+    description: "Identify reports with broken links."
+    template: "SELECT er.run_id FROM report.enhanced_runs er LEFT JOIN report.enhanced_filtered_stocks ers ON er.run_id = ers.run_id WHERE ers.run_id IS NULL;"
+python_tools:
+  -
+    id: "report_link_checker"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+    outputs:
+      - "validity_status"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "# Quarantined section\n\ndef run(context):\n    results = {'validity_status': []}\n    for run_id in context.inputs['run_id']:\n        status = check_links_for_run(run_id)  # Hypothetical function\n        results['validity_status'].append((run_id, status))\n    return results"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'recommendations': ['Summarize missing data points clearly.', 'Provide actionable remediation steps for identified issues.', 'Use user-friendly language in the comparison matrix.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:47"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report_link_checker: execution failed: AttributeError: 'dict' object has no attribute 'inputs'"
+review:
+  status: "needs_heal"
+  findings:
+    - "report_link_checker: execution failed: AttributeError: 'dict' object has no attribute 'inputs'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,63 @@
+created_at: "2026-06-06T12:50:28"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: debug trace."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0653_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    sql: "SELECT trade_date, index_symbol, close, rsi, trend_signal FROM market.index_eod WHERE trade_date >= CURDATE() - INTERVAL 3 MONTH"
+    template_name: "index_performance"
+  -
+    sql: "SELECT snapshot_date, sector, COUNT(symbol) AS count FROM scores.stage_snapshots WHERE stage = 'Stage 2' GROUP BY snapshot_date, sector ORDER BY snapshot_date DESC"
+    template_name: "stage_analysis"
+  -
+    sql: "SELECT snapshot_date, symbol, company_name, sector, price, rsi, relative_strength FROM scores.stage2_vcp_picks WHERE change_1w_pct > 5 ORDER BY snapshot_date DESC"
+    template_name: "vcp_candidates"
+status: "test_failed"
+synthesis_guidance: "Draw insights from market indices and equity performance. Highlight sector leaders and potential swing candidates."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "debug_trace"
+title: "3M Market Rotation Swing Assessment Variant 0653"
+tool_plan_template: "Agent analyzes market trends and sector dominance based on approved data sources."
+validation_errors:
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.month is not approved"
+validation_rules:
+  - "Ensure all selected data align with the timeframe and input patterns."
+  - "Verify interpretations align with sector rotations and stage leadership."
+version: 1
+review:
+  attempts: 3
+  findings:
+    - "market.index_eod.curdate is not approved"
+    - "market.index_eod.month is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"

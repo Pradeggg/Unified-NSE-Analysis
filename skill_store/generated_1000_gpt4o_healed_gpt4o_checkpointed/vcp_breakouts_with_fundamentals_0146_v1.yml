@@ -1,0 +1,65 @@
+created_at: "2026-06-06T12:42:21"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 3 months; response style: narrative plus evidence."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0146_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  data_extraction: "WITH VCP_Candidates AS (SELECT symbol FROM scores.stage2_vcp_picks WHERE enhanced_fund_score > 80) SELECT e.symbol, e.close, e.volume FROM market.equity_eod e JOIN VCP_Candidates v ON e.symbol = v.symbol WHERE e.trade_date > CURRENT_DATE - INTERVAL '3 months' AND e.close > e.week52_high * 0.9"
+status: "validated"
+synthesis_guidance: "Use extracted data to construct a narrative highlighting standout stocks for potential investment."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+title: "VCP Breakouts With Fundamentals Variant 0146"
+tool_plan_template:
+  candidates:
+    - "symbol"
+  evidence:
+    - "narrative"
+    - "fund_details"
+  filters:
+    - "minervini_score > 70"
+    - "market_cap_cr > 500"
+  risks:
+    - "earnings_quality < 3"
+  tradingview_symbols:
+    - "symbol"
+validation_errors:
+  - "market.equity_eod.company_name is not approved"
+  - "market.equity_eod.sector is not approved"
+validation_rules:
+  - "Ensure all candidates have a minervini_score > 70"
+  - "Check liquidity: market_cap_cr > 500"
+version: 1
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"

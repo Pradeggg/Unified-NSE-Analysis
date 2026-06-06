@@ -1,0 +1,53 @@
+id: "agent_route_failure_diagnostics_0644_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0644"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for last 3 months: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as debug trace"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Use available data to trace potential failures in route diagnostics over the past three months, focusing on issues in tool availability and symbol resolution."
+sql_templates:
+  -
+    description: "Fetch runs from the last 3 months for diagnosing agent errors."
+    template: "SELECT run_id, run_ts, universe_size, stocks_analyzed, stocks_filtered, notes FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    description: "Identify recent symbol resolution issues in filtered stocks."
+    template: "SELECT r.run_id, fs.symbol, fs.recommendation, fs.weekly_signal FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks fs ON r.run_id = fs.run_id WHERE fs.symbol IS NULL AND r.run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure queries only use approved schemas and join conditions."
+synthesis_guidance: "Focus on generating a detailed debug trace for route diagnostics issues over the last three months."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:12"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

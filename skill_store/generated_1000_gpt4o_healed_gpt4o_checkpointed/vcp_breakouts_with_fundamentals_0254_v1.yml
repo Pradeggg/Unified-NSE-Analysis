@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:43:42"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: quarter to date; response style: ranked candidates."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0254_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "Select VCP and Breakout Stocks"
+    template: "SELECT v.symbol, v.company_name, v.sector, v.price, v.vcp_score, v.trading_signal, e.week52_high, e.market_cap_cr FROM scores.stage2_vcp_picks v JOIN market.equity_eod e ON v.symbol = e.symbol WHERE e.trade_date = CURRENT_DATE AND v.vcp_score IS NOT NULL AND e.close >= e.week52_high * 0.95 ORDER BY v.vcp_score DESC, v.trading_signal DESC"
+status: "validated"
+synthesis_guidance: "Use selected SQL outputs to rank stocks based on VCP patterns and breakout potential, integrating fundamental strength information."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "ranked_candidates"
+title: "VCP Breakouts With Fundamentals Variant 0254"
+tool_plan_template: "Generate a ranked list of stocks that are exhibiting VCP patterns, new highs, or breakout scenarios with strong fundamentals based on quarter-to-date data."
+validation_rules:
+  - "Ensure only approved columns and tables are used in SQL templates."
+  - "All SQL queries must be read-only."
+  - "Output candidates must be ranked according to VCP score and trading signal."
+version: 1

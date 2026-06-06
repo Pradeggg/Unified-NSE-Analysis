@@ -1,0 +1,50 @@
+id: "agent_route_failure_diagnostics_1498_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1498"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for weekly review: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as portfolio-aware output"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Assess evidence across runs and stock filtering to identify failures in routing logic. Focus on examining anomaly patterns in market sentiment and technical scores. Ensure the resolution considers portfolio impact for weekly insights."
+sql_templates:
+  -
+    template: "SELECT run_id, analysis_date, market_sentiment, notes FROM report.enhanced_runs WHERE run_ts > DATE_SUB(NOW(), INTERVAL 7 DAY) AND market_sentiment < 0.5"
+  -
+    template: "WITH filtered_stocks AS (SELECT run_id, symbol, score FROM report.enhanced_filtered_stocks WHERE weekly_signal = 'weak' AND above_50dma = 'no') SELECT fs.symbol, ss.trend_signal FROM filtered_stocks fs JOIN scores.stage_snapshots ss ON fs.symbol = ss.symbol WHERE ss.snapshot_date > DATE_SUB(NOW(), INTERVAL 7 DAY)"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure only SELECT/WITH templates are used in SQL."
+  - "Cross-validate tool gaps using evidence from multiple tables."
+synthesis_guidance: "Integrate findings into a comprehensive diagnostic that highlights key failures and suggests strategic fixes, ensuring alignment with position-sizing and portfolio-awareness directives."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:09:16"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.date_sub is not approved"
+  - "report.enhanced_runs.day is not approved"
+  - "report.enhanced_runs.now is not approved"

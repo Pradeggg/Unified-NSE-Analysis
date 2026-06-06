@@ -1,0 +1,67 @@
+id: "signal_outcome_feedback_review_0963_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0963"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: post results; response style: comparison matrix."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for post results: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as comparison matrix"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  required_function: "run(context)"
+  language: "python"
+  mode: "read_only"
+  inputs:
+
+  outputs:
+
+  approved_tables:
+
+  code: ""
+sql_templates:
+  -
+    description: "Fetches signals along with their outcomes such as target hits or stop loss over the last 3 months."
+    template: "SELECT s.symbol, s.signal, s.date_issued, s.hit_target, s.hit_stop, e.close AS price_at_resolution, ss.stage "
+    FROM signals.signal_log s : "JOIN market.equity_eod e ON s.symbol = e.symbol "
+    AND e.trade_date = s.date_resolved : "JOIN scores.stage_snapshots ss ON s.symbol = ss.symbol "
+    WHERE s.date_issued > CURRENT_DATE - INTERVAL '3 months' : "AND s.hit_target IS NOT NULL "
+    LIMIT 100;: ""
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Design post-results analysis to identify patterns, learn from the signal outcomes, and enhance decision-making frameworks."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:45"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

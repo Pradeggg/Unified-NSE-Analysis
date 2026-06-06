@@ -1,0 +1,71 @@
+id: "market_3m_rotation_swing_1499_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1499"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for weekly review: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    description: "3-month market analysis focusing on regime, sector rotation, and swing candidates with a weekly review window."
+    steps:
+      - "Analyze recent market index trends for broad regime context."
+      - "Evaluate sector performance and rotation over the last 3 months."
+      - "Identify leading sectors and potential stage 2 swing candidates."
+      - "Cross-validate VCP candidates with latest stage snapshots."
+      - "Synthesize the findings into a portfolio-aware format."
+sql_templates:
+  -
+    title: "Recent Market Index Trends"
+    query: "SELECT index_symbol, AVG(change_pct) AS avg_change FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 months') GROUP BY index_symbol ORDER BY avg_change DESC LIMIT 5;"
+  -
+    title: "Sector Performance Analysis"
+    query: "SELECT sector, AVG(change_1m_pct) AS avg_1m_change FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY avg_1m_change DESC LIMIT 5;"
+  -
+    title: "Stage 2 Leadership"
+    query: "SELECT symbol, company_name, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY stage_score DESC LIMIT 5;"
+  -
+    title: "VCP Candidate Validation"
+    query: "SELECT v.symbol, v.company_name, v.trading_signal FROM scores.stage2_vcp_picks v JOIN scores.stage_snapshots s ON v.symbol = s.symbol WHERE v.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND s.stage = 'STAGE_2' ORDER BY v.vcp_score DESC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "{'rules': ['Ensure that index returns reflect the average change over the past 3 months.', 'Leading sectors should cover the top-performing sectors with positive 1-month changes.', 'Primary candidates must be Stage 2 with strong buy signals.', 'Use latest available dates for confirming VCP and swing candidates.']}"
+synthesis_guidance: "{'guidance': ['Reflect on sector rotation as a signal of market regime shifts.', 'Summarize findings in a portfolio-aware format to highlight actionable insights.', 'Assess candidate stocks for strategic swing-trading opportunities.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:39"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_change is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "market.index_eod.avg_change is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

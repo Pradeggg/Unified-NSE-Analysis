@@ -1,0 +1,70 @@
+id: "sector_breadth_rotation_watchlist_0951_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0951"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for quarter to date: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as comparison matrix"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tool_policy:
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    required_fields:
+      - "id"
+      - "language"
+      - "mode"
+      - "inputs"
+      - "outputs"
+      - "approved_tables"
+      - "code"
+sql_templates:
+  -
+    name: "sector_breadth_query"
+    template: "WITH latest_snapshots AS (SELECT MAX(snapshot_date) AS latest_date FROM scores.stage_snapshots), filtered_stage_snapshots AS (SELECT sector, symbol, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT latest_date FROM latest_snapshots) AND stage = 'STAGE_2'), improving_sectors AS (SELECT sd.sector, sd.index_name, sd.pct_above_50dma, sd.breadth_signal, sd.change_5d FROM breadth.sector_daily sd JOIN breadth.ma_pct_above ma ON sd.snapshot_date = ma.snapshot_date WHERE sd.snapshot_date = (SELECT latest_date FROM latest_snapshots) AND sd.breadth_signal = 'IMPROVING') SELECT improving_sectors.sector, ROUND(AVG(stage_score), 2) as avg_stage_score FROM improving_sectors JOIN filtered_stage_snapshots on improving_sectors.sector = filtered_stage_snapshots.sector GROUP BY improving_sectors.sector ORDER BY avg_stage_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "rules"
+synthesis_guidance: "Highlight sectors with improving breadth and strong Stage 2 participation. Present findings as a comparative matrix with ranks; ensure list is suitable for a TradingView watchlist."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:40"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

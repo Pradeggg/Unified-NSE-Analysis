@@ -1,0 +1,63 @@
+created_at: "2026-06-06T12:52:02"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: last 20 sessions; response style: action watchlist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0833_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for last 20 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select index returns over the last 3 months."
+    template: "SELECT index_symbol, AVG(change_pct) AS index_average_change FROM market.index_eod WHERE trade_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE GROUP BY index_symbol"
+  -
+    description: "Identify sectors with leading stage distribution changes."
+    template: "SELECT sector, AVG(technical_score) AS technical_score_average FROM scores.stage_snapshots WHERE snapshot_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE GROUP BY sector ORDER BY technical_score_average DESC"
+  -
+    description: "List primary swing candidates from recent sector rotation."
+    template: "SELECT symbol, company_name, sector, rsi, relative_strength FROM scores.stage2_vcp_picks WHERE snapshot_date BETWEEN CURRENT_DATE - INTERVAL '20 days' AND CURRENT_DATE AND vcp_score IS NOT NULL ORDER BY vcp_score DESC"
+status: "test_failed"
+synthesis_guidance: "Focus on translating data and trends into actionable insights, particularly swing trading opportunities in the context of market regime analysis."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "last_20_sessions"
+  - "action_watchlist"
+title: "3M Market Rotation Swing Assessment Variant 0833"
+tool_plan_template: "Using available evidence, assess market regime changes, stage 2 leadership, and prepare action watchlist."
+validation_errors:
+  - "market.index_eod.index_average_change is not approved"
+  - "scores.stage_snapshots.technical_score_average is not approved"
+validation_rules:
+  - "Ensure all index symbols are from the approved schema."
+  - "Verify calculation of averages are within logical bounds."
+version: 1
+review:
+  attempts: 3
+  findings:
+    - "market.index_eod.index_average_change is not approved"
+    - "scores.stage_snapshots.technical_score_average is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"

@@ -1,0 +1,53 @@
+id: "corporate_events_results_watchlist_0359_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0359"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for quarter to date: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as exceptions and gaps first"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Evaluate corporate event-driven actions and results for symbols with a recent quarter context."
+sql_templates:
+  -
+    type: "corporate_events"
+    sql: "SELECT ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, ce.detail, ss.stage, ce.source FROM signals.corporate_events ce JOIN scores.stage_snapshots ss ON ce.symbol = ss.symbol WHERE ce.event_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY ce.event_date DESC LIMIT 50;"
+  -
+    type: "results_analysis"
+    sql: "WITH latest_results AS (SELECT DISTINCT ON (ra.symbol) ra.symbol, ra.period_end, ra.verdict, ra.growth_yoy_revenue_pct, ra.growth_qoq_revenue_pct, ra.eps_yoy_pct, ra.score FROM scores.results_analysis ra ORDER BY ra.symbol, ra.period_end DESC NULLS LAST, ra.updated_at DESC) SELECT lr.symbol, lr.period_end, lr.verdict, lr.growth_yoy_revenue_pct, lr.growth_qoq_revenue_pct, lr.eps_yoy_pct, lr.score FROM latest_results lr JOIN signals.corporate_events ce ON lr.symbol = ce.symbol WHERE ce.event_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY lr.period_end DESC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Verify latest event data alignment with stage snapshot."
+synthesis_guidance: "Identify exceptions and information gaps for upcoming corporate actions, with a focus on source validation."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:17"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

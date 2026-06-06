@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:50:48"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: weekly review; response style: debug trace."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0691_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+  portfolio_state:
+    template: "SELECT holdings.symbol, holdings.qty, holdings.avg_cost, stage_snapshots.price, stage_snapshots.stage_score FROM portfolio.holdings AS holdings JOIN scores.stage_snapshots AS stage_snapshots ON holdings.symbol = stage_snapshots.symbol WHERE stage_snapshots.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    validation: "Ensures correct joining of holdings with recent scores."
+  sector_exposure:
+    template: "SELECT stage_snapshots.sector, SUM(holdings.qty * stage_snapshots.live_price) AS total_value FROM portfolio.holdings AS holdings JOIN scores.stage_snapshots AS stage_snapshots ON holdings.symbol = stage_snapshots.symbol WHERE stage_snapshots.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY stage_snapshots.sector;"
+    validation: "Calculates sector exposure based on current holdings valuations."
+status: "validated"
+synthesis_guidance: "Aggregate data to generate overall portfolio state. Identify sectors with high exposure, and use stage scores to recommend 'add' or 'trim' actions. Highlight any positions with significant risk flags based on changes in scoring or valuation."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "weekly_review"
+  - "debug_trace"
+title: "Portfolio Incremental Add Trim Review Variant 0691"
+tool_plan_template: "Use SQL to query approved tables for portfolio snapshot and holding analysis. Apply logic to identify 'add' or 'trim' candidates based on scoring and current holdings."
+validation_rules:
+  - "Ensure all table joins adhere to foreign key relationships."
+  - "Verify calculations for average and sum aggregations are accurate."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

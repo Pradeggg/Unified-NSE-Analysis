@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:43:20"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: today; response style: ranked candidates."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0204_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for today: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    description: "Get latest run metadata."
+    template: "SELECT * FROM report.enhanced_runs WHERE analysis_date = CURRENT_DATE ORDER BY run_ts DESC LIMIT 1;"
+  -
+    description: "Get stock information for the latest run."
+    template: "SELECT * FROM report.enhanced_filtered_stocks WHERE run_id = (SELECT run_id FROM report.enhanced_runs WHERE analysis_date = CURRENT_DATE ORDER BY run_ts DESC LIMIT 1) ORDER BY rank;"
+status: "validated"
+synthesis_guidance: "Perform in-depth validation of report links and stock rows, synthesizing findings and remediation steps."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "today"
+  - "ranked_candidates"
+title: "Enhanced Report Data Validation Variant 0204"
+tool_plan_template: "Verify report metadata and validate stock data for today's watchlist."
+validation_rules:
+  - "Ensure reports are generated for today."
+  - "Validate all stock rows have necessary data."
+  - "Check for missing or broken report links."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

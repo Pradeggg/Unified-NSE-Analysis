@@ -1,0 +1,63 @@
+id: "vcp_breakouts_with_fundamentals_0218_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0218"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: latest EOD; response style: ranked candidates."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Identify high-performing VCP breakout stocks with strong fundamentals using evidence from approved schema."
+sql_templates:
+  -
+    template: "WITH high_performance AS (SELECT symbol, max(high) OVER (PARTITION BY symbol) as max_high FROM market.equity_eod WHERE trade_date = CURRENT_DATE - 1) SELECT e.symbol, p.company_name, p.sector, e.high, p.fundamental_score FROM high_performance e JOIN scores.stage_snapshots p ON e.symbol = p.symbol WHERE e.high = e.max_high AND p.fundamental_score > 80;"
+    description: "Select stocks creating new highs with strong fundamentals."
+  -
+    template: "SELECT s.symbol, s.company_name, s.sector, s.vcp_score FROM scores.stage2_vcp_picks s WHERE s.snapshot_date = CURRENT_DATE - 1 AND s.vcp_score > 70 ORDER BY s.vcp_score DESC;"
+    description: "Select VCP breakout stocks with high VCP scores."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure appropriate filtering for fundamental scores and VCP scores."
+  - "Validate date references align with latest EOD data."
+synthesis_guidance: "Prioritize stocks with new highs, VCP patterns, and strong fundamentals. Rank candidates based on a combination of VCP scores and fundamental strength."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:43:29"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.s is not approved"
+  - "unknown table e.high"
+  - "unknown table e.max_high"
+  - "unknown table e.symbol"
+  - "unknown table p.company_name"
+  - "unknown table p.fundamental_score"
+  - "unknown table p.sector"
+  - "unknown table p.symbol"
+  - "unknown table s.company_name"
+  - "unknown table s.sector"
+  - "unknown table s.snapshot_date"
+  - "unknown table s.symbol"
+  - "unknown table s.vcp_score"

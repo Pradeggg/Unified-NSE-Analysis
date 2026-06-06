@@ -1,0 +1,49 @@
+id: "agent_route_failure_diagnostics_0658_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0658"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for quarter to date: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as debug trace"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Inspect evidence tables to find correlations with route failures and diagnose issues in position-sizing contexts."
+sql_templates:
+  -
+    name: "RunAnalysis"
+    query: "SELECT run_id, run_ts, universe_size, stocks_analyzed, market_composite_score FROM report.enhanced_runs WHERE run_ts >= date_trunc('quarter', current_date);"
+  -
+    name: "FilteredStocks"
+    query: "SELECT symbol, score, recommendation, current_price, volume FROM report.enhanced_filtered_stocks WHERE run_id = (SELECT MAX(run_id) FROM report.enhanced_filtered_stocks);"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "status"
+synthesis_guidance: "Trace the failures back to their origins by aligning evidence with expected routes. Identify missing tools or resolution errors particularly in position-sizing contexts. Structure findings as debug traces."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.date_trunc is not approved"

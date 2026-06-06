@@ -1,0 +1,58 @@
+id: "company_360_research_report_1280_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Comprehensive Company Research Card"
+description: "Generate a detailed research card for a company, focusing on financials, fundamentals, and technical setups for the Indian market."
+input_patterns:
+  - "/research <symbol> comprehensive report"
+  - "full research report with fundamentals and technical charts"
+  - "360 research for stock in Indian market"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "Indian_market"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Start by fetching the latest technical and stage information from scores.stage_snapshots."
+  - "Retrieve recent financial trends from scores.quarterly_results and scores.annual_results."
+  - "Obtain current market price and volume data from market.equity_eod."
+sql_templates:
+  -
+    description: "Fetch latest stage and technical scores for given symbol."
+    query: "SELECT * FROM scores.stage_snapshots WHERE symbol = :symbol AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 5;"
+  -
+    description: "Fetch latest quarterly results for given symbol."
+    query: "SELECT * FROM scores.quarterly_results WHERE symbol = :symbol ORDER BY period_end DESC LIMIT 1;"
+  -
+    description: "Fetch latest annual results for given symbol."
+    query: "SELECT * FROM scores.annual_results WHERE symbol = :symbol ORDER BY period_end DESC LIMIT 1;"
+  -
+    description: "Fetch latest market data for given symbol."
+    query: "SELECT * FROM market.equity_eod WHERE symbol = :symbol AND trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+validation_rules:
+  - "Ensure all required columns are present in the results."
+  - "Validate that the latest financials align with snapshot data."
+synthesis_guidance: "['Combine technical scores with financial trends to form a coherent company overview.', 'Highlight key financial ratios and growth metrics.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:03"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

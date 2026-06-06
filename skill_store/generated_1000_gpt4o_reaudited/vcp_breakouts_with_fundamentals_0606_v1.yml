@@ -1,0 +1,68 @@
+created_at: "2026-06-06T12:50:06"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: today; response style: debug trace."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0606_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    name: "Fetch VCP and Breakout Candidates"
+    query: "SELECT eod.symbol, eod.high, eod.week52_high, vcp.vcp_score, vcp.enhanced_fund_score FROM scores.stage2_vcp_picks AS vcp JOIN market.equity_eod AS eod ON vcp.symbol = eod.symbol WHERE eod.trade_date = CURRENT_DATE AND eod.high > eod.week52_high * 0.9 AND vcp.vcp_score >= 3 AND vcp.enhanced_fund_score >= 70"
+status: "validated"
+synthesis_guidance: "{'layout': 'Use evidence-driven narrative, supporting breakout and VCP logic with data-backed insights.', 'emphasis': 'Highlight stocks with both technical breakouts and solid fundamental bases.'}"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "today"
+  - "debug_trace"
+title: "VCP Breakouts With Fundamentals Variant 0606"
+tool_plan_template:
+  candidates:
+    description: "Stocks matching the filter criteria"
+    logic: "Select unique symbols with strong fundamentals and price action."
+  evidence:
+    description: "Gather supporting market and score data"
+  filters:
+    criteria:
+      - "high > week52_high * 0.9"
+      - "vcp_score >= 3"
+      - "enhanced_fund_score >= 70"
+    description: "Identify stocks with new highs, VCP breakout, and strong fundamentals."
+  risks:
+    description: "Identify potential risks based on market and score data"
+  tradingview_symbols:
+    description: "Format results for TradingView integration"
+validation_rules:
+  - "Ensure SQL only uses approved tables and columns"
+  - "Verify all scoring logic aligns with provided criteria"
+  - "Validate integration output format with TradingView"
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

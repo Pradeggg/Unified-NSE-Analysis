@@ -1,0 +1,65 @@
+id: "quarterly_results_quality_review_1293_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1293"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: ranked candidates."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "daily refresh follow-up for weekly review: latest quarterly results analysis"
+  - "which companies had strong quarterly results as ranked candidates"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "daily_refresh_follow-up"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Search relevant evidence and process observations."
+sql_templates:
+  latest_results_observation: "SELECT symbol, period_end, revenue, pat, opm_pct, eps FROM scores.quarterly_results WHERE period_type='quarterly' ORDER BY period_end DESC LIMIT 10;"
+  analyze_results: "SELECT symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct, verdict FROM scores.results_analysis WHERE period_end=(SELECT MAX(period_end) FROM scores.results_analysis) ORDER BY score DESC LIMIT 10;"
+python_tools:
+  -
+    id: "company_ranking_calculator"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "growth_yoy_revenue_pct"
+      - "growth_qoq_revenue_pct"
+      - "growth_yoy_pat_pct"
+      - "growth_qoq_pat_pct"
+    outputs:
+      - "ranked_companies"
+    approved_tables:
+      - "scores.results_analysis"
+    code: "def run(context):\n    # Compute a simple rank based on revenue and PAT growth\n    results = context['results']\n    ranked = sorted(results, key=lambda x: (x['growth_yoy_revenue_pct'] + x['growth_qoq_revenue_pct'] + x['growth_yoy_pat_pct'] + x['growth_qoq_pat_pct']), reverse=True)\n    return {'ranked_companies': [r['symbol'] for r in ranked[:5]]}"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure revenue and PAT growth percentages are positive for strong quarterly results."
+  - "Review margin movements for significant changes."
+synthesis_guidance: "Focus on identifying companies with notable growth in revenue, PAT, and improvements in margins."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:47"
+generation_model: "gpt-4o"
+validation_errors:
+  - "company_ranking_calculator: execution failed: KeyError: 'results'"
+review:
+  status: "needs_heal"
+  findings:
+    - "company_ranking_calculator: execution failed: KeyError: 'results'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

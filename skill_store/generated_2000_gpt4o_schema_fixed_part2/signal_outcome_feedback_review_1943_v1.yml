@@ -1,0 +1,57 @@
+id: "signal_outcome_feedback_review_1943_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1943"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for last 3 months: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as comparison matrix"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+
+  evidence_gaps:
+
+sql_templates:
+  -
+    name: "SignalOutcomeReview"
+    template: "WITH recent_signals AS (SELECT * FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months'), resolved_signals AS (SELECT id, symbol, date_issued, hit_target, hit_stop FROM recent_signals WHERE date_resolved IS NOT NULL) SELECT rs.symbol, COUNT(*) AS signal_count, SUM(CASE WHEN rs.hit_target THEN 1 ELSE 0 END) AS targets_hit, SUM(CASE WHEN rs.hit_stop THEN 1 ELSE 0 END) AS stops_hit FROM resolved_signals rs JOIN scores.stage_snapshots ss ON rs.symbol = ss.symbol WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY rs.symbol ORDER BY signal_count DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure latest dates are used for stage snapshots."
+  - "Verify SQL syntax compatibility with PostgreSQL."
+  - "Confirm outcome calculations align with signal hits and misses."
+synthesis_guidance: "['Analyze patterns from successful and failed signals.', 'Highlight symbols with consistent outcomes.', 'Suggest routing improvements based on outcome trends.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

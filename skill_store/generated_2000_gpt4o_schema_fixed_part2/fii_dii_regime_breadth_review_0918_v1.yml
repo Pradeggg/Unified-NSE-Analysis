@@ -1,0 +1,60 @@
+id: "fii_dii_regime_breadth_review_0918_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0918"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for latest EOD: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as comparison matrix"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  evidence_gathering:
+    - "Gather latest EOD data for FII/DII flows, market regime, breadth, and index information."
+  analysis:
+    - "Compare FII and DII flows for the latest date to identify net trends."
+    - "Evaluate market regime for the latest date to determine risk-on or risk-off context."
+    - "Analyze market breadth indicators such as advances, declines, and sentiment."
+    - "Check index action to confirm market trends."
+  output_synthesis:
+    - "Construct a comparison matrix highlighting regime, flow context, breadth context, and index confirmation."
+    - "Identify risk flags based on gathered evidence."
+sql_templates:
+  - "WITH latest_flows AS (SELECT trade_date, fii_net_today, dii_net_today, flow_signal FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows)), latest_regime AS (SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history)), latest_breadth AS (SELECT trade_date, ad_signal, market_sentiment FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily)), latest_index AS (SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND index_symbol = 'NIFTY_50') SELECT lf.trade_date, lf.flow_signal, lr.regime, lr.confidence, lb.ad_signal, lb.market_sentiment, li.close, li.change_pct FROM latest_flows lf JOIN latest_regime lr ON lf.trade_date = lr.trade_date JOIN latest_breadth lb ON lf.trade_date = lb.trade_date JOIN latest_index li ON lf.trade_date = li.trade_date;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure evidence tables are accessed with latest EOD logic."
+  - "Confirm that all joins adhere to approved join conditions."
+synthesis_guidance: "['Synthesize output in a tabular format for easy comparison.', 'Highlight key indicators using identified risk flags.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

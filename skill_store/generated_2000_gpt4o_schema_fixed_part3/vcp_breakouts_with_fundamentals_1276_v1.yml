@@ -1,0 +1,51 @@
+id: "vcp_breakouts_with_fundamentals_1276_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1276"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: pre market; response style: ranked candidates."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Use screening indicators to filter VCP breakouts with strong fundamentals during pre-market hours."
+sql_templates:
+  - "SELECT e.symbol, e.close, s.enhanced_fund_score, s.trading_signal, p.vcp_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol AND e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) JOIN scores.stage2_vcp_picks p ON e.symbol = p.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND p.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND s.trading_signal IN ('BUY', 'STRONG_BUY') AND e.close = e.week52_high ORDER BY s.enhanced_fund_score DESC, p.vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Each candidate must have a valid NSE symbol."
+  - "Enhanced fundamental score should be above a certain threshold."
+  - "Trading signal should be either 'BUY' or 'STRONG_BUY'."
+synthesis_guidance: "Highlight stocks achieving new highs with robust fundamental scores and ranked possibly by VCP quality."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

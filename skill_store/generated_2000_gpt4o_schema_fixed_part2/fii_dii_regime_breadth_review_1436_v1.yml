@@ -1,0 +1,57 @@
+id: "fii_dii_regime_breadth_review_1436_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1436"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as portfolio-aware output"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  python_tools:
+
+  sql_templates:
+    -
+      description: "Fetch FII/DII flow, regime, breadth, and index data for the last 20 sessions."
+      query: "SELECT f.trade_date, f.fii_net_today, f.dii_net_today, r.regime, r.confidence, b.advances, b.declines, m.index_symbol, m.close FROM signals.fii_dii_flows f INNER JOIN signals.regime_history r ON f.trade_date = r.trade_date INNER JOIN breadth.market_daily b ON f.trade_date = b.trade_date INNER JOIN market.index_eod m ON f.trade_date = m.trade_date WHERE f.trade_date >= (CURRENT_DATE - INTERVAL '20 days') AND m.index_symbol = 'Nifty 50' ORDER BY f.trade_date DESC;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:15"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

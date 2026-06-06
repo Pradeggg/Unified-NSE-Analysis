@@ -1,0 +1,66 @@
+id: "corporate_events_results_watchlist_0317_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0317"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: exceptions and gaps first."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for latest EOD: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as exceptions and gaps first"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  upcoming_events: "SELECT id, symbol, event_type, event_date, detail, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY event_date;"
+  recent_results: "SELECT symbol, company_name, industry, filing_date, growth_yoy_revenue_pct, growth_qoq_revenue_pct, source_trail FROM scores.results_analysis ORDER BY filing_date DESC LIMIT 10;"
+python_tools:
+  -
+    id: "recent_sector_performance_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      symbols: "List of company symbols from sql_templates.recent_results"
+    outputs:
+      performance_analysis: "Dict with sector-relative performance metrics"
+    approved_tables:
+      - "scores.results_analysis"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Extract recent results for sector-relative analysis\n    symbols = context['symbols']\n    performance_analysis = {}\n    # Hypothetically analyze data for illustrative purposes\n    for symbol in symbols:\n        # Example computation\n        performance_analysis[symbol] = {'sector_relative_performance': 'computed_value'}\n    return performance_analysis"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure no data manipulation beyond read-only SQL."
+  - "Verify correct schema and column usage according to approved tables."
+synthesis_guidance: "Prioritize exceptions and evidence gaps in the analysis response."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:55"
+generation_model: "gpt-4o"
+validation_errors:
+  - "recent_sector_performance_analysis: inputs must be a list"
+  - "recent_sector_performance_analysis: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "recent_sector_performance_analysis: inputs must be a list"
+    - "recent_sector_performance_analysis: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

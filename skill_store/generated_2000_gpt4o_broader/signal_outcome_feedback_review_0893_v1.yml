@@ -1,0 +1,52 @@
+id: "signal_outcome_feedback_review_0893_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0893"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for weekly review: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as action watchlist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Create a weekly review of signal outcomes, focusing on targets and stop-losses hit. Analyze patterns to build an action watchlist."
+sql_templates:
+  -
+    name: "ReviewSignalOutcomes"
+    query: "SELECT id, date_issued, symbol, signal, price_at_issue, target_1, target_2, stop_loss, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_resolved BETWEEN CURRENT_DATE - INTERVAL '7 days' AND CURRENT_DATE;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all outcomes are calculated based on resolutions within the past week."
+  - "Identify distinct patterns among successful and failed signals."
+synthesis_guidance: "Utilize the outcome summary to guide further analysis and action planning."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:45:54"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 3 months; response style: exceptions and gaps first."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0346_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "Identify VCP and Breakout Candidates"
+    query: "WITH recent_highs AS (SELECT symbol, MAX(close) AS recent_high FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY symbol), vcp_candidates AS (SELECT v.symbol, v.company_name, v.enhanced_fund_score FROM scores.stage2_vcp_picks v WHERE v.enhanced_fund_score >= 70 AND v.snapshot_date >= CURRENT_DATE - INTERVAL '3 months'), breakout_candidates AS (SELECT e.symbol FROM market.equity_eod e JOIN recent_highs h ON e.symbol = h.symbol WHERE e.close = h.recent_high AND e.trade_date >= CURRENT_DATE - INTERVAL '3 months') SELECT vc.symbol, vc.company_name, vc.enhanced_fund_score FROM vcp_candidates vc JOIN breakout_candidates bc ON vc.symbol = bc.symbol;"
+status: "validated"
+synthesis_guidance: "['Focus first on gaps and exceptions', 'Prioritize candidates with the highest fundamental scores']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+title: "VCP Breakouts With Fundamentals Variant 0346"
+tool_plan_template:
+
+validation_rules:
+  - "Ensure all symbols match between VCP and breakout lists"
+  - "Check enhanced fund score threshold is met"
+version: 1

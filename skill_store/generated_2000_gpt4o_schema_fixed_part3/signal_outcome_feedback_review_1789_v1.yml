@@ -1,0 +1,63 @@
+id: "signal_outcome_feedback_review_1789_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review: Variant 1789"
+description: "Evaluate intraday signal outcomes to improve future routes and skill selection, focusing on source-trail validation."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for intraday context: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as QA checklist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "{output_contract: {outcome_summary, winner_patterns, failure_patterns, route_improvements, next_checks}}"
+sql_templates:
+  -
+    description: "Retrieve signal outcome statistics."
+    template: "SELECT symbol, COUNT(*) AS total_signals, SUM(CASE WHEN hit_target THEN 1 ELSE 0 END) AS targets_hit, SUM(CASE WHEN hit_stop THEN 1 ELSE 0 END) AS stops_hit FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '1 month' GROUP BY symbol LIMIT 100;"
+  -
+    description: "Fetch latest price and score context for resolved signals."
+    template: "SELECT s.symbol, s.date_resolved, s.price_at_resolution, e.close AS latest_close, st.stage, st.technical_score FROM signals.signal_log s LEFT JOIN market.equity_eod e ON s.symbol = e.symbol AND e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) LEFT JOIN scores.stage_snapshots st ON s.symbol = st.symbol AND st.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) WHERE s.hit_target OR s.hit_stop LIMIT 100;"
+python_tools:
+  -
+    id: "evaluate_signal_performance"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "historical_signals"
+    outputs:
+      - "performance_metrics"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context):\n    # Code to evaluate performance metrics from historical signals\n    pass"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure outcomes match signal targets or stops."
+  - "Validate symbols using approved schema columns."
+synthesis_guidance: "Focus on patterns leading to successful or unsuccessful outcomes, highlighting lessons for improvement without speculative inference."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:47"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.stops_hit is not approved"
+  - "signals.signal_log.targets_hit is not approved"
+  - "signals.signal_log.total_signals is not approved"

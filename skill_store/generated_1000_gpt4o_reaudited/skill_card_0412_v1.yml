@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:46:18"
+created_by: "llm_generated"
+description: "Perform data validation for enhanced report runs and review missing links."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "skill_card_0412_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for latest EOD: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    query: "SELECT run_id, run_ts, analysis_date, universe_size FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 10"
+    template_id: "select_runs"
+  -
+    query: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE score > 80 ORDER BY score DESC"
+    template_id: "select_filtered_stocks"
+status: "validated"
+synthesis_guidance: "Compile findings into a portfolio-aware output for institutional review considering market sentiment from the latest EOD data."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "latest_EOD"
+  - "portfolio-aware_output"
+title: "Enhanced Report Data Validation"
+tool_plan_template: "Verify broken links and identify missing data using approved tables."
+validation_rules:
+  - "Ensure all selected stocks have recommendations."
+  - "Check the latest run includes valid universe_size."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

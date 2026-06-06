@@ -1,0 +1,55 @@
+id: "insider_bulk_deal_signal_review_1004_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1004"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: today; response style: concise table."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for today: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as concise table"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Evaluate insider buying, bulk deals, and technical confirmation based on today's data to assemble a watchlist. Prioritize symbols with both insider activity and positive technical setups."
+sql_templates:
+  -
+    name: "select_insider_and_bulk_deals"
+    template: "WITH insider_data AS ( SELECT symbol, MAX(alert_date) AS max_alert_date FROM signals.insider_alerts WHERE alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts) GROUP BY symbol), bulk_data AS ( SELECT symbol, MAX(deal_date) AS max_deal_date FROM signals.bulk_block_deals WHERE deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals) GROUP BY symbol) SELECT i.symbol FROM insider_data i JOIN bulk_data b ON i.symbol = b.symbol"
+  -
+    name: "select_latest_technical_context"
+    template: "SELECT s.symbol, s.stage, s.trading_signal, s.technical_score FROM scores.stage_snapshots s WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.symbol IN ({symbols}) AND s.stage = 'STAGE_2' AND s.trading_signal IN ('BUY', 'STRONG_BUY')"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure output columns match requirements."
+  - "Assess SQL for read-only compliance."
+synthesis_guidance: "Produce a concise watchlist table enumerating key symbols of interest based on today's insider and bulk deal data harmonized with constructive technical readings."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:07"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

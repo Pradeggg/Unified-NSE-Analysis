@@ -1,0 +1,69 @@
+id: "report_link_data_validation_0152_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0152"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: quarter to date; response style: narrative plus evidence."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for quarter to date: review report links not working"
+  - "validate generated report links and missing data as narrative plus evidence"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  sql_templates:
+    run_metadata_query:
+      template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE analysis_date >= CURRENT_DATE - INTERVAL '3 months';"
+      description: "Query to retrieve metadata for enhanced runs for the quarter to date."
+    filtered_stocks_query:
+      template: "SELECT symbol, score, recommendation, current_price, volume FROM report.enhanced_filtered_stocks WHERE rank <= 10;"
+      description: "Query to retrieve top 10 filtered stocks for analysis."
+  evidence_gaps:
+
+sql_templates:
+
+python_tools:
+  -
+    id: "run_metadata_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_metadata_query"
+    outputs:
+      - "narrative_insights"
+    approved_tables:
+      - "report.enhanced_runs"
+    code: "def run(context):\n    # Placeholder for analyzing run metadata.\n    return {'narrative_insights': 'Analyzed metadata for enhanced runs.'}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Use approved tables and columns only."
+  - "SQL templates must be read-only."
+  - "Do not use primary_tables or required_tables."
+  - "If needed concepts are missing, place them in evidence_gaps."
+synthesis_guidance: "['Combine SQL results into a narrative format', 'Ensure evidence is framed for the Indian market context']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:42:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

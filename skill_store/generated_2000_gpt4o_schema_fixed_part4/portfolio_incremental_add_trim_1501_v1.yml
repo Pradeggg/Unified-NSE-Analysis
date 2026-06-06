@@ -1,0 +1,52 @@
+id: "portfolio_incremental_add_trim_1501_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1501"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: today; response style: research-only summary."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for today: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as research-only summary"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "today"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+
+sql_templates:
+  latest_holdings_stage_snapshot:
+    query: "SELECT h.symbol, h.qty, h.avg_cost, ss.company_name, ss.sector, ss.stage, ss.trading_signal, ss.relative_strength FROM portfolio.holdings AS h JOIN scores.stage_snapshots AS ss ON h.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    description: "Retrieve latest stage and scores for current holdings for add/trim analysis."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure correct join with approved columns."
+  - "Filters must adhere to latest date logic from approved global rules."
+  - "SQL must be read-only and bounded as necessary."
+synthesis_guidance: "[\"Summarize quickly for today's decisions.\", 'Consider sector exposure alongside individual positions.', 'Focus on reading signals and relative strength for add/trim calls.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

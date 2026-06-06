@@ -1,0 +1,55 @@
+id: "vcp_breakouts_with_fundamentals_1192_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1192"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: weekly review; response style: narrative plus evidence."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    description: "Use appropriate SQL queries to gather information from the approved tables. If complex logic is needed, use Python evidence tools in read-only mode."
+sql_templates:
+  -
+    template_id: "latest_vcp_breakouts"
+    query: "SELECT s.symbol, s.company_name, s.price, s.trading_signal, p.vcp_score, p.enhanced_fund_score FROM scores.stage2_vcp_picks p JOIN scores.stage_snapshots s ON p.symbol = s.symbol WHERE p.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY p.vcp_score DESC, p.symbol LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all trading signals are either BUY or STRONG_BUY."
+  - "Verify the use of the latest snapshot dates for each table."
+  - "Check if VCP scores are ordered correctly in descending order."
+synthesis_guidance: "['Focus on identifying stocks with both strong VCP breakout potential and robust fundamentals.', 'Highlight top candidates in a narrative format that provides both qualitative and quantitative insights.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

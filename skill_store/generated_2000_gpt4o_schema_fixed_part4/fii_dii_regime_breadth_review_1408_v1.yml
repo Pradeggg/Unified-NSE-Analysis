@@ -1,0 +1,59 @@
+id: "fii_dii_regime_breadth_review_1408_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1408"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for today: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as portfolio-aware output"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    description: "Plan for generating a comprehensive review of current market conditions based on FII/DII flows, market regime, breadth, and index evidence."
+    steps:
+      - "Retrieve latest FII/DII flow signals and trends."
+      - "Identify current market regime and its confidence."
+      - "Assess market breadth indicators including advances and declines."
+      - "Check index level confirmations for coherence with above signals."
+sql_templates:
+  -
+    description: "Fetch the latest FII/DII flows, regime, breadth, and index data for today's analysis."
+    sql: "WITH latest_data AS (SELECT MAX(trade_date) AS max_date FROM signals.fii_dii_flows) SELECT f.trade_date, f.fii_net_today, f.dii_net_today, f.flow_signal, r.regime, r.confidence, b.advances, b.declines, i.close, i.change_pct FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date JOIN breadth.market_daily b ON f.trade_date = b.trade_date JOIN market.index_eod i ON f.trade_date = i.trade_date WHERE f.trade_date = (SELECT max_date FROM latest_data) AND i.index_symbol = 'Nifty 50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all components (regime, flows, breadth, index) are aligned to provide a coherent overview of market conditions."
+  - "Extracted data should all correspond to the latest market date available."
+synthesis_guidance: "[\"Interpret combined data to frame the market's risk-on or risk-off stance.\", 'Provide nuanced advice on position sizing in current market conditions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:22"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

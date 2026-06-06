@@ -1,0 +1,59 @@
+created_at: "2026-06-06T12:43:16"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: narrative plus evidence."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0193_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for weekly review: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as narrative plus evidence"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    name: "Index Returns"
+    query: "SELECT index_symbol, AVG(change_pct) as average_return FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol ORDER BY average_return DESC"
+  -
+    name: "Leading Sectors"
+    query: "WITH sector_changes AS (SELECT sector, AVG(change_1m_pct) AS avg_change FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector) SELECT sector FROM sector_changes ORDER BY avg_change DESC LIMIT 5"
+status: "test_failed"
+synthesis_guidance: "Focus on narrative insights with supporting evidence from approved tables."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "weekly_review"
+  - "narrative_plus_evidence"
+title: "3M Market Rotation Swing Assessment Variant 0193"
+tool_plan_template:
+  approved_domains:
+    - "market_analysis"
+  intent: "Research-Only Market Analysis"
+  method: "Daily EOD and weekly market regime review"
+validation_rules:
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+version: 1
+validation_errors:
+  - "market.index_eod.average_return is not approved"

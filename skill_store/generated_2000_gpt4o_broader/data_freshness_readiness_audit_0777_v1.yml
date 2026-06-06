@@ -1,0 +1,63 @@
+id: "data_freshness_readiness_audit_0777_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0777"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: pre market; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for pre market: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Ensure sources' freshness aligns with thresholds in input_patterns and assess sector-relative performance."
+sql_templates:
+  freshness_check: "SELECT MAX(trade_date) AS last_date FROM market.index_eod WHERE index_symbol = 'NIFTY';"
+  sector_relative_comparison: "WITH latest AS (SELECT sector, MAX(snapshot_date) AS last_snapshot FROM scores.stage_snapshots GROUP BY sector) SELECT s.sector, s.snapshot_date, s.tech_score FROM scores.stage_snapshots s JOIN latest l ON s.sector = l.sector AND s.snapshot_date = l.last_snapshot WHERE s.tech_score IS NOT NULL;"
+python_tools:
+  -
+    id: "freshness_analysis_tool_01"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "last_date"
+      - "threshold_date"
+    outputs:
+      - "is_fresh"
+    approved_tables:
+      - "market.index_eod"
+    code: "def run(context):\n    return context['last_date'] >= context['threshold_date']"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "All dates must be within acceptable thresholds as specified by input_patterns."
+  - "No missing data for relevant sectors pre-market."
+  - "Verification must be based on approved schema columns."
+synthesis_guidance: "Focus on critical sectors showing lag and recommend immediate verification actions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:37"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.last_date is not approved"
+  - "scores.stage_snapshots.tech_score is not approved"

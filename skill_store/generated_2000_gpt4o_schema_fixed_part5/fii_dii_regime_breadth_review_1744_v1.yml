@@ -1,0 +1,56 @@
+id: "fii_dii_regime_breadth_review_1744_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1744"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: last 3 months; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for last 3 months: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    description: "Identify market risk-on or risk-off context by reviewing FII/DII flows, market regime, breadth indicators, and index confirmations. Create a linked QA checklist to evaluate these components over the last 3 months."
+sql_templates:
+  -
+    name: "evaluate_market_conditions"
+    template: "SELECT f.trade_date, f.fii_net_today, f.dii_net_today, f.flow_signal, r.regime, r.confidence, b.net_ad, b.ad_signal, i.trend_signal, i.trading_signal\nFROM signals.fii_dii_flows f\nJOIN signals.regime_history r ON f.trade_date = r.trade_date\nJOIN breadth.market_daily b ON f.trade_date = b.trade_date\nJOIN market.index_eod i ON f.trade_date = i.trade_date\nWHERE f.trade_date >= CURRENT_DATE - INTERVAL '3 months'\nAND i.index_symbol = 'Nifty 50'\nORDER BY f.trade_date DESC;\n"
+    note: "Evaluates FII/DII flows, market regime, breadth, and index action over the last 3 months."
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Check FII/DII net flows are trending similarly to the regime context."
+  - "Ensure breadth indicators and index signals confirm regime and flow signals."
+  - "Flag any divergences between flows, breadth, and index confirmations."
+synthesis_guidance: "['Compile findings into a structured QA checklist format.', 'Highlight key indicators of risk-on or risk-off environments.', 'Provide clear watchlist recommendations based on synthesized evidence.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:29"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

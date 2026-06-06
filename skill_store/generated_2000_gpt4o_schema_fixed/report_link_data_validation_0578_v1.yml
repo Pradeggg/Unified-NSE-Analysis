@@ -1,0 +1,58 @@
+id: "report_link_data_validation_0578_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0578"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for pre market: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "SELECT * FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+sql_templates:
+  -
+    template: "SELECT R.run_id, R.run_ts, F.symbol, F.current_price, F.recommendation FROM report.enhanced_runs R JOIN report.enhanced_filtered_stocks F ON R.run_id = F.run_id WHERE R.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+    input_parameters:
+
+    output_fields:
+      - "run_id"
+      - "run_ts"
+      - "symbol"
+      - "current_price"
+      - "recommendation"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "required_fields"
+  - "sql_syntax"
+  - "latest_date_filter"
+synthesis_guidance: "Generate a summary of the validation process focusing on findings related to broken or missing data links in the position-sizing context for pre-market hours."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:25:29"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

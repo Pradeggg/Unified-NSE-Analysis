@@ -1,0 +1,52 @@
+id: "sector_breadth_rotation_watchlist_0139_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0139"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for last 20 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as narrative plus evidence"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze sector breadth and stage migration using a combination of SQL queries and possible Python tools for complex operations. Ensure read-only data handling."
+sql_templates:
+  - "SELECT sector, AVG(pct_above_50dma) AS avg_pct_above_50dma, AVG(change_5d) AS avg_change_5d FROM breadth.sector_daily WHERE snapshot_date > CURRENT_DATE - INTERVAL '20 days' GROUP BY sector ORDER BY avg_pct_above_50dma DESC;"
+  - "SELECT sector, AVG(stage2_pct) AS avg_stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date > CURRENT_DATE - INTERVAL '20 days' GROUP BY sector ORDER BY avg_stage2_pct DESC;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure SQL adheres to given structure and is read-only."
+  - "All SQL queries must use approved tables and columns."
+  - "Output must align with the given output contract."
+synthesis_guidance: "Prioritize sectors with high average percentage above 50DMA and strong stage 2 participation. Provide supporting evidence using breadth and stage snapshots. Narrate findings contextually to assist trading strategies."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:46"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.avg_stage2_pct is not approved"
+  - "breadth.ma_pct_above.sector is not approved"
+  - "breadth.sector_daily.avg_change_5d is not approved"
+  - "breadth.sector_daily.avg_pct_above_50dma is not approved"

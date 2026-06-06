@@ -1,0 +1,51 @@
+id: "portfolio_lab_paper_trading_review_0040_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0040"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: TradingView export; timeframe: last 20 sessions; response style: concise table."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "TradingView export for last 20 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as concise table"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "info: Use SQL to extract paper trading activities and present findings in a readable table format."
+sql_templates:
+  paper_trading_summary: "SELECT s.symbol, s.date_issued, s.signal, s.entry_low, s.entry_high, s.stop_loss, s.target_1, s.target_2, e.close AS latest_close FROM signals.signal_log s JOIN market.equity_eod e ON s.symbol = e.symbol WHERE s.date_issued >= (CURRENT_DATE - INTERVAL '20 days') AND e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) ORDER BY s.date_issued DESC, s.symbol LIMIT 20;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure selected data is limited to the last 20 sessions."
+  - "Verify that output includes signals and latest market data."
+synthesis_guidance: "Combine extracted signals with market data to show entry, exit, stop, and target prices clearly and concisely in a table."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

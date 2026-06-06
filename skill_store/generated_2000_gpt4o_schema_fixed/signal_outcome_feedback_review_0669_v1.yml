@@ -1,0 +1,83 @@
+id: "signal_outcome_feedback_review_0669_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0669"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: post results; response style: debug trace."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for post results: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as debug trace"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "post_results"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  inputs:
+    - "Review signal logs to analyze target and stop hit outcomes."
+  outputs:
+    - "summary of outcomes"
+    - "recognition of winning patterns"
+    - "identification of failure patterns"
+    - "routes for improvement"
+    - "recommended next checks"
+  steps:
+    - "Fetch resolved signals and join with stage snapshots."
+    - "Analyze signal outcomes and categorize into successes and failures."
+    - "Identify patterns based on stage and price context."
+sql_templates:
+  signal_outcome_analysis:
+    type: "SELECT"
+    template: "SELECT sl.symbol, sl.date_issued, sl.signal, sl.hit_target, sl.hit_stop, ss.stage, sl.return_pct FROM signals.signal_log sl JOIN scores.stage_snapshots ss ON sl.symbol = ss.symbol WHERE sl.date_resolved IS NOT NULL AND sl.return_pct IS NOT NULL ORDER BY sl.date_issued DESC LIMIT 100"
+python_tools:
+  -
+    id: "outcome_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+    required_function: "run(context)"
+    inputs:
+      context: "Dataset containing historical signal resolutions and related stage snapshots."
+    outputs:
+      summary: "Compact summary of outcomes."
+      patterns: "Extraction of dominant winning and losing patterns."
+      recommendations: "Actionable insights for improving signal-generation models."
+    code: "def run(context): pass"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Check all joins to ensure correct alignment of signals with stage snapshots."
+  - "Validate that summary includes hit target and stop information."
+  - "Confirm coverage of both winner and failure patterns in the outputs."
+synthesis_guidance: "['Analyze recurring success patterns related to specific stages or market conditions.', 'Identify frequent causes of failures to propose actionable improvements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:30"
+generation_model: "gpt-4o"
+validation_errors:
+  - "outcome_analysis_tool: inputs must be a list"
+  - "outcome_analysis_tool: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "outcome_analysis_tool: inputs must be a list"
+    - "outcome_analysis_tool: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

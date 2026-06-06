@@ -1,0 +1,67 @@
+id: "insider_bulk_deal_signal_review_1340_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1340"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: last 20 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for last 20 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as exceptions and gaps first"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  evidence_query_sequence:
+    -
+      id: "bulk_deal_context_query"
+      explanation: "Retrieve bulk deals from the last 20 days."
+      sql_template: "SELECT * FROM signals.bulk_block_deals WHERE deal_date >= (CURRENT_DATE - INTERVAL '20 days');"
+    -
+      id: "stage_snapshot_query"
+      explanation: "Get latest stage snapshots for technical analysis."
+      sql_template: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    -
+      id: "insider_alerts_query"
+      explanation: "Find insider alerts correlating with bulk deals."
+      sql_template: "SELECT * FROM signals.insider_alerts WHERE alert_date >= (CURRENT_DATE - INTERVAL '20 days');"
+  termination_criteria:
+    - "Successful execution of all evidence queries"
+  notes:
+    - "Ensure the queries respect the latest date constraints and return results matching the last 20 sessions as specified."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all SQL templates use validated columns and adhere to approved schema."
+  - "Verify evidence queries provide complete data coverage for required outcomes."
+synthesis_guidance: "['Combine insider alerts and bulk deal activities to assess market movements.', 'Provide insights into accumulation or distribution patterns based on technical confirmations.', 'Emphasize any exceptions or gaps discovered during analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

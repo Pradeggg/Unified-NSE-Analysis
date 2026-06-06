@@ -1,0 +1,71 @@
+id: "market_3m_rotation_swing_0065_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0065"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: post results; response style: concise table."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "post_results"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  description: "Identify market regimes, sector leadership, and stage 2 swing candidates with potential risks."
+  steps:
+    - "Analyze index performance over the last 3 months to determine regime shifts."
+    - "Identify sector rotations from index and equity data."
+    - "Evaluate Stage 2 leadership using approved scores tables."
+    - "Assess liquid swing candidates using VCP analysis."
+    - "Conduct a risk-first review post-earnings season."
+sql_templates:
+  -
+    template_name: "index_performance_analysis"
+    description: "Assess index performance over the last 3 months."
+    query: "SELECT index_symbol, AVG(change_pct) as avg_change_pct FROM market.index_eod WHERE trade_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) GROUP BY index_symbol;"
+  -
+    template_name: "sector_performance"
+    description: "Evaluate sector performance."
+    query: "SELECT sector, AVG(change_1m_pct) as avg_1m_change_pct FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) GROUP BY sector;"
+  -
+    template_name: "stage2_candidates"
+    description: "Identify Stage 2 candidates."
+    query: "SELECT symbol, stage_score FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH);"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all data is from the last 3 months."
+  - "Confirm swing candidates are in Stage 2."
+  - "Leading sectors must show significant rotation."
+synthesis_guidance: "Focus on concise representation of market trends and leadership transitions. Prioritize actionable insights from data."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:41:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_change_pct is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage_snapshots.avg_1m_change_pct is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"

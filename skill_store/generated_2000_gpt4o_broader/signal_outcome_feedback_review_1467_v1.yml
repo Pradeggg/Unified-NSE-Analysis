@@ -1,0 +1,57 @@
+id: "signal_outcome_feedback_review_1467_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1467"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for post results: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as portfolio-aware output"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  plan: "Analyze signal outcomes against target or stop hits. Compare sector performance post results. Provide portfolio-aware insights."
+sql_templates:
+  -
+    description: "Select signals hitting target or stop."
+    template: "SELECT id, date_issued, symbol, sector, company, signal, price_at_issue, entry_low, entry_high, stop_loss, target_1, target_2, date_resolved, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE hit_target = TRUE OR hit_stop = TRUE;"
+  -
+    description: "Compare performance with sector averages."
+    template: "WITH sector_performance AS (SELECT sector, AVG(return_pct) AS avg_return FROM signals.signal_log WHERE date_resolved IS NOT NULL GROUP BY sector) SELECT s.symbol, s.company, s.sector, s.return_pct, sp.avg_return FROM signals.signal_log AS s JOIN sector_performance AS sp ON s.sector = sp.sector WHERE s.date_resolved IS NOT NULL;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure data provided aligns with approved schema."
+  - "SQL queries must remain read-only and safe."
+  - "Output must contextualize signal outcomes in a sector-relative manner."
+synthesis_guidance: "{'instruction': 'Generate insights based on post-result sector comparison and signal outcome tracking.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:30"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

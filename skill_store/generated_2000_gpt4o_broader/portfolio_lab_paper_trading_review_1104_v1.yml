@@ -1,0 +1,66 @@
+id: "portfolio_lab_paper_trading_review_1104_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1104"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: today; response style: narrative plus evidence."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for today: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "today"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  strategy_state: null
+  open_trades: null
+  entry_exit_rules: null
+  exposure: null
+  exceptions: null
+sql_templates:
+  strategy_state:
+    template: "SELECT symbol, signal, price_at_issue, target_1, stop_loss FROM signals.signal_log WHERE date_issued = CURRENT_DATE AND regime_at_issue = 'paper_trading';"
+    notes: "Gather current day signals for paper trading strategies."
+  open_trades:
+    template: "SELECT symbol, qty, avg_cost FROM portfolio.holdings WHERE buy_date <= CURRENT_DATE;"
+    notes: "List all open trades as of today."
+  entry_exit_rules:
+    template: "SELECT symbol, entry_low, entry_high, stop_loss, target_1 FROM signals.signal_log WHERE date_issued <= CURRENT_DATE AND date_resolved IS NULL;"
+    notes: "Review entry and exit rules for unresolved trades."
+  exposure:
+    template: "WITH exposure_calc AS (SELECT symbol, SUM(qty * avg_cost) AS total_exposure FROM portfolio.holdings GROUP BY symbol) SELECT symbol, total_exposure FROM exposure_calc;"
+    notes: "Calculate exposure based on current holdings."
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "status"
+synthesis_guidance: "{'style': 'narrative_plus_evidence', 'focus': 'Create a comprehensive overview of paper trading strategies utilizing distinct signals, holdings context, and market behavior.', 'gaps': 'evidence_gaps'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:25"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

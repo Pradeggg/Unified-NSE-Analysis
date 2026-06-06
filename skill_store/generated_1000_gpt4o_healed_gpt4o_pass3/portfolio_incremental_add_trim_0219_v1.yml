@@ -1,0 +1,51 @@
+created_at: "2026-06-06T12:43:26"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: latest EOD; response style: ranked candidates."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0219_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for latest EOD: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Retrieve and rank current holdings by stage score for latest EOD."
+    template: "SELECT h.symbol, h.qty, h.avg_cost, s.sector, s.market_cap_cat, s.stage_score, s.trend_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY s.stage_score DESC;"
+status: "validated"
+synthesis_guidance: "['Evaluate based on latest trend and stage scores.', 'Consider diversification across sectors.', 'Balance risk versus reward for actions.']"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "ranked_candidates"
+title: "Portfolio Incremental Add Trim Review Variant 0219"
+tool_plan_template: "Analyze scores and holdings to suggest add/trim actions based on the latest market conditions and portfolio status."
+validation_rules:
+  - "Ensure portfolio state accurately represents current holdings."
+  - "Validate sector exposure distribution."
+  - "Rank add and trim candidates based on stage score."
+version: 1

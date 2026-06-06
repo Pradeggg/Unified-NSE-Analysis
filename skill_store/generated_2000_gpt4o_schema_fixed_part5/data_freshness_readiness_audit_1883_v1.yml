@@ -1,0 +1,73 @@
+id: "data_freshness_readiness_audit_1883_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1883"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for intraday context: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as action watchlist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    description: "Review all required tables and determine the latest available data for each table. Identify any tables where the data is not from the latest trading date. Prepare an action watchlist based on missing or stale data."
+sql_templates:
+  -
+    template_name: "latest_data_check"
+    template: "SELECT 'market.index_eod' AS table_name, MAX(trade_date) AS latest_date FROM market.index_eod UNION ALL SELECT 'market.equity_eod' AS table_name, MAX(trade_date) AS latest_date FROM market.equity_eod UNION ALL SELECT 'scores.stage_snapshots' AS table_name, MAX(snapshot_date) AS latest_date FROM scores.stage_snapshots UNION ALL SELECT 'breadth.market_daily' AS table_name, MAX(trade_date) AS latest_date FROM breadth.market_daily UNION ALL SELECT 'breadth.ma_pct_above' AS table_name, MAX(snapshot_date) AS latest_date FROM breadth.ma_pct_above UNION ALL SELECT 'report.enhanced_runs' AS table_name, MAX(run_ts) AS latest_date FROM report.enhanced_runs;"
+python_tools:
+  -
+    id: "data_freshness_checker"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "latest_dates"
+    outputs:
+      - "freshness_summary"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "breadth.market_daily"
+      - "breadth.ma_pct_above"
+      - "report.enhanced_runs"
+    code: "def run(context): latest_dates = context['latest_dates']; today = '2023-10-10'; freshness_summary = {table: ('Fresh' if latest_date >= today else 'Stale') for table, latest_date in latest_dates.items()}; return freshness_summary"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "{'rule_name': 'check_latest_dates', 'description': 'Ensure that the latest dates for the evidence tables match the most recent trading date.', 'logic': 'Compare the dates from the SQL result with the current date. If any date is older than expected, mark the source as not fresh.'}"
+synthesis_guidance: "['Cross-verify the latest data dates with external market data where available.', 'Provide recommendations for addressing any freshness issues found.', 'Highlight any gaps in the data that could impact analysis quality or decisions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:55"
+generation_model: "gpt-4o"
+validation_errors:
+  - "data_freshness_checker: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "data_freshness_checker: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

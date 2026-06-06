@@ -1,0 +1,68 @@
+created_at: "2026-06-06T12:41:06"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: concise table."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0022_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    return {'snapshot_date': max(snapshot['snapshot_date'] for snapshot in context['scores.stage_snapshots'])}"
+    id: "latest_snapshot_date_tool"
+    inputs:
+
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "snapshot_date"
+sql_templates:
+
+status: "test_failed"
+synthesis_guidance: "['Synthesize data into a concise table showcasing stocks meeting enhanced fundamentals and VCP breakout criteria.', 'Include evidence from latest snapshots.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "concise_table"
+title: "VCP Breakouts With Fundamentals Variant 0022"
+tool_plan_template:
+  sql_templates:
+    -
+      template: "SELECT symbol, company_name, sector, change_1w_pct, stage, enhanced_fund_score, market_cap_cat FROM scores.stage_snapshots WHERE stage = '2' AND enhanced_fund_score >= 70 AND snapshot_date >= (CURRENT_DATE - INTERVAL '5 days')"
+    -
+      template: "SELECT symbol, company_name, price, vcp_score, vcp_breakout_pct FROM scores.stage2_vcp_picks WHERE vcp_score > 80 AND snapshot_date >= (CURRENT_DATE - INTERVAL '5 days')"
+validation_rules:
+  - "Ensure snapshot_date is within the last 5 sessions."
+  - "Filter stocks with strong fundamentals (enhanced_fund_score >= 70)."
+  - "Only include Stage 2 stocks."
+version: 1
+validation_errors:
+  - "latest_snapshot_date_tool: execution failed: KeyError: 'scores.stage_snapshots'"
+review:
+  status: "needs_heal"
+  findings:
+    - "latest_snapshot_date_tool: execution failed: KeyError: 'scores.stage_snapshots'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

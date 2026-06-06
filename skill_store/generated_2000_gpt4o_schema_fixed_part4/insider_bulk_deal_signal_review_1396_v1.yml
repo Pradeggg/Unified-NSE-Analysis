@@ -1,0 +1,80 @@
+id: "insider_bulk_deal_signal_review_1396_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1396"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for weekly review: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as exceptions and gaps first"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    evidence_gaps:
+      - "Technical confirmation alignment with latest market trends"
+sql_templates:
+  -
+    template_id: "latest_insider_alerts"
+    description: "Fetch latest insider alerts."
+    sql: "SELECT * FROM signals.insider_alerts WHERE alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts) LIMIT 100;"
+  -
+    template_id: "latest_bulk_deals"
+    description: "Fetch latest bulk or block deals."
+    sql: "SELECT * FROM signals.bulk_block_deals WHERE deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals) LIMIT 100;"
+  -
+    template_id: "stage_2_signals"
+    description: "Fetch Stage 2 stocks with strong buy signals."
+    sql: "SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 100;"
+python_tools:
+  -
+    id: "calculate_risk_score"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "insider_score"
+      - "trading_signal"
+      - "price_volatility"
+    outputs:
+      - "risk_score"
+    approved_tables:
+      - "signals.insider_alerts"
+      - "scores.stage_snapshots"
+    code: "def run(context): return {'risk_score': context['insider_score'] * 0.2 + (1 - context['trading_signal']) * 0.8}"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure freshness by checking dates within the last week."
+  - "Highlight gaps or inconsistencies in deal values."
+  - "Verify alignment with technical confirmations."
+synthesis_guidance: "Focus on identifying exceptions and gaps first for insider buying, bulk deals, and their technical confirmations. Highlight anomalies and provide context for potential investment opportunities."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:15"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_risk_score: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_risk_score: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

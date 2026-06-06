@@ -1,0 +1,69 @@
+id: "portfolio_lab_paper_trading_review_1412_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1412"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: latest EOD; response style: portfolio-aware output."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for latest EOD: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "latest_EOD"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Analyze paper trading strategies using latest EOD data. Focus on entries, exits, stop losses, and targets. Ensure data isolation from real holdings. Review strategies for institutional insights considering no mix with real portfolio. Produce structured output suitable for portfolio-aware analysis."
+sql_templates:
+  -
+    description: "Fetch latest EOD market data and current strategy signals."
+    query: "WITH latest_markets AS (SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND series = 'EQ'), latest_signals AS (SELECT * FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log)) SELECT lm.symbol, lm.close AS latest_close_price, ls.signal, ls.entry_low, ls.entry_high, ls.stop_loss, ls.target_1, ls.target_2 FROM latest_markets lm JOIN latest_signals ls ON lm.symbol = ls.symbol;"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "result"
+    approved_tables:
+      - "portfolio.holdings"
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "# Implement logic to process the context and return a structured result.\ndef run(context):\n    # Extract and process data from context.\n    # Logic for manipulating and analyzing data here...\n    return result"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "{'ensure_data_integrity': 'Verify that data is separated between paper trading and real holdings.', 'check_timeframe': 'Ensure the focus is on the latest EOD data.'}"
+synthesis_guidance: "Combine paper trading data with the latest market and signal information to produce a comprehensive review. Focus on providing insights that highlight separation from real holdings while ensuring data accuracy and relevance to the latest market conditions."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:21"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

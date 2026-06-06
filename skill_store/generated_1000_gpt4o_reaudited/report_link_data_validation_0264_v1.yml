@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:43:57"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: post results; response style: ranked candidates."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0264_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for post results: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    name: "Fetch Report Run Metadata"
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE analysis_date = ?;"
+  -
+    name: "Fetch Filtered Stocks"
+    template: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = ?;"
+status: "validated"
+synthesis_guidance: "Summarize findings with a focus on identifying broken links and missing data, offering potential solutions and verification steps."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "post_results"
+  - "ranked_candidates"
+title: "Enhanced Report Data Validation Variant 0264"
+tool_plan_template: "Perform analysis using the approved tables and validate the report links, identify broken links, and check for missing data."
+validation_rules:
+  - "Ensure report links are functional"
+  - "Check that report data is complete and accurate"
+  - "Provide ranked candidates for missing data"
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

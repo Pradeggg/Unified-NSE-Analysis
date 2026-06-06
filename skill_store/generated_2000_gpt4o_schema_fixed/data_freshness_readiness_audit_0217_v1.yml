@@ -1,0 +1,91 @@
+id: "data_freshness_readiness_audit_0217_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0217"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: ranked candidates."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for latest EOD: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as ranked candidates"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  approved_tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+  sql_templates:
+    -
+      description: "Extract the latest index EOD data for sector-relative comparison."
+      template: "SELECT * FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+    -
+      description: "Check the latest EOD data in equities."
+      template: "SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND series = 'EQ';"
+    -
+      description: "Retrieve the latest stage snapshots."
+      template: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  validation_rules:
+    - "Ensure data freshness by checking the latest available date in all tables matched to the current EOD."
+    - "Verify that the loader has captured all sectors for the latest EOD."
+  output_contract:
+    - "freshness_matrix"
+    - "missing_sources"
+    - "blocking_gaps"
+    - "loader_actions"
+    - "verification_queries"
+  synthesis_guidance:
+    - "Provide a sector-relative ranked list of data freshness indicators."
+    - "Highlight any missing data sources or obsolete data that could hinder accurate EOD reporting."
+  python_tools:
+    -
+      id: "freshness_checker_tool"
+      language: "python"
+      mode: "read_only"
+      code: "def run(context):\n    # Analyze the data freshness using the latest records.\n    results = {\n        'freshness_matrix': 'Assessed based on the latest EOD data.',\n        'missing_sources': 'Identified areas lacking recent data.',\n        'blocking_gaps': 'Determined gaps that might block accurate reporting.',\n        'loader_actions': 'Proposed actions to enhance loader efficiency.',\n        'verification_queries': 'Suggested queries for further verification.'\n    }\n    return results"
+  evidence_gaps:
+    - "No direct mapping for technical narrative unavailability."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:24"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

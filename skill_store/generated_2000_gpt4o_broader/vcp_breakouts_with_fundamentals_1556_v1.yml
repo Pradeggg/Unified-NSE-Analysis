@@ -1,0 +1,64 @@
+id: "vcp_breakouts_with_fundamentals_1556_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1556"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: quarter to date; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  required_function: "run(context)"
+  language: "python"
+  mode: "read_only"
+  blocked_capabilities:
+    - "network"
+    - "subprocess"
+    - "filesystem_write"
+    - "db_write"
+    - "broker_api"
+  required_fields:
+    - "id"
+    - "language"
+    - "mode"
+    - "inputs"
+    - "outputs"
+    - "approved_tables"
+    - "code"
+sql_templates:
+  -
+    type: "Read-Only"
+    query: "SELECT symbol, company_name, price, market_cap_cat, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE vcp_score > 75 AND enhanced_fund_score > 80 AND vcp_breakout_pct > 5 ORDER BY vcp_score DESC;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "status"
+synthesis_guidance: "{'framework': 'Use evidence from Indian market data; perform analysis within the constraints of a research-only framework.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:50"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.market_cap_cat is not approved"

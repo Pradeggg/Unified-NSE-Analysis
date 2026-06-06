@@ -1,0 +1,53 @@
+id: "corporate_events_results_watchlist_1437_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1437"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for last 20 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  -
+    template_name: "Upcoming Corporate Events with Stage and Results Context"
+    template_sql: "WITH recent_events AS (SELECT symbol, event_type, event_date FROM signals.corporate_events WHERE event_date BETWEEN CURRENT_DATE - INTERVAL '20 days' AND CURRENT_DATE), latest_stages AS (SELECT DISTINCT ON (symbol) symbol, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY')), results_context AS (SELECT symbol, verdict, growth_yoy_revenue_pct, growth_qoq_revenue_pct FROM scores.results_analysis WHERE period_end = (SELECT MAX(period_end) FROM scores.results_analysis) ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC), events_watchlist AS (SELECT rec.symbol, rec.event_type, rec.event_date, ls.stage, rc.verdict, rc.growth_yoy_revenue_pct, rc.growth_qoq_revenue_pct FROM recent_events rec LEFT JOIN latest_stages ls ON rec.symbol = ls.symbol LEFT JOIN results_context rc ON rec.symbol = rc.symbol) SELECT * FROM events_watchlist LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all joins are according to approved schema join rules."
+  - "Use DISTINCT ON (symbol) for fetching the latest result according to approved rules."
+  - "Use LIMIT to constrain result sets as per global SQL rules."
+synthesis_guidance: "['Provide a portfolio-aware summary of findings.', 'Consider sector-relative positioning in the narrative output.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:33"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

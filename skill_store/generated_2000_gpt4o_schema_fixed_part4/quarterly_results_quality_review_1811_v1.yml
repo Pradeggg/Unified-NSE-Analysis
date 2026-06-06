@@ -1,0 +1,59 @@
+id: "quarterly_results_quality_review_1811_v1"
+version: 1
+status: "review_pending"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1811"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for latest EOD: latest quarterly results analysis"
+  - "which companies had strong quarterly results as action watchlist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    evidence_queries:
+      -
+        query_name: "latest_quarterly_results"
+        description: "Fetch the latest quarterly results with growth metrics and margin changes."
+        sql_template: "WITH latest_results AS ( SELECT DISTINCT ON (symbol) * FROM scores.quarterly_results WHERE period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC ) SELECT r.symbol, ra.company_name, ra.industry, r.period_end, ra.verdict, ra.growth_yoy_revenue_pct, ra.growth_qoq_revenue_pct, ra.growth_yoy_pat_pct, ra.growth_qoq_pat_pct, ra.opm_delta_pp, r.opm_pct, ra.eps_yoy_pct, rs.stage, rs.stage_score, rs.trading_signal FROM latest_results r JOIN scores.results_analysis ra ON r.symbol = ra.symbol AND r.period_end = ra.period_end JOIN scores.stage_snapshots rs ON r.symbol = rs.symbol WHERE rs.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ra.verdict = 'beat' ORDER BY rs.stage_score DESC LIMIT 10;"
+sql_templates:
+  -
+    template_name: "fetch_top_results"
+    description: "Retrieve top companies with strong quarterly results."
+    sql: "SELECT symbol, company_name, industry, growth_yoy_revenue_pct, growth_yoy_pat_pct FROM scores.results_analysis WHERE period_end = (SELECT MAX(period_end) FROM scores.results_analysis) AND verdict = 'beat' ORDER BY growth_yoy_revenue_pct DESC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Generate an action watchlist highlighting companies with top growth and margin performance."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

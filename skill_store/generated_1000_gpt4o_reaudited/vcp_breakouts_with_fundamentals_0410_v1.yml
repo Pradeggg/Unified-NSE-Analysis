@@ -1,0 +1,48 @@
+created_at: "2026-06-06T12:46:18"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: today; response style: portfolio-aware output."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0410_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select stocks creating new highs, VCPs, or breakouts with strong fundamentals."
+    template: "WITH target_stocks AS (SELECT s.symbol, s.price, s.enhanced_fund_score, s.market_cap_cat FROM scores.stage2_vcp_picks s WHERE s.vcp_score > 0.75 AND s.enhanced_fund_score > 60) SELECT e.symbol, e.close, e.volume, t.price, t.enhanced_fund_score FROM market.equity_eod e JOIN target_stocks t ON e.symbol = t.symbol WHERE e.trade_date = CURRENT_DATE AND e.close > (0.98 * e.week52_high)"
+status: "test_failed"
+synthesis_guidance: "Interpret results in a portfolio-aware manner; consider liquidity and market cap categories."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "today"
+  - "portfolio-aware_output"
+title: "VCP Breakouts With Fundamentals Variant 0410"
+tool_plan_template: "screening {{....}}"
+validation_rules:
+  - "Ensure stocks have VCP score > 0.75"
+  - "Stocks must have enhanced_fund_score > 60"
+version: 1
+validation_errors:
+  - "scores.stage2_vcp_picks.market_cap_cat is not approved"

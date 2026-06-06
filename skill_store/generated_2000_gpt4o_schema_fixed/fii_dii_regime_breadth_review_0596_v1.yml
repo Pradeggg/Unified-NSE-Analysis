@@ -1,0 +1,56 @@
+id: "fii_dii_regime_breadth_review_0596_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0596"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as research-only summary"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Generate a weekly market analysis summary by examining FII and DII flows, market regime, and market breadth."
+sql_templates:
+  -
+    name: "flow_regime_breadth_analysis"
+    sql: "SELECT\n  f.trade_date,\n  f.fii_net_5d,\n  f.dii_net_5d,\n  r.regime,\n  b.advances,\n  b.declines,\n  i.close AS index_close\nFROM\n  signals.fii_dii_flows AS f\nJOIN\n  signals.regime_history AS r ON f.trade_date = r.trade_date\nJOIN\n  breadth.market_daily AS b ON f.trade_date = b.trade_date\nJOIN\n  market.index_eod AS i ON f.trade_date = i.trade_date\nWHERE\n  i.index_symbol = 'NIFTY 50'\n  AND f.trade_date >= CURRENT_DATE - INTERVAL '1 week'\nORDER BY\n  f.trade_date DESC;"
+    purpose: "Analyze recent FII/DII flows, market regime, and breadth to evaluate the current market context."
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+synthesis_guidance: "Summarize the evidence to provide a weekly assessment of whether the market is in risk-on or risk-off mode."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:25:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

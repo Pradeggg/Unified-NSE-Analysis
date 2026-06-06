@@ -1,0 +1,75 @@
+id: "insider_bulk_deal_signal_review_0192_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0192"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: weekly review; response style: narrative plus evidence."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for weekly review: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as narrative plus evidence"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  required_function: "run(context)"
+  language: "python"
+  mode: "read_only"
+  blocked_capabilities:
+    - "network"
+    - "subprocess"
+    - "filesystem_write"
+    - "db_write"
+    - "broker_api"
+  required_fields:
+    - "id"
+    - "language"
+    - "mode"
+    - "inputs"
+    - "outputs"
+    - "approved_tables"
+    - "code"
+sql_templates:
+  -
+    name: "get_insider_alerts"
+    sql: "SELECT * FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '7 days';"
+  -
+    name: "get_bulk_deals"
+    sql: "SELECT * FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '7 days';"
+  -
+    name: "get_technical_scores"
+    sql: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE - INTERVAL '1 day';"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Check for presence of insider alerts and bulk deals in the last 7 days."
+  - "Ensure technical confirmation aligns with deal summaries."
+synthesis_guidance: "['Combine technical confirmations with insider and bulk deal evidence to create a narrative.', 'Highlight high conviction accumulation candidates based on insider scores.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

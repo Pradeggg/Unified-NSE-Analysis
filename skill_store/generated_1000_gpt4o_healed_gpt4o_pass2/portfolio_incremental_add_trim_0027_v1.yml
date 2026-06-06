@@ -1,0 +1,169 @@
+card:
+  created_at: "2026-06-06T12:41:06"
+  created_by: "llm_generated"
+  description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: concise table."
+  domain: "portfolio_review"
+  evidence_required:
+    tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+  generation_model: "gpt-4o"
+  id: "portfolio_incremental_add_trim_0027_v1"
+  input_patterns:
+    - "should we add incrementally or reduce exposure"
+    - "portfolio position sizing by sector and stock"
+    - "review holdings for add trim decisions"
+    - "sector-relative comparison for last 5 sessions: should we add incrementally or reduce exposure"
+    - "review holdings for add trim decisions as concise table"
+  output_contract:
+    - "portfolio_state"
+    - "sector_exposure"
+    - "add_candidates"
+    - "trim_candidates"
+    - "risk_flags"
+  python_tools:
+    -
+      approved_tables:
+        - "scores.stage_snapshots"
+      code: "# Calculate sector-relative scores based on average performance.\ndef run(context):\n    sector_data = context.get('sector_data', {})\n    if not sector_data:\n        return {'error': 'sector_data not found'}\n    relative_sector_score = {}\n    # Placeholder logic for demonstration purposes\n    for sector, data in sector_data.items():\n        relative_sector_score[sector] = sum(data) / len(data)\n    return {'relative_sector_score': relative_sector_score}"
+      id: "calculate_relativity_scores"
+      inputs:
+        - "sector_data"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "relative_sector_score"
+  review:
+    attempts: 1
+    findings:
+      - "calculate_relativity_scores: execution failed: KeyError: 'sector_data'"
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "generated"
+  sql_templates:
+    -
+      description: "Fetch recent performance data for portfolio holdings."
+      query: "SELECT ss.symbol, ss.company_name, ss.sector, ss.stage, ss.stage_score, ss.change_1d_pct, ss.change_1w_pct, ss.relative_strength, ss.trend_signal FROM scores.stage_snapshots ss JOIN portfolio.holdings ph ON ss.symbol = ph.symbol WHERE ss.snapshot_date >= (CURRENT_DATE - INTERVAL '5 DAY');"
+    -
+      description: "Calculate average performance by sector."
+      query: "WITH sector_performance AS (SELECT ss.sector, AVG(ss.change_1w_pct) AS avg_change_1w_pct FROM scores.stage_snapshots ss WHERE ss.snapshot_date >= (CURRENT_DATE - INTERVAL '5 DAY') GROUP BY ss.sector) SELECT * FROM sector_performance;"
+  status: "generated"
+  synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+  tags:
+    - "portfolio"
+    - "position_sizing"
+    - "sector_exposure"
+    - "add_trim"
+    - "sector-relative_comparison"
+    - "last_5_sessions"
+    - "concise_table"
+  title: "Portfolio Incremental Add Trim Review Variant 0027"
+  tool_plan_template:
+    - "Extract recent performance and technical indicators of current holdings."
+    - "Perform relative sector comparison for the last 5 trading sessions."
+    - "Identify potential add and trim candidates based on analysis."
+  validation_errors:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  validation_rules:
+    - "required_tables_exist"
+    - "sql_is_read_only"
+    - "output_contract_present"
+  version: 1
+created_at: "2026-06-06T12:41:06"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: concise table."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0027_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for last 5 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as concise table"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "# Calculate sector-relative scores based on average performance.\n# Make sure this calculation remains read-only and provides insight without changing data.\ndef run(context):\n    sector_data = context['sector_data']\n    # ... Perform calculations here\n    return {'relative_sector_score': relative_sector_score}"
+    id: "calculate_relativity_scores"
+    inputs:
+      - "sector_data"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "relative_sector_score"
+review:
+  attempts: 3
+  findings:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    description: "Fetch recent performance data for portfolio holdings."
+    query: "SELECT ss.symbol, ss.company_name, ss.sector, ss.stage, ss.stage_score, ss.change_1d_pct, ss.change_1w_pct, ss.relative_strength, ss.trend_signal FROM scores.stage_snapshots ss JOIN portfolio.holdings ph ON ss.symbol = ph.symbol WHERE ss.snapshot_date >= (CURRENT_DATE - INTERVAL '5 DAY');"
+  -
+    description: "Calculate average performance by sector."
+    query: "WITH sector_performance AS (SELECT ss.sector, AVG(ss.change_1w_pct) AS avg_change_1w_pct FROM scores.stage_snapshots ss WHERE ss.snapshot_date >= (CURRENT_DATE - INTERVAL '5 DAY') GROUP BY ss.sector) SELECT * FROM sector_performance;"
+status: "test_failed"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "concise_table"
+title: "Portfolio Incremental Add Trim Review Variant 0027"
+tool_plan_template:
+  - "Extract recent performance and technical indicators of current holdings."
+  - "Perform relative sector comparison for the last 5 trading sessions."
+  - "Identify potential add and trim candidates based on analysis."
+validation_errors:
+  - "description is required"
+  - "domain is required"
+  - "evidence_required is required"
+  - "id is required"
+  - "input_patterns is required"
+  - "output_contract is required"
+  - "tags is required"
+  - "title is required"
+  - "validation_rules is required"
+  - "version is required"
+  - "version must be a positive integer"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+version: 1

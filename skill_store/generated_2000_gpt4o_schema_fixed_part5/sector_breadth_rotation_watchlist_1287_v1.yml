@@ -1,0 +1,73 @@
+id: "sector_breadth_rotation_watchlist_1287_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1287"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for intraday context: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as ranked candidates"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Evaluate sector performance using market breadth metrics, stage participation ratios, and price momentum indicators. Generate a ranked watchlist of sectors and stock symbols ready for TradingView evaluation."
+sql_templates:
+  -
+    name: "sector_breadth_analysis"
+    description: "Analyze and rank sectors based on breadth and stage 2 participation."
+    sql: "WITH latest_breadth AS (SELECT snapshot_date, sector, pct_above_50dma, change_5d, breadth_signal FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)),\nlatest_stage AS (SELECT snapshot_date, sector, AVG(stage2_pct) AS avg_stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.ma_pct_above) GROUP BY snapshot_date, sector)\nSELECT b.sector, b.pct_above_50dma, b.change_5d, b.breadth_signal, s.avg_stage2_pct FROM latest_breadth b JOIN latest_stage s ON b.sector = s.sector ORDER BY s.avg_stage2_pct DESC LIMIT 10;"
+python_tools:
+  -
+    required_function: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_ranks"
+      - "improving_sectors"
+    outputs:
+      - "candidate_symbols"
+      - "tradingview_symbols"
+    approved_tables:
+      - "breadth.sector_daily"
+      - "breadth.ma_pct_above"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Placeholder for any additional Python processing based on sector ranks.\n    return {'candidate_symbols': context['sector_ranks'][:5], 'tradingview_symbols': context['improving_sectors'][:5]}"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure the sectors with the highest stage 2 participation are ranked highest."
+  - "Use parameterized SQL queries with bounded result sets."
+synthesis_guidance: "Combine sector breadth metrics with stage analysis to highlight improving sectors. Generate a list of stock symbols within top-ranked sectors for TradingView integration."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:15"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

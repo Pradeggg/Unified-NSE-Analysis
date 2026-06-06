@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:51:35"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: weekly review; response style: QA checklist."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0795_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    query_name: "fetch_portfolio_holdings"
+    sql: "SELECT h.symbol, h.qty, h.avg_cost, s.price, s.change_1w_pct, s.stage, s.stage_score FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trend_signal = 'Increase';"
+  -
+    query_name: "fetch_risk_flags"
+    sql: "SELECT symbol, technical_score, rsi FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND rsi > 70;"
+status: "validated"
+synthesis_guidance: "Focus on generating insights regarding potential adds or trims based on risk indicators and price performance. Highlight key sectors and stocks for weekly review."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "weekly_review"
+  - "QA_checklist"
+title: "Portfolio Incremental Add Trim Review Variant 0795"
+tool_plan_template: "review-current-holdings"
+validation_rules:
+  - "All SQL queries must be read-only."
+  - "Ensure the output fields match the expected structure."
+version: 1

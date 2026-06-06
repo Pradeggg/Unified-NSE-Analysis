@@ -1,0 +1,70 @@
+id: "data_freshness_readiness_audit_1449_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1449"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for last 3 months: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as portfolio-aware output"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  inputs:
+    thresholds: "data freshness readiness thresholds"
+    validation_period: "last 3 months"
+  outputs:
+    freshness_matrix: "Matrix indicating data freshness across evidence sources"
+    missing_sources: "List of missing or outdated data sources"
+    blocking_gaps: "Critical gaps blocking data quality assurance"
+    loader_actions: "Recommended actions for data loader adjustments"
+    verification_queries: "Queries for validation of data ingestion and freshness"
+  plan:
+    - "Review data freshness readiness thresholds."
+    - "Assess the freshness and completeness of each table over the last 3 months."
+    - "Identify gaps and potential risks in data coverage."
+    - "Explore loader logs for potential failures or delays."
+    - "Compile a portfolio-aware output summarizing findings."
+sql_templates:
+  -
+    type: "SELECT"
+    template: "SELECT trade_date, COUNT(*) AS record_count FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY trade_date ORDER BY trade_date DESC"
+  -
+    type: "SELECT"
+    template: "SELECT snapshot_date, COUNT(*) as record_count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY snapshot_date ORDER BY snapshot_date DESC"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure data freshness is within agreed thresholds."
+  - "Portfolio-aware output must acknowledge potential impacts on market analytics."
+synthesis_guidance: "['Summarize data freshness insights with a focus on portfolio implications.', 'Identify and suggest actions to mitigate gaps in data readiness.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:18"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.record_count is not approved"
+  - "scores.stage_snapshots.record_count is not approved"

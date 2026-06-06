@@ -1,0 +1,72 @@
+id: "report_link_data_validation_1824_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1824"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  mode: "read_only"
+  join_rules:
+    -
+      left_table: "report.enhanced_runs"
+      left_column: "run_id"
+      right_table: "report.enhanced_filtered_stocks"
+      right_column: "run_id"
+      condition: "report.enhanced_runs.run_id = report.enhanced_filtered_stocks.run_id"
+  sql_templates:
+    -
+      name: "select_latest_run_data"
+      sql: "SELECT ers.run_id, ers.run_ts, ers.analysis_date, efs.symbol, efs.score, efs.recommendation FROM report.enhanced_runs AS ers JOIN report.enhanced_filtered_stocks AS efs ON ers.run_id = efs.run_id WHERE ers.run_ts >= CURRENT_DATE - INTERVAL '5 days';"
+  output_contract:
+    - "findings"
+    - "broken_links"
+    - "missing_data"
+    - "remediation"
+    - "verification"
+  validation_rules:
+    - "Ensure report IDs match between tables."
+    - "Verify timestamps are within the last 5 sessions."
+  synthesis_guidance:
+    goal: "Generate insights into broken/missing links and data issues for action watchlists."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

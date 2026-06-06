@@ -1,0 +1,69 @@
+id: "quarterly_results_quality_review_1181_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1181"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: intraday context; response style: narrative plus evidence."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for intraday context: latest quarterly results analysis"
+  - "which companies had strong quarterly results as narrative plus evidence"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "intraday_context"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  sql_templates:
+    -
+      description: "Retrieve symbols with the latest quarterly results and their performance metrics."
+      template: "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.period_label, qr.revenue, ra. growth_yoy_revenue_pct, ra.growth_yoy_pat_pct, ra.opm_delta_pp, ra.pl_commentary, ra.verdict FROM scores.quarterly_results qr INNER JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end WHERE qr.period_type = 'quarter' ORDER BY qr.symbol, qr.period_end DESC NULLS LAST, qr.fetched_at DESC LIMIT 10;"
+    -
+      description: "Analyze margin movements and verdicts."
+      template: "SELECT symbol, opm_delta_pp, verdict FROM scores.results_analysis WHERE period_end = (SELECT MAX(period_end) FROM scores.results_analysis) AND verdict IN ('beat', 'miss', 'inline') ORDER BY opm_delta_pp DESC LIMIT 5;"
+  python_tools:
+    -
+      id: "analyze_trends_readonly"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "growth_yoy_revenue_pct"
+        - "growth_yoy_pat_pct"
+        - "opm_delta_pp"
+      outputs:
+        - "trend_summary"
+      approved_tables:
+        - "scores.results_analysis"
+      code: "def run(context):\n    result = []\n    for row in context['scores.results_analysis']:\n        trend = {'symbol': row['symbol'], 'trend_summary': ''}\n        if row['growth_yoy_revenue_pct'] > 20 and row['growth_yoy_pat_pct'] > 20:\n            trend['trend_summary'] = 'Strong growth in both revenue and PAT'\n        elif row['opm_delta_pp'] > 0:\n            trend['trend_summary'] = 'Improving operating margins'\n        result.append(trend)\n    return result"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'guidelines': ['Synthesize results as a narrative with supporting evidence.', \"Highlight key factors driving the quarter's performance.\", 'Identify potential risks or anomalies in results.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:56:15"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

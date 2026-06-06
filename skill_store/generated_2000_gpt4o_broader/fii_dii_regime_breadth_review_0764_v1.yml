@@ -1,0 +1,55 @@
+id: "fii_dii_regime_breadth_review_0764_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0764"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: post results; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for post results: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "post_results"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+
+sql_templates:
+  fii_dii_flows_query: "SELECT trade_date, fii_net_today, dii_net_today, fii_trend, dii_trend, flow_signal FROM signals.fii_dii_flows ORDER BY trade_date DESC LIMIT 1;"
+  regime_history_query: "SELECT trade_date, regime, confidence FROM signals.regime_history ORDER BY trade_date DESC LIMIT 1;"
+  market_breadth_query: "SELECT trade_date, advances, declines, bullish_pct, bearish_pct, ad_signal FROM breadth.market_daily ORDER BY trade_date DESC LIMIT 1;"
+  index_eod_query: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod ORDER BY trade_date DESC LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Utilize approved evidence tables to synthesize a coherent narrative of current market conditions based on FII/DII flows, breadth, regime, and index signals. Provide insights into risk-on or risk-off posture using a QA checklist format."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

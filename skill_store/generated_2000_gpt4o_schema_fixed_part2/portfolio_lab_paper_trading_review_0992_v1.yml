@@ -1,0 +1,59 @@
+id: "portfolio_lab_paper_trading_review_0992_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0992"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: weekly review; response style: comparison matrix."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for weekly review: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as comparison matrix"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review paper trading strategies with focus on entries, exits, stop losses, and targets. Use comparison matrix for a deep institutional weekly review."
+sql_templates:
+  -
+    description: "Retrieve the latest snapshots for Stage 2 signals."
+    template: "SELECT symbol, company_name, stage, price, technical_score, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2';"
+  -
+    description: "Get entry and exit details from signal log."
+    template: "SELECT symbol, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_resolved IS NULL AND signal = 'BUY' LIMIT 100;"
+  -
+    description: "Fetch current holdings and their cost details."
+    template: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all necessary data points are included in the report."
+  - "Verify accurate filtering of Stage 2 signals for analysis."
+synthesis_guidance: "['Compare current strategy states with historical performance.', 'Summarize entry and exit effectiveness in the review matrix.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

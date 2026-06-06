@@ -1,0 +1,68 @@
+id: "report_link_data_validation_0312_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Validate Enhanced Report Links and Data"
+description: "Perform deep institutional review of enhanced report run metadata, filtered stock rows, and source trails for exceptions and data gaps. Focus on the latest End Of Day (EOD)."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for latest EOD"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  python_tools:
+    -
+      id: "validate_data"
+      language: "python"
+      mode: "read_only"
+      approved_tables:
+        - "report.enhanced_runs"
+        - "report.enhanced_filtered_stocks"
+      inputs:
+        - "run_id"
+        - "symbol"
+      outputs:
+        - "exceptions"
+        - "missing_links"
+        - "missing_data"
+      code: "def run(context):\n    findings = []\n    # Validate report link integrity and data presence\n    # Ensure only latest entries are considered, filtering via latest 'run_ts'\n    return findings"
+sql_templates:
+  -
+    purpose: "Retrieve latest report run metadata for validation"
+    template: "SELECT * FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+  -
+    purpose: "Validate filtered stocks data for the latest report run"
+    template: "SELECT * FROM report.enhanced_filtered_stocks WHERE run_id = (SELECT run_id FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 1);"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure report links are functional and data is present."
+  - "Identify any missing links or data gaps and document as exceptions."
+synthesis_guidance: "['Highlight exceptions and data gaps.', 'Provide remediation steps and verification outcomes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:47"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

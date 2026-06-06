@@ -1,0 +1,53 @@
+id: "portfolio_incremental_add_trim_0717_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0717"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: QA checklist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for latest EOD: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Evaluate latest stage snapshots and current holdings to determine potential add/trim actions."
+sql_templates:
+  -
+    template: "SELECT \n    h.symbol, \n    s.company_name, \n    s.sector, \n    s.trading_signal, \n    s.relative_strength, \n    h.qty \nFROM \n    portfolio.holdings h \nJOIN \n    scores.stage_snapshots s ON h.symbol = s.symbol \nWHERE \n    s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) \n    AND s.trading_signal IN ('BUY', 'STRONG_BUY') \nORDER BY \n    s.relative_strength DESC \nLIMIT 10;"
+    description: "Retrieve potential add candidates based on latest trading signals and relative strength."
+  -
+    template: "SELECT \n    h.symbol, \n    s.company_name, \n    s.sector, \n    s.trading_signal, \n    s.relative_strength, \n    h.qty \nFROM \n    portfolio.holdings h \nJOIN \n    scores.stage_snapshots s ON h.symbol = s.symbol \nWHERE \n    s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) \n    AND s.trading_signal = 'SELL' \nORDER BY \n    s.relative_strength ASC \nLIMIT 10;"
+    description: "Identify potential trim candidates based on latest trading signals."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "general"
+  - "limits"
+synthesis_guidance: "['Summarize suggested actions for each sector, pointing out strong add or urgent trim candidates with justifications.', 'Imagine the boardroom discussion and anticipate likely challenges or opportunities.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:35:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

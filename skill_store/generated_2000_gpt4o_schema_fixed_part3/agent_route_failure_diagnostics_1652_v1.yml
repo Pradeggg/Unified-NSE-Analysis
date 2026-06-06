@@ -1,0 +1,74 @@
+id: "agent_route_failure_diagnostics_1652_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1652"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for quarter to date: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as debug trace"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Inspecting route failures and diagnostics with a focus on institutional review. Collecting relevant evidence quarter to date."
+sql_templates:
+  -
+    description: "Check for recent enhanced runs with potential issues."
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered, notes FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months'"
+  -
+    description: "Identify stocks with unusual symbols or missing tool mappings."
+    template: "SELECT efs.symbol, efs.score, efs.recommendation FROM report.enhanced_filtered_stocks efs LEFT JOIN report.enhanced_runs er ON efs.run_id = er.run_id WHERE er.run_ts >= CURRENT_DATE - INTERVAL '3 months' AND efs.recommendation IS NULL"
+  -
+    description: "Examine latest stage snapshot for potential symbol resolution issues."
+    template: "SELECT symbol, stage, trading_signal, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IS NULL"
+python_tools:
+  -
+    id: "diagnostic_insights_generator"
+    language: "python"
+    mode: "read_only"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    inputs:
+      - "recent_run_data"
+      - "symbol_resolution_issues"
+      - "tool_gaps"
+    outputs:
+      - "insights"
+      - "recommendations"
+    code: "\n# Example Python diagnostic tool\n\ndef run(context):\n    recent_runs = context['recent_run_data']\n    symbol_issues = context['symbol_resolution_issues']\n    gaps = context['tool_gaps']\n\n    insights = []\n    for run in recent_runs:\n        if not run['stocks_filtered']:\n            insights.append(\"Run ID {} has filtering issues.\".format(run['run_id']))\n\n    for issue in symbol_issues:\n        insights.append(\"Symbol {} has a potential resolution issue.\".format(issue['symbol']))\n\n    for gap in gaps:\n        insights.append(\"Potential tool gap for symbol {} in run {}.\".format(gap['symbol'], gap['run_id']))\n\n    recommendations = \"Review tool configurations and update symbol mappings as required.\"\n\n    return {'insights': insights, 'recommendations': recommendations}\n"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure that recent enhanced runs have complete data."
+  - "Confirm that tool gaps and missing recommendations are identified."
+synthesis_guidance: "['Combine evidence to form a comprehensive view of potential agent route failures.', 'Provide insights into how these issues can be resolved.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:31"
+generation_model: "gpt-4o"
+validation_errors:
+  - "diagnostic_insights_generator: SQL write operation string is not allowed"
+review:
+  status: "needs_heal"
+  findings:
+    - "diagnostic_insights_generator: SQL write operation string is not allowed"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

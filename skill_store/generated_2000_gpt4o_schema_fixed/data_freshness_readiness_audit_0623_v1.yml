@@ -1,0 +1,49 @@
+id: "data_freshness_readiness_audit_0623_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Adda Freshness Audit Skill Card"
+description: "Evaluates the freshness of Agent Adda evidence sources within the Indian market for various workflows. Focused on daily refreshes over the last five sessions."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "check DB loader freshness"
+  - "missing approved history"
+  - "daily refresh follow-up for last 5 sessions: data freshness readiness thresholds"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+  sql_templates:
+    -
+      description: "Check the latest available trade_date for each table and compare with the current date."
+      template: "SELECT MAX(trade_date) AS latest_trade_date FROM {{table_name}};"
+tool_plan_template: "Assess data readiness by comparing the latest available dates in each table against expected freshness thresholds."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "ensure"
+synthesis_guidance: "Synthesize data freshness insights and recommend actions for stale data sources."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:26:58"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

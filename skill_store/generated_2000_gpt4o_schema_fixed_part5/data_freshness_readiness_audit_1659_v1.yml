@@ -1,0 +1,74 @@
+id: "data_freshness_readiness_audit_1659_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1659"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for quarter to date: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as debug trace"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    description: "Use SQL to verify data freshness across all required tables. Employ a debug trace by checking freshness against the maximum dates in respective tables."
+sql_templates:
+  -
+    description: "Ensure market index EOD data is up-to-date for the quarter."
+    sql: "SELECT MAX(trade_date) FROM market.index_eod WHERE trade_date >= (SELECT DATE_TRUNC('quarter', CURRENT_DATE));"
+  -
+    description: "Verify equity EOD data is current for quarter to date."
+    sql: "SELECT MAX(trade_date) FROM market.equity_eod WHERE trade_date >= (SELECT DATE_TRUNC('quarter', CURRENT_DATE));"
+  -
+    description: "Confirm latest stage snapshots are within the quarter."
+    sql: "SELECT MAX(snapshot_date) FROM scores.stage_snapshots WHERE snapshot_date >= (SELECT DATE_TRUNC('quarter', CURRENT_DATE));"
+  -
+    description: "Check daily market breadth data freshness."
+    sql: "SELECT MAX(trade_date) FROM breadth.market_daily WHERE trade_date >= (SELECT DATE_TRUNC('quarter', CURRENT_DATE));"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure that MAX dates returned from SQL queries are within the current quarter."
+  - "Verify all required tables were checked for data freshness."
+synthesis_guidance: "['Aggregate results into a freshness_matrix.', 'Identify missing_sources if any data is absent or stale.', 'Document blocking_gaps that affect readiness.', 'Provide loader_actions if any loaders require intervention.', 'Detail verification_queries to help trace issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:33"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.date_trunc is not approved"
+  - "market.equity_eod.date_trunc is not approved"
+  - "market.index_eod.date_trunc is not approved"
+  - "scores.stage_snapshots.date_trunc is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "breadth.market_daily.date_trunc is not approved"
+    - "market.equity_eod.date_trunc is not approved"
+    - "market.index_eod.date_trunc is not approved"
+    - "scores.stage_snapshots.date_trunc is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

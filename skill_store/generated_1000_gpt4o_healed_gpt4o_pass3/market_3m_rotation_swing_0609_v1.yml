@@ -1,0 +1,65 @@
+created_at: "2026-06-06T12:50:04"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: today; response style: debug trace."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0609_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  status: "needs_heal"
+  findings:
+    - "market.index_eod.change_pct_avg is not approved"
+    - "scores.stage_snapshots.sector_appearance is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    name: "IndexPerformance"
+    query: "SELECT index_symbol, SUM(change_pct)/COUNT(*) as change_pct_avg FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol;"
+  -
+    name: "SectorLeadership"
+    query: "SELECT sector, COUNT(*) as sector_appearance FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY sector_appearance DESC;"
+  -
+    name: "SwingCandidates"
+    query: "SELECT symbol, company_name, sector, price, rsi FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE ORDER BY vcp_score DESC LIMIT 5;"
+status: "test_failed"
+synthesis_guidance: "Analyze and synthesize index performance, sector leadership data, and identify top swing candidates. Consider using debug traces for source-trail validation and highlight potential risks if gaps exist."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "today"
+  - "debug_trace"
+title: "3M Market Rotation Swing Assessment Variant 0609"
+tool_plan_template: "Assess market regime through recent index trends, determine sector leadership, and identify Stage 2 technical candidates for swing trading. Apply debug traces for source-trail validation."
+validation_errors:
+  - "market.index_eod.change_pct_avg is not approved"
+  - "scores.stage_snapshots.sector_appearance is not approved"
+validation_rules:
+  -
+    - "Ensure all SQL templates use approved tables and columns."
+  -
+    - "Validate that all required fields are populated in generated output."
+version: 1

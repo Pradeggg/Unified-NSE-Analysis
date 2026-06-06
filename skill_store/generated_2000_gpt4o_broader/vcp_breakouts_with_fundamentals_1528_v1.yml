@@ -1,0 +1,66 @@
+id: "vcp_breakouts_with_fundamentals_1528_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1528"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: last 5 sessions; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "select_vcp_breakouts"
+    sql: "WITH recent_vcp AS (SELECT symbol, MAX(snapshot_date) AS recent_date FROM scores.stage2_vcp_picks WHERE vcp_breakout_pct > 5 GROUP BY symbol) SELECT e.symbol, e.close, e.high, e.low, s.enhanced_fund_score, s.financial_strength FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date >= CURRENT_DATE - INTERVAL '5 days' AND e.series = 'EQ' AND s.snapshot_date = recent_vcp.recent_date AND recent_vcp.symbol = e.symbol;"
+python_tools:
+  -
+    id: "calculate_liquidity_filters"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "recent_vcp_data"
+    outputs:
+      - "liquidity_filtered_stocks"
+    approved_tables:
+      - "market.equity_eod"
+    code: "def run(context):\n    # Assuming context['recent_vcp_data'] contains relevant stock details\n    filtered_stocks = []\n    for stock in context['recent_vcp_data']:\n        if stock['volume'] > 100000:  # Hypothetical liquidity condition\n            filtered_stocks.append(stock)\n    return filtered_stocks"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "{'context': 'Research-only summary for Indian market', 'focus': 'Position sizing and VCP breaks over the last 5 sessions.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:09:34"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_liquidity_filters: execution failed: KeyError: 'recent_vcp_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_liquidity_filters: execution failed: KeyError: 'recent_vcp_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

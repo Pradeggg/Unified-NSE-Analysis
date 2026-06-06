@@ -1,0 +1,67 @@
+id: "portfolio_incremental_add_trim_1235_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1235"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for last 20 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Execute a risk-first review using the last 20 sessions. Consider stage scores and fundamental metrics to rank add/trim candidates."
+sql_templates:
+  -
+    name: "Get Recent Performance"
+    query: "SELECT symbol, sector, stage_score, change_1d_pct, change_1w_pct, change_1m_pct FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL '20 days';"
+  -
+    name: "Fetch Portfolio Holdings"
+    query: "SELECT symbol, qty, avg_cost FROM portfolio.holdings;"
+python_tools:
+  -
+    id: "risk_evaluation_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "recent_performance_data"
+      - "portfolio_holdings_data"
+    outputs:
+      - "ranked_add_trim_candidates"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    performance = context[\"recent_performance_data\"]\n    holdings = context[\"portfolio_holdings_data\"]\n    # Logic to evaluate risk and rank candidates\n    ranked_candidates = [] # Placeholder for ranking logic\n    return ranked_candidates"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Snapshot data should be from the last 20 days."
+  - "Rank candidates for incremental add/trim."
+synthesis_guidance: "Rank holdings based on risk and potential. Consider recent performance, stage scores, and portfolio exposure."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:46"
+generation_model: "gpt-4o"
+validation_errors:
+  - "risk_evaluation_tool: execution failed: KeyError: 'recent_performance_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "risk_evaluation_tool: execution failed: KeyError: 'recent_performance_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,69 @@
+id: "market_3m_rotation_swing_0561_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0561"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as research-only summary"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Identify market regime and sector performance"
+    template: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)"
+  -
+    description: "Select Stage 2 leadership and potential swing candidates"
+    template: "SELECT symbol, company_name, sector, stage FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)"
+python_tools:
+  -
+    id: "vcp_risk_assessment_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "recent_trend_data"
+    outputs:
+      - "risk_score"
+      - "risk_summary"
+    approved_tables:
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    # Read-only analysis for VCP risk\n    # context contains 'symbol' and 'recent_trend_data'\n    risk_score = calculate_risk(context['recent_trend_data'])\n    risk_summary = summarize_risk(context['symbol'], risk_score)\n    return {'risk_score': risk_score, 'risk_summary': risk_summary}"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Status must be 'generated'."
+synthesis_guidance: "['Focus on quick market regime summary for the Indian market.', 'Highlight sectors with growing momentum and regime leadership.', 'Identify primary Stage 2 swing candidates with research-only focus.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:58:31"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"

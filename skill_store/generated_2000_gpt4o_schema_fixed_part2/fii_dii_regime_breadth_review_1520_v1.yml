@@ -1,0 +1,48 @@
+id: "fii_dii_regime_breadth_review_1520_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1520"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: latest EOD; response style: research-only summary."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for latest EOD: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as research-only summary"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Combine evidence from institutional flows, market regime, breadth indicators, and index confirmations to evaluate market risk-on or risk-off conditions."
+sql_templates:
+  -
+    name: "select_latest_eod_data"
+    template: "WITH latest_trade_date AS (SELECT MAX(trade_date) AS max_date FROM market.index_eod) SELECT fii.trade_date, fii.fii_net_today, fii.dii_net_today, regime.regime, regime.confidence, breadth.net_ad, breadth.market_sentiment, index_data.close FROM signals.fii_dii_flows fii JOIN signals.regime_history regime ON fii.trade_date = regime.trade_date JOIN breadth.market_daily breadth ON fii.trade_date = breadth.trade_date JOIN market.index_eod index_data ON fii.trade_date = index_data.trade_date WHERE index_data.index_symbol = 'Nifty 50' AND fii.trade_date = (SELECT max_date FROM latest_trade_date);"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure trade_date aligns across all datasets"
+  - "Verify index_symbol filter is correctly applied to 'Nifty 50'"
+synthesis_guidance: "Synthesize data by highlighting the trend and sentiment, explaining risk context using combined parameters such as FII/DII net values, regime confidence, and breadth indicators."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:04"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.market_daily is not approved"

@@ -1,0 +1,68 @@
+id: "signal_outcome_feedback_review_0879_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0879"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for pre market: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as action watchlist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "For a given context, apply source-trail validation using pre market timeframe, considering lessons from signal outcomes."
+sql_templates:
+  -
+    description: "Fetch prior signal outcomes that hit target or stop"
+    sql: "SELECT symbol, date_issued, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '1 month' AND (hit_target = TRUE OR hit_stop = TRUE);"
+  -
+    description: "Fetch latest stage snapshot for performance evaluation"
+    sql: "SELECT symbol, stage, stage_score, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+  -
+    id: "outcome_processing_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "hit_target"
+      - "hit_stop"
+      - "return_pct"
+    outputs:
+      - "outcome_summary"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context):\n    # Process outcomes to create a summary of results\n    successes = [s for s in context if s['hit_target']]\n    failures = [s for s in context if s['hit_stop']]\n    summary = {\n        'total': len(context),\n        'successes': len(successes),\n        'failures': len(failures)\n    }\n    return {'outcome_summary': summary}"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all returned symbols have signal outcomes defined in the signal log."
+  - "Verify that the latest stage snapshot is available for each symbol."
+synthesis_guidance: "Summarize patterns from successfully hit targets and stops, identify potential routes to improve signal strategies, and suggest next checks for action watchlists."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:56"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

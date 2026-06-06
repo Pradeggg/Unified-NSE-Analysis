@@ -1,0 +1,53 @@
+id: "corporate_events_results_watchlist_1507_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1507"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: today; response style: research-only summary."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for today: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as research-only summary"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "today"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  python_tools:
+
+  evidence_gaps:
+
+sql_templates:
+  - "WITH recent_events AS (SELECT symbol, event_type, event_date FROM signals.corporate_events WHERE event_date = CURRENT_DATE), results_analysis AS (SELECT symbol, growth_yoy_revenue_pct FROM scores.results_analysis WHERE period_end = CURRENT_DATE) SELECT re.symbol, re.event_type, re.event_date, ra.growth_yoy_revenue_pct FROM recent_events re LEFT JOIN results_analysis ra ON re.symbol = ra.symbol ORDER BY ra.growth_yoy_revenue_pct DESC"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates must only be read-only SELECT/WITH templates."
+synthesis_guidance: "Focus on capturing today's corporate events with sector-relative metrics for growth, forming a watchlist that highlights impactful stocks."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:09:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

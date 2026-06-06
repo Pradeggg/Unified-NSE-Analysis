@@ -1,0 +1,71 @@
+created_at: "2026-06-06T12:41:35"
+created_by: "llm_generated"
+description: "Deep institutional review focusing on report data validation pre-market, presented as a detailed yet concise table."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "enhanced_report_validation_1001_0072_v1"
+input_patterns:
+  - "broken report links"
+  - "validate report data"
+  - "review for missing stock data in reports"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_runs"
+    code: "def run(context):\n    broken_links = []\n    # Implement logic to validate links\n    # For now, mock result\n    return broken_links"
+    id: "run_link_verification"
+    inputs:
+      - "run_id"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "broken_links"
+sql_templates:
+  -
+    description: "Check for broken report links and missing data in enhanced runs."
+    name: "validate_report_links"
+    template: "SELECT run_id, run_ts, stocks_analyzed FROM report.enhanced_runs WHERE stocks_filtered < stocks_analyzed"
+  -
+    description: "Identify missing stock data in filtered stock reports."
+    name: "check_missing_stock_data"
+    template: "SELECT run_id, symbol, recommendation FROM report.enhanced_filtered_stocks WHERE score IS NULL OR current_price IS NULL"
+status: "test_failed"
+synthesis_guidance: "Compile findings into a concise table format with clear indications of missing or broken elements."
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "pre_market"
+  - "concise_table"
+title: "Enhanced Report Data Validation 1001"
+tool_plan_template:
+  input_parameters:
+    - "run_id"
+  name: "validation_tool"
+  output_parameters:
+    - "findings"
+    - "broken_links"
+    - "missing_data"
+    - "remediation"
+    - "verification"
+validation_rules:
+  - "Ensure run_id is unique and corresponds between tables"
+  - "Verify stocks_analyzed is greater than zero"
+version: 1
+validation_errors:
+  - "run_link_verification: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_link_verification: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,53 @@
+id: "signal_outcome_feedback_review_1257_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1257"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: ranked candidates."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for quarter to date: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as ranked candidates"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Use a read-only SQL template to gather signal outcomes, sector performance, and candidate rankings for the current quarter."
+sql_templates:
+  signal_outcome_summary:
+    query: "WITH latest_signal_data AS (SELECT * FROM signals.signal_log WHERE date_resolved >= CURRENT_DATE - INTERVAL '3 months'), latest_stage_data AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT sl.symbol, sl.sector, sl.signal, sl.outcome, ss.stage FROM latest_signal_data sl JOIN latest_stage_data ss ON sl.symbol = ss.symbol WHERE sl.hit_target = TRUE OR sl.hit_stop = TRUE ORDER BY ss.stage_score DESC LIMIT 10;"
+    annotation: "Fetch the symbols which hit their target or stop within the last quarter, ranked by stage score."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure the SQL only makes use of SELECT statements."
+  - "Apply filters for the latest quarter date range."
+  - "Ensure the data is ranked hierarchically and limited to top candidates."
+synthesis_guidance: "{'description': 'Synthesize the results into valuable insights for future portfolio decisions based on recent signal performance.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

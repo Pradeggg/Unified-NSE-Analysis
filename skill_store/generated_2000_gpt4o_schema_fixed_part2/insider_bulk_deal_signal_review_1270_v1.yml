@@ -1,0 +1,54 @@
+id: "insider_bulk_deal_signal_review_1270_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1270"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: post results; response style: ranked candidates."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for post results: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as ranked candidates"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "candidate_selection"
+    query: "WITH latest_stage AS (SELECT symbol, technical_score, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), insider_candidates AS (SELECT ia.symbol, ia.alert_date, ia.insider_score FROM signals.insider_alerts ia JOIN latest_stage ls ON ia.symbol = ls.symbol WHERE ia.alert_date >= CURRENT_DATE - INTERVAL '3 months' AND ls.stage = 'STAGE_2'), bulk_deal_candidates AS (SELECT bd.symbol, bd.deal_date FROM signals.bulk_block_deals bd JOIN latest_stage ls ON bd.symbol = ls.symbol WHERE bd.deal_date >= CURRENT_DATE - INTERVAL '3 months' AND ls.stage = 'STAGE_2') SELECT DISTINCT on (ic.symbol) ic.symbol, ic.alert_date, ic.insider_score, ls.technical_score FROM insider_candidates ic JOIN bulk_deal_candidates bc ON ic.symbol = bc.symbol JOIN latest_stage ls ON ic.symbol = ls.symbol ORDER BY ic.symbol, ic.alert_date DESC, ls.technical_score DESC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:32"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

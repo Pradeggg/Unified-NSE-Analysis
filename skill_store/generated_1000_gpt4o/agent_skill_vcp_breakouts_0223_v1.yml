@@ -1,0 +1,66 @@
+id: "agent_skill_vcp_breakouts_0223_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0223"
+description: "Identify stocks reaching new highs or showing VCP breakouts with robust fundamentals over the last 5 sessions. This variant emphasizes a comprehensive institutional review, providing a ranked list of candidates."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "vcp_breakout_candidates"
+    query: "WITH latest_vcp AS (SELECT symbol, company_name, sector, price, vcp_score, rankings.rank FROM scores.stage2_vcp_picks WHERE snapshot_date >= current_date - interval '5 days') SELECT e.symbol, e.trade_date, e.high, e.close, s.enhanced_fund_score, s.investment_score FROM market.equity_eod e JOIN latest_vcp s ON e.symbol = s.symbol WHERE e.high = e.week52_high"
+python_tools:
+
+output_contract:
+  -
+    filters:
+      - "Latest 5 sessions"
+      - "Ranked by fundamentals and VCP score"
+  -
+    candidates: "List of symbols with detailed breakout analysis"
+  -
+    tradingview_symbols: "Symbols ready for TradingView integration"
+  -
+    evidence: "Compiled from extracted and processed market and scores data"
+  -
+    risks:
+      - "Limited timeframe analysis"
+      - "Dependent on quality of input data"
+validation_rules:
+  - "Ensure inputs match specified patterns"
+  - "Validate existence of necessary tables and columns"
+synthesis_guidance: "['Focus on integrating both VCP breakout and robust fundamental selection criteria', 'Prioritize ranking by enhanced fundamental score']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:43:29"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table e.close"
+  - "unknown table e.high"
+  - "unknown table e.symbol"
+  - "unknown table e.trade_date"
+  - "unknown table e.week52_high"
+  - "unknown table rankings.rank"
+  - "unknown table s.enhanced_fund_score"
+  - "unknown table s.investment_score"
+  - "unknown table s.symbol"

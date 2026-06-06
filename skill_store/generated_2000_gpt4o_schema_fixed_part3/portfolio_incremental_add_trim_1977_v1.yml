@@ -1,0 +1,68 @@
+id: "portfolio_incremental_add_trim_1977_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1977"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: pre market; response style: comparison matrix."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for pre market: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  python_tool_policy:
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      type: "dict"
+      schema:
+        portfolio_state: "array"
+        sector_exposure: "array"
+    outputs:
+      type: "dict"
+      schema:
+        add_candidates: "array"
+        trim_candidates: "array"
+        risk_flags: "array"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Obtain holdings and latest stage data\n    holdings = context['portfolio_state']\n    latest_stage_data = context['sector_exposure']\n\n    # Simple rules for add or trim candidates\n    add_candidates = []\n    trim_candidates = []\n\n    for holding in holdings:\n        matching_data = next((item for item in latest_stage_data if item['symbol'] == holding['symbol']), None)\n        if matching_data:\n            if matching_data['trading_signal'] in ['BUY', 'STRONG_BUY'] and matching_data['stage'] == 'STAGE_2':\n                add_candidates.append(holding['symbol'])\n            elif matching_data['trading_signal'] == 'SELL':\n                trim_candidates.append(holding['symbol'])\n\n    return {\n        'add_candidates': add_candidates,\n        'trim_candidates': trim_candidates,\n        'risk_flags': []\n    }"
+sql_templates:
+  -
+    template_name: "latest_stage_portfolio"
+    template: "WITH latest_stage AS (\n  SELECT *\n  FROM scores.stage_snapshots\n  WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n)\nSELECT h.symbol, h.qty, h.avg_cost, s.sector, s.trading_signal, s.stage\nFROM portfolio.holdings h\nJOIN latest_stage s ON h.symbol = s.symbol\nLIMIT 100;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure SQL queries use the latest allowed filters."
+  - "Verify Python tools maintain read-only execution."
+synthesis_guidance: "['Incorporate latest sector and trading signals.', 'Emphasize sector-relative comparisons and short timeframes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:45"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

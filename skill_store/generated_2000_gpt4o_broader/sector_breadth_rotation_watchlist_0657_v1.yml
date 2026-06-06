@@ -1,0 +1,57 @@
+id: "sector_breadth_rotation_watchlist_0657_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0657"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for quarter to date: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as debug trace"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Use sector_daily and ma_pct_above for sector breadth analysis. Use stage_snapshots to find stocks in Stage 2. Use equity_eod for latest price and momentum indicators."
+sql_templates:
+  -
+    description: "Fetch sectors ordered by percentage change in 5 days to find improving sectors."
+    query: "SELECT sector, change_5d FROM breadth.sector_daily WHERE snapshot_date = CURRENT_DATE ORDER BY change_5d DESC;"
+  -
+    description: "Select stocks in Stage 2 from stage_snapshots."
+    query: "SELECT symbol, company_name, sector FROM scores.stage_snapshots WHERE stage = '2' AND snapshot_date = CURRENT_DATE AND change_1m_pct > 0;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure SQL queries use only approved tables and columns."
+  - "Validate that evidence_required tables match queries."
+  - "Confirm output aligns with sector-relative comparison for quarter to date."
+synthesis_guidance: "Integrate sector breadth, stage information, and price momentum for creating an actionable watchlist focusing on sectors and stocks in Stage 2 with positive momentum."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:19"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

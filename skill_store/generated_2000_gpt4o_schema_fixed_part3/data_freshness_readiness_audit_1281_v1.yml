@@ -1,0 +1,60 @@
+id: "data_freshness_readiness_audit_1281_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1281"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for intraday context: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as ranked candidates"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  template: "Perform a quick scan on the data sources to identify if they meet the freshness thresholds. Use the evidence required to verify the freshness and identify any gaps."
+sql_templates:
+  -
+    name: "Check Latest Index EOD Freshness"
+    query: "SELECT MAX(trade_date) AS latest_index_date FROM market.index_eod;"
+  -
+    name: "Check Latest Equity EOD Freshness"
+    query: "SELECT MAX(trade_date) AS latest_equity_date FROM market.equity_eod;"
+  -
+    name: "Check Latest Stage Snapshots Freshness"
+    query: "SELECT MAX(snapshot_date) AS latest_stage_date FROM scores.stage_snapshots;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all queries are read-only and match the approved schema."
+  - "Verify that the freshness dates are as recent as necessary based on defined thresholds."
+synthesis_guidance: "['Provide a ranked list of sources based on their freshness.', 'Identify any sources that are blocking further analysis.', 'Suggest loader actions to resolve any identified freshness gaps.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:00"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_equity_date is not approved"
+  - "market.index_eod.latest_index_date is not approved"
+  - "scores.stage_snapshots.latest_stage_date is not approved"

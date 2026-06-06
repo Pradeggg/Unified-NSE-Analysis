@@ -1,0 +1,61 @@
+id: "data_freshness_readiness_audit_0861_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0861"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for post results: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as action watchlist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  - "Verify data freshness using the approved columns and latest date columns from the approved schema."
+  - "Assess any missing data that affects technical narratives."
+sql_templates:
+  -
+    description: "Check for latest data availability in market index EOD."
+    template: "SELECT MAX(trade_date) AS latest_date FROM market.index_eod;"
+  -
+    description: "Check for latest data availability in equity EOD."
+    template: "SELECT MAX(trade_date) AS latest_date FROM market.equity_eod;"
+  -
+    description: "Check latest stage snapshots."
+    template: "SELECT MAX(snapshot_date) AS latest_snapshot FROM scores.stage_snapshots;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Confirm all SQL runs without errors using given schema."
+  - "Verify all dates are within expected thresholds."
+synthesis_guidance: "['Compile findings into a comprehensive action watchlist.', 'Highlight sources with data freshness gaps explicitly.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:42"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_date is not approved"
+  - "market.index_eod.latest_date is not approved"
+  - "scores.stage_snapshots.latest_snapshot is not approved"

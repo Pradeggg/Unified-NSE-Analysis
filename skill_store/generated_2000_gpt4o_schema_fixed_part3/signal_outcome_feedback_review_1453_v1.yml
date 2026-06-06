@@ -1,0 +1,55 @@
+id: "signal_outcome_feedback_review_1453_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1453"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for quarter to date: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as portfolio-aware output"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze the performance of trading signals issued in the current quarter to identify patterns and learn from outcomes. Generate reports on successful signals and recommendations on potential improvements."
+sql_templates:
+  -
+    description: "Fetch signal outcomes for the current quarter."
+    query: "\n            WITH latest_date AS (\n                SELECT MAX(date_resolved) AS max_date\n                FROM signals.signal_log\n            ),\n            quarter_signals AS (\n                SELECT *\n                FROM signals.signal_log\n                WHERE date_resolved BETWEEN (CURRENT_DATE - INTERVAL '3 months') AND (SELECT max_date FROM latest_date)\n            )\n            SELECT \n                symbol, \n                signal, \n                hit_target, \n                hit_stop, \n                return_pct\n            FROM quarter_signals\n            WHERE date_resolved IS NOT NULL;\n            "
+  -
+    description: "Join signal logs with stage snapshots to evaluate current scores."
+    query: "\n            SELECT \n                sl.symbol, \n                sl.signal, \n                sl.return_pct, \n                ss.stage, \n                ss.technical_score, \n                ss.investment_score\n            FROM signals.signal_log sl\n            JOIN scores.stage_snapshots ss ON sl.symbol = ss.symbol\n            WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n            AND sl.date_resolved IS NOT NULL;\n            "
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "date_range"
+  - "symbol_consistency"
+synthesis_guidance: "Emphasize actionable insights from successful signals and lessons from failures, focusing on improving future signal routes and skill selections."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:57"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

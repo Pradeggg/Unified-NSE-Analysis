@@ -1,0 +1,66 @@
+id: "vcp_breakouts_with_fundamentals_0310_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0310"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: today; response style: exceptions and gaps first."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "today"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Generate TradingView CSV export with the identified stocks."
+sql_templates:
+  -
+    name: "vcp_breakout_candidates"
+    query: "SELECT vcp.symbol, vcp.price, vcp.rsi, vcp.relative_strength, vcp.trading_signal, sn.enhanced_fund_score FROM scores.stage2_vcp_picks vcp JOIN scores.stage_snapshots sn ON vcp.symbol = sn.symbol AND sn.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) WHERE vcp.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND vcp.trading_signal IN ('BUY', 'STRONG_BUY') AND vcp.enhanced_fund_score > 70 ORDER BY vcp.vcp_score DESC LIMIT 20;"
+python_tools:
+  -
+    id: "vcp_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "snapshot_date"
+      - "vcp_score"
+    outputs:
+      - "filtered_candidates"
+    approved_tables:
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    latest_date = context['snapshot_date']\n    vcp_score = context['vcp_score']\n    # Implement the logic for filtering candidates\n    filtered_candidates = []  # Pseudocode\n    return filtered_candidates"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure SQL is read-only and uses approved tables/columns only."
+  - "Verify data alignment with the latest-date filters using global rules."
+  - "Limit result sets for efficient data handling."
+synthesis_guidance: "['Identify breakout stocks with VCP criteria and strong fundamentals.', 'Prepare data for TradingView export while highlighting any gaps or exceptions.', 'Clearly label and outline risks associated based on available data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:47"
+generation_model: "gpt-4o"
+validation_errors:
+  - "vcp_analysis_tool: execution failed: KeyError: 'snapshot_date'"
+review:
+  status: "needs_heal"
+  findings:
+    - "vcp_analysis_tool: execution failed: KeyError: 'snapshot_date'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

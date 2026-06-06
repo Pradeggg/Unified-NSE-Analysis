@@ -1,0 +1,102 @@
+id: "report_link_data_validation_1180_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1180"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: pre market; response style: narrative plus evidence."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for pre market: review report links not working"
+  - "validate generated report links and missing data as narrative plus evidence"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "pre_market"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+  tool_plan_template:
+    output_contract:
+      - "findings"
+      - "broken_links"
+      - "missing_data"
+      - "remediation"
+      - "verification"
+  evidence_gaps:
+
+  sql_templates:
+    check_missing_data:
+      query: "SELECT r.run_id, r.run_ts, r.analysis_date, r.stocks_analyzed, f.symbol FROM report.enhanced_runs r LEFT JOIN report.enhanced_filtered_stocks f ON r.run_id = f.run_id WHERE f.symbol IS NULL;"
+      description: "Find runs with missing stock data."
+    verify_report_links:
+      query: "SELECT r.run_id, r.analysis_date, COUNT(f.symbol) AS missing_data_count FROM report.enhanced_runs r LEFT JOIN report.enhanced_filtered_stocks f ON r.run_id = f.run_id WHERE f.symbol IS NULL GROUP BY r.run_id, r.analysis_date;"
+      description: "Check for missing data counts in report links."
+tool_plan_template:
+
+sql_templates:
+
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+
+    outputs:
+
+    approved_tables:
+
+    code: "# Placeholder for Python tool if needed in future implementations."
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "S"
+  - "t"
+  - "a"
+  - "t"
+  - "u"
+  - "s"
+  - " "
+  - "m"
+  - "u"
+  - "s"
+  - "t"
+  - " "
+  - "b"
+  - "e"
+  - " "
+  - "g"
+  - "e"
+  - "n"
+  - "e"
+  - "r"
+  - "a"
+  - "t"
+  - "e"
+  - "d"
+  - "."
+synthesis_guidance: "Use PostgreSQL syntax for readiness, and focus on narrative plus evidence framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:56:11"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run: must define run(context)"
+  - "run: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "run: must define run(context)"
+    - "run: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

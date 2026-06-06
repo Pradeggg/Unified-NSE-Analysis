@@ -1,0 +1,76 @@
+created_at: "2026-06-06T12:41:28"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: concise table."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0057_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 3
+  findings:
+    - "market.index_eod.index_avg_return is not approved"
+    - "market.index_eod.month is not approved"
+    - "scores.stage2_vcp_picks.month is not approved"
+    - "scores.stage_snapshots.avg_rsi is not approved"
+    - "scores.stage_snapshots.month is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    sql: "SELECT index_symbol, AVG(change_pct) as index_avg_return FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL 3 MONTH GROUP BY index_symbol;"
+    template_name: "index_returns"
+  -
+    sql: "SELECT stage, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL 3 MONTH GROUP BY stage;"
+    template_name: "stage_distribution_change"
+  -
+    sql: "SELECT sector, AVG(rsi) as avg_rsi FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL 3 MONTH GROUP BY sector ORDER BY avg_rsi DESC LIMIT 5;"
+    template_name: "leading_sectors"
+  -
+    sql: "SELECT company_name, symbol, sector, trading_signal FROM scores.stage2_vcp_picks WHERE snapshot_date > CURRENT_DATE - INTERVAL 3 MONTH ORDER BY vcp_score DESC LIMIT 10;"
+    template_name: "primary_candidates"
+status: "test_failed"
+synthesis_guidance:
+  - "Combine SQL results to synthesize a concise table reflecting market regime analysis."
+  - "Highlight key sectors and candidates eligible for swing trading consideration."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "concise_table"
+title: "3M Market Rotation Swing Assessment Variant 0057"
+tool_plan_template: "{}"
+validation_errors:
+  - "market.index_eod.index_avg_return is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage2_vcp_picks.month is not approved"
+  - "scores.stage_snapshots.avg_rsi is not approved"
+  - "scores.stage_snapshots.month is not approved"
+validation_rules:
+  - "Ensure index_returns contains valid and current index symbols and their returns."
+  - "Check stage_distribution_change for stage shifts and validate against market trends."
+  - "Confirm leading_sectors reflect recent top-performing sectors by score."
+  - "Verify primary_candidates are suitable for swing trading based on the latest VCP scores."
+version: 1

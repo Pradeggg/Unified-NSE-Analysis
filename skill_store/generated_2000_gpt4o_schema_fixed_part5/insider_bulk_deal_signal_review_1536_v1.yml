@@ -1,0 +1,69 @@
+id: "insider_bulk_deal_signal_review_1536_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1536"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: last 20 sessions; response style: research-only summary."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for last 20 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as research-only summary"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    title: null
+    content: null
+sql_templates:
+  -
+    name: "Fetch Insider Alerts"
+    description: "Retrieve insider alerts and related information for the last 20 sessions."
+    query: "SELECT symbol, entity, qty, value_cr, alert_date FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '20 days';"
+  -
+    name: "Fetch Bulk/Block Deals"
+    description: "Retrieve bulk or block deal information for the last 20 sessions."
+    query: "SELECT symbol, entity, qty, price, deal_date FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '20 days';"
+  -
+    name: "Fetch Latest Stage Snapshots"
+    description: "Get the latest stage data and scores for technical confirmation."
+    query: "SELECT symbol, stage, stage_score, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    name: "Fetch Latest EOD Data"
+    description: "Get the latest EOD data for stock symbols."
+    query: "SELECT symbol, close, volume, delivery_qty FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure insider alerts cover at least the last 20 sessions."
+  - "Validate correctness of bulk and block deal data."
+  - "Check that technical confirmations are using the latest stage snapshot."
+synthesis_guidance: "['Summarize insider and bulk deal activity over the last 20 sessions.', 'Provide a technical confirmation overview using stage snapshots.', 'Highlight notable symbols based on combined insider, bulk deal, and technical data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,56 @@
+id: "vcp_breakouts_with_fundamentals_0394_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0394"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  steps:
+    - "Select latest data from scores.stage2_vcp_picks where snapshot_date is the maximum and order by vcp_score desc."
+    - "Use approved_schema join rules to connect symbol data between scores.stage2_vcp_picks and scores.stage_snapshots."
+    - "Filter for strong enhanced_fund_score, financial_strength, and sales_growth."
+sql_templates:
+  -
+    description: "Fetch latest VCP pick stocks with strong fundamentals."
+    query: "SELECT v.symbol, v.company_name, v.price, v.vcp_score, s.enhanced_fund_score, s.financial_strength, s.sales_growth FROM scores.stage2_vcp_picks v JOIN scores.stage_snapshots s ON v.symbol = s.symbol WHERE v.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY v.vcp_score DESC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure candidates have enhanced_fund_score >= 80."
+  - "Verify VCP candidates are part of series 'EQ'."
+synthesis_guidance: "['Focus first on gaps or exceptional conditions revealed.', 'Summarize key indicators that put candidates in the top quartile.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:54"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

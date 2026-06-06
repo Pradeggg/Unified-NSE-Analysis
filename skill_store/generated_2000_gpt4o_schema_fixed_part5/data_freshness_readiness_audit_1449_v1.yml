@@ -1,0 +1,55 @@
+id: "data_freshness_readiness_audit_1449_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Data Freshness Audit for Agent Adda"
+description: "Assess the freshness of data sources for Agent Adda over the last three months. Focus: ensuring data is fresh enough for daily and report workflows."
+input_patterns:
+  - "check data freshness for last 3 months"
+  - "evaluate current data freshness readiness"
+  - "verify DB loader timelines"
+  - "identify data freshness gaps"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "audit"
+  - "source-validation"
+  - "timeliness"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Generate a matrix of data freshness using provided tables to ensure data is updated as per expected timelines."
+sql_templates:
+  -
+    name: "recent_index_eod_check"
+    template: "SELECT trade_date, index_symbol, close FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 months') ORDER BY trade_date DESC;"
+  -
+    name: "recent_equity_eod_check"
+    template: "SELECT trade_date, symbol, close FROM market.equity_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 months') ORDER BY trade_date DESC;"
+  -
+    name: "recent_snapshots_check"
+    template: "SELECT snapshot_date, symbol, stage FROM scores.stage_snapshots WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '3 months') ORDER BY snapshot_date DESC;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "update_timestamps"
+  - "recommendations"
+validation_rules:
+  - "Ensure data covers the last three months."
+  - "Check for any missing days."
+synthesis_guidance: "['Highlight gaps in data freshness.', 'Provide actionable recommendations to address any identified issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

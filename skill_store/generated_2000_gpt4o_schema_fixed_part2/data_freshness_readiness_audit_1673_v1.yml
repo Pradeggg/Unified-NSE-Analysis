@@ -1,0 +1,62 @@
+id: "data_freshness_readiness_audit_1673_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1673"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: pre market; response style: debug trace."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for pre market: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as debug trace"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Check data freshness by comparing the latest dates across evidence tables. Evaluate any discrepancies or blocking issues."
+sql_templates:
+  -
+    description: "Fetch the latest date from each table to assess freshness."
+    sql:
+      - "SELECT MAX(trade_date) AS latest_trade_date FROM market.index_eod"
+      - "SELECT MAX(trade_date) AS latest_trade_date FROM market.equity_eod"
+      - "SELECT MAX(snapshot_date) AS latest_snapshot_date FROM scores.stage_snapshots"
+      - "SELECT MAX(trade_date) AS latest_trade_date FROM breadth.market_daily"
+      - "SELECT MAX(snapshot_date) AS latest_snapshot_date FROM breadth.ma_pct_above"
+      - "SELECT MAX(run_ts) AS latest_run_ts FROM report.enhanced_runs"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all latest dates are within acceptable thresholds for pre-market readiness."
+  - "Identify and document any missing data sources or historical gaps."
+synthesis_guidance: "Summarize gaps and actions needed to restore data readiness for Agent Adda's Indian market operations."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:49"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.latest_snapshot_date is not approved"
+  - "breadth.market_daily.latest_trade_date is not approved"
+  - "market.equity_eod.latest_trade_date is not approved"
+  - "market.index_eod.latest_trade_date is not approved"
+  - "report.enhanced_runs.latest_run_ts is not approved"
+  - "scores.stage_snapshots.latest_snapshot_date is not approved"

@@ -1,0 +1,64 @@
+id: "report_link_data_validation_1922_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Skill"
+description: "Skill card for validating enhanced report data links and identifying missing entries, focusing on deep institutional review over the last 5 sessions. Provides outcomes in a comparison matrix format."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  methodology: "Analyze report links and stock data over last 5 sessions to validate integrity and highlight discrepancies. Summarize in a comparison matrix."
+sql_templates:
+  - "SELECT run_id, run_ts, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '5 days';"
+  - "SELECT run_id, symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '5 days');"
+python_tools:
+  -
+    id: "data_extraction_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "report_data"
+    outputs:
+      - "clean_data"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Process and clean the report data\n    return {'clean_data': process_data(context['report_data'])}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure report links are clickable and lead to expected data."
+  - "Check for missing data entries in stock records."
+  - "Validate filters applied on stock data against expected standards."
+synthesis_guidance: "['Compile results into a readable matrix highlighting inconsistencies.', 'Emphasize trends and patterns for the institutional review.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:30"
+generation_model: "gpt-4o"
+validation_errors:
+  - "data_extraction_tool: execution failed: NameError: name 'process_data' is not defined"
+review:
+  status: "needs_heal"
+  findings:
+    - "data_extraction_tool: execution failed: NameError: name 'process_data' is not defined"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,80 @@
+id: "signal_outcome_feedback_review_0151_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0151"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: quick scan; timeframe: quarter to date; response style: narrative plus evidence."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for quarter to date: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as narrative plus evidence"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+    run:
+      id: "evaluate_signals"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "signal_data"
+        - "market_data"
+        - "stage_data"
+      outputs:
+        - "outcome_summary"
+        - "winner_patterns"
+        - "failure_patterns"
+        - "route_improvements"
+        - "next_checks"
+      approved_tables:
+        - "signals.signal_log"
+        - "scores.stage_snapshots"
+        - "market.equity_eod"
+      code: "# Example Python code snippet\n# Analyze signal performance using read-only access\ndef run(context):\n  import pandas as pd\n  signal_data = context['signal_data']\n  market_data = context['market_data']\n  stage_data = context['stage_data']\n  # Placeholder logic for performance analysis\n  outcome_summary = {}  # Populate with analysis\n  winner_patterns = []  # Analyze winning trades\n  failure_patterns = []  # Analyze failing trades\n  route_improvements = []  # Suggestions for improvement\n  next_checks = []  # Suggested next checks\n  return outcome_summary, winner_patterns, failure_patterns, route_improvements, next_checks"
+sql_templates:
+  -
+    description: "Get resolved signals hitting target or stop."
+    sql: "SELECT id, symbol, date_issued, price_at_issue, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_resolved IS NOT NULL AND (hit_target = 1 OR hit_stop = 1)"
+  -
+    description: "Get the latest stage snapshot for symbols."
+    sql: "SELECT symbol, stage, technical_score, investment_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+  -
+    description: "Get the latest market data for resolved signals."
+    sql: "SELECT symbol, close, volume FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure that outcome summaries cover at least 80% of resolved signals."
+  - "Winner and failure patterns must provide actionable insights."
+  - "Suggest at least one improvement route."
+  - "Include next steps or checks required for insights validation."
+synthesis_guidance: "['Combine SQL-derived insights with Python analysis.', 'Present outcomes in a narrative format supported by evidence.', 'Emphasize actionable insights and improvements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,58 @@
+id: "fii_dii_regime_breadth_review_1800_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1800"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    steps:
+      - "Check latest market regime, institutional flows, and market breadth data."
+      - "Assess whether the current regime is risk-on or risk-off."
+      - "Analyze institutional flow patterns (FII/DII) over the last 5 days."
+      - "Analyze market breadth indicators, including advances, declines, and TRIN."
+      - "Verify market sentiments and index confirmations through selected indices."
+sql_templates:
+  current_regime_and_flows: "SELECT rh.trade_date, rh.regime, rh.confidence, fii.flow_signal, fii.fii_trend, fii.dii_trend FROM signals.regime_history rh JOIN signals.fii_dii_flows fii ON rh.trade_date = fii.trade_date WHERE rh.trade_date = (SELECT MAX(trade_date) FROM signals.regime_history);"
+  market_breadth: "SELECT md.trade_date, md.advances, md.declines, md.ad_signal, md.trin_signal FROM breadth.market_daily md WHERE md.trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+  index_confirmation: "SELECT eod.trade_date, eod.index_symbol, eod.close, eod.trend_signal, eod.trading_signal FROM market.index_eod eod WHERE eod.trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND eod.index_symbol = 'NIFTY 50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "{'output_format': 'QA checklist', 'response_clarity': 'Clear and concise explanation of risk-on or risk-off context.'}"
+synthesis_guidance: "{'evidence_integration': 'Combine insights from regime, flow, and breadth data to form a coherent narrative.', 'user_friendly_language': 'Ensure explanations are understandable by non-specialists.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:04"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

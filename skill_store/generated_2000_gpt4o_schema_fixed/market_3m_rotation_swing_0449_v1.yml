@@ -1,0 +1,60 @@
+id: "market_3m_rotation_swing_0449_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0449"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "{{ seeds.0.sql_templates }}"
+sql_templates:
+  -
+    description: "Retrieve last 3 months index returns."
+    template: "SELECT index_symbol, SUM(change_pct) AS index_returns FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol;"
+  -
+    description: "Fetch change in stage distribution for the last 3 months."
+    template: "WITH last_three_months AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months') SELECT stage, COUNT(*) AS stage_count FROM last_three_months GROUP BY stage;"
+  -
+    description: "Identify leading sectors in Stage 2 over the last 3 months."
+    template: "SELECT sector, COUNT(*) AS leadership_count FROM scores.stage_snapshots WHERE stage = 'STAGE_2' AND snapshot_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY leadership_count DESC LIMIT 5;"
+  -
+    description: "Select primary swing candidates based on Stage 2 and VCP."
+    template: "SELECT v.symbol, v.company_name, v.price, v.vcp_score FROM scores.stage2_vcp_picks v JOIN scores.stage_snapshots s ON v.symbol = s.symbol WHERE s.stage = 'STAGE_2' AND v.vcp_score > 80 AND v.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY v.vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all symbols in output have been in Stage 2 within the last 3 months."
+  - "Leading sectors must have more than one appearance in stage assessments."
+  - "Primary candidates should reflect high VCP scores and Stage 2 alignment."
+synthesis_guidance: "Use approved SQL templates for data retrieval. Frame portfolio-aware analysis highlighting sector shifts and promising swing candidates."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:44"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.index_returns is not approved"
+  - "scores.stage_snapshots.leadership_count is not approved"

@@ -1,0 +1,53 @@
+id: "signal_outcome_feedback_review_1173_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1173"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: pre market; response style: narrative plus evidence."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for pre market: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as narrative plus evidence"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Select statement for reviewing signal outcomes with contextual scores"
+sql_templates:
+  -
+    template: "SELECT\n    sl.symbol,\n    sl.company,\n    sl.signal,\n    sl.date_issued,\n    sl.date_resolved,\n    sl.price_at_resolution,\n    sl.return_pct,\n    sl.hit_target,\n    sl.hit_stop,\n    st.stage,\n    st.technical_score,\n    st.investment_score\nFROM\n    signals.signal_log sl\nJOIN\n    scores.stage_snapshots st ON sl.symbol = st.symbol\nWHERE\n    sl.date_resolved IS NOT NULL\n    AND sl.date_issued > CURRENT_DATE - INTERVAL '1 month'\nORDER BY\n    sl.date_issued DESC\nLIMIT 100;"
+    description: "Fetches resolved signals from past month showing respective stage and score context."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure outcome summary for each signal is narrative and backed by the SQL result evidence."
+  - "Identify patterns in signals that hit targets and those that hit stops."
+  - "Specify actionable improvements based on signal outcomes."
+synthesis_guidance: "Present findings in a structured feedback loop, emphasizing lessons learned and potential strategies for future signal generation."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:41:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

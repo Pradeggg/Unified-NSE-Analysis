@@ -1,0 +1,54 @@
+id: "vcp_breakouts_with_fundamentals_1626_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1626"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 5 sessions; response style: debug trace."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    description: "VCP screening with enhanced fundamentals over the last 5 sessions. Ensure freshness and strong fundamental scores."
+sql_templates:
+  -
+    name: "latest_vcp_candidates"
+    description: "Select latest VCP candidates with strong fundamentals."
+    query: "WITH latest_vcp AS (\n    SELECT * FROM scores.stage2_vcp_picks \n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)\n    ORDER BY vcp_score DESC, rank ASC\n    LIMIT 100\n),\nlatest_stage AS ( \n    SELECT * FROM scores.stage_snapshots \n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n)\nSELECT v.symbol, v.company_name, v.price, v.change_1w_pct, v.trading_signal, s.enhanced_fund_score\nFROM latest_vcp v\nJOIN latest_stage s ON v.symbol = s.symbol\nWHERE s.trading_signal IN ('BUY', 'STRONG_BUY')\nAND s.enhanced_fund_score > 70;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "{'enforcement': 'Ensure all symbols are from the latest snapshot dates.', 'checks': ['Validate that candidates have enhanced_fund_score > 70.', \"Confirm trading_signal is 'BUY' or 'STRONG_BUY'.\"]}"
+synthesis_guidance: "Emphasize new-high and VCP patterns in the market with higher-quality fundamentals. Audit the freshness for the last 5 sessions using the latest snapshot data."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

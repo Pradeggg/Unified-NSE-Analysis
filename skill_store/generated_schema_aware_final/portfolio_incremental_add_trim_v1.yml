@@ -1,0 +1,74 @@
+id: "portfolio_incremental_add_trim_v1"
+version: 1
+status: "generated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review"
+description: "Research-only Agent Adda Indian market skill to review current portfolio holdings alongside point-in-time stage, technical, fundamental, and composite signals for incremental add or trim discussion."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+  evidence_gaps:
+    - "No approved schema column for user risk profile, investment horizon, target allocation, benchmark weights, realized gains, taxes, liquidity needs, or cash balance."
+    - "No approved schema column for corporate actions, pledged promoter holding, mutual fund ownership changes, FII or DII flows, earnings dates, news events, or analyst estimates."
+    - "No approved schema column for portfolio-level realized or unrealized profit and loss after fees, brokerage, slippage, or taxes."
+    - "No approved schema column for sector classification history beyond the current sector field in scores.stage_snapshots."
+    - "No approved schema column for trade execution constraints such as lot size, bid-ask spread, market depth, or order book liquidity."
+tool_plan_template:
+  -
+    step: "Load current holdings with latest available stage snapshot evidence."
+    sql_template_ref: "current_holdings_latest_snapshot"
+  -
+    step: "Review sector exposure using holding quantity, average cost, latest available live price, and sector evidence."
+    sql_template_ref: "sector_exposure_latest_snapshot"
+  -
+    step: "Identify research candidates for possible incremental addition from existing holdings with stronger stage, trend, technical, fundamental, and investment evidence."
+    sql_template_ref: "add_candidate_evidence"
+  -
+    step: "Identify research candidates for possible trimming or risk reduction from existing holdings with weaker stage, trend, technical, fundamental, or investment evidence."
+    sql_template_ref: "trim_candidate_evidence"
+  -
+    step: "Synthesize portfolio state, sector concentration, add candidates, trim candidates, and risk flags with explicit evidence gaps and research-only framing."
+sql_templates:
+  current_holdings_latest_snapshot:
+    description: "Read-only query for current holdings joined to the latest available stage snapshot."
+    sql: "SELECT portfolio.holdings.symbol, portfolio.holdings.qty, portfolio.holdings.avg_cost, portfolio.holdings.buy_date, scores.stage_snapshots.snapshot_date, scores.stage_snapshots.company_name, scores.stage_snapshots.sector, scores.stage_snapshots.market_cap_cat, scores.stage_snapshots.price, scores.stage_snapshots.live_price, scores.stage_snapshots.price_date, scores.stage_snapshots.change_1d_pct, scores.stage_snapshots.change_1w_pct, scores.stage_snapshots.change_1m_pct, scores.stage_snapshots.stage, scores.stage_snapshots.stage_score, scores.stage_snapshots.technical_score, scores.stage_snapshots.rsi, scores.stage_snapshots.trend_signal, scores.stage_snapshots.trading_signal, scores.stage_snapshots.relative_strength, scores.stage_snapshots.supertrend_state, scores.stage_snapshots.supertrend_value, scores.stage_snapshots.can_slim_score, scores.stage_snapshots.minervini_score, scores.stage_snapshots.fundamental_score, scores.stage_snapshots.enhanced_fund_score, scores.stage_snapshots.earnings_quality, scores.stage_snapshots.sales_growth, scores.stage_snapshots.financial_strength, scores.stage_snapshots.institutional_backing, scores.stage_snapshots.investment_score, scores.stage_snapshots.stance, scores.stage_snapshots.narrative, scores.stage_snapshots.fund_details, scores.stage_snapshots.source_csv FROM portfolio.holdings JOIN scores.stage_snapshots ON portfolio.holdings.symbol = scores.stage_snapshots.symbol WHERE scores.stage_snapshots.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY scores.stage_snapshots.sector, portfolio.holdings.symbol"
+  sector_exposure_latest_snapshot:
+    description: "Read-only query for sector-level exposure from current holdings using approved quantity, average cost, live price, and sector columns."
+    sql: "SELECT scores.stage_snapshots.sector, COUNT(portfolio.holdings.symbol), SUM(portfolio.holdings.qty), SUM(portfolio.holdings.qty * portfolio.holdings.avg_cost), SUM(portfolio.holdings.qty * scores.stage_snapshots.live_price) FROM portfolio.holdings JOIN scores.stage_snapshots ON portfolio.holdings.symbol = scores.stage_snapshots.symbol WHERE scores.stage_snapshots.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY scores.stage_snapshots.sector ORDER BY SUM(portfolio.holdings.qty * scores.stage_snapshots.live_price) DESC"
+  add_candidate_evidence:
+    description: "Read-only query to rank existing holdings by stronger available stage, technical, fundamental, and investment evidence for incremental-add research review."
+    sql: "SELECT portfolio.holdings.symbol, portfolio.holdings.qty, portfolio.holdings.avg_cost, portfolio.holdings.buy_date, scores.stage_snapshots.snapshot_date, scores.stage_snapshots.company_name, scores.stage_snapshots.sector, scores.stage_snapshots.market_cap_cat, scores.stage_snapshots.live_price, scores.stage_snapshots.change_1w_pct, scores.stage_snapshots.change_1m_pct, scores.stage_snapshots.stage, scores.stage_snapshots.stage_score, scores.stage_snapshots.technical_score, scores.stage_snapshots.rsi, scores.stage_snapshots.trend_signal, scores.stage_snapshots.trading_signal, scores.stage_snapshots.relative_strength, scores.stage_snapshots.supertrend_state, scores.stage_snapshots.can_slim_score, scores.stage_snapshots.minervini_score, scores.stage_snapshots.fundamental_score, scores.stage_snapshots.enhanced_fund_score, scores.stage_snapshots.earnings_quality, scores.stage_snapshots.sales_growth, scores.stage_snapshots.financial_strength, scores.stage_snapshots.institutional_backing, scores.stage_snapshots.investment_score, scores.stage_snapshots.stance, scores.stage_snapshots.narrative, scores.stage_snapshots.fund_details FROM portfolio.holdings JOIN scores.stage_snapshots ON portfolio.holdings.symbol = scores.stage_snapshots.symbol WHERE scores.stage_snapshots.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY scores.stage_snapshots.investment_score DESC, scores.stage_snapshots.stage_score DESC, scores.stage_snapshots.technical_score DESC, scores.stage_snapshots.fundamental_score DESC"
+  trim_candidate_evidence:
+    description: "Read-only query to rank existing holdings by weaker available stage, technical, fundamental, and investment evidence for trim or risk-reduction research review."
+    sql: "SELECT portfolio.holdings.symbol, portfolio.holdings.qty, portfolio.holdings.avg_cost, portfolio.holdings.buy_date, scores.stage_snapshots.snapshot_date, scores.stage_snapshots.company_name, scores.stage_snapshots.sector, scores.stage_snapshots.market_cap_cat, scores.stage_snapshots.live_price, scores.stage_snapshots.change_1d_pct, scores.stage_snapshots.change_1w_pct, scores.stage_snapshots.change_1m_pct, scores.stage_snapshots.stage, scores.stage_snapshots.stage_score, scores.stage_snapshots.technical_score, scores.stage_snapshots.rsi, scores.stage_snapshots.trend_signal, scores.stage_snapshots.trading_signal, scores.stage_snapshots.relative_strength, scores.stage_snapshots.supertrend_state, scores.stage_snapshots.can_slim_score, scores.stage_snapshots.minervini_score, scores.stage_snapshots.fundamental_score, scores.stage_snapshots.enhanced_fund_score, scores.stage_snapshots.earnings_quality, scores.stage_snapshots.sales_growth, scores.stage_snapshots.financial_strength, scores.stage_snapshots.institutional_backing, scores.stage_snapshots.investment_score, scores.stage_snapshots.stance, scores.stage_snapshots.narrative, scores.stage_snapshots.fund_details FROM portfolio.holdings JOIN scores.stage_snapshots ON portfolio.holdings.symbol = scores.stage_snapshots.symbol WHERE scores.stage_snapshots.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY scores.stage_snapshots.investment_score ASC, scores.stage_snapshots.stage_score ASC, scores.stage_snapshots.technical_score ASC, scores.stage_snapshots.fundamental_score ASC"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "The card status must remain generated."
+  - "Use only evidence_required.tables for evidence sourcing."
+  - "Use only approved columns from scores.stage_snapshots and portfolio.holdings."
+  - "SQL templates must be read-only and begin with SELECT or WITH."
+  - "Do not include executable Python or execution instructions."
+  - "Do not invent missing concepts such as target allocation, user suitability, taxes, cash balance, or benchmark weights; list them as evidence gaps when relevant."
+  - "Frame all outputs as Indian market research support, not personalized investment advice."
+  - "Do not recommend guaranteed returns, certainty, or immediate execution."
+  - "Do not produce buy, sell, or hold orders; use research language such as possible incremental add candidate, possible trim candidate, watchlist, or risk flag."
+  - "If latest snapshot evidence is unavailable for a holding, mark the holding as an evidence gap rather than inferring signals."
+synthesis_guidance: "{'portfolio_state': 'Summarize each holding with symbol, company_name, sector, market_cap_cat, qty, avg_cost, buy_date, live_price, stage, stage_score, technical_score, fundamental_score, investment_score, stance, and key narrative or fund_details where available.', 'sector_exposure': 'Discuss sector concentration using the sector exposure query. Use quantity, average cost, and latest live price evidence only. Avoid claiming target weights because target allocation is not present in the approved schema.', 'add_candidates': 'Surface existing holdings with relatively stronger investment_score, stage_score, technical_score, fundamental_score, positive trend_signal, supportive trading_signal, relative_strength, and constructive stance. Present as research candidates for incremental review, not as execution advice.', 'trim_candidates': 'Surface existing holdings with weaker investment_score, stage_score, technical_score, fundamental_score, adverse trend_signal or trading_signal, weak relative_strength, deteriorating change_1w_pct or change_1m_pct, or cautionary stance. Present as risk review or possible trim candidates, not as execution advice.', 'risk_flags': 'Flag concentration, weak technical or fundamental scores, poor relative strength, unfavorable supertrend_state, high downside momentum, stale price_date, missing snapshot evidence, or conflicts between technical and fundamental evidence.', 'research_only_disclaimer': 'This skill is for Agent Adda Indian market research and portfolio review support only. It does not provide personalized investment advice, suitability assessment, tax advice, or trade execution recommendations.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:17:16"
+generation_model: "gpt-5.5"

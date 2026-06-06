@@ -1,0 +1,65 @@
+id: "market_3m_rotation_swing_1359_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1359"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as exceptions and gaps first"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze market regime and sector rotation using SQL templates with read-only evidence tools to identify stage 2 leadership and swing candidates. Address evidence gaps first."
+sql_templates:
+  index_returns:
+    template: "WITH latest_index AS ( SELECT index_symbol, close FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) ) SELECT index_symbol, close FROM latest_index;"
+    description: "Retrieve the latest close price for each index."
+  stage_distribution_change:
+    template: "SELECT stage, COUNT(*) AS count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY stage;"
+    description: "Count the number of stocks in each stage over the last 3 months."
+  leading_sectors:
+    template: "SELECT sector, AVG(change_1m_pct) AS avg_monthly_change FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector ORDER BY avg_monthly_change DESC LIMIT 5;"
+    description: "Identify leading sectors based on average monthly change in stage 2 stocks."
+  primary_candidates:
+    template: "SELECT symbol, change_1m_pct, rsi FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 10;"
+    description: "Retrieve top 10 VCP candidates based on the latest VCP score."
+  risks:
+    template: "SELECT symbol, change_1w_pct, relative_strength FROM scores.stage2_vcp_picks WHERE change_1w_pct < 0 ORDER BY relative_strength ASC LIMIT 5;"
+    description: "Identify top 5 risks, focusing on negative one-week changes and weak relative strength."
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure output fields match the contract specification."
+  - "Support exceptions-first analysis."
+synthesis_guidance: "['Synthesize key insights about market regime and sector leadership.', 'Highlight stage 2 leadership and swing candidate potentials.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,54 @@
+id: "fii_dii_regime_breadth_review_0526_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0526"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: last 5 sessions; response style: research-only summary."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for last 5 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as research-only summary"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    type: "SELECT"
+    template: "WITH latest_flows AS ( SELECT trade_date, fii_net_5d, dii_net_5d, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL '5 days' ), latest_regime AS ( SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date >= CURRENT_DATE - INTERVAL '5 days' ), latest_breadth AS ( SELECT trade_date, advances, declines, ad_signal FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '5 days' ), latest_index AS ( SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '5 days' AND index_symbol = 'NIFTY 50' ) SELECT lf.trade_date, lf.fii_net_5d, lf.dii_net_5d, lf.flow_signal, lr.regime, lr.confidence, lb.advances, lb.declines, lb.ad_signal, li.close, li.change_pct, li.trend_signal FROM latest_flows lf JOIN latest_regime lr ON lf.trade_date = lr.trade_date JOIN latest_breadth lb ON lf.trade_date = lb.trade_date JOIN latest_index li ON lf.trade_date = li.trade_date;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data is from the last 5 trading sessions."
+  - "Confirm all evidence tables provide data for the same dates."
+  - "Check consistency across flow, regime, and breadth signals."
+synthesis_guidance: "['Summarize the market context in terms of risk-on or risk-off.', 'Focus on the latest market trends and institutional flows.', 'Provide insights only with approved schema columns.', 'Maintain a research-only perspective, avoiding predictions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:47"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,62 @@
+id: "market_3m_rotation_swing_0673_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0673"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: pre market; response style: debug trace."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  sql_templates:
+    -
+      name: "index_performance"
+      query: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date > DATE_SUB(CURDATE(), INTERVAL 3 MONTH) ORDER BY trade_date DESC"
+    -
+      name: "sector_leadership"
+      query: "SELECT sector, AVG(stage_score) as avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date > DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY sector ORDER BY avg_stage_score DESC"
+    -
+      name: "swing_candidates"
+      query: "SELECT symbol, company_name, price, change_1d_pct FROM scores.stage2_vcp_picks WHERE snapshot_date = CURDATE() ORDER BY vcp_score DESC"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure index_returns includes data for at least 3 indexes."
+  - "leading_sectors must list top 3 sectors by average stage score."
+  - "primary_candidates should contain at least 5 active swing candidates."
+synthesis_guidance: "['Cross-reference sector performance with swing candidate viability.', 'Highlight changes in market regime impacting the next trading session.', 'Identify any evident risks in sector rotations or index trends.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:50:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,63 @@
+id: "sector_breadth_rotation_watchlist_0181_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0181"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: intraday context; response style: narrative plus evidence."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for intraday context: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as narrative plus evidence"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "intraday_context"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  sector_ranks: "Rank sectors by their recent breadth and price performance."
+  improving_sectors: "Identify sectors showing improvement in breadth metrics."
+  candidate_symbols: "Identify stock symbols in improving sectors with favorable stage and technical scores."
+  tradingview_symbols: "Export candidate symbols to TradingView format for quick addition."
+  evidence: "Compile evidence from sector breadth and market data to support the narrative."
+sql_templates:
+  -
+    name: "sector_breadth_ranking"
+    description: "Rank sectors by percentage above 50DMA and 5-day change."
+    query: "SELECT sector, SUM(pct_above_50dma) AS total_breadth, SUM(change_5d) AS total_change FROM breadth.sector_daily GROUP BY sector ORDER BY total_breadth DESC, total_change DESC;"
+  -
+    name: "stage2_participation"
+    description: "Get sectors with highest Stage 2 percentage."
+    query: "SELECT sector, AVG(stage2_pct) AS avg_stage2 FROM breadth.ma_pct_above GROUP BY sector ORDER BY avg_stage2 DESC;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all sector ranks consider breadth and change metrics."
+  - "Cross-verify sector improvement with stage data for stock symbols."
+  - "Export to TradingView format accurately."
+synthesis_guidance: "{'narrative': 'Create a clear narrative linking sector improvement metrics to stock candidates using evidence.', 'evidence_integration': 'Correlate evidence from SQL queries to support observations on sector and symbol performance.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:30"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.avg_stage2 is not approved"
+  - "breadth.ma_pct_above.sector is not approved"
+  - "breadth.sector_daily.total_breadth is not approved"
+  - "breadth.sector_daily.total_change is not approved"

@@ -1,0 +1,51 @@
+id: "agent_adda_data_freshness_001_v1"
+version: 1
+status: "validated"
+domain: "data_validation"
+title: "Quarter-To-Date Freshness Audit"
+description: "Perform a freshness audit on report run metadata and filtered stock rows for enhanced data validation, focusing on quarter-to-date."
+input_patterns:
+  - "check data freshness for quarter-to-date"
+  - "ensure report links are updated"
+  - "validate report data quarter-to-date"
+  - "audit data freshness for current quarter"
+tags:
+  - "data_audit"
+  - "freshness_check"
+  - "quarter_to_date"
+  - "report_validation"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  sql_templates:
+    -
+      template: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+      description: "Fetch quarterly report runs"
+    -
+      template: "SELECT symbol, current_price FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months');"
+      description: "Fetch stock data for quarterly report runs"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure data timeframes align with the current quarter-to-date."
+  - "Check links accessibility and resolve any broken links."
+synthesis_guidance: "Present findings as a concise table illustrating report run details and any issues found in the data."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:41:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

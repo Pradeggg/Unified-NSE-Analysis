@@ -1,0 +1,52 @@
+id: "signal_outcome_feedback_review_1257_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1257"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: ranked candidates."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for quarter to date: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as ranked candidates"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Evaluate signals and performance over the quarter to date, focusing on sector comparisons and outcome understanding to inform next action steps."
+sql_templates:
+  -
+    template_name: "sector_comparison"
+    template: "SELECT symbol, sector, AVG(return_pct) as avg_return FROM signals.signal_log WHERE date_issued >= :quarter_start AND date_resolved <= :quarter_end GROUP BY sector ORDER BY avg_return DESC;"
+  -
+    template_name: "outcome_summary"
+    template: "SELECT symbol, sector, date_issued, date_resolved, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= :quarter_start AND date_resolved <= :quarter_end;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "Verify the usage of approved tables and columns only."
+  - "Match output structure to the defined output_contract."
+synthesis_guidance: "Focus on identifying patterns that emerged from signal outcomes. Emphasize sector-relative performance and highlight actionable insights for improvements."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:15"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.avg_return is not approved"

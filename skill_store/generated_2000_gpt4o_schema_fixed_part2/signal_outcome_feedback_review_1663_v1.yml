@@ -1,0 +1,49 @@
+id: "signal_outcome_feedback_review_1663_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review"
+description: "Evaluation of signal outcomes to improve skill selection and trading routes."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+tags:
+  - "signal_log"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  operation: "SQL Analysis"
+  goal: "Extract and analyze historical signal outcomes and evaluate based on success metrics."
+sql_templates:
+  -
+    statement: "SELECT s.symbol, s.date_issued, s.return_pct, s.hit_target, s.hit_stop, e.close FROM signals.signal_log s JOIN market.equity_eod e ON s.symbol = e.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND (s.hit_target = true OR s.hit_stop = true)"
+    purpose: "Identify signals that hit either their target or stop and analyze their performance."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "ensure_non_empty_results"
+  - "verify_symbol_consistency"
+synthesis_guidance: "{'contextual_insights': 'Interpret how market conditions reflected in outcomes and provide insights.', 'strategic_advice': 'Include recommendations for strategy adjustments based on the analysis.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

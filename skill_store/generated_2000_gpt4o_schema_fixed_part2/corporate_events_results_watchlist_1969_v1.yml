@@ -1,0 +1,51 @@
+id: "corporate_events_results_watchlist_1969_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1969"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: post results; response style: comparison matrix."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for post results: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as comparison matrix"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "post_results"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze corporate events and results using approved schema tables, ensuring source-trail for validation."
+sql_templates:
+  -
+    description: "Retrieve recent corporate events with associated results analysis and stage snapshots."
+    template: "SELECT ce.symbol, ce.event_type, ce.event_date, ra.filing_date, ra.verdict, ss.stage, ss.trading_signal\nFROM signals.corporate_events ce\nJOIN scores.results_analysis ra ON ce.symbol = ra.symbol\nJOIN scores.stage_snapshots ss ON ce.symbol = ss.symbol\nWHERE ce.event_date >= CURRENT_DATE - INTERVAL '3 months'\nAND ra.period_end = (SELECT MAX(period_end) FROM scores.results_analysis ra2 WHERE ra2.symbol = ra.symbol)\nAND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots ss2 WHERE ss2.symbol = ss.symbol)\nLIMIT 100;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure data pulled is from the last 3 months."
+  - "Verify source trail for every entry to maintain evidence integrity."
+synthesis_guidance: "Focus on presenting data in a comparison matrix format, highlighting key indicators such as verdict, stage, and trading signal."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:21"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

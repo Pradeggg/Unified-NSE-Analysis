@@ -1,0 +1,76 @@
+created_at: "2026-06-06T12:41:45"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: intraday context; response style: concise table."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0089_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    description: "Generate summary of market analysis over the last 3 months."
+    name: "analysis_summary"
+    run: "def run(context):\n    # Read-only operations for market analysis\n    pass"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: code is required"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: language must be python"
+    - "<missing-id>: mode must be read_only"
+    - "<missing-id>: outputs must be a non-empty list"
+    - "market.index_eod.avg_change is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    description: "Total market performance over the last 3 months."
+    template: "SELECT index_symbol, AVG(change_pct) as avg_change FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 MONTHS' GROUP BY index_symbol;"
+  -
+    description: "Determine leading sectors based on stage 2 leadership."
+    template: "SELECT sector, COUNT(symbol) as count FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date > CURRENT_DATE - INTERVAL '3 MONTHS' GROUP BY sector ORDER BY count DESC;"
+status: "test_failed"
+synthesis_guidance:
+  - "Synthesize SQL query results into a coherent market overview."
+  - "Prioritize concise and clear presentation of data."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "concise_table"
+title: "3M Market Rotation Swing Assessment Variant 0089"
+tool_plan_template:
+
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: language must be python"
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: outputs must be a non-empty list"
+  - "market.index_eod.avg_change is not approved"
+validation_rules:
+  - "Ensure date range is exactly 3 months."
+  - "Confirm index and sector data represent current trends."
+version: 1

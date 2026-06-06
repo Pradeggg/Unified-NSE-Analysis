@@ -1,0 +1,54 @@
+id: "report_link_data_validation_1726_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1726"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "1. Verify the presence of report metadata and filtered data for each run in the last 5 sessions.\n2. Check for broken links or missing data in the HTML files associated with each report run.\n3. Evaluate the freshness of data using the 'run_ts' field against the current date.\n4. Provide a checklist summary of findings, broken links, missing data, remediation, and verification steps."
+sql_templates:
+  -
+    title: "Fetch Latest 5 Report Runs"
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered, notes FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 5;"
+  -
+    title: "Check Filtered Stocks for Last 5 Report Runs"
+    template: "SELECT run_id, symbol, score, recommendation, current_price FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 5);"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Ensure the validation process emphasizes data freshness and integrity for Indian market reports. Compile findings into a QA checklist format highlighting issues and actionable steps for remediation."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:32"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

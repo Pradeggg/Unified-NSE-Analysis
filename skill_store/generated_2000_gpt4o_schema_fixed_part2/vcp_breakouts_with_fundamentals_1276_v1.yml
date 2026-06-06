@@ -1,0 +1,57 @@
+id: "vcp_breakouts_with_fundamentals_1276_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1276"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: pre market; response style: ranked candidates."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  task: "Create a list of VCP breakout candidates with strong fundamentals."
+  steps:
+    - "Extract the latest stock data from the market.equity_eod table."
+    - "Identify stocks in the STAGE_2 phase using scores.stage_snapshots."
+    - "Filter these candidates for VCP patterns using scores.stage2_vcp_picks."
+sql_templates:
+  -
+    name: "vcp_breakouts_with_fundamentals"
+    query: "SELECT s2vp.symbol, s2vp.company_name, s2vp.sector, s2vp.price, s2vp.trading_signal, s2vp.trend_signal, s2vp.vcp_score, s2vp.enhanced_fund_score FROM scores.stage2_vcp_picks s2vp WHERE s2vp.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND s2vp.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY s2vp.vcp_score DESC, s2vp.rank ASC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "sql"
+  - "contract"
+synthesis_guidance: "Focus on high VCP scores and enhanced fundamental scores for leading candidates. Ensure data freshness for pre market analysis."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

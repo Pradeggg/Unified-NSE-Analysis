@@ -1,0 +1,50 @@
+id: "portfolio_incremental_add_trim_0577_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0577"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for pre market: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as research-only summary"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Evaluate sector and stock performance using scores.stage_snapshots and portfolio.holdings."
+sql_templates:
+  -
+    query: "WITH ranked_performance AS ( SELECT symbol, sector, stage_score, technical_score, ROW_NUMBER() OVER (PARTITION BY sector ORDER BY stage_score DESC) as sector_rank FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE ) SELECT p.symbol, h.qty, h.avg_cost, rp.sector_rank FROM portfolio.holdings h JOIN ranked_performance rp ON h.symbol = rp.symbol WHERE rp.sector_rank <= 5;"
+    description: "Identify top 5 sector-ranked holdings for incremental actions."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all extracted data is sector-relative."
+  - "Confirm that all SQL queries are read-only."
+synthesis_guidance: "Provide a summary based on sector-relative performance. Highlight sectors with top-ranked holdings for potential incremental adds and identify any risk flags or trim candidates."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:58:36"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,55 @@
+id: "portfolio_incremental_add_trim_1823_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1823"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for last 5 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as action watchlist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "To evaluate whether to add or trim positions, we will review the scores and stages over the last five sessions, along with current portfolio holdings."
+sql_templates:
+  -
+    name: "recent_stage_snapshots"
+    template: "SELECT symbol, sector, price, change_1d_pct, change_1w_pct, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '5 days';"
+    description: "Fetch recent stage snapshots for analysis."
+  -
+    name: "current_portfolio_holdings"
+    template: "SELECT symbol, qty, avg_cost FROM portfolio.holdings;"
+    description: "Fetch current portfolio holdings for comparison with recent performance."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data is recent and covers all necessary sectors."
+  - "Verify that performance metrics align with add/trim decisions."
+synthesis_guidance: "['Discuss daily changes and cumulative impact over the week.', 'Highlight sectors with strong or weak performance indicators.', 'Identify clear candidates for adding or trimming based on recorded scores and sector exposure.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,53 @@
+id: "report_link_data_validation_0352_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0352"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for quarter to date: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Plans validation against approved tables to identify report link issues and data gaps during the specified quarter."
+sql_templates:
+  -
+    step: "validate_report_runs"
+    description: "Check if the run metadata is properly populated and within the quarter timeframe."
+    template: "SELECT run_id, run_ts, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE analysis_date BETWEEN date_trunc('quarter', CURRENT_DATE) AND CURRENT_DATE;"
+    result: "Identifies missing or outdated runs."
+  -
+    step: "validate_filtered_stocks"
+    description: "Verify the completeness and data integrity of filtered stock rows."
+    template: "SELECT run_id, symbol, recommendation FROM report.enhanced_filtered_stocks WHERE score IS NULL OR current_price IS NULL;"
+    result: "Lists stocks with incomplete data entries."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "All run_ids must have corresponding filtered stocks data within valid dates."
+  - "Ensure no NULL values for crucial financial metrics in stock data."
+synthesis_guidance: "Compile exceptions first, focusing on missing or erroneous report links and data entries."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:45:53"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.date_trunc is not approved"

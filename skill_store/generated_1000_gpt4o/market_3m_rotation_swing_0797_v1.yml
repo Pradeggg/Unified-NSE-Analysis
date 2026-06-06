@@ -1,0 +1,54 @@
+id: "market_3m_rotation_swing_0797_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0797"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for weekly review: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    template: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= DATE(NOW()) - INTERVAL '3 months';"
+    description: "Fetch index performance over the last 3 months."
+  -
+    template: "SELECT symbol, sector, stage, change_1w_pct FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    description: "Analyze sector leadership and stages."
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all output fields are populated."
+  - "Check the data integrity and consistency against approved tables."
+synthesis_guidance: "['Summarize findings into a QA checklist format.', 'Highlight key insights from sector-relative comparison.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:51:40"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.date is not approved"
+  - "market.index_eod.now is not approved"

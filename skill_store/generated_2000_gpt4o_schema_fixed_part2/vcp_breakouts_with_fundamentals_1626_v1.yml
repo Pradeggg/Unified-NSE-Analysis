@@ -1,0 +1,54 @@
+id: "vcp_breakouts_with_fundamentals_1626_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1626"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 5 sessions; response style: debug trace."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Find VCP breakout candidates for the last 5 sessions with high fundamental scores."
+    sql: "WITH latest_eod AS ( SELECT symbol, MAX(trade_date) AS latest_date FROM market.equity_eod GROUP BY symbol ), vcp_candidates AS ( SELECT s.symbol, s.company_name, s.price, s.trading_signal, s.fundamental_score, e.high AS latest_high FROM scores.stage_snapshots s JOIN latest_eod eod ON s.symbol = eod.symbol AND s.snapshot_date = eod.latest_date JOIN market.equity_eod e ON e.symbol = s.symbol WHERE s.stage = 'STAGE_2' AND s.enhanced_fund_score > 80 AND e.trade_date >= CURRENT_DATE - INTERVAL '5 days' AND s.trading_signal IN ('BUY', 'STRONG_BUY') ) SELECT * FROM vcp_candidates ORDER BY s.enhanced_fund_score DESC, s.trading_signal ASC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure candidates have enhanced fund score > 80."
+  - "Ensure trading signal is either BUY or STRONG_BUY."
+  - "Use data only from the last 5 sessions."
+synthesis_guidance: "{'advice': 'Focus on filtering candidates with strong fundamentals and currently favorable trading signals.', 'highlight': 'Prioritize stocks with strong recent technical performance in Stage 2.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:21"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,61 @@
+id: "agent_route_failure_diagnostics_1162_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1162"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: post results; response style: narrative plus evidence."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for post results: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as narrative plus evidence"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "post_results"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Review deep institutional processes for route diagnostics. Query relevant evidence and frame outcomes."
+sql_templates:
+  -
+    template_id: "enhanced_report_query"
+    description: "Retrieve the latest enhanced report runs with details on stocks analyzed and filtered."
+    sql: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+  -
+    template_id: "filtered_stocks_inspection"
+    description: "Inspect the stock list from the latest report to understand symbol trends."
+    sql: "SELECT efs.symbol, efs.rank, efs.recommendation, efs.score FROM report.enhanced_filtered_stocks efs INNER JOIN report.enhanced_runs er ON efs.run_id = er.run_id WHERE er.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+  -
+    template_id: "stage_snapshot_inspection"
+    description: "Check latest stage snapshots for key symbol analytics."
+    sql: "SELECT symbol, stage, stage_score, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all SQL queries adhere strictly to read-only guidelines."
+  - "Output must incorporate both evidence and narrative styles."
+  - "Investigate evidence gaps listed in tool_plan_template."
+synthesis_guidance: "['Provide a narrative that discusses route failures with respect to Agent Adda.', 'Utilize the JSON evidence and SQL findings to support the diagnostic narrative.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:56:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

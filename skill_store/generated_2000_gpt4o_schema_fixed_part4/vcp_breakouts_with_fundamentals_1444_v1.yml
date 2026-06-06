@@ -1,0 +1,57 @@
+id: "vcp_breakouts_with_fundamentals_1444_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1444"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    validation_query:
+      type: "SQL"
+      template: "SELECT EXISTS (SELECT 1 FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) AS has_data;"
+sql_templates:
+  -
+    name: "fetch_vcp_breakout_candidates"
+    type: "SQL"
+    template: "WITH latest_snapshots AS (SELECT symbol, enhanced_fund_score, investment_score, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), vcp_candidates AS (SELECT sp.symbol, sp.price, sp.rsi, sp.relative_strength, sp.trading_signal, sp.enhanced_fund_score FROM scores.stage2_vcp_picks sp JOIN latest_snapshots ls ON sp.symbol = ls.symbol WHERE sp.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND sp.trading_signal IN ('BUY', 'STRONG_BUY') AND sp.enhanced_fund_score > 50 AND sp.investment_score > 60 ORDER BY sp.vcp_score DESC, sp.rank ASC LIMIT 10) SELECT eod.symbol, eod.week52_high, eod.week52_low, eod.market_cap_cr, vp.price, vp.trading_signal, vp.rsi FROM market.equity_eod eod JOIN vcp_candidates vp ON eod.symbol = vp.symbol WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure at least one stock meets the criteria of VCP, strong fundamentals, and stage 2 with a positive breakout signal."
+  - "Limit candidates list to no more than 10 stocks."
+synthesis_guidance: "['Prioritize stocks with the strongest combination of VCP score and enhanced fundamental scores.', 'Present results in a portfolio-aware manner, considering liquidity and market cap.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

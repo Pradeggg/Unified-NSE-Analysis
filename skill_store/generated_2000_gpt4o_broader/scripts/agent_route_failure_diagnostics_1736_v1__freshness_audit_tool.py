@@ -1,0 +1,1 @@
+def run(context): return {'freshness_status': 'Fresh' if (context['run_ts'] - context['analysis_date']).days < 20 else 'Stale'}

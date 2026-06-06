@@ -1,0 +1,66 @@
+created_at: "2026-06-06T12:50:29"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: quarter to date; response style: debug trace."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0659_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    return [{'status': 'Validation check placeholder', 'details': 'Implement source-trail validation logic here'}]"
+    id: "source_trail_validator"
+    inputs:
+
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "The Python tool must output a non-empty list indicating validation status."
+review:
+  attempts: 3
+  findings:
+    - "source_trail_validator: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    description: "Fetch current portfolio holdings and their stage scores."
+    template: "SELECT portfolio.holdings.symbol, portfolio.holdings.qty, portfolio.holdings.avg_cost, scores.stage_snapshots.stage, scores.stage_snapshots.stage_score FROM portfolio.holdings JOIN scores.stage_snapshots ON portfolio.holdings.symbol = scores.stage_snapshots.symbol WHERE scores.stage_snapshots.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    type: "read-only"
+status: "test_failed"
+synthesis_guidance: "Using the approved evidence, synthesize a report that details the current portfolio state, identifies potential candidates for incremental adds or trims, and highlights any risk flags observed during the quarter to date."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "debug_trace"
+title: "Portfolio Incremental Add Trim Review Variant 0659"
+tool_plan_template: "Analyze the current portfolio holdings and scores for potential changes. Validate source trails in the context of quarter-to-date performance using debug trace style."
+validation_errors:
+  - "source_trail_validator: run(context) must return a dict"
+validation_rules:
+  - "Ensure the SQL only uses read-only operations."
+  - "Output must clearly indicate any portfolio state changes."
+  - "Add candidates must show potential for positive change."
+  - "Trim candidates must show risk or reduced potential."
+version: 1

@@ -1,0 +1,56 @@
+id: "portfolio_lab_paper_trading_review_1146_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1146"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for last 3 months: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Focus on freshness and separation of strategies in the paper trading context. Conduct a narrative review using evidence from signs, holdings, and market prices without mixing with the real portfolio."
+sql_templates:
+  -
+    title: "Fetch Latest Signal Outcomes"
+    template: "SELECT symbol, date_issued, signal, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued >= (CURRENT_DATE - INTERVAL '3 months') AND signal IN ('BUY', 'SELL') ORDER BY date_issued DESC LIMIT 50;"
+  -
+    title: "Get Current Holdings and Stage"
+    template: "SELECT portfolio.holdings.symbol, qty, avg_cost, buy_date, stage FROM portfolio.holdings JOIN scores.stage_snapshots ON portfolio.holdings.symbol = scores.stage_snapshots.symbol WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "latest_date_filter"
+  - "text_field_check"
+synthesis_guidance: "Produce a clear narrative of the strategies in terms of entries, exits, and current performance metrics over the last 3 months. Highlight freshness and any deviations or exceptions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

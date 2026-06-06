@@ -1,0 +1,50 @@
+id: "signal_outcome_feedback_review_0137_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0137"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for last 20 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as narrative plus evidence"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  signals_outcome_review: "WITH latest_signals AS (SELECT * FROM signals.signal_log WHERE date_issued > CURRENT_DATE - INTERVAL '20 days'), outcome_summary AS (SELECT symbol, sector, COUNT(CASE WHEN hit_target THEN 1 END) AS hit_target_count, COUNT(CASE WHEN hit_stop THEN 1 END) AS hit_stop_count FROM latest_signals GROUP BY symbol, sector) SELECT * FROM outcome_summary;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Check if outcome_summary contains expected columns: symbol, sector, hit_target_count, hit_stop_count"
+synthesis_guidance: "['Use outcome summaries to identify winning and failing patterns.', 'Highlight sectors with better performance relative to others.', 'Identify route improvements based on signal outcomes.', 'Prepare checks for subsequent sessions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:19"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

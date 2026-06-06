@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:43:33"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 5 sessions; response style: ranked candidates."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0226_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    name: "fetch_new_high_vcp_breakouts"
+    query: "WITH recent_vcp AS (SELECT symbol, MAX(snapshot_date) AS latest_date FROM scores.stage2_vcp_picks GROUP BY symbol HAVING MAX(vcp_score) > 75) SELECT e.symbol, e.trade_date, e.high, s.enhanced_fund_score FROM market.equity_eod e JOIN recent_vcp v ON e.symbol = v.symbol JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date >= current_date - INTERVAL '5 days' AND e.close > e.prev_close ORDER BY s.enhanced_fund_score DESC;"
+status: "validated"
+synthesis_guidance: "Aggregate data views by combining fundamental and breakout patterns. Maintain readonly scope in scripts and SQL."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "ranked_candidates"
+title: "VCP Breakouts With Fundamentals Variant 0226"
+tool_plan_template: "JSON only output; no primary_tables/required_tables invention."
+validation_rules:
+  - "Ensure recent data is used within the last 5 sessions."
+  - "Candidates must be ranked by enhanced fundamentals score."
+  - "Verify trading symbols are correct."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

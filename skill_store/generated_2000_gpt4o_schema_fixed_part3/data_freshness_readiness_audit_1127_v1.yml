@@ -1,0 +1,73 @@
+id: "data_freshness_readiness_audit_1127_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1127"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for last 5 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as narrative plus evidence"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+  views:
+
+tool_plan_template: "To assess data freshness readiness, we'll examine the latest data from market index, equity, scores, market breadth, and report tables. This includes checking the timeframes and coverage against the last 5 sessions."
+sql_templates:
+  -
+    description: "Fetch latest data for the last 5 sessions"
+    query: "SELECT * FROM market.index_eod WHERE trade_date >= (SELECT MAX(trade_date) - INTERVAL '5 days' FROM market.index_eod);"
+  -
+    description: "Check data freshness across tables"
+    query: "SELECT trade_date, index_symbol, close FROM market.index_eod ORDER BY trade_date DESC LIMIT 5;"
+python_tools:
+  -
+    id: "calculate_freshness"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "freshness_summary"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Analyze data freshness\n    pass"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all data aligns with the last 5 trading sessions."
+  - "Check each required table for data completeness."
+synthesis_guidance: "['Compare data across sectors to determine relative freshness.', 'Synthesize narrative based on data alignment and completeness.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:55:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_freshness: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_freshness: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

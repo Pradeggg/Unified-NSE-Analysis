@@ -1,0 +1,58 @@
+id: "report_link_data_validation_1642_v1"
+version: 1
+status: "test_failed"
+domain: "data_validation"
+title: "Enhanced Report Data Validation"
+description: "Validate enhanced report data by analyzing metadata and stock information for recent runs. Focus on identifying broken links and missing data."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for last 3 months: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Examine evidence within the last 3 months by joining metadata and filtered stock information using approved join conditions."
+sql_templates:
+  -
+    description: "Retrieve recent enhanced report runs and associated stocks."
+    query: "SELECT er.run_id, er.run_ts, er.universe_size, er.stocks_analyzed, er.stocks_filtered, er.market_composite_score, es.symbol, es.score, es.recommendation FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks es ON er.run_id = es.run_id WHERE er.run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+  - "required_function"
+  - "language"
+  - "mode"
+  - "inputs"
+  - "outputs"
+  - "approved_tables"
+  - "code"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "required_columns"
+  - "filters"
+synthesis_guidance: "Summarize findings into actionable insights focusing on potential discrepancies in report links and missing stock data."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:29"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

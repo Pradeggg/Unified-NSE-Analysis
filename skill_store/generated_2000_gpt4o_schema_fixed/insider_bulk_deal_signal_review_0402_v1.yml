@@ -1,0 +1,51 @@
+id: "insider_bulk_deal_signal_review_0402_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0402"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for today: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as portfolio-aware output"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "{ Provide a detailed review of insider alerts and bulk deals with stage 2 technical confirmation. }"
+sql_templates:
+  latest_insider_alerts: "SELECT * FROM signals.insider_alerts WHERE alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts) AND insider_score > 50 LIMIT 50;"
+  latest_bulk_deals: "SELECT * FROM signals.bulk_block_deals WHERE deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals) AND deal_type = 'BULK' LIMIT 50;"
+  stage_confirmed_setups: "WITH latest_stage AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), insider_and_bulk AS (SELECT ia.symbol, ia.entity FROM signals.insider_alerts ia JOIN signals.bulk_block_deals bb ON ia.symbol = bb.symbol WHERE ia.alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts) AND ia.insider_score > 50 AND bb.deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals) AND bb.deal_type = 'BULK') SELECT ls.symbol, ls.trading_signal FROM latest_stage ls JOIN insider_and_bulk ib ON ls.symbol = ib.symbol WHERE ls.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "symbol_format"
+synthesis_guidance: "['Focus on recent insider and bulk deal signals with technical confirmations.', 'Provide insights on accumulation or distribution trends.', 'Prioritize symbols with strong buy signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:55"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

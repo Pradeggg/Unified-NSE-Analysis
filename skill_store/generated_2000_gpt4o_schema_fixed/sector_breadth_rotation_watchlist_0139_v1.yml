@@ -1,0 +1,52 @@
+id: "sector_breadth_rotation_watchlist_0139_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0139"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for last 20 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as narrative plus evidence"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "{ 'steps': ['Execute SQL templates to gather relevant sector and stock data.', 'Analyze data to rank sectors and identify candidate stocks.', 'Prepare narrative and evidence synthesis for the watchlist.'] }"
+sql_templates:
+  - "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_sector_breadth AS (SELECT * FROM breadth.sector_daily WHERE snapshot_date >= CURRENT_DATE - INTERVAL '20 days') SELECT sector, AVG(stage_score) AS avg_stage_score, SUM(stage = 'STAGE_2') AS stage_2_count FROM latest_snapshots JOIN latest_sector_breadth ON latest_snapshots.sector = latest_sector_breadth.sector GROUP BY sector ORDER BY avg_stage_score DESC LIMIT 10;"
+  - "SELECT symbol, company_name, stage_score, trading_signal FROM latest_snapshots WHERE trading_signal IN ('BUY', 'STRONG_BUY') AND stage = 'STAGE_2' ORDER BY stage_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all selected sectors adhere to source-trail validation."
+  - "Confirm candidate lists are constrained by stage and scored appropriately."
+synthesis_guidance: "['Compare average stage scores across sectors to identify leadership.', 'Highlight symbols moving into more constructive stages.', 'Provide narrative context with bullet points for sector movements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

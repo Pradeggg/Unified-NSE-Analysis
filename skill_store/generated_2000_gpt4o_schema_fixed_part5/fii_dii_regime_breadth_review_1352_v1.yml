@@ -1,0 +1,55 @@
+id: "fii_dii_regime_breadth_review_1352_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1352"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for quarter to date: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as exceptions and gaps first"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    evidence_gathering_plan: "Combine FII/DII flows, market regime, breadth diagnostics, and index confirmation to evaluate risk conditions."
+    evidence_analysis_plan: "Focus on detecting anomalies and gaps that could indicate risk-on or risk-off shifts in the market."
+sql_templates:
+  -
+    id: "regime_flow_breadth_query"
+    type: "RO"
+    sql: "SELECT f.trade_date, f.flow_signal, r.regime, b.ad_signal, i.trend_signal FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date JOIN breadth.market_daily b ON f.trade_date = b.trade_date JOIN market.index_eod i ON f.trade_date = i.trade_date WHERE i.index_symbol = 'Nifty 50' AND f.trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "{'rules': ['Check that all required data fields are present in the result set.', 'Ensure consistency between flow signals, regime status, and breadth indicators.', 'Identify and flag any anomalies or gaps in data continuity or logical consistency.']}"
+synthesis_guidance: "{'items': ['Prioritize anomalies in data to indicate shifts.', 'Combine and compare regime labels with flow and breadth data for a comprehensive context.', 'Provide a detailed review of any inconsistencies or missing data elements in the quarter-to-date period.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

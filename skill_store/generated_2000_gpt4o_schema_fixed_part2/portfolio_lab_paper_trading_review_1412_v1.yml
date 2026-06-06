@@ -1,0 +1,59 @@
+id: "portfolio_lab_paper_trading_review_1412_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review"
+description: "Conduct a comprehensive review of paper trading strategies focusing on entries, exits, stop losses, and targets. This review considers the latest EOD data for a deep institutional analysis of paper trading portfolios, keeping them separate from real holdings."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for latest EOD: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "latest_EOD"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review of paper trading strategies using latest market and portfolio data."
+sql_templates:
+  -
+    description: "Retrieve latest EOD data for all holdings in portfolio."
+    template: "SELECT h.symbol, e.close, e.change_pct FROM portfolio.holdings h JOIN market.equity_eod e ON h.symbol = e.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+    notes: "Ensures data is based on latest market close."
+  -
+    description: "Fetch latest stage and score context for paper trading strategies."
+    template: "SELECT s.symbol, s.stage, s.technical_score FROM signals.signal_log l JOIN scores.stage_snapshots s ON l.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+    notes: "Aligns signal outcomes with current market stages."
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure no data mixing between paper trading and real holdings."
+  - "All SQL must remain read-only and adhere to approved schemas."
+  - "Validate latest date filters as per global SQL rules."
+synthesis_guidance: "Focus on separating paper trades from real portfolios while providing a detailed, strategic overview."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

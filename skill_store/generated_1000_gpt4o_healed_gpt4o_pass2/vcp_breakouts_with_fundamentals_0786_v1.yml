@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:51:34"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: intraday context; response style: QA checklist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0786_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Select stocks creating new highs with strong fundamentals."
+    template: "SELECT e.symbol, e.close, e.week52_high, e.volume, s.fundamental_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.close >= e.week52_high AND s.fundamental_score > 70"
+status: "validated"
+synthesis_guidance: "Use both price action and fundamental strength to filter breakout and VCP opportunities in a QA checklist format. Focus on stocks with strong market cap and volume characteristics where possible."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "intraday_context"
+  - "QA_checklist"
+title: "VCP Breakouts With Fundamentals Variant 0786"
+tool_plan_template: "Agent screens for VCP breakout stocks with fundamentals in Indian Market using a checklist approach."
+validation_errors:
+  - "scores.stage2_vcp_picks.v is not approved"
+validation_rules:
+  - "Ensure that selected stocks have high fundamental scores."
+  - "Confirm that stocks are at or near 52-week highs for breakout potential."
+  - "Verify that VCP scores are high for valid patterns."
+version: 1

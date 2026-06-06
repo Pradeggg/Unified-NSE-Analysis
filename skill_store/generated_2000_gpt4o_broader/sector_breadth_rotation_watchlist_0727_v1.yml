@@ -1,0 +1,53 @@
+id: "sector_breadth_rotation_watchlist_0727_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0727"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for last 5 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as QA checklist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  plan: "Analyze sector breadth, participation above moving averages, and stage scores to rank sectors by recent trend improvement."
+sql_templates:
+  sector_ranking: "WITH recent_sector_breadth AS ( SELECT sector, AVG(change_5d) AS avg_change_5d, AVG(pct_above_50dma) AS avg_above_50dma FROM breadth.sector_daily WHERE snapshot_date > (SELECT MAX(snapshot_date) - 5 FROM breadth.sector_daily) GROUP BY sector ) SELECT sector, avg_change_5d, avg_above_50dma FROM recent_sector_breadth ORDER BY avg_change_5d DESC, avg_above_50dma DESC;"
+  stage2_participation: "SELECT sector, AVG(stage2_pct) AS avg_stage2 FROM breadth.ma_pct_above WHERE snapshot_date > (SELECT MAX(snapshot_date) - 5 FROM breadth.ma_pct_above) GROUP BY sector ORDER BY avg_stage2 DESC;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sector ranks are computed correctly using recent breadth and stage data."
+  - "Document improving sectors and potential candidates for TradingView."
+synthesis_guidance: "['Combine sector rankings and improvement metrics to shortlist sectors.', 'Identify symbols with technical improvements for TradingView addition.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

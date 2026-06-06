@@ -1,0 +1,57 @@
+created_at: "2026-06-06T12:52:51"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: latest EOD; response style: comparison matrix."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0918_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select VCP picks with strong fundamentals from latest snapshot."
+    sql: "SELECT vcp.symbol, vcp.company_name, vcp.sector, vcp.price, vcp.vcp_score, vcp.enhanced_fund_score, eod.trade_date, eod.close, eod.volume FROM scores.stage2_vcp_picks AS vcp JOIN market.equity_eod AS eod ON vcp.symbol = eod.symbol WHERE eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND vcp.enhanced_fund_score > 80 AND vcp.vcp_score > 70;"
+status: "validated"
+synthesis_guidance: "Emphasize comparison matrices, latest EOD data, and strong fundamentals for VCP breakouts."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "comparison_matrix"
+title: "VCP Breakouts With Fundamentals Variant 0918"
+tool_plan_template:
+  description: "Generate VCP breakouts with fundamentals using a matrix comparison for the latest EOD."
+  input_requirements:
+    - "EOD data"
+    - "VCP picks"
+    - "fundamental scores"
+validation_rules:
+  - "Ensure SQL provides read-only operations."
+  - "Confirm outputs match expected formats for tradingview and matrix comparison."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

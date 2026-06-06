@@ -1,0 +1,62 @@
+id: "vcp_breakouts_with_fundamentals_0850_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0850"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 3 months; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_3_months"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Generate candidates by analyzing VCP breakouts and strong fundamentals within the last 3 months."
+sql_templates:
+  -
+    template_name: "GetHighVolumeBreakouts"
+    template_description: "Select stocks with high volume and breakout patterns."
+    sql: "SELECT e.symbol, e.high, e.volume, e.trade_date FROM market.equity_eod e WHERE e.trade_date >= current_date - interval '3 months' AND e.high > e.prev_close * 1.05"
+  -
+    template_name: "GetStrongFundamentals"
+    template_description: "Select stocks with strong fundamentals."
+    sql: "SELECT s.symbol, s.company_name, s.enhanced_fund_score FROM scores.stage_snapshots s WHERE s.enhanced_fund_score > 80 AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure inclusion of VCP scores"
+  - "Check presence of breakout indicators"
+synthesis_guidance: "Combine candidate lists from SQL with strong fundamental filters to generate a high-quality watchlist."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:52:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.e is not approved"
+  - "unknown table e.high"
+  - "unknown table e.prev_close"
+  - "unknown table e.symbol"
+  - "unknown table e.trade_date"
+  - "unknown table e.volume"
+  - "unknown table s.company_name"
+  - "unknown table s.enhanced_fund_score"
+  - "unknown table s.snapshot_date"
+  - "unknown table s.symbol"

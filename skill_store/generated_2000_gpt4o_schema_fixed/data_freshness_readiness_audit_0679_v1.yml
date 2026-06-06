@@ -1,0 +1,77 @@
+id: "data_freshness_readiness_audit_0679_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0679"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: pre market; response style: debug trace."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for pre market: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as debug trace"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "pre_market"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  - "1. Determine latest available date from each table."
+  - "2. Compare these dates with expected freshness thresholds."
+  - "3. Identify any missing data or overdue updates."
+  - "4. Return a structured response with analysis and recommendations."
+sql_templates:
+  -
+    query_type: "latest_date_extraction"
+    template: "SELECT MAX(trade_date) AS latest_trade_date FROM {table};"
+python_tools:
+  -
+    id: "latest_date_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      context:
+        - "trade_date"
+        - "snapshot_date"
+    outputs:
+      latest_date: "Returns the most recent date for data freshness calculation."
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "\nrequired_function = 'run(context)'\n\ndef run(context):\n    latest_dates = []\n    for date_column in context:\n        query = f\"SELECT MAX({date_column}) AS latest FROM {{table}};\"\n        # Execute the query in the appropriate environment and append results.\n        latest_dates.append(execute_query(query))\n    return latest_dates"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "All input patterns must align with evidence tables."
+  - "SQL queries must be read-only and parameterized."
+synthesis_guidance: "['Emphasize data freshness context and timely availability.', 'Prioritize gaps impacting pre-market readiness.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:40"
+generation_model: "gpt-4o"
+validation_errors:
+  - "latest_date_tool: inputs must be a list"
+  - "latest_date_tool: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "latest_date_tool: inputs must be a list"
+    - "latest_date_tool: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

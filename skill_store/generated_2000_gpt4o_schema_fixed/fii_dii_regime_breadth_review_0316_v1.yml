@@ -1,0 +1,69 @@
+id: "fii_dii_regime_breadth_review_0316_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0316"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: latest EOD; response style: exceptions and gaps first."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for latest EOD: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as exceptions and gaps first"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  - "1. Select the most recent date of market data by finding the maximum trade date in market.index_eod."
+  - "2. Retrieve and analyze FII/DII flow trends, market regimes, market breadth, and index confirmation for the latest market data from relevant tables."
+sql_templates:
+  -
+    name: "Fetch Latest Market Data"
+    query: "SELECT MAX(trade_date) as latest_trade_date FROM market.index_eod;"
+  -
+    name: "Combine FII DII Flows and Regime Data"
+    query: "WITH latest_data AS (SELECT MAX(trade_date) AS latest_trade_date FROM market.index_eod) SELECT f.trade_date, f.fii_net_today, f.dii_net_today, f.fii_trend, f.dii_trend, r.regime, r.confidence FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date WHERE f.trade_date = (SELECT latest_trade_date FROM latest_data);"
+  -
+    name: "Market Breadth and Index Confirmation"
+    query: "WITH latest_data AS (SELECT MAX(trade_date) AS latest_trade_date FROM market.index_eod) SELECT b.trade_date, b.advances, b.declines, b.market_sentiment, i.index_symbol, i.close FROM breadth.market_daily b JOIN market.index_eod i ON b.trade_date = i.trade_date WHERE b.trade_date = (SELECT latest_trade_date FROM latest_data) AND i.index_symbol = 'NIFTY_50';"
+python_tools:
+  -
+    id: "data_synthesis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "regime_data"
+      - "breadth_data"
+    outputs:
+      - "combined_analysis"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+    code: "def run(context): return {'combined_analysis': context['regime_data']}"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all latest data is based on the most recent trade_date."
+  - "Validate that index confirmation is restricted to NIFTY_50."
+synthesis_guidance: "['Combine data from both SQL queries into a cohesive narrative.', 'Identify any discrepancies or gaps in the data and present them first.', 'Provide an assessment of market risk-on or risk-off status.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:04"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.latest_trade_date is not approved"

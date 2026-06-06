@@ -1,0 +1,55 @@
+id: "vcp_breakouts_with_fundamentals_1878_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1878"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Identify and evaluate VCP breakout stocks with strong fundamentals using pre market data."
+sql_templates:
+  -
+    description: "Select latest VCP picks with strong fundamentals and liquidity"
+    sql: "SELECT v.symbol, v.company_name, v.price, v.vcp_score, s.enhanced_fund_score, e.volume \nFROM scores.stage2_vcp_picks v\nJOIN scores.stage_snapshots s ON v.symbol = s.symbol\nJOIN market.equity_eod e ON v.symbol = e.symbol\nWHERE v.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)\nAND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nAND e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)\nAND s.enhanced_fund_score > 60\nORDER BY v.vcp_score DESC\nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  -
+    context: "Ensure strong fundamentals and liquidity"
+    checks:
+      - "enhanced_fund_score > 60"
+      - "volume > 100000"
+synthesis_guidance: "['Focus on high-quality VCP breakouts with substantial fundamental support and pre-market action potential.', 'Provide action watchlist tailored to position-sizing context.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

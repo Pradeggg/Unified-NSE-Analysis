@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:52:37"
+created_by: "llm_generated"
+description: "Validation of TradingView export alongside weekly review data. Key focus on verifying report link functionality and completeness of stock data."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "skill_card_001_0900_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    purpose: "Fetch recent runs from the past week."
+    query: "SELECT run_id, run_ts, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '7 days'"
+  -
+    purpose: "Check for missing signal data in filtered stocks."
+    query: "SELECT symbol, daily_signal, weekly_signal FROM report.enhanced_filtered_stocks WHERE run_id = :run_id AND (daily_signal IS NULL OR weekly_signal IS NULL)"
+status: "validated"
+synthesis_guidance: "Summarize findings with focus on action items for the report QA process."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "weekly_review"
+  - "action_watchlist"
+title: "Weekly TradingView Export Validation"
+tool_plan_template:
+  steps:
+    - "1. Check report.enhanced_runs for any metadata discrepancies."
+    - "2. Verify all stocks in report.enhanced_filtered_stocks have necessary data."
+  task: "Validate report links and data completeness using TradingView exports."
+validation_rules:
+  - "Ensure all required data fields are populated in enhanced_filtered_stocks."
+  - "Link checks focus on recent TradingView exports."
+version: 1

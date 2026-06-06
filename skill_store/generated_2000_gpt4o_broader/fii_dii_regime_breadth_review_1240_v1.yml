@@ -1,0 +1,61 @@
+id: "fii_dii_regime_breadth_review_1240_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1240"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as ranked candidates"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "For each required evidence, frame an assessment using SQL or Python as needed under the rules."
+sql_templates:
+  -
+    template: "SELECT trade_date, fii_net_today, dii_net_today, flow_signal FROM signals.fii_dii_flows ORDER BY trade_date DESC LIMIT 20;"
+    description: "Fetch the latest 20 sessions for FII/DII flows and flow signals."
+  -
+    template: "SELECT trade_date, regime, confidence FROM signals.regime_history ORDER BY trade_date DESC LIMIT 20;"
+    description: "Retrieve recent regime history and confidence for analysis."
+  -
+    template: "SELECT trade_date, advances, declines, net_ad, ad_signal FROM breadth.market_daily ORDER BY trade_date DESC LIMIT 20;"
+    description: "Extract the latest breadth indicators including advances, declines, and AD signals."
+  -
+    template: "SELECT trade_date, close, change_pct, trend_signal FROM market.index_eod WHERE index_symbol = 'NIFTY 50' ORDER BY trade_date DESC LIMIT 20;"
+    description: "Get the recent closing prices, percent changes, and trend signals for NIFTY 50."
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure SQL templates contain no data modification commands."
+  - "Results must strictly follow read-only policies."
+synthesis_guidance: "{'strategy': 'Rank candidates based on how well FII/DII flows, market regime, and breadth align with a risk-on or risk-off backdrop.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:46"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

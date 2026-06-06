@@ -1,0 +1,86 @@
+id: "data_freshness_readiness_audit_1827_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1827"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for last 5 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as action watchlist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  status: "generated"
+  steps:
+    - "Identify the latest trade date for market.index_eod and market.equity_eod."
+    - "Check the latest snapshot_date in scores.stage_snapshots to ensure it aligns with recent market activity."
+    - "Analyze breadth metrics across the last 5 sessions for market_daily and ma_pct_above."
+    - "Compare scores with recent enhanced runs to verify consistency in market sentiment and analysis coverage."
+    - "Compile any missing or stale data sources into a report for action."
+sql_templates:
+  -
+    name: "latest_index_data"
+    description: "Fetch latest index data for verification."
+    query: "SELECT * FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+  -
+    name: "latest_equity_data"
+    description: "Fetch latest equity data for verification."
+    query: "SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+  -
+    name: "stage_snapshot_check"
+    description: "Verify alignment of latest stage snapshots with recent dates."
+    query: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "freshness_matrix"
+      - "missing_sources"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "# This Python tool checks for data consistency in the recent date ranges\n# Returns freshness matrix and missing sources as needed\n\nclass FreshnessChecker:\n    def run(self, context):\n        max_index_date = context['latest_index_data'].iloc[0]['trade_date']\n        max_equity_date = context['latest_equity_data'].iloc[0]['trade_date']\n\n        freshness_matrix = {'index': max_index_date, 'equity': max_equity_date}\n        missing_sources = []\n\n        if max_index_date != max_equity_date:\n            missing_sources.append(\"Data mismatch between index and equity dates.\")\n\n        return {'freshness_matrix': freshness_matrix, 'missing_sources': missing_sources}\n\n# Please provide the context from the data fetch operations before running.\n\nfreshness_checker = FreshnessChecker()"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "execution"
+  - "coverage"
+synthesis_guidance: "{'integration': 'Combine data freshness results with an action plan addressing any data lags.', 'recommendations': 'Highlight essential actions needed for data readiness enhancement.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:24"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

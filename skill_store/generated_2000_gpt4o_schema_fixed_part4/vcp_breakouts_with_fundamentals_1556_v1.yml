@@ -1,0 +1,53 @@
+id: "vcp_breakouts_with_fundamentals_1556_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1556"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: quarter to date; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  - "Assess stage, signal, and fundamental scores to select quality VCP breakout stocks with recent highs."
+sql_templates:
+  -
+    description: "Retrieve latest VCP candidates with strong fundamentals and recent highs."
+    template: "SELECT vcp.symbol, vcp.company_name, vcp.sector, vcp.price, vcp.trading_signal, vcp.investment_score, vcp.vcp_score FROM scores.stage2_vcp_picks AS vcp JOIN scores.stage_snapshots AS ss ON vcp.symbol = ss.symbol WHERE vcp.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND vcp.vcp_score > 70 AND vcp.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY vcp.vcp_score DESC, vcp.rank ASC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Confirmed presence of necessary scores and signal columns for decision making."
+  - "Ensured SQL filters align with schema constraints and variant goals."
+synthesis_guidance: "['Summarize findings focusing on fundamental strength and technical signals.', 'Emphasize stocks with potential based on VCP patterns and trading signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

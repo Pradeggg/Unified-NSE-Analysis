@@ -1,0 +1,57 @@
+id: "sector_breadth_rotation_watchlist_0853_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0853"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: action watchlist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for quarter to date: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as action watchlist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "{ 'SELECT': 'sector, SUM(pct_above_50dma) as sector_breadth', 'FROM': 'breadth.sector_daily', 'WHERE': 'snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)', 'GROUP BY': 'sector', 'ORDER BY': 'sector_breadth DESC', 'LIMIT': '5'}"
+sql_templates:
+  -
+    description: "Fetch top sectors by breadth."
+    sql: "WITH latest_sector_data AS (SELECT sector, SUM(pct_above_50dma) as sector_breadth FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) GROUP BY sector) SELECT sector FROM latest_sector_data ORDER BY sector_breadth DESC LIMIT 5;"
+  -
+    description: "Fetch stocks in sector with Stage 2."
+    sql: "SELECT symbol FROM scores.stage_snapshots WHERE stage = 'STAGE_2' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND sector IN (SELECT sector FROM latest_sector_data);"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "sector"
+  - "stage"
+  - "date_filters"
+synthesis_guidance: "Summarize sectors showing improvement. Identify symbols within these sectors to add to an action watchlist. Align with stage 2 participation and RS momentum."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:31"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

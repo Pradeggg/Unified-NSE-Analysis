@@ -1,0 +1,74 @@
+created_at: "2026-06-06T12:51:56"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: latest EOD; response style: action watchlist."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0820_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for latest EOD: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    description: "Read-only validation tool for report links"
+    run: "def run(context): pass"
+    tool_name: "validate_report_links"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: code is required"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: language must be python"
+    - "<missing-id>: mode must be read_only"
+    - "<missing-id>: outputs must be a non-empty list"
+    - "report.enhanced_filtered_stocks.day is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    description: "Fetch runs with analysis date."
+    query: "SELECT run_id, analysis_date FROM report.enhanced_runs WHERE analysis_date = CURRENT_DATE;"
+  -
+    description: "Identify stocks missing data."
+    query: "SELECT symbol FROM report.enhanced_filtered_stocks WHERE CURRENT_DATE - INTERVAL '1' DAY > run_id AND (current_price IS NULL OR volume IS NULL);"
+status: "test_failed"
+synthesis_guidance:
+  - "Consolidate findings from evidence provided by SQL queries."
+  - "Recommend specific action items based on data validations."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "action_watchlist"
+title: "Enhanced Report Data Validation Variant 0820"
+tool_plan_template:
+  - "Analyze the enhanced report runs and filtered stocks to identify metadata inconsistencies and data gaps."
+  - "Generate refined action items for validating and correcting the report links."
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: language must be python"
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: outputs must be a non-empty list"
+  - "report.enhanced_filtered_stocks.day is not approved"
+validation_rules:
+  - "Ensure SELECT queries only; no modifications allowed."
+  - "Confirm the run_ts timestamp is not outdated."
+version: 1

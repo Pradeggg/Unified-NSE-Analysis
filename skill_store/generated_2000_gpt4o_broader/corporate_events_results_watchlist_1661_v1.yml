@@ -1,0 +1,66 @@
+id: "corporate_events_results_watchlist_1661_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1661"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: post results; response style: debug trace."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for post results: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as debug trace"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "post_results"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  python_tools:
+    -
+      required_function: "run(context)"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "context"
+      outputs:
+        - "filtered_events"
+      approved_tables:
+        - "signals.corporate_events"
+        - "scores.results_analysis"
+        - "scores.stage_snapshots"
+      code: "# Example read-only Python tool code\n\ndef run(context):\n    # This is a placeholder for the actual logic\n    # Fetching corporate events, analyzing results\n    # Filtering based on specific criteria\n    filtered_events = []\n    for event in context['signals.corporate_events']:\n        if event['event_type'] in ['dividend', 'split', 'bonus']:\n            filtered_events.append(event)\n    return filtered_events"
+sql_templates:
+  -
+    template: "SELECT symbol, event_date, event_type FROM signals.corporate_events WHERE event_date >= CURRENT_DATE AND event_type IN ('AGM', 'dividend', 'split', 'bonus');"
+    description: "Fetch upcoming corporate events related to dividends, splits, bonus issues, or AGMs."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all used fields exist in the evidence_required tables."
+  - "All SQL statements must be read-only SELECT/WITH templates."
+  - "Python tools must be read-only and use approved tables only."
+synthesis_guidance: "['Synthesize results by combining SQL query data and Python tool output.', 'Trace sources for each event and result for reliability.', 'Provide a summarized watchlist view for quick analysis post-results.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,145 @@
+created_at: "2026-06-06T12:43:20"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: today; response style: ranked candidates."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0206_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    definition: "def run(context): pass"
+    description: "Calculates VCP score for given stocks based on predefined metrics."
+    name: "calculate_vcp_score"
+review:
+  status: "needs_heal"
+  findings:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    description: "Select stocks with VCP and breakout patterns with strong fundamentals."
+    query: "SELECT symbol, company_name, sector, price, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE enhanced_fund_score > 80 AND vcp_score > 70 ORDER BY vcp_score DESC;"
+  -
+    description: "Select stocks hitting new 52-week highs."
+    query: "SELECT symbol, high FROM market.equity_eod WHERE high = week52_high AND trade_date = CURRENT_DATE ORDER BY volume DESC;"
+status: "test_failed"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "today"
+  - "ranked_candidates"
+title: "VCP Breakouts With Fundamentals Variant 0206"
+tool_plan_template:
+
+validation_errors:
+  - "description is required"
+  - "domain is required"
+  - "evidence_required is required"
+  - "id is required"
+  - "input_patterns is required"
+  - "output_contract is required"
+  - "tags is required"
+  - "title is required"
+  - "validation_rules is required"
+  - "version is required"
+  - "version must be a positive integer"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+version: 1
+card:
+  created_at: "2026-06-06T12:43:20"
+  created_by: "llm_generated"
+  description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: today; response style: ranked candidates."
+  domain: "screening"
+  evidence_required:
+    tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "vcp_breakouts_with_fundamentals_0206_v1"
+  input_patterns:
+    - "stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "VCP breakout stocks for TradingView"
+    - "quality breakouts with strong fundamentals"
+    - "freshness audit for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "quality breakouts with strong fundamentals as ranked candidates"
+  output_contract:
+    - "filters"
+    - "candidates"
+    - "tradingview_symbols"
+    - "evidence"
+    - "risks"
+  python_tools:
+    -
+      definition: "def run(context): pass"
+      description: "Calculates VCP score for given stocks based on predefined metrics."
+      name: "calculate_vcp_score"
+  review:
+    attempts: 3
+    findings:
+
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "needs_heal"
+  sql_templates:
+    -
+      description: "Select stocks with VCP and breakout patterns with strong fundamentals."
+      query: "SELECT symbol, company_name, sector, price, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE enhanced_fund_score > 80 AND vcp_score > 70 ORDER BY vcp_score DESC;"
+    -
+      description: "Select stocks hitting new 52-week highs."
+      query: "SELECT symbol, high FROM market.equity_eod WHERE high = week52_high AND trade_date = CURRENT_DATE ORDER BY volume DESC;"
+  status: "generated"
+  synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+  tags:
+    - "vcp"
+    - "breakout"
+    - "new_high"
+    - "fundamentals"
+    - "tradingview"
+    - "freshness_audit"
+    - "today"
+    - "ranked_candidates"
+  title: "VCP Breakouts With Fundamentals Variant 0206"
+  tool_plan_template:
+
+  validation_errors:
+
+  validation_rules:
+    - "required_tables_exist"
+    - "sql_is_read_only"
+    - "output_contract_present"
+  version: 1

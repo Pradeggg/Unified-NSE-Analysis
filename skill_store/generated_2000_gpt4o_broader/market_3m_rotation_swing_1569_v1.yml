@@ -1,0 +1,56 @@
+id: "market_3m_rotation_swing_1569_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  step1: "Query recent index performance to understand market regime."
+  step2: "Identify leading sectors responsible for market momentum."
+  step3: "Select equities showing Stage 2 characteristics."
+  step4: "Validate source trails post results."
+sql_templates:
+  index_performance: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH)"
+  leading_sectors: "SELECT sector, AVG(relative_strength) AS avg_strength FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) GROUP BY sector ORDER BY avg_strength DESC LIMIT 5"
+  stage_2_candidates: "SELECT symbol, company_name, close, change_1m_pct FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) ORDER BY change_1m_pct DESC LIMIT 10"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure data reflects the last 3 months accurately."
+  - "Cross-verify sector strength and candidate selection with similar historical periods."
+synthesis_guidance: "{'summary_style': 'construct a coherent narrative outlining market conditions, key sectoral contributions, and recommended swing candidates.', 'risk_assessment': 'note any volatility or drawback risks observed in the data.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage_snapshots.avg_strength is not approved"
+  - "scores.stage_snapshots.close is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"

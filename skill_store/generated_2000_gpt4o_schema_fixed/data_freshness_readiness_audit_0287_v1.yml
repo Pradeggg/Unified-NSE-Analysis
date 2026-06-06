@@ -1,0 +1,55 @@
+id: "data_freshness_readiness_audit_0287_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0287"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for intraday context: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as ranked candidates"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  evidence_gaps:
+
+sql_templates:
+  data_freshness_check:
+    query: "SELECT table_name, MAX(date_column) as last_update FROM (SELECT 'market.index_eod' as table_name, trade_date as date_column FROM market.index_eod UNION ALL SELECT 'market.equity_eod', trade_date FROM market.equity_eod UNION ALL SELECT 'scores.stage_snapshots', snapshot_date FROM scores.stage_snapshots UNION ALL SELECT 'breadth.market_daily', trade_date FROM breadth.market_daily UNION ALL SELECT 'breadth.ma_pct_above', snapshot_date FROM breadth.ma_pct_above UNION ALL SELECT 'report.enhanced_runs', run_ts FROM report.enhanced_runs) AS subquery GROUP BY table_name ORDER BY last_update DESC;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "check_date_freshness"
+synthesis_guidance: "{'instruction': 'Compare the last update timestamps and identify which sources are not meeting the freshness threshold.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

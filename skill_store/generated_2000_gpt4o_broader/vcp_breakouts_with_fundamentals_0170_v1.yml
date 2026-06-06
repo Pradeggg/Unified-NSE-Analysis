@@ -1,0 +1,75 @@
+id: "vcp_breakouts_with_fundamentals_0170_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0170"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: post results; response style: narrative plus evidence."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "post_results"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters:
+    - "enhanced_fund_score >= 80"
+    - "vcp_score >= 70"
+    - "market_cap_cr >= 1000"
+  candidates:
+    - "new_high: close >= week52_high"
+    - "vcp_breakout_pct >= 5"
+  tradingview_symbols:
+    select:
+      - "symbol"
+      - "close"
+  evidence:
+    - "enhanced_fund_score"
+    - "vcp_score"
+    - "market_cap_cr"
+  risks:
+    - "high volatility"
+    - "liquidity issues"
+sql_templates:
+  new_highs:
+    -
+      query: "SELECT symbol, close FROM market.equity_eod WHERE close >= week52_high AND market_cap_cr >= 1000"
+      description: "Identify stocks reaching new 52-week highs with sufficient market capitalization."
+  vcp_breakouts:
+    -
+      query: "SELECT symbol, vcp_breakout_pct FROM scores.stage2_vcp_picks WHERE vcp_score >= 70 AND vcp_breakout_pct >= 5"
+      description: "Find stocks with significant VCP breakout percentages."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure that new highs, VCP scores, and fundamental scores are accurately retrieved."
+  - "Check for the correct calculation of breakout percentages and fundamental strength."
+synthesis_guidance: "['Provide a narrative that combines technical breakouts with strong fundamental scores.', 'Highlight stocks with the best balance between breakout potential and investment quality.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

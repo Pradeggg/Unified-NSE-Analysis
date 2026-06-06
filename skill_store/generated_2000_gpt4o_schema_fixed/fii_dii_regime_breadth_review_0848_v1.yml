@@ -1,0 +1,68 @@
+id: "fii_dii_regime_breadth_review_0848_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0848"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: last 3 months; response style: action watchlist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for last 3 months: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as action watchlist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "last_3_months"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  python_tool:
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs: "N/A"
+    outputs: "N/A"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context): return 'Python tool usage is not required for this task.'"
+sql_templates:
+  -
+    description: "Fetch FII/DII flows, market regime, and breadth over the last 3 months."
+    sql: "SELECT f.trade_date, f.flow_signal, f.fii_trend, f.dii_trend, r.regime, r.confidence, b.ad_signal, b.market_sentiment FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date JOIN breadth.market_daily b ON f.trade_date = b.trade_date WHERE f.trade_date >= CURRENT_DATE - INTERVAL '3 months'"
+  -
+    description: "Get index confirmation data over the last 3 months."
+    sql: "SELECT i.trade_date, i.index_symbol, i.close, i.change_pct, i.trend_signal FROM market.index_eod i JOIN signals.fii_dii_flows f ON i.trade_date = f.trade_date WHERE i.trade_date >= CURRENT_DATE - INTERVAL '3 months' AND i.index_symbol = 'Nifty 50'"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure query results align with structured output contract."
+  - "Verify data timeliness with latest available dates."
+  - "Confirm index symbol filtering is appropriate."
+synthesis_guidance: "Combine findings to articulate an informed perspective on market risk, considering FII/DII flow trends, market regime confidence, breadth indicators, and index signals. Present insights as actionable items in a watchlist format for traders."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

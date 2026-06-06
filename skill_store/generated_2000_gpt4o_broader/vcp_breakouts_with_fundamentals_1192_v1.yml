@@ -1,0 +1,63 @@
+id: "vcp_breakouts_with_fundamentals_1192_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals"
+description: "Identify stocks showing VCP breakouts with strong fundamentals and liquidity in the Indian market."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Generate and evaluate a list of potential VCP breakout stocks focusing on institutional grade fundamentals."
+sql_templates:
+  -
+    template_id: "select_vcp_breakouts"
+    description: "Select potential VCP breakout candidates based on recent stock data."
+    template: "WITH latest_prices AS (SELECT symbol, close FROM market.equity_eod WHERE trade_date = CURRENT_DATE), vcp_candidates AS (SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE enhanced_fund_score > 7 AND vcp_score > 5) SELECT v.symbol, v.company_name, l.close FROM vcp_candidates v JOIN latest_prices l ON v.symbol = l.symbol;"
+python_tools:
+  -
+    id: "process_vcp_data"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "filtered_candidates"
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    symbols = [entry['symbol'] for entry in context if entry['enhanced_fund_score'] > 7]\n    return symbols"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure SQL queries only perform read operations."
+  - "Verify output matches the approved schema fields."
+synthesis_guidance: "Combine data from equity, fundamentals, and VCP scores to synthesize a narrative for potential breakout stocks."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:16"
+generation_model: "gpt-4o"
+validation_errors:
+  - "process_vcp_data: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "process_vcp_data: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

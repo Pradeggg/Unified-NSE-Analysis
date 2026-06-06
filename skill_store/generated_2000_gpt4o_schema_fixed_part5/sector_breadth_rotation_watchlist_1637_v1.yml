@@ -1,0 +1,66 @@
+id: "sector_breadth_rotation_watchlist_1637_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1637"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for last 20 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as debug trace"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    task: "Identify top sectors by breadth and stage participation."
+    sources:
+      - "breadth.sector_daily"
+      - "breadth.ma_pct_above"
+  -
+    task: "Select leading stocks in improving sectors."
+    sources:
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+sql_templates:
+  - "SELECT sector, AVG(pct_above_50dma) as avg_pct_above_50dma, AVG(change_5d) as avg_change_5d FROM breadth.sector_daily WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '20 days') GROUP BY sector ORDER BY avg_pct_above_50dma DESC, avg_change_5d DESC LIMIT 5;"
+  - "SELECT s.symbol, s.company_name, s.sector FROM scores.stage_snapshots s INNER JOIN market.equity_eod e ON s.symbol = e.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.stage = 'STAGE_2' AND e.series = 'EQ' ORDER BY s.relative_strength DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure results are ordered by avg_pct_above_50dma and avg_change_5d."
+  - "Limit candidate list to top 10 symbols by relative strength."
+synthesis_guidance: "['Focus on sector-relative performance.', 'Explain ranking methodology using debug trace.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:18"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.sector_daily.avg_change_5d is not approved"
+  - "breadth.sector_daily.avg_pct_above_50dma is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "breadth.sector_daily.avg_change_5d is not approved"
+    - "breadth.sector_daily.avg_pct_above_50dma is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

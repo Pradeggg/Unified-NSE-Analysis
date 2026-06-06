@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:46:25"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: portfolio-aware output."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0434_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select stocks with new highs or VCP breakouts and strong fundamentals from the last 20 sessions."
+    template: "WITH recent_highs AS (SELECT symbol, trade_date, close FROM market.equity_eod WHERE trade_date > CURRENT_DATE - INTERVAL '20' DAY AND high >= week52_high), recent_vcp_breakouts AS (SELECT symbol, snapshot_date, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE snapshot_date > CURRENT_DATE - INTERVAL '20' DAY AND vcp_score > 3 AND enhanced_fund_score > 3) SELECT DISTINCT e.symbol FROM recent_highs e JOIN recent_vcp_breakouts v ON e.symbol = v.symbol WHERE v.enhanced_fund_score > 3;"
+status: "validated"
+synthesis_guidance: "Focus on stocks with strong fundamentals, high VCP scores, and recent breakout behavior."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+title: "VCP Breakouts With Fundamentals Variant 0434"
+tool_plan_template:
+
+validation_rules:
+  - "ensure candidates have strong fundamentals and are recent VCP or breakout stocks."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

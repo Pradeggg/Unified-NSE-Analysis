@@ -1,0 +1,89 @@
+id: "signal_outcome_feedback_review_1761_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection with a focus on quick scanning post-results."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "post_results"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    steps:
+      -
+        step: "Analyze signal outcomes"
+        description: "Assess signals that hit targets or stops and calculate success ratios."
+      -
+        step: "Identify winner patterns"
+        description: "Determine common factors in successful signals."
+      -
+        step: "Identify failure patterns"
+        description: "Analyze unsuccessful signals to extract failure trends."
+      -
+        step: "Suggest route improvements"
+        description: "Propose strategies for enhancing future signal accuracy."
+    sql_templates:
+      -
+        template_name: "signal_outcome_summary"
+        description: "Summarize signal outcomes."
+        sql: "SELECT date_issued, symbol, signal, price_at_issue, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_resolved IS NOT NULL;"
+    output_contract:
+      - "outcome_summary"
+      - "winner_patterns"
+      - "failure_patterns"
+      - "route_improvements"
+      - "next_checks"
+sql_templates:
+
+python_tools:
+  -
+    id: "signal_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signal_outcome_summary"
+    outputs:
+      - "winner_patterns"
+      - "failure_patterns"
+      - "route_improvements"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    signal_data = context['signal_outcome_summary']\n    # Analyze signal_data to determine patterns\n    winner_patterns = []\n    failure_patterns = []\n    route_improvements = []\n    # Here would be the analysis logic to fill these lists\n    return {\n        'winner_patterns': winner_patterns,\n        'failure_patterns': failure_patterns,\n        'route_improvements': route_improvements\n    }"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:37"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signal_analysis_tool: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "signal_analysis_tool: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

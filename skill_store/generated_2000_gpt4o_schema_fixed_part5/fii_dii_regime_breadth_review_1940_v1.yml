@@ -1,0 +1,53 @@
+id: "fii_dii_regime_breadth_review_1940_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1940"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as comparison matrix"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    description: "Query the necessary tables to gather evidence on FII/DII flows, market regime, breadth metrics, and index performance for comparative analysis."
+sql_templates:
+  -
+    template: "WITH latest_trades AS (SELECT MAX(trade_date) AS latest_date FROM signals.fii_dii_flows), \nlatest_data AS (SELECT * FROM signals.fii_dii_flows WHERE trade_date IN (SELECT latest_date FROM latest_trades)),\nregime_data AS (SELECT * FROM signals.regime_history WHERE trade_date IN (SELECT latest_date FROM latest_trades)),\nbreadth_data AS (SELECT * FROM breadth.market_daily WHERE trade_date IN (SELECT latest_date FROM latest_trades)),\nindex_data AS (SELECT * FROM market.index_eod WHERE trade_date IN (SELECT latest_date FROM latest_trades)) \nSELECT ld.trade_date,\nld.fii_net_today, ld.dii_net_today, ld.flow_signal,\nrd.regime, rd.confidence,\nmb.ad_signal, mb.trin_signal,\nmi.close AS index_close, mi.change_pct\nFROM latest_data ld\nJOIN regime_data rd ON ld.trade_date = rd.trade_date\nJOIN breadth_data mb ON ld.trade_date = mb.trade_date\nJOIN index_data mi ON ld.trade_date = mi.trade_date\nWHERE mi.index_symbol = 'NIFTY 50'\nORDER BY ld.trade_date DESC LIMIT 20;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure the data includes the last 20 trading sessions."
+  - "Check all joined evidence aligns by the same trade_date."
+synthesis_guidance: "Compile a comprehensive comparison of market conditions using evidence from flows, regime states, breadth indicators, and index levels for risk-on or risk-off conclusions."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

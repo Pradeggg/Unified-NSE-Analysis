@@ -1,0 +1,1 @@
+def run(context): profit_data = context['profit_data']; risk_flags = ['HIGH_RISK' if entry['profit_pct'] < -10 else 'LOW_RISK' for entry in profit_data]; return risk_flags

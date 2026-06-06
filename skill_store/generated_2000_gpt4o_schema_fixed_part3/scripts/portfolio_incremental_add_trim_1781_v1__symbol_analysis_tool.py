@@ -1,0 +1,1 @@
+def run(context): symbol_data = context['data']; # Analyze symbol data for trends return {};

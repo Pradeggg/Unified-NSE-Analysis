@@ -1,0 +1,53 @@
+id: "quarterly_results_quality_review_1447_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1447"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "sector-relative comparison for last 3 months: latest quarterly results analysis"
+  - "which companies had strong quarterly results as portfolio-aware output"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  tools:
+
+  evidence_gaps:
+
+sql_templates:
+  template_1:
+    query: "WITH latest_quarterly_results AS (SELECT DISTINCT ON (q.symbol) q.symbol, q.period_end, q.revenue, q.opm_pct, q.pat, r.verdict FROM scores.quarterly_results q JOIN scores.results_analysis r ON q.symbol = r.symbol AND q.period_end = r.period_end WHERE q.period_end >= CURRENT_DATE - INTERVAL '3 months' AND q.period_type = 'quarter' ORDER BY q.symbol, q.period_end DESC NULLS LAST, q.fetched_at DESC) SELECT l.symbol, l.revenue, l.opm_pct, l.pat, l.verdict FROM latest_quarterly_results l JOIN scores.stage_snapshots s ON l.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.stage = 'STAGE_2';"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "required_keys"
+synthesis_guidance: "{'rules': []}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:57"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,75 @@
+id: "corporate_events_results_watchlist_1773_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1773"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: pre market; response style: QA checklist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for pre market: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as QA checklist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  headers:
+    response_format: "QA checklist"
+    refresh_frequency: "daily"
+    market_focus_time: "pre market"
+  sections:
+    -
+      title: "Corporate Events"
+      query: "SELECT symbol, event_type, event_date, purpose_raw, detail FROM signals.corporate_events WHERE event_date >= CURRENT_DATE;"
+      output_mapping: "event_calendar"
+    -
+      title: "Results Analysis"
+      query: "SELECT symbol, company_name, growth_yoy_revenue_pct, growth_qoq_revenue_pct, verdict FROM scores.results_analysis WHERE filing_date >= CURRENT_DATE - INTERVAL '1 DAY';"
+      output_mapping: "result_context"
+    -
+      title: "Performance and Watchlist"
+      query: "SELECT symbol, company_name, stage, change_1d_pct FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE - INTERVAL '1 DAY';"
+      output_mapping: "symbol_watchlist"
+sql_templates:
+  -
+    template: "SELECT symbol, event_type, event_date, purpose_raw, detail FROM signals.corporate_events WHERE event_date >= CURRENT_DATE;"
+    remarks: "Fetch upcoming corporate events for the current day onwards."
+  -
+    template: "SELECT symbol, company_name, growth_yoy_revenue_pct, growth_qoq_revenue_pct, verdict FROM scores.results_analysis WHERE filing_date >= CURRENT_DATE - INTERVAL '1 DAY';"
+    remarks: "Fetch recent results analysis for the applicable companies."
+  -
+    template: "SELECT symbol, company_name, stage, change_1d_pct FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE - INTERVAL '1 DAY';"
+    remarks: "Fetch daily performance and watchlist information."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure SQL templates are read-only and syntactically correct."
+  - "Responses must be structured as a QA checklist."
+  - "Use only approved tables and columns."
+synthesis_guidance: "Combine evidence from SQL queries to create a comprehensive daily watchlist report structured as a QA checklist. Prioritize event and result details with clear indicators for pre-market decisions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

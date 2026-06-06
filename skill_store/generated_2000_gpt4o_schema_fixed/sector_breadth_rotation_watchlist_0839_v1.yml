@@ -1,0 +1,56 @@
+id: "sector_breadth_rotation_watchlist_0839_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0839"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for last 20 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as action watchlist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Create a sector-relative watchlist with a focus on latest sector breadth, stage 2 participation, relative strength, and price momentum."
+sql_templates:
+  -
+    template_id: "find_improving_sectors"
+    template: "SELECT sector, pct_above_50dma, change_5d, breadth_signal FROM breadth.sector_daily WHERE snapshot_date >= CURRENT_DATE - INTERVAL '20 days' ORDER BY change_5d DESC LIMIT 10;"
+  -
+    template_id: "find_stage2_candidates"
+    template: "SELECT symbol, company_name, stage, stage_score, relative_strength FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' ORDER BY stage_score DESC LIMIT 20;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure latest date filters are applied."
+  - "Sector ranks should be bounded and relevant to the Indian market."
+synthesis_guidance: "{'keywords': ['improvement', 'momentum', 'rotation'], 'approach': 'Compile results from sector_daily and stage_snapshots to identify promising sectors and stocks.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:25"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

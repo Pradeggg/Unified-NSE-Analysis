@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:50:06"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: today; response style: debug trace."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0607_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for today: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+  -
+    description: "Identify current portfolio holdings that have a 'Buy' supertrend state."
+    query: "WITH latest_price AS (SELECT symbol, live_price, supertrend_state FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE), holding_details AS (SELECT h.symbol, h.qty, h.avg_cost, p.live_price, p.supertrend_state FROM portfolio.holdings h JOIN latest_price p ON h.symbol = p.symbol) SELECT symbol, qty, avg_cost, live_price, supertrend_state FROM holding_details WHERE supertrend_state = 'Buy';"
+  -
+    description: "Calculate current sector exposure percentages in the portfolio."
+    query: "WITH sector_exposure AS (SELECT sector, SUM(qty * live_price) AS total_value FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE GROUP BY sector) SELECT sector, total_value, (total_value / (SELECT SUM(qty * live_price) FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE)) * 100 AS sector_percentage FROM sector_exposure;"
+status: "validated"
+synthesis_guidance: "Focus on synthesizing data to highlight actionable insights relevant to today's sector dynamics and portfolio needs."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "today"
+  - "debug_trace"
+title: "Portfolio Incremental Add Trim Review Variant 0607"
+tool_plan_template:
+
+validation_rules:
+  - "Ensure only SELECT queries are used."
+  - "Ensure schema compliance with scores.stage_snapshots and portfolio.holdings tables."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

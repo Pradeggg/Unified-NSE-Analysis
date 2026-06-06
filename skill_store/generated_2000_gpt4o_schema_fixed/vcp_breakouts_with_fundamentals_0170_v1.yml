@@ -1,0 +1,54 @@
+id: "vcp_breakouts_with_fundamentals_0170_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0170"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: post results; response style: narrative plus evidence."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "post_results"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "{Plan detailed in SQL template}"
+sql_templates:
+  -
+    id: "tradingview_vcp_0170"
+    description: "SQL to fetch latest VCP breakout candidates with strong fundamentals."
+    sql: "WITH latest_stage_snapshots AS (\n    SELECT *\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n), latest_vcp_picks AS (\n    SELECT *\n    FROM scores.stage2_vcp_picks\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)\n    ORDER BY vcp_score DESC, rank ASC\n    LIMIT 10\n)\nSELECT ev.symbol, ev.close, ev.volume, ss.enhanced_fund_score, ss.trading_signal\nFROM market.equity_eod ev\nJOIN latest_stage_snapshots ss ON ev.symbol = ss.symbol\nJOIN latest_vcp_picks vp ON ev.symbol = vp.symbol\nWHERE ev.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)\n  AND ss.stage = 'STAGE_2'\n  AND ss.trading_signal IN ('BUY', 'STRONG_BUY')\nORDER BY ss.enhanced_fund_score DESC\nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "SQL must use latest snapshot_date conditions."
+  - "Ensure trading_signal is constructively filtered for 'BUY' or 'STRONG_BUY'."
+  - "Limit result sets appropriately to avoid overwhelming outputs."
+synthesis_guidance: "Provide a narrative alongside evidence to support candidate selection."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

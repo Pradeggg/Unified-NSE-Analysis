@@ -1,0 +1,51 @@
+id: "corporate_events_results_watchlist_0625_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0625"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: risk-first review; timeframe: last 5 sessions; response style: debug trace."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "risk-first review for last 5 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as debug trace"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "risk-first_review"
+  - "last_5_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Using evidence tables, extract event-driven stocks with results context, applying risk-first review filters for last 5 market sessions."
+sql_templates:
+  -
+    code: "WITH latest_stages AS (SELECT DISTINCT ON (symbol) symbol, stage, stage_score, trading_signal, snapshot_date FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY symbol, snapshot_date DESC) SELECT ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, ce.detail, ce.source, sa.stage, sa.stage_score, sa.trading_signal FROM signals.corporate_events ce INNER JOIN latest_stages sa ON ce.symbol = sa.symbol WHERE ce.event_date >= CURRENT_DATE - INTERVAL '5 days' ORDER BY ce.event_date ASC LIMIT 50;"
+    description: "Selects latest corporate events and joins with current stage data for watchlist synthesis."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "results should prioritize events in the next or last 5 sessions"
+  - "ensure symbols are unique and aligned with the latest staging data"
+synthesis_guidance: "Construct a watchlist highlighting event-driven symbols with current stage and event details. Prioritize based on risk-first review criteria."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

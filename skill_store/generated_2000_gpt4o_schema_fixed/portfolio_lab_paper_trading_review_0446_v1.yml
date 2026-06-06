@@ -1,0 +1,66 @@
+id: "portfolio_lab_paper_trading_review_0446_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0446"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for last 3 months: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  structure: "Evidence query with focus on strategy review; freshness window: last 3 months."
+  steps:
+    -
+      name: "Fetch_latest_signals"
+      type: "sql_template"
+      description: "Retrieve latest signals and strategies from signals.signal_log for the last 3 months."
+      template: "SELECT * FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months'"
+    -
+      name: "Fetch_latest_holdings"
+      type: "sql_template"
+      description: "Retrieve latest holdings from portfolio.holdings for analysis alongside strategies."
+      template: "SELECT * FROM portfolio.holdings"
+sql_templates:
+  -
+    name: "Signal_strategy_review"
+    description: "SQL to review paper trading strategies and their outcomes for the last 3 months."
+    template: "WITH latest_signals AS (SELECT * FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months'), latest_snapshot AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT ls.symbol, ls.signal, ls.entry_low, ls.entry_high, ls.stop_loss, ls.target_1, ls.target_2, ss.stage, ss.technical_score FROM latest_signals ls JOIN latest_snapshot ss ON ls.symbol = ss.symbol"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "schema_violations"
+  - "outlier_handling"
+synthesis_guidance: "{'strategy_interpretation': 'Focus on the alignment of entry and exit points with historical data.', 'market_context': 'Use latest stage snapshots for contextual analysis.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

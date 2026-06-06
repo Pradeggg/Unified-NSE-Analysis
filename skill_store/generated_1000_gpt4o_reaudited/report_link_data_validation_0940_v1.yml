@@ -1,0 +1,57 @@
+created_at: "2026-06-06T12:52:56"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: last 20 sessions; response style: comparison matrix."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0940_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    query: "SELECT run_id, analysis_date, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE run_ts >= DATE_SUB(CURDATE(), INTERVAL 20 DAY)"
+    type: "read-only"
+  -
+    query: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= DATE_SUB(CURDATE(), INTERVAL 20 DAY))"
+    type: "read-only"
+status: "test_failed"
+synthesis_guidance: "['Create a comparison matrix to quickly identify discrepancies in data.', 'Prioritize broken links and data gaps in TradingView reports.']"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "comparison_matrix"
+title: "Enhanced Report Data Validation Variant 0940"
+tool_plan_template:
+  required_action: "compare and validate report links and stock data over the last 20 sessions"
+  steps:
+    - "Check for broken links in report pages."
+    - "Identify missing data in underlying stock HTML files."
+    - "Analyze TradingView export consistency over the last 20 sessions."
+validation_rules:
+  - "Ensure all links are reachable and not returning 404."
+  - "Stock data must be non-empty for the last 20 sessions."
+  - "Compare report data with TradingView exports for consistency."
+version: 1
+validation_errors:
+  - "report.enhanced_runs.curdate is not approved"
+  - "report.enhanced_runs.date_sub is not approved"
+  - "report.enhanced_runs.day is not approved"

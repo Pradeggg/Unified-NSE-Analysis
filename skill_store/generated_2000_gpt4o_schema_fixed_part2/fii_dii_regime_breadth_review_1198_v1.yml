@@ -1,0 +1,57 @@
+id: "fii_dii_regime_breadth_review_1198_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1198"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: weekly review; response style: narrative plus evidence."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as narrative plus evidence"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  - "Step 1: Retrieve latest market regime, FII DII flow, and market breadth information using the SQL templates."
+  - "Step 2: Analyze the data to determine the current market risk context."
+  - "Step 3: Formulate a narrative explanation with evidence to describe the risk context to the user."
+sql_templates:
+  -
+    template_id: "latest_regime_breadth_flow"
+    template: "SELECT rh.trade_date, rh.regime, rh.confidence, fdf.flow_signal, md.ad_signal, md.trin_signal\nFROM signals.regime_history rh\nJOIN signals.fii_dii_flows fdf ON rh.trade_date = fdf.trade_date\nJOIN breadth.market_daily md ON fdf.trade_date = md.trade_date\nWHERE rh.trade_date = (SELECT MAX(trade_date) FROM signals.regime_history);"
+    description: "Retrieve the latest market regime, FII DII flow signals, and market breadth signals."
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "['Use the latest data to assess the current market regime.', 'Provide a narrative with evidence that explains whether the market is in a risk-on or risk-off regime.', 'Highlight key indicators such as flow signal and market breadth for position-sizing context.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:41:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

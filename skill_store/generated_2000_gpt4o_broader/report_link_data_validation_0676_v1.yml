@@ -1,0 +1,67 @@
+id: "report_link_data_validation_0676_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0676"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: pre market; response style: debug trace."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for pre market: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "pre_market"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Using approved tables and columns, perform data validation ensuring report links work, and data fields are populated and fresh for pre-market analysis."
+sql_templates:
+  -
+    description: "Check report run metadata freshness for pre-market."
+    query: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '1 day' AND universe_size > 0;"
+  -
+    description: "Fetch stocks with missing critical data fields."
+    query: "SELECT run_id, symbol, recommendation FROM report.enhanced_filtered_stocks WHERE current_price IS NULL OR open_price IS NULL;"
+python_tools:
+  -
+    id: "validate_report_links"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "url"
+    outputs:
+      - "is_valid"
+      - "status_code"
+    approved_tables:
+
+    code: "def run(context):\n    import requests\n    url = context['inputs']['url']\n    try:\n        response = requests.head(url)\n        return {'is_valid': response.status_code == 200, 'status_code': response.status_code}\n    except requests.RequestException:\n        return {'is_valid': False, 'status_code': None}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "ensure_all_links_valid"
+  - "confirm_data_population"
+  - "validate_freshness"
+synthesis_guidance: "Aggregate evidence to construct a traceable validation report detailing any anomolies in report generation, any discovered missing data fields, and suggested remediation steps."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:34"
+generation_model: "gpt-4o"
+validation_errors:
+  - "import requests is not allowed"
+review:
+  status: "needs_heal"
+  findings:
+    - "import requests is not allowed"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

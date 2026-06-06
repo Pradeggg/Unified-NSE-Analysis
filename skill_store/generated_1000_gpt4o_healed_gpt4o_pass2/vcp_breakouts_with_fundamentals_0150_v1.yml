@@ -1,0 +1,70 @@
+created_at: "2026-06-06T12:42:20"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 3 months; response style: narrative plus evidence."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0150_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    symbols = context.get('selected_symbols', [])\n    if not symbols:\n        return {}\n    return {'contextual_narrative': 'Narrative insights based on selected symbols.'}"
+    id: "run_context_analysis"
+    inputs:
+      - "selected_symbols"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "contextual_narrative"
+review:
+  attempts: 3
+  findings:
+    - "run_context_analysis: missing output contextual_narrative"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  - "SELECT symbol, company_name, sector, live_price, change_1d_pct, change_1w_pct, can_slim_score, minervini_score, fundamental_score FROM scores.stage_snapshots WHERE stage = 'Stage 2' AND (change_1w_pct > 0 OR change_1d_pct > 0) AND fundamental_score > 8;"
+  - "SELECT symbol, price, vcp_score, vcp_breakout_pct FROM scores.stage2_vcp_picks WHERE vcp_score > 7 AND vcp_breakout_pct > 5;"
+status: "test_failed"
+synthesis_guidance: "Create narrative insights that contextualize the findings within the Indian market while ensuring data integrity and TradingView compatibility."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+title: "VCP Breakouts With Fundamentals Variant 0150"
+tool_plan_template:
+  list:
+    - "Filter stocks that have hit new highs, VCP, or breakout patterns in the last 3 months."
+    - "Ensure stocks have strong fundamental scores."
+    - "Extract data suitable for TradingView integration."
+    - "Compose narrative insights based on findings."
+  outline: "Identify stocks based on recent price movements and strong fundamentals for TradingView export."
+validation_errors:
+  - "run_context_analysis: missing output contextual_narrative"
+validation_rules:
+  - "Ensure SQL queries are read-only and use only approved tables."
+  - "Validate inputs to python tool are sanitized and not originating from untrusted sources."
+version: 1

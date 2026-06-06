@@ -1,0 +1,55 @@
+id: "market_3m_rotation_swing_0097_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0097"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: weekly review; response style: concise table."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for weekly review: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  - "Perform analysis based on the last three months of market data."
+  - "Focus on identifying sector leaders and swing candidates using stage analysis."
+  - "Provide a sector-relative comparison."
+sql_templates:
+  -
+    template: "SELECT index_symbol, change_pct, trade_date FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'"
+    description: "Get index performance change over the last 3 months."
+  -
+    template: "SELECT sector, COUNT(DISTINCT symbol) AS num_leaders FROM scores.stage_snapshots WHERE stage = '2' AND snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector"
+    description: "Identify leading sectors with Stage 2 stocks in the past 3 months."
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Data freshness must be within the last 3 months."
+  - "Assess relevance based on sector performance and changes."
+synthesis_guidance: "['Combine index performance and sector leadership insights.', 'Highlight primary swing candidates from Stage 2 analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:41:51"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.num_leaders is not approved"

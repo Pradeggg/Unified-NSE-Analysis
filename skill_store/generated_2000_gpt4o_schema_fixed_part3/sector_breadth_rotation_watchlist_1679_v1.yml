@@ -1,0 +1,65 @@
+id: "sector_breadth_rotation_watchlist_1679_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1679"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: pre market; response style: debug trace."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for pre market: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as debug trace"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "pre_market"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Identify top sectors based on daily breadth and Stage 2 participation using breadth.sector_daily and breadth.ma_pct_above."
+    - "Extract symbols with BUY or STRONG_BUY trading signals from scores.stage_snapshots."
+    - "Cross-reference with market.equity_eod for EOD price and volume data."
+    - "Generate debug trace of source and validation path."
+sql_templates:
+  -
+    name: "SectorBreadthAnalysis"
+    template: "WITH TopSectors AS (SELECT sector, AVG(pct_above_50dma) AS avg_pct_above FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) GROUP BY sector ORDER BY avg_pct_above DESC LIMIT 5), Stage2Participation AS (SELECT sector, AVG(stage2_pct) AS avg_stage2 FROM breadth.ma_pct_above WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.ma_pct_above) GROUP BY sector ORDER BY avg_stage2 DESC LIMIT 5) SELECT ts.sector, ts.avg_pct_above, s2p.avg_stage2 FROM TopSectors ts JOIN Stage2Participation s2p ON ts.sector = s2p.sector;"
+  -
+    name: "CandidateSymbols"
+    template: "SELECT symbol, company_name, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY') AND sector IN (SELECT sector FROM SectorBreadthAnalysis);"
+  -
+    name: "EODData"
+    template: "SELECT eod.symbol, eod.close, eod.volume FROM market.equity_eod eod JOIN CandidateSymbols cs ON eod.symbol = cs.symbol WHERE eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sector breadth aligns with Stage 2 participation."
+  - "Verify candidate symbols have recent price data."
+  - "Validate SQL results with expected schema and types."
+synthesis_guidance: "['Combine extracted data to form a comprehensive watchlist ready for TradingView integration.', 'Provide detailed debug trace for source-trail validation.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

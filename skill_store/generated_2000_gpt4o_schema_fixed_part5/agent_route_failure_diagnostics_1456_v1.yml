@@ -1,0 +1,66 @@
+id: "agent_route_failure_diagnostics_1456_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1456"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for quarter to date: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as portfolio-aware output"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Diagnose failures using available data to identify freshness issues and potential resolution loops."
+sql_templates:
+  -
+    name: "latest_enhanced_runs"
+    template: "SELECT run_id, run_ts FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '3 months';"
+    description: "Fetch latest enhanced runs for the quarter-to-date freshness audit."
+python_tools:
+  -
+    id: "process_results"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_data"
+    outputs:
+      - "diagnostics_summary"
+    approved_tables:
+      - "report.enhanced_runs"
+    code: "# Placeholder function to summarize diagnostics\n\ndef run(context):\n    run_data = context['run_data']\n    # Process run_data to produce diagnostics_summary\n    diagnostics_summary = {'summary': 'Processed diagnostics'}\n    return diagnostics_summary"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure SQL queries use approved tables and columns only."
+  - "Verify correct usage of _join_rules and _global_rules."
+synthesis_guidance: "['Consider portfolio effects when synthesizing route diagnostics.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:20"
+generation_model: "gpt-4o"
+validation_errors:
+  - "process_results: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "process_results: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,62 @@
+id: "report_link_data_validation_0368_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0368"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: post results; response style: exceptions and gaps first."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for post results: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "post_results"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    tool: "sql_query_validation"
+    description: "Check for existing gaps in enhanced runs data."
+    sql_templates:
+      -
+        template: "SELECT run_id FROM report.enhanced_runs WHERE notes IS NULL OR market_sentiment = ''"
+        purpose: "Identify runs with missing notes or sentiment."
+  -
+    tool: "sql_query_verification"
+    description: "Verify completion of stock data for filtered stocks."
+    sql_templates:
+      -
+        template: "SELECT run_id, symbol FROM report.enhanced_filtered_stocks WHERE recommendation IS NULL OR (current_price IS NULL AND open_price IS NULL)"
+        purpose: "Identify stocks missing recommendations or price data."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates must be read-only SELECT/WITH templates."
+synthesis_guidance: "['Focus on exceptions and gaps first.', 'Ensure position-sizing context is maintained.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

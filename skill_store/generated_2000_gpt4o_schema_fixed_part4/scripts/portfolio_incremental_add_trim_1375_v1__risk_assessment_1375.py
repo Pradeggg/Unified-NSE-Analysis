@@ -1,0 +1,3 @@
+def run(context):
+    # Analyze risk based on portfolio and stage data
+    ...

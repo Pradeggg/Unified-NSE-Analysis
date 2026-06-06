@@ -1,0 +1,53 @@
+id: "insider_bulk_deal_signal_review_1438_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1438"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for last 20 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as portfolio-aware output"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review insider and bulk deal data with technical indicators to provide portfolio-aware insights."
+sql_templates:
+  -
+    name: "insider_bulk_deals_last_20_sessions"
+    template: "WITH recent_deals AS ( SELECT symbol, MAX(deal_date) AS last_deal_date FROM signals.bulk_block_deals WHERE deal_date >= (SELECT MAX(trade_date) - INTERVAL '20' DAY FROM market.equity_eod) GROUP BY symbol ) SELECT s.symbol, s.deal_date, s.side, s.qty, s.price, t.stage, t.technical_score FROM signals.bulk_block_deals s JOIN scores.stage_snapshots t ON s.symbol = t.symbol JOIN recent_deals r ON s.symbol = r.symbol AND s.deal_date = r.last_deal_date WHERE t.snapshot_date = r.last_deal_date AND s.deal_date >= (SELECT MAX(trade_date) - INTERVAL '20' DAY FROM market.equity_eod) ORDER BY t.technical_score DESC;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure only read-only SQL templates."
+  - "Check Python tool adherence to policy."
+  - "Only use approved tables."
+synthesis_guidance: "['Combine insider and technical data for clear position-sizing insights.', 'Provide a detailed view of accumulation or distribution signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

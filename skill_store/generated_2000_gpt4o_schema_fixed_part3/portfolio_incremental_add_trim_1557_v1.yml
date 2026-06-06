@@ -1,0 +1,54 @@
+id: "portfolio_incremental_add_trim_1557_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1557"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: research-only summary."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for quarter to date: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as research-only summary"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Generate a research-only summary for incremental add or trim decisions based on holdings' sector-relative performance for the quarter to date."
+sql_templates:
+  -
+    template_id: "latest_stage_data"
+    sql: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    template_id: "portfolio_joined_with_latest_stages"
+    sql: "SELECT h.symbol, h.qty, h.avg_cost, s.sector, s.change_1m_pct, s.stage, s.trading_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure the result set includes all symbols from current holdings."
+  - "Check that sector-relative comparisons are provided."
+  - "Validate that recommendations align with trading signals and market changes."
+synthesis_guidance: "Summarize the findings focusing on whether incremental add or trim actions are advised based on sector performance and trading signals. Include research-only insights on sector trends and provide reasoned conclusions."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:24"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

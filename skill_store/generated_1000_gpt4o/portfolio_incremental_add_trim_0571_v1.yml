@@ -1,0 +1,67 @@
+id: "portfolio_incremental_add_trim_0571_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0571"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for pre market: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as research-only summary"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  language: "python"
+  required_function: "run(context)"
+  mode: "read_only"
+  approved_tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+  inputs:
+    snapshot_date: "current date"
+    market_open: false
+  outputs:
+    - "portfolio_state"
+    - "sector_exposure"
+    - "add_candidates"
+    - "trim_candidates"
+    - "risk_flags"
+  code: "# Extract and process data for analysis"
+sql_templates:
+  -
+    template: "WITH recent_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE), portfolio_analysis AS (SELECT h.symbol, h.qty, s.stage, s.stage_score, s.trading_signal FROM portfolio.holdings h JOIN recent_snapshots s ON h.symbol = s.symbol) SELECT * FROM portfolio_analysis"
+    description: "Extract latest portfolio holding analysis with stage and trading signals."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure snapshot_date is current"
+  - "Market status must be pre open"
+synthesis_guidance: "Focus on high-level executive summary of add/trim strategies based on recent market data and portfolio status."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:49:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table h.qty"
+  - "unknown table h.symbol"
+  - "unknown table s.stage"
+  - "unknown table s.stage_score"
+  - "unknown table s.symbol"
+  - "unknown table s.trading_signal"

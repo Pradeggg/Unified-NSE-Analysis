@@ -1,0 +1,66 @@
+id: "market_3m_rotation_swing_1821_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1821"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for last 5 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    description: "* Start with a broad market index overview for the last 5 sessions to understand the regime shift\u2014use `market.index_eod`.\n* Analyze sector performance by reviewing `scores.stage_snapshots` to identify stage distribution changes and leading sectors.\n* Identify potential swing candidates from `scores.stage2_vcp_picks`, prioritizing those with positive `trading_signal` and VCP scores.\n* Summarize findings in an action-watchlist style with attention to recent market swings and momentum."
+sql_templates:
+  -
+    template_id: "index_overview"
+    description: "Get index performance over the last 5 sessions."
+    query: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= (SELECT MAX(trade_date) FROM market.index_eod) - INTERVAL '5 days';"
+  -
+    template_id: "sector_performance"
+    description: "Analyze sector distribution and performance."
+    query: "WITH latest_snapshot AS ( SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ) SELECT sector, COUNT(*) AS count, AVG(stage_score) AS avg_stage_score FROM latest_snapshot WHERE stage = 'STAGE_2' GROUP BY sector ORDER BY avg_stage_score DESC;"
+  -
+    template_id: "swing_candidates"
+    description: "Select top swinging candidates based on VCP scores."
+    query: "SELECT symbol, company_name, vcp_score, trading_signal FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "Verify SQL templates return expected columns and data types."
+  - "Check action watchlist consistency against input patterns."
+  - "Confirm no unintended data manipulations in Python tools."
+synthesis_guidance: "['Summarize market index momentum succinctly.', 'Highlight sector changes with potential impacts.', 'List top candidate symbols with trading signals and VCP scores.', 'Illustrate risks with qualitative observations from evidence.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:29"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

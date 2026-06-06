@@ -1,0 +1,72 @@
+id: "insider_bulk_deal_signal_review_1424_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1424"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: last 5 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for last 5 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as portfolio-aware output"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "last_5_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    python_tool_policy:
+      required_function: "run(context)"
+      language: "python"
+      mode: "read_only"
+      blocked_capabilities:
+        - "network"
+        - "subprocess"
+        - "filesystem_write"
+        - "db_write"
+        - "broker_api"
+      required_fields:
+        - "id"
+        - "language"
+        - "mode"
+        - "inputs"
+        - "outputs"
+        - "approved_tables"
+        - "code"
+sql_templates:
+  -
+    description: "Identify candidate symbols with significant insider or bulk deal activity and technical support over the last 5 sessions."
+    template: "WITH latest_stage AS (\n    SELECT symbol,\n           stage,\n           MAX(snapshot_date) AS latest_snapshot_date\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n      AND stage = 'STAGE_2'\n    GROUP BY symbol, stage\n), latest_deals AS (\n    SELECT symbol,\n           MAX(deal_date) AS latest_deal_date\n    FROM signals.bulk_block_deals\n    WHERE deal_date >= CURRENT_DATE - INTERVAL '5 days'\n    GROUP BY symbol\n), candidate_symbols AS (\n    SELECT i.symbol\n    FROM signals.insider_alerts i\n    JOIN latest_stage ls ON i.symbol = ls.symbol\n    JOIN latest_deals ld ON i.symbol = ld.symbol\n    WHERE i.alert_date >= CURRENT_DATE - INTERVAL '5 days'\n)\nSELECT e.symbol,\n       e.close,\n       e.change_pct,\n       s.trading_signal\nFROM market.equity_eod e\nJOIN candidate_symbols c ON e.symbol = c.symbol\nJOIN scores.stage_snapshots s ON e.symbol = s.symbol\nWHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)\nLIMIT 50;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure output includes detailed analysis of insider alerts and bulk or block deals."
+  - "Check technical confirmation aligns with the latest market data."
+  - "Verify watchlist relevance by filtering for STAGE_2 stocks with positive trading signals."
+synthesis_guidance: "['Synthesize results with respect to insider activity significance and technical alignments.', 'Prioritize stocks exhibiting strong positive setups in the last 5 sessions.', 'Frame output with portfolio-awareness for trader insights.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

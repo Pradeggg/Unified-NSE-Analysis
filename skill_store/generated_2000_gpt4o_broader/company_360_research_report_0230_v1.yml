@@ -1,0 +1,70 @@
+id: "company_360_research_report_0230_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0230"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: TradingView export; timeframe: last 5 sessions; response style: ranked candidates."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "TradingView export for last 5 sessions: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as ranked candidates"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template: "Create a comprehensive company research report in the context of the Indian market using specified tables and evidence. Ensure SQL templates are read-only and Python tools are only applied when necessary."
+sql_templates:
+  snapshot_query: "SELECT * FROM scores.stage_snapshots WHERE symbol = 'RELIANCE';"
+  financial_query: "SELECT * FROM scores.quarterly_results WHERE symbol = 'RELIANCE';"
+  technical_query: "SELECT * FROM market.equity_eod WHERE symbol = 'RELIANCE' ORDER BY trade_date DESC LIMIT 5;"
+python_tools:
+  -
+    id: "calculate_technical_indicators"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "market.equity_eod"
+    outputs:
+      - "technical_indicators"
+    approved_tables:
+      - "market.equity_eod"
+    code: "def run(context):\n    # Example function to calculate technical indicators\n    eod_data = context['market.equity_eod']\n    return {'technical_indicators': 'sample_output'}"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all data points are correctly pulled from approved tables."
+  - "Maintain read-only status for SQL queries and Python tools."
+  - "Synthesize data respecting Indian market context."
+synthesis_guidance: "Integrate data from both SQL queries and Python tools, ensuring a comprehensive and coherent narrative fitting the Indian market perspective, with attention to contemporary trading strategies and valuations."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:58"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_technical_indicators: execution failed: KeyError: 'market.equity_eod'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_technical_indicators: execution failed: KeyError: 'market.equity_eod'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

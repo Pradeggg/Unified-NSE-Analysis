@@ -1,0 +1,77 @@
+id: "corporate_events_results_watchlist_0107_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0107"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: today; response style: narrative plus evidence."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for today: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as narrative plus evidence"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "today"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  type: "extraction_plan"
+  steps:
+    -
+      description: "Identify upcoming or recent corporate events and results."
+      output: "event_calendar"
+    -
+      description: "Select symbols for watchlist based on event impact and stage."
+      output: "symbol_watchlist"
+    -
+      description: "Provide context for the results of symbols in the watchlist."
+      output: "result_context"
+    -
+      description: "Categorize actions based on the event-driven analysis."
+      output: "action_bucket"
+    -
+      description: "Capture sources for transparency and validation."
+      output: "source_trail"
+sql_templates:
+  -
+    description: "Extract symbols with corporate events for today's date."
+    template: "SELECT symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date = CURRENT_DATE AND event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM') LIMIT 50"
+  -
+    description: "Select latest stage data for symbols in the event-driven watchlist."
+    template: "WITH latest_stage AS (SELECT DISTINCT ON (symbol) symbol, stage, snapshot_date FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY symbol, snapshot_date DESC) SELECT s.symbol, ce.event_type FROM signals.corporate_events ce JOIN latest_stage s ON ce.symbol = s.symbol WHERE ce.event_date = CURRENT_DATE AND s.stage = 'STAGE_2'"
+  -
+    description: "Compile results analysis for symbols on the watchlist."
+    template: "SELECT symbol, company_name, growth_yoy_revenue_pct, growth_yoy_pat_pct FROM scores.results_analysis WHERE symbol IN (SELECT symbol FROM signals.corporate_events WHERE event_date = CURRENT_DATE) AND period_end = (SELECT MAX(period_end) FROM scores.results_analysis WHERE filing_date <= CURRENT_DATE) LIMIT 50"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+synthesis_guidance: "{'type': 'narrative_synthesis', 'objective': \"Compose a sector-relative synopsis for today's event-driven stocks. Integrate evidence and context from the extracted data to form a coherent analysis.\"}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:19:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

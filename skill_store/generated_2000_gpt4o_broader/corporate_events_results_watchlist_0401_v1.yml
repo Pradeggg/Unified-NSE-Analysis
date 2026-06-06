@@ -1,0 +1,54 @@
+id: "corporate_events_results_watchlist_0401_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0401"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for today: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Identify and list corporate events for today using the evidence tables with focus on symbols related to the user's portfolio preferences. Provide a quick view with relevant context from results analysis and stage snapshots."
+sql_templates:
+  -
+    description: "Retrieve today's corporate events."
+    template: "SELECT symbol, event_type, event_date, detail, source FROM signals.corporate_events WHERE event_date = CURRENT_DATE;"
+  -
+    description: "Get recent results analysis for relevant symbols."
+    template: "SELECT symbol, company_name, growth_yoy_revenue_pct, growth_qoq_revenue_pct, score FROM scores.results_analysis WHERE filing_date = CURRENT_DATE;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event dates align with the provided patterns."
+  - "Confirm symbols match between events and results analysis for consistency."
+synthesis_guidance: "Compile a comprehensive overview using the gathered data to highlight event-driven stocks for today, focusing on portfolio relevance."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:45"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

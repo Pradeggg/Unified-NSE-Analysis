@@ -1,0 +1,58 @@
+id: "portfolio_lab_paper_trading_review_1034_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1034"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: concise table."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for last 20 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as concise table"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "market.equity_eod"
+tool_plan_template:
+  summary: "Analyze paper trading strategies with focus on entries, exits, and exposure, generating a concise watchlist for the last 20 sessions."
+  steps:
+    - "Identify signals issued within the last 20 sessions from the signals.signal_log table."
+    - "Fetch latest EOD prices for the symbols identified using the market.equity_eod table."
+sql_templates:
+  -
+    name: "Retrieve Last 20 Sessions Signals"
+    query: "SELECT symbol, signal, date_issued, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '20 days';"
+  -
+    name: "Retrieve Latest EOD Prices"
+    query: "SELECT symbol, close, trade_date FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all symbols have recent EOD prices for exposure calculations."
+  - "Check alignment of signal issue dates with the EOD data's trade dates."
+synthesis_guidance: "['Present strategy summaries in a concise table format emphasizing actionable insights.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

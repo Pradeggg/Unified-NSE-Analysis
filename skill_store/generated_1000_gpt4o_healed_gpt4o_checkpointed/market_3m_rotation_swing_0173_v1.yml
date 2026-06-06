@@ -1,0 +1,73 @@
+created_at: "2026-06-06T12:42:36"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: pre market; response style: narrative plus evidence."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0173_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as narrative plus evidence"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Get the last 3 months of index returns."
+    template: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    description: "Find the leading sectors and top swing candidates."
+    template: "WITH sector_strength AS (SELECT sector, AVG(relative_strength) AS avg_strength FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_strength DESC) SELECT sector FROM sector_strength LIMIT 3;"
+status: "validated"
+synthesis_guidance:
+  - "Narrate market regime trends over the past 3 months."
+  - "Identify leading sectors and key swing trading opportunities."
+  - "Discuss any observed risks in the current market analysis."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "narrative_plus_evidence"
+title: "3M Market Rotation Swing Assessment Variant 0173"
+tool_plan_template:
+  approved_tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+  code: "def run(context):\n    # Your logic here to process input context into the desired output\n    pass"
+  inputs:
+    - "context"
+  language: "python"
+  mode: "read_only"
+  outputs:
+    - "json"
+validation_errors:
+
+validation_rules:
+  - "Ensure index_returns contain valid trade_date and change_pct."
+  - "Verify that leading_sectors are within the top 3 with highest average relative strength."
+version: 1
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"

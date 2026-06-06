@@ -1,0 +1,55 @@
+id: "report_link_data_validation_0634_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Skill Card"
+description: "Agent skill card to validate enhanced report run metadata and filtered stock rows, focusing on watchlist creation and debug trace for the last 20 sessions."
+input_patterns:
+  - "review report links not working"
+  - "validate generated report links and missing data"
+  - "watchlist creation for last 20 sessions: review report links not working"
+tags:
+  - "report_qa"
+  - "links"
+  - "data_validation"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  plan_description: "Use SQL templates to retrieve last 20 sessions of report runs and stock filtering results, identify broken links and missing data."
+  plan_steps:
+    - "Query enhanced report runs for the last 20 sessions."
+    - "Check for missing data and broken links."
+    - "Synthesize findings into a debug trace format."
+sql_templates:
+  recent_runs:
+    query: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_filtered FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 20;"
+    description: "Retrieve metadata for the latest 20 report runs."
+  filtered_stocks_check:
+    query: "SELECT run_id, symbol FROM report.enhanced_filtered_stocks WHERE rank IS NULL OR symbol IS NULL;"
+    description: "Identify gaps or missing data in filtered stocks."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure SQL queries adhere to templates."
+  - "Synthesize into debug trace response."
+synthesis_guidance: "Summarize findings to highlight broken links and missing data, offering remediation steps based on the last 20 sessions analysis."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

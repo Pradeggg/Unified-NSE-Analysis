@@ -1,0 +1,68 @@
+id: "company_360_research_report_1938_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1938"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "position-sizing context for last 20 sessions: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as comparison matrix"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template: "{RELIANCE Comprehensive Report: Use overview, fundamentals, technicals}"
+sql_templates:
+  -
+    template_id: "latest_stage_data"
+    description: "Retrieve the latest stage data for the given symbol."
+    sql: "SELECT * FROM scores.stage_snapshots WHERE symbol = $1 AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 1;"
+  -
+    template_id: "quarterly_financials"
+    description: "Retrieve the latest quarterly financials for the given symbol."
+    sql: "SELECT * FROM scores.quarterly_results WHERE symbol = $1 AND (period_end, fetched_at) IN (SELECT period_end, fetched_at FROM scores.quarterly_results WHERE symbol = $1 ORDER BY period_end DESC NULLS LAST, fetched_at DESC LIMIT 1);"
+  -
+    template_id: "eod_technicals"
+    description: "Retrieve EOD technical data for the last 20 sessions for the given symbol."
+    sql: "SELECT * FROM market.equity_eod WHERE symbol = $1 AND trade_date > CURRENT_DATE - INTERVAL '20 days' ORDER BY trade_date DESC;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  -
+    rule: "Ensure all sections are filled based on available evidence."
+  -
+    rule: "Check if current stage and signal match."
+synthesis_guidance: "['Summarize insights from financials and technicals.', 'Incorporate narrative elements from analysis.', 'Focus on position-sizing implications, last 20 sessions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

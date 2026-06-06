@@ -1,0 +1,62 @@
+created_at: "2026-06-06T12:41:36"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: post results; response style: concise table."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0069_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    name: "index_returns_last_3_months"
+    template: "WITH last_3_months AS (SELECT trade_date, index_symbol, close FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months') SELECT index_symbol, (MAX(close) - MIN(close)) / MIN(close) * 100 AS return_pct FROM last_3_months GROUP BY index_symbol;"
+  -
+    name: "leading_sectors_change"
+    template: "SELECT sector, COUNT(DISTINCT symbol) AS count, SUM(stage_score) AS total_stage_score FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY total_stage_score DESC LIMIT 5;"
+  -
+    name: "stage2_swing_candidates"
+    template: "SELECT symbol, company_name, sector, price, relative_strength, trading_signal FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' AND stage=2;"
+status: "test_failed"
+synthesis_guidance: "['Combine index returns and sector score data to demonstrate market regime.', 'Highlight top performing sectors and Stage 2 swing candidates.', 'Identify potential market risks based on volatility metrics.']"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "post_results"
+  - "concise_table"
+title: "3M Market Rotation Swing Assessment Variant 0069"
+tool_plan_template:
+  evidence_gaps:
+
+  python_tools:
+
+validation_rules:
+  - "Ensure 'as_of_date' reflects the execution date."
+  - "Ensure index return calculation uses accurate start and end prices."
+  - "Validate sector leadership based on stage score aggregation."
+  - "Ensure swing candidates conform to Stage 2 criteria."
+version: 1
+validation_errors:
+  - "scores.stage2_vcp_picks.stage is not approved"
+  - "scores.stage_snapshots.total_stage_score is not approved"

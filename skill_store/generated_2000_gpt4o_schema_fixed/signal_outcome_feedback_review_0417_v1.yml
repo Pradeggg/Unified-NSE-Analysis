@@ -1,0 +1,73 @@
+id: "signal_outcome_feedback_review_0417_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0417"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: portfolio-aware output."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for latest EOD: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as portfolio-aware output"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Fetch latest EOD trade data for all symbols."
+    - "Join signal log entries with resolved date to check outcomes."
+    - "Compare outcomes against issued targets and stop-loss."
+    - "Perform sector-relative analysis using stage snapshots."
+sql_templates:
+  -
+    description: "Fetch latest EOD data for analysis"
+    template: "SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+  -
+    description: "Join signals and stages to evaluate outcomes"
+    template: "SELECT s.id, s.symbol, s.hit_target, s.hit_stop, ss.sector, ss.stage, ss.technical_score FROM signals.signal_log s INNER JOIN scores.stage_snapshots ss ON s.symbol = ss.symbol WHERE s.date_resolved IS NOT NULL AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "analysis_results"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+    code: "# Placeholder for Python analysis code"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure signals have non-null resolution dates."
+  - "Align trade dates and snapshot dates using global rules."
+synthesis_guidance: "['Focus on sector-relative comparisons.', 'Highlight target hits and misses.', 'Translate outcomes into actionable insights.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:03"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run: must define run(context)"
+review:
+  status: "needs_heal"
+  findings:
+    - "run: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

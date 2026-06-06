@@ -1,0 +1,57 @@
+id: "signal_outcome_feedback_review_1915_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1915"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for latest EOD: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as comparison matrix"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Evaluate outcomes of generated signals based on their targets and stops, focusing on the latest end-of-day data."
+sql_templates:
+  -
+    description: "Select latest signals with their outcomes."
+    template: "SELECT sl.date_issued, sl.symbol, sl.signal, sl.hit_target, sl.hit_stop, sl.return_pct FROM signals.signal_log sl WHERE sl.date_issued = (SELECT MAX(date_issued) FROM signals.signal_log);"
+  -
+    description: "Join with latest stage snapshots for context."
+    template: "SELECT sl.symbol, ss.stage, ss.technical_score FROM signals.signal_log sl INNER JOIN scores.stage_snapshots ss ON sl.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all input patterns are captured in the evidence evaluation."
+  - "Validate SQL templates for correct table usage and joining based on approved rules."
+synthesis_guidance: "['Provide a comparison matrix summarizing successful and failed signal traits.', 'Identify patterns in the outcomes for future strategy refinement.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

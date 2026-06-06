@@ -1,0 +1,56 @@
+id: "vcp_breakouts_with_fundamentals_0268_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0268"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: post results; response style: ranked candidates."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  tool: "Agent Adda Screening Tool"
+  type: "SQLTemplate"
+  template:
+    sql: "WITH latest_snapshot AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY')) SELECT p.symbol, p.company_name, p.sector, p.price, p.enhanced_fund_score FROM scores.stage2_vcp_picks p JOIN latest_snapshot s ON p.symbol = s.symbol WHERE p.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY p.vcp_score DESC, p.rank ASC LIMIT 10;"
+    params:
+
+sql_templates:
+  - "WITH latest_snapshot AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY')) SELECT p.symbol, p.company_name, p.sector, p.price, p.enhanced_fund_score FROM scores.stage2_vcp_picks p JOIN latest_snapshot s ON p.symbol = s.symbol WHERE p.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY p.vcp_score DESC, p.rank ASC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure candidates are from the latest snapshot date."
+  - "Ensure all symbols have a BUY or STRONG_BUY trading signal."
+synthesis_guidance: "['Focus on stocks that rank high on VCP score and have strong fundamentals.', 'Provide a concise list with trading signals and enhanced fundamental scores.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:48"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

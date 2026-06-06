@@ -1,0 +1,54 @@
+id: "agent_route_failure_diagnostics_1456_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1456"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: quarter to date; response style: portfolio-aware output."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for quarter to date: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as portfolio-aware output"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Identify gaps in tool coverage and validate symbol resolutions. Focus on recent missing data within the quarter to date."
+sql_templates:
+  -
+    purpose: "Freshness audit for enhanced runs quarter to date"
+    sql: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    purpose: "Symbol resolution diagnostics"
+    sql: "SELECT efs.run_id, efs.symbol, ss.rsi, ss.trading_signal FROM report.enhanced_filtered_stocks efs JOIN scores.stage_snapshots ss ON efs.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure SQL templates only use SELECT statements."
+  - "Check that queries are bounded and filtered for recent data using approved criteria."
+synthesis_guidance: "['Aggregate diagnostic findings into portfolio-aware insights.', 'Advocate for tool coverage enhancements based on identified gaps.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

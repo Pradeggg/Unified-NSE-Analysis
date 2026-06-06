@@ -1,0 +1,143 @@
+card:
+  created_at: "2026-06-06T12:46:27"
+  created_by: "llm_generated"
+  description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 5 sessions; response style: portfolio-aware output."
+  domain: "screening"
+  evidence_required:
+    tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "vcp_breakouts_with_fundamentals_0426_v1"
+  input_patterns:
+    - "stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "VCP breakout stocks for TradingView"
+    - "quality breakouts with strong fundamentals"
+    - "freshness audit for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+    - "quality breakouts with strong fundamentals as portfolio-aware output"
+  output_contract:
+    - "filters"
+    - "candidates"
+    - "tradingview_symbols"
+    - "evidence"
+    - "risks"
+  python_tools:
+    -
+      blocked_capabilities:
+        - "broker/order automation"
+        - "network calls"
+        - "subprocess calls"
+        - "DB writes"
+      code: "class StockAnalyzer:\n    def run(context):\n        # Logic for analyzing stock\n        return []"
+      language: "python"
+      mode: "read-only"
+      required_fields:
+        - "symbol"
+        - "price"
+        - "fundamental_score"
+      required_function: "run"
+  review:
+    attempts: 3
+    findings:
+
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "needs_heal"
+  sql_templates:
+    -
+      name: "fetch_vcp_breakouts"
+      query: "WITH filtered_stocks AS (SELECT e.symbol, e.trade_date, e.close, s.fundamental_score, s.enhanced_fund_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date > current_date - interval '5 days' AND (s.minervini_score > 0.8 OR s.enhanced_fund_score > 8) AND e.high = e.week52_high) SELECT f.symbol, f.trade_date, f.close FROM filtered_stocks f"
+  status: "generated"
+  synthesis_guidance: "Ensure coverage of both technical breakouts and strong fundamentals while aligning output with portfolio management objectives."
+  tags:
+    - "vcp"
+    - "breakout"
+    - "new_high"
+    - "fundamentals"
+    - "tradingview"
+    - "freshness_audit"
+    - "last_5_sessions"
+    - "portfolio-aware_output"
+  title: "VCP Breakouts With Fundamentals Variant 0426"
+  tool_plan_template: "Generate a list of eligible stocks showing VCP, breakout, or new highs with strong fundamentals in the last 5 sessions. Include TradingView symbols and portfolio-aware outputs."
+  validation_errors:
+
+  validation_rules:
+    - "Ensure that SQL templates are read-only."
+    - "All outputs should adhere to 'portfolio-aware' implications."
+  version: 1
+created_at: "2026-06-06T12:46:27"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 5 sessions; response style: portfolio-aware output."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0426_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    blocked_capabilities:
+      - "broker/order automation"
+      - "network calls"
+      - "subprocess calls"
+      - "DB writes"
+    code: "class StockAnalyzer:\n    def run(context):\n        # Logic for analyzing stock\n        return []"
+    language: "python"
+    mode: "read-only"
+    required_fields:
+      - "symbol"
+      - "price"
+      - "fundamental_score"
+    required_function: "run"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: mode must be read_only"
+    - "<missing-id>: must define run(context)"
+    - "<missing-id>: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    name: "fetch_vcp_breakouts"
+    query: "WITH filtered_stocks AS (SELECT e.symbol, e.trade_date, e.close, s.fundamental_score, s.enhanced_fund_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date > current_date - interval '5 days' AND (s.minervini_score > 0.8 OR s.enhanced_fund_score > 8) AND e.high = e.week52_high) SELECT f.symbol, f.trade_date, f.close FROM filtered_stocks f"
+status: "test_failed"
+synthesis_guidance: "Ensure coverage of both technical breakouts and strong fundamentals while aligning output with portfolio management objectives."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "portfolio-aware_output"
+title: "VCP Breakouts With Fundamentals Variant 0426"
+tool_plan_template: "Generate a list of eligible stocks showing VCP, breakout, or new highs with strong fundamentals in the last 5 sessions. Include TradingView symbols and portfolio-aware outputs."
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: must define run(context)"
+  - "<missing-id>: outputs must be a non-empty list"
+validation_rules:
+  - "Ensure that SQL templates are read-only."
+  - "All outputs should adhere to 'portfolio-aware' implications."
+version: 1

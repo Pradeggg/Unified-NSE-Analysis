@@ -1,0 +1,67 @@
+id: "fii_dii_regime_breadth_review_0722_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0722"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for last 5 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  sql_templates:
+    -
+      template: "\n                WITH latest_flows AS (\n                    SELECT * FROM signals.fii_dii_flows\n                    WHERE trade_date > CURRENT_DATE - INTERVAL '5 days'\n                ),\n                latest_regime AS (\n                    SELECT * FROM signals.regime_history\n                    WHERE trade_date > CURRENT_DATE - INTERVAL '5 days'\n                ),\n                latest_breadth AS (\n                    SELECT * FROM breadth.market_daily\n                    WHERE trade_date > CURRENT_DATE - INTERVAL '5 days'\n                ),\n                latest_index AS (\n                    SELECT * FROM market.index_eod\n                    WHERE trade_date > CURRENT_DATE - INTERVAL '5 days'\n                      AND index_symbol = 'NIFTY_50'\n                )\n                SELECT rf.trade_date, rf.fii_net_5d, rf.dii_net_5d, rh.regime, rh.confidence,\n                       md.net_ad, md.ad_signal, ieod.close, ieod.change_pct\n                FROM latest_flows rf\n                JOIN latest_regime rh ON rf.trade_date = rh.trade_date\n                JOIN latest_breadth md ON rf.trade_date = md.trade_date\n                JOIN latest_index ieod ON rf.trade_date = ieod.trade_date\n                ORDER BY rf.trade_date DESC\n                LIMIT 5;\n            "
+  output_contract:
+    - "regime"
+    - "flow_context"
+    - "breadth_context"
+    - "index_confirmation"
+    - "risk_flags"
+  validation_rules:
+    rules:
+
+  synthesis_guidance:
+    - "Aggregate FII/DII flow trends with market regime confidence."
+    - "Examine breadth context (advances/declines) and TRIN signals."
+    - "Compare index action for confirmation of risk-on or risk-off context."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

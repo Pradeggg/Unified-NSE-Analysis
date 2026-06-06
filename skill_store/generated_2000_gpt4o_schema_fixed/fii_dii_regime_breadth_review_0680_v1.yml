@@ -1,0 +1,52 @@
+id: "fii_dii_regime_breadth_review_0680_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0680"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: pre market; response style: debug trace."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for pre market: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as debug trace"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "pre_market"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  query: "SELECT fh.trade_date, fh.fii_net_today, fh.dii_net_today, rh.regime, rh.confidence, md.ad_signal, ieo.close, ieo.trend_signal FROM signals.fii_dii_flows AS fh JOIN signals.regime_history AS rh ON fh.trade_date = rh.trade_date JOIN breadth.market_daily AS md ON fh.trade_date = md.trade_date JOIN market.index_eod AS ieo ON fh.trade_date = ieo.trade_date WHERE ieo.index_symbol = 'Nifty 50' AND fh.trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows) LIMIT 1;"
+sql_templates:
+  - "SELECT fh.trade_date, fh.fii_net_today, fh.dii_net_today, rh.regime, rh.confidence, md.ad_signal, ieo.close, ieo.trend_signal FROM signals.fii_dii_flows AS fh JOIN signals.regime_history AS rh ON fh.trade_date = rh.trade_date JOIN breadth.market_daily AS md ON fh.trade_date = md.trade_date JOIN market.index_eod AS ieo ON fh.trade_date = ieo.trade_date WHERE ieo.index_symbol = 'Nifty 50' AND fh.trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows) LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data types match the approved schema."
+  - "Check that latest records are used by comparing trade_date to the max date."
+  - "Verify joins adhere to _join_rules."
+synthesis_guidance: "{'primary_focus': 'Combine flow, regime, breadth, and index evidence.', 'secondary_focus': 'Assess risk-on or risk-off status.', 'debug_trace': 'Focus on traceability of data sources in synthesis.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:45"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

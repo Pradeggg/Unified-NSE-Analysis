@@ -1,0 +1,55 @@
+id: "sector_breadth_rotation_watchlist_1399_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1399"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for weekly review: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as exceptions and gaps first"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Finalize a watchlist by focusing on sector breadth and stage migration using SQL and any required Python evidence, adhering to read-only policies."
+sql_templates:
+  -
+    title: "Sector Breadth and Stage 2 Participation"
+    description: "Selects sectors with strong breadth and stage participation."
+    template: "SELECT bs.sector, bs.pct_above_50dma, bs.change_5d, bs.breadth_signal, ms.stage2_pct FROM breadth.sector_daily bs JOIN breadth.ma_pct_above ma ON bs.snapshot_date = ma.snapshot_date WHERE bs.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) AND ms.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.ma_pct_above) ORDER BY ms.stage2_pct DESC;"
+    restrictions: "Read-only SELECT using latest dates, no write operations."
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure output is sorted by stage2_pct descending."
+  - "Verify sector breadth thresholds are met for selection."
+synthesis_guidance: "Focus on exceptions and gaps, highlighting the sectors with strong stage transitions and breadth improvements."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

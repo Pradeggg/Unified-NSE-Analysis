@@ -1,0 +1,54 @@
+id: "corporate_events_results_watchlist_1759_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1759"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: quarter to date; response style: QA checklist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for quarter to date: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as QA checklist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Fetch events and results for watchlist validation with a quality assurance checklist, focusing on sources and dates within the current quarter."
+sql_templates:
+  -
+    query: "SELECT ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, ce.detail, ce.source, ra.verdict, ra.growth_yoy_revenue_pct, ss.stage, ss.trading_signal, ss.price FROM signals.corporate_events AS ce JOIN scores.results_analysis AS ra ON ce.symbol = ra.symbol JOIN scores.stage_snapshots AS ss ON ce.symbol = ss.symbol WHERE ce.event_date >= CURRENT_DATE - INTERVAL '3 MONTHS' ORDER BY ce.event_date DESC LIMIT 100;"
+    description: "Retrieve recent corporate events along with results and stage snapshots for QA checklist validation."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event dates are within the current quarter."
+  - "Verify result verdicts align with industry benchmarks."
+  - "Check for source-trail consistency across data sources."
+synthesis_guidance: "['Summarize findings with emphasis on upcoming events.', 'Highlight any discrepancies in source data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:37"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

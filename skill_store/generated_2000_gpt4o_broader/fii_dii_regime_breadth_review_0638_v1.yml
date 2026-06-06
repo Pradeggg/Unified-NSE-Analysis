@@ -1,0 +1,77 @@
+id: "fii_dii_regime_breadth_review_0638_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0638"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as debug trace"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    sql_template: "SELECT trade_date, fii_net_today, dii_net_today, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL 20 DAY ORDER BY trade_date DESC;"
+  -
+    sql_template: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date >= CURRENT_DATE - INTERVAL 20 DAY ORDER BY trade_date DESC;"
+  -
+    sql_template: "SELECT trade_date, advances, declines, ad_signal FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL 20 DAY ORDER BY trade_date DESC;"
+  -
+    sql_template: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL 20 DAY ORDER BY trade_date DESC;"
+sql_templates:
+  - "SELECT trade_date, fii_net_today, dii_net_today, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL 20 DAY ORDER BY trade_date DESC;"
+  - "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date >= CURRENT_DATE - INTERVAL 20 DAY ORDER BY trade_date DESC;"
+  - "SELECT trade_date, advances, declines, ad_signal FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL 20 DAY ORDER BY trade_date DESC;"
+  - "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL 20 DAY ORDER BY trade_date DESC;"
+python_tools:
+  -
+    id: "debug_flow_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "fii_dii_flows_data"
+      - "regime_data"
+      - "breadth_data"
+      - "index_data"
+    outputs:
+      - "debug_trace_output"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context):\n    # Analyze and combine market data\n    # Return a debug trace of the market context analysis\n    pass"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates must be read-only SELECT/WITH templates."
+  - "Use evidence_required.tables exactly; do not use primary_tables or required_tables."
+synthesis_guidance: "['Explain context using market regime, FII/DII flows, and breadth.', 'Assess risk-on or risk-off context based on evidence.', 'Focus on position-sizing context for last 20 sessions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.day is not approved"
+  - "market.index_eod.day is not approved"
+  - "signals.fii_dii_flows.day is not approved"
+  - "signals.regime_history.day is not approved"

@@ -1,0 +1,54 @@
+id: "signal_outcome_feedback_review_0865_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0865"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for post results: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as action watchlist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review signal outcomes for improvements."
+sql_templates:
+  -
+    description: "Select prior signals that hit target or stop, including context."
+    template: "WITH signal_outcomes AS (SELECT id, date_issued, symbol, sector, company, signal, setup_class, price_at_issue, entry_low, entry_high, stop_loss, target_1, target_2, date_resolved, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE (hit_target = TRUE OR hit_stop = TRUE)), stage_context AS (SELECT snapshot_date, symbol, sector, stage, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), joined_data AS (SELECT so.*, sc.stage, sc.technical_score FROM signal_outcomes so JOIN stage_context sc ON so.symbol = sc.symbol) SELECT * FROM joined_data LIMIT 50;"
+  -
+    description: "Evaluate signal success and failure patterns."
+    template: "SELECT sector, COUNT(*) AS total_signals, SUM(CASE WHEN hit_target THEN 1 ELSE 0 END) AS targets_hit, SUM(CASE WHEN hit_stop THEN 1 ELSE 0 END) AS stops_hit FROM signals.signal_log GROUP BY sector ORDER BY total_signals DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure SQL runs without errors."
+  - "Check that all symbols align between joins."
+  - "Validate the correctness of date filters."
+synthesis_guidance: "['Focus on creating actionable insights from signal assessments.', 'Highlight patterns and provide recommendations for future strategy.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:47"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.stops_hit is not approved"
+  - "signals.signal_log.targets_hit is not approved"
+  - "signals.signal_log.total_signals is not approved"

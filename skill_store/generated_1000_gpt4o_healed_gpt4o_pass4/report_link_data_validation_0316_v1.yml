@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:44:26"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: latest EOD; response style: exceptions and gaps first."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0316_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for latest EOD: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Check for recent enhanced report runs within the latest EOD"
+    query: "SELECT run_id, run_ts, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)"
+  -
+    description: "Identify missing stock data in latest enhanced filtered stocks"
+    query: "SELECT symbol, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = (SELECT run_id FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)) AND current_price IS NULL"
+status: "validated"
+synthesis_guidance: "['Highlight all gaps in the report data.', 'Focus on EOD data freshness; note any inconsistencies immediately.']"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+title: "Enhanced Report Data Validation Variant 0316"
+tool_plan_template:
+  python_tools:
+
+validation_rules:
+  - "Ensure all report entries have valid timestamps"
+  - "Check if any report stocks are missing data or recommendations"
+version: 1

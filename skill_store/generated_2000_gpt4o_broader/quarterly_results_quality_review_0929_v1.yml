@@ -1,0 +1,53 @@
+id: "quarterly_results_quality_review_0929_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0929"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: source-trail validation; timeframe: last 5 sessions; response style: comparison matrix."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "source-trail validation for last 5 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as comparison matrix"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  step_1: "Fetch recent quarterly results from scores.quarterly_results for the last 5 sessions."
+  step_2: "Analyze key growth and margin metrics from scores.results_analysis."
+  step_3: "Check filing freshness and narrative quality from analysis fields."
+sql_templates:
+  fetch_recent_quarterly_results: "SELECT symbol, period_end, revenue, pat FROM scores.quarterly_results WHERE period_end > (CURRENT_DATE - INTERVAL '5 days');"
+  analyze_growth_margin: "SELECT symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, opm_delta_pp FROM scores.results_analysis WHERE filing_date > (CURRENT_DATE - INTERVAL '5 days');"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "check_filing_date_relevance"
+  - "verify_source_trail_completeness"
+synthesis_guidance: "{'comparison_matrix_tip': 'Provide a matrix comparing revenue growth, PAT growth, and margin changes.', 'narrative_quality_focus': 'Highlight companies with strong narrative quality.', 'filing_date_importance': 'Emphasize the filing date relevance to ensure freshness of data.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:25"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

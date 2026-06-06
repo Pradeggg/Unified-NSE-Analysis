@@ -1,0 +1,57 @@
+id: "signal_outcome_feedback_review_0067_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0067"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: post results; response style: concise table."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for post results: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as concise table"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  task: "Analyze signal outcomes using provided evidence tables."
+  steps:
+    - "Fetch the latest stage snapshots for context."
+    - "Review hit targets and stop outcomes from signal log."
+    - "Synthesize results into sector-relative comparisons."
+sql_templates:
+  -
+    description: "Fetch latest signals and their outcomes for sector-relative review."
+    template: "\n            WITH latest_signals AS (\n                SELECT \n                    s.symbol, \n                    s.sector, \n                    s.hit_target, \n                    s.hit_stop, \n                    s.return_pct, \n                    s.date_issued,\n                    st.stage\n                FROM \n                    signals.signal_log s\n                JOIN \n                    scores.stage_snapshots st ON s.symbol = st.symbol\n                WHERE \n                    st.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n            )\n            SELECT \n                sector,\n                COUNT(*) AS total_signals,\n                SUM(CASE WHEN hit_target THEN 1 ELSE 0 END) AS target_hits,\n                SUM(CASE WHEN hit_stop THEN 1 ELSE 0 END) AS stop_hits,\n                AVG(return_pct) AS avg_return\n            FROM \n                latest_signals\n            GROUP BY \n                sector\n            ORDER BY \n                avg_return DESC\n            LIMIT 10;\n            "
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "sql_usage"
+  - "constraints"
+synthesis_guidance: "Emphasize concise sector-relative insights and recommendations for improving trading strategies."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:16"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

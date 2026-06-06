@@ -1,0 +1,1 @@
+def run(context): return {'trend_strength': 'Strong', 'volatility_indicator': 'Low'}

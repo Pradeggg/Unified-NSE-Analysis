@@ -1,0 +1,53 @@
+id: "insider_bulk_deal_signal_review_1746_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1746"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: last 3 months; response style: QA checklist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for last 3 months: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as QA checklist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "last_3_months"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Query insider alerts and bulk deals from the last 3 months, along with their technical confirmation status."
+  - "Generate a QA checklist based on the findings."
+sql_templates:
+  -
+    template: "WITH latest_stage_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), insider_filtered AS (SELECT symbol, MAX(alert_date) AS latest_alert_date, SUM(qty) AS total_qty FROM signals.insider_alerts WHERE alert_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY symbol), bulk_deal_filtered AS (SELECT symbol, MAX(deal_date) AS latest_deal_date, SUM(qty) AS total_deal_qty FROM signals.bulk_block_deals WHERE deal_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY symbol) SELECT i.symbol, i.total_qty, b.total_deal_qty, s.stage, s.technical_score FROM insider_filtered i JOIN bulk_deal_filtered b ON i.symbol = b.symbol JOIN latest_stage_snapshots s ON i.symbol = s.symbol WHERE s.stage = 'STAGE_2' AND s.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure that no joins are made without an approved join rule."
+  - "Output should be limited to enhance performance and focus."
+synthesis_guidance: "['Structure the result in a clear QA checklist format.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:45"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

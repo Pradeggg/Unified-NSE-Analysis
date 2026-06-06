@@ -1,0 +1,60 @@
+id: "signal_outcome_feedback_review_0851_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0851"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: quick scan; timeframe: quarter to date; response style: action watchlist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for quarter to date: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as action watchlist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "For a quick scan report, review signals hit (target, stop) this quarter. Highlight success and failure patterns, suggest improvements."
+sql_templates:
+  -
+    description: "Fetch signals resolved this quarter with outcomes."
+    template: "SELECT id, symbol, date_issued, date_resolved, price_at_issue, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_resolved >= DATE_TRUNC('quarter', CURRENT_DATE) AND date_resolved < DATE_TRUNC('quarter', CURRENT_DATE) + INTERVAL '1 quarter'"
+python_tools:
+  -
+    id: "signal_outcome_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signal_log"
+    outputs:
+      - "outcome_summary"
+      - "winner_patterns"
+      - "failure_patterns"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context):\n    summary = {}\n    winners = []\n    failures = []\n    for signal in context['signal_log']:\n        if signal['hit_target']:\n            winners.append(signal)\n        elif signal['hit_stop']:\n            failures.append(signal)\n    summary.update({'total_signals': len(context['signal_log']),\n                    'total_winners': len(winners),\n                    'total_failures': len(failures)})\n    return {'outcome_summary': summary, 'winner_patterns': winners, 'failure_patterns': failures}"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure only relevant columns are selected."
+  - "No write operations in queries."
+synthesis_guidance: "Summarize signal performance, extract winning/losing patterns, recommend tactical changes based on outcomes."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.date_trunc is not approved"

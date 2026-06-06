@@ -1,0 +1,51 @@
+id: "portfolio_lab_paper_trading_review_1762_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Paper Trading Portfolio Deep Dive"
+description: "Analyze and review paper trading strategies, including entries and exits, with a focus on institutional-grade scrutiny."
+input_patterns:
+  - "Analyze my paper trading strategies"
+  - "Review my paper trading entries and exits"
+  - "Institutional review of paper trading performance"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_review"
+  - "entry_exit"
+  - "institutional_review"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Assess paper trading portfolio with a QA checklist; review based on signals and EOD data."
+sql_templates:
+  -
+    name: "latest_holdings"
+    description: "Fetch latest holdings details from the portfolio."
+    template: "SELECT symbol, qty, avg_cost FROM portfolio.holdings;"
+  -
+    name: "latest_signal_log"
+    description: "Fetch unresolved signals and their status."
+    template: "SELECT symbol, signal, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_resolved IS NULL;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure no unresolved signals without exit records."
+synthesis_guidance: "Focus on clarity and depth in the analysis to support decision-making for institutional traders."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:46"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

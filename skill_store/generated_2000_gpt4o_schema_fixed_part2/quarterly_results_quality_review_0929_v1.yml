@@ -1,0 +1,68 @@
+id: "quarterly_results_quality_review_0929_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0929"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: source-trail validation; timeframe: last 5 sessions; response style: comparison matrix."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "source-trail validation for last 5 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as comparison matrix"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Evaluate the company symbols' latest quarterly results and their analysis over the last 5 sessions, focusing on revenue, PAT growth, operating margins, and filing details."
+sql_templates:
+  -
+    description: "Fetch latest quarterly results and analysis."
+    sql: "WITH latest_quarterly AS (SELECT DISTINCT ON (symbol) symbol, period_end, revenue, pat, opm_pct FROM scores.quarterly_results WHERE period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC), latest_analysis AS (SELECT DISTINCT ON (symbol) symbol, period_end, growth_yoy_revenue_pct, growth_yoy_pat_pct, opm_delta_pp FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC) SELECT q.symbol, q.revenue, q.pat, q.opm_pct, a.growth_yoy_revenue_pct, a.growth_yoy_pat_pct, a.opm_delta_pp FROM latest_quarterly q JOIN latest_analysis a ON q.symbol = a.symbol AND q.period_end = a.period_end LIMIT 10;"
+python_tools:
+  -
+    id: "calculate_growth_metrics"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "revenue_last_period"
+      - "revenue_current_period"
+      - "pat_last_period"
+      - "pat_current_period"
+    outputs:
+      - "revenue_growth"
+      - "pat_growth"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+    code: "def run(context):\n    revenue_growth = (context['revenue_current_period'] - context['revenue_last_period']) / context['revenue_last_period'] * 100\n    pat_growth = (context['pat_current_period'] - context['pat_last_period']) / context['pat_last_period'] * 100\n    return {'revenue_growth': revenue_growth, 'pat_growth': pat_growth}"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure that results are from the last 5 sessions."
+  - "Validate the consistency of revenue and PAT growth figures."
+synthesis_guidance: "['Prepare a comparison matrix incorporating financial growth metrics.', 'Include source-trail validation for each assessment.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_growth_metrics: execution failed: KeyError: 'revenue_current_period'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_growth_metrics: execution failed: KeyError: 'revenue_current_period'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

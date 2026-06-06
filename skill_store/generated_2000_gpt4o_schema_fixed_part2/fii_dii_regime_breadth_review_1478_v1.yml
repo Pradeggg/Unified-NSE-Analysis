@@ -1,0 +1,55 @@
+id: "fii_dii_regime_breadth_review_1478_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1478"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: pre market; response style: portfolio-aware output."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for pre market: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as portfolio-aware output"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "pre_market"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "{tool concept to be implemented based on approved schema and compliant with framing rules}"
+sql_templates:
+  -
+    description: "Fetch latest FII/DII flow trend and regime data for market analysis."
+    query: "SELECT fff.trade_date, fff.flow_signal, fff.fii_trend, fff.dii_trend, rh.regime, rh.confidence FROM signals.fii_dii_flows fff JOIN signals.regime_history rh ON fff.trade_date = rh.trade_date WHERE fff.trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows)"
+  -
+    description: "Fetch latest market breadth and index confirmation data."
+    query: "SELECT md.trade_date, md.ad_signal, md.market_sentiment, ie.index_symbol, ie.close, ie.trend_signal FROM breadth.market_daily md JOIN market.index_eod ie ON md.trade_date = ie.trade_date WHERE md.trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily) AND ie.index_symbol = 'NIFTY 50'"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all date-related data is the latest using the approved global date rules."
+  - "Verify that all indexes are correctly filtered to 'NIFTY 50' unless specified otherwise."
+synthesis_guidance: "Combine evidence to present a cohesive view of market conditions considering position-sizing context, with emphasis on risk identification. Flag significant variances in institutional flows, regime shifts, and breadth indicators."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:37"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,64 @@
+id: "fii_dii_regime_breadth_review_0176_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0176"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: pre market; response style: narrative plus evidence."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for pre market: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as narrative plus evidence"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "pre_market"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  inputs:
+    - "Current market date"
+    - "Desired analysis depth"
+  outputs:
+    - "Narrative explaining market context"
+  steps:
+    - "Assess FII/DII flow trends from signals.fii_dii_flows"
+    - "Determine market regime from signals.regime_history"
+    - "Analyze market breadth from breadth.market_daily"
+    - "Confirm index trends from market.index_eod"
+sql_templates:
+  flow_context: "SELECT trade_date, fii_net_today, dii_net_today, flow_signal FROM signals.fii_dii_flows WHERE trade_date = CURRENT_DATE;"
+  regime: "SELECT regime, confidence FROM signals.regime_history WHERE trade_date = CURRENT_DATE;"
+  breadth_context: "SELECT net_ad, ad_signal, market_sentiment FROM breadth.market_daily WHERE trade_date = CURRENT_DATE;"
+  index_confirmation: "SELECT index_symbol, close, change_pct FROM market.index_eod WHERE trade_date = CURRENT_DATE AND index_symbol = 'NIFTY_50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Verify trade_dates match for all sources."
+  - "Fila current regime confidence > 50% for validity."
+  - "Ensure NIFTY_50 index shows coherent trend with breadth signals."
+synthesis_guidance: "{'combine': 'Integrate flow, regime, breadth, and index data into a coherent narrative.', 'highlight': 'Emphasize discrepancies or confirmations across flows and breadth.', 'narrative_style': 'Approach with an advisor tone suitable for pre-market analysis.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

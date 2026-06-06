@@ -1,0 +1,55 @@
+id: "portfolio_incremental_add_trim_0699_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0699"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: weekly review; response style: debug trace."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+
+sql_templates:
+  holdings_review:
+    sql: "SELECT h.symbol, h.qty, s.sector, s.stage, s.stage_score, s.trend_signal, s.price FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE;"
+    description: "Fetch current holdings with relevant stage and trend information for review."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data accuracy for current snapshot date."
+  - "Validate stage score and trend signal information."
+synthesis_guidance: "Review the current portfolio holdings with sector distribution and market conditions. Identify potential candidates for adding or trimming positions based on the stage score and trend signals."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:50:48"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table h.qty"
+  - "unknown table h.symbol"
+  - "unknown table s.price"
+  - "unknown table s.sector"
+  - "unknown table s.snapshot_date"
+  - "unknown table s.stage"
+  - "unknown table s.stage_score"
+  - "unknown table s.symbol"
+  - "unknown table s.trend_signal"

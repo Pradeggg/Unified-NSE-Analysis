@@ -1,0 +1,83 @@
+id: "signal_outcome_feedback_review_0263_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0263"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: post results; response style: ranked candidates."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for post results: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as ranked candidates"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "<tool_plan_template_placeholder>"
+sql_templates:
+  -
+    description: "Fetch signals that have been resolved and categorize outcomes."
+    template: "SELECT id, symbol, date_issued, hit_target, hit_stop, price_at_resolution, return_pct FROM signals.signal_log WHERE date_resolved IS NOT NULL ORDER BY date_issued DESC LIMIT 100;"
+  -
+    description: "Join resolved signals with the latest stage snapshots for additional context."
+    template: "SELECT sl.id, sl.symbol, sl.date_issued, sl.hit_target, sl.hit_stop, ss.stage, ss.technical_score FROM signals.signal_log sl JOIN scores.stage_snapshots ss ON sl.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND sl.date_resolved IS NOT NULL ORDER BY sl.date_issued DESC LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "<"
+  - "v"
+  - "a"
+  - "l"
+  - "i"
+  - "d"
+  - "a"
+  - "t"
+  - "i"
+  - "o"
+  - "n"
+  - "_"
+  - "r"
+  - "u"
+  - "l"
+  - "e"
+  - "s"
+  - "_"
+  - "p"
+  - "l"
+  - "a"
+  - "c"
+  - "e"
+  - "h"
+  - "o"
+  - "l"
+  - "d"
+  - "e"
+  - "r"
+  - ">"
+synthesis_guidance: "<synthesis_guidance_placeholder>"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:49"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

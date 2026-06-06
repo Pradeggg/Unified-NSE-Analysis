@@ -1,0 +1,147 @@
+card:
+  created_at: "2026-06-06T12:42:20"
+  created_by: "llm_generated"
+  description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: narrative plus evidence."
+  domain: "portfolio_review"
+  evidence_required:
+    tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+  generation_model: "gpt-4o"
+  id: "portfolio_incremental_add_trim_0147_v1"
+  input_patterns:
+    - "should we add incrementally or reduce exposure"
+    - "portfolio position sizing by sector and stock"
+    - "review holdings for add trim decisions"
+    - "sector-relative comparison for last 3 months: should we add incrementally or reduce exposure"
+    - "review holdings for add trim decisions as narrative plus evidence"
+  output_contract:
+    - "portfolio_state"
+    - "sector_exposure"
+    - "add_candidates"
+    - "trim_candidates"
+    - "risk_flags"
+  python_tools:
+    -
+      approved_tables:
+        - "scores.stage_snapshots"
+      code: "def run(context):\n    # Assume context is a properly formatted DataFrame or an object that resembles it.\n    # Calculate the average technical score per sector.\n    sector_scores = {}\n    for row in context:\n        sector = row.get('sector')\n        score = row.get('technical_score')\n        if sector in sector_scores:\n            sector_scores[sector].append(score)\n        else:\n            sector_scores[sector] = [score]\n    # Calculate mean for each sector\n    sector_mean_scores = {sector: sum(scores)/len(scores) for sector, scores in sector_scores.items()}\n    return sector_mean_scores"
+      id: "sector_performance_analysis"
+      inputs:
+        - "snapshot_data"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "sector_relative_strength"
+  review:
+    attempts: 3
+    findings:
+      - "sector_performance_analysis: missing output sector_relative_strength"
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "generated"
+  sql_templates:
+    -
+      description: "Retrieve the current holdings for analysis."
+      template: "SELECT symbol, qty, avg_cost FROM portfolio.holdings"
+  status: "generated"
+  synthesis_guidance:
+    - "Consider both quantitative score metrics and qualitative sector narratives."
+    - "Integrate findings cohesively with portfolio strategies."
+  tags:
+    - "portfolio"
+    - "position_sizing"
+    - "sector_exposure"
+    - "add_trim"
+    - "sector-relative_comparison"
+    - "last_3_months"
+    - "narrative_plus_evidence"
+  title: "Portfolio Incremental Add Trim Review Variant 0147"
+  tool_plan_template:
+    -
+      description: "Examine current portfolio positions to identify potential add or trim candidates."
+      step: "Analyze current holdings"
+    -
+      description: "Compare sector performance using the last 3 months' data to understand relative strength."
+      step: "Sector-relative performance analysis"
+    -
+      description: "List out securities for potential incremental additions or reductions based on sector performance and portfolio allocation."
+      step: "Identify add/trim candidates"
+  validation_errors:
+
+  validation_rules:
+    - "Ensure evidence collection sticks to approved tables and columns."
+    - "Only generate insights within the specified timeframe of 3 months."
+  version: 1
+created_at: "2026-06-06T12:42:20"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: narrative plus evidence."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0147_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for last 3 months: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    import pandas as pd\n\n    if isinstance(context, pd.DataFrame):\n        return context.groupby('sector').mean().to_dict('index')\n    else:\n        return {'error': 'Invalid input format for sector performance analysis.'}"
+    id: "sector_performance_analysis"
+    inputs:
+      - "snapshot_data"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "sector_relative_strength"
+review:
+  status: "needs_heal"
+  findings:
+    - "import pandas is not allowed"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    description: "Retrieve the current holdings for analysis."
+    template: "SELECT symbol, qty, avg_cost FROM portfolio.holdings"
+status: "test_failed"
+synthesis_guidance:
+  - "Consider both quantitative score metrics and qualitative sector narratives."
+  - "Integrate findings cohesively with portfolio strategies."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+title: "Portfolio Incremental Add Trim Review Variant 0147"
+tool_plan_template:
+  -
+    description: "Examine current portfolio positions to identify potential add or trim candidates."
+    step: "Analyze current holdings"
+  -
+    description: "Compare sector performance using the last 3 months' data to understand relative strength."
+    step: "Sector-relative performance analysis"
+  -
+    description: "List out securities for potential incremental additions or reductions based on sector performance and portfolio allocation."
+    step: "Identify add/trim candidates"
+validation_errors:
+  - "import pandas is not allowed"
+validation_rules:
+  - "Ensure evidence collection sticks to approved tables and columns."
+  - "Only generate insights within the specified timeframe of 3 months."
+version: 1

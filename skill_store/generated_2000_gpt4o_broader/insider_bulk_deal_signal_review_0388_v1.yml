@@ -1,0 +1,71 @@
+id: "insider_bulk_deal_signal_review_0388_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0388"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: intraday context; response style: exceptions and gaps first."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for intraday context: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as exceptions and gaps first"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review insider alerts and bulk deals with technical analysis for indication of accumulation or distribution, focusing on exceptions and gaps."
+sql_templates:
+  -
+    template_id: "fetch_insider_alerts"
+    template: "SELECT symbol, alert_date, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_type = 'buy' AND alert_date > CURRENT_DATE - INTERVAL '7 days';"
+  -
+    template_id: "fetch_bulk_deals"
+    template: "SELECT symbol, deal_date, entity, qty, price, side FROM signals.bulk_block_deals WHERE deal_type = 'bulk' AND deal_date > CURRENT_DATE - INTERVAL '7 days';"
+  -
+    template_id: "fetch_technical_confirmation"
+    template: "SELECT symbol, trend_signal, rsi, technical_score FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE AND trend_signal = 'positive';"
+python_tools:
+  -
+    id: "technical_analysis_helper"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbols"
+    outputs:
+      - "technical_summary"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Example read-only logic for technical analysis summary\n    pass"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all fetched symbols have technical scores."
+  - "Confirm insider alerts match bulk deal symbols for consistency."
+synthesis_guidance: "Focus on the significance of insider and bulk actions within the context of short-term market trends, emphasizing exceptions and gaps."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:37"
+generation_model: "gpt-4o"
+validation_errors:
+  - "technical_analysis_helper: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "technical_analysis_helper: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

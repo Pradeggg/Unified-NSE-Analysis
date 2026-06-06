@@ -1,0 +1,61 @@
+id: "company_360_research_report_1462_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1462"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: deep institutional review; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "deep institutional review for post results: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as portfolio-aware output"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "deep_institutional_review"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template: "Fetch the latest data from specified tables using provided filters to create a comprehensive research report."
+sql_templates:
+  - "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol = :symbol"
+  - "SELECT * FROM scores.quarterly_results WHERE symbol = :symbol AND period_type = 'quarter' ORDER BY period_end DESC NULLS LAST, fetched_at DESC LIMIT 1"
+  - "SELECT * FROM scores.annual_results WHERE symbol = :symbol AND period_type = 'annual' ORDER BY period_end DESC NULLS LAST, fetched_at DESC LIMIT 1"
+  - "SELECT * FROM scores.balance_sheet WHERE symbol = :symbol ORDER BY period_end DESC NULLS LAST, fetched_at DESC LIMIT 1"
+  - "SELECT * FROM scores.cash_flow WHERE symbol = :symbol ORDER BY period_end DESC NULLS LAST, fetched_at DESC LIMIT 1"
+  - "SELECT * FROM scores.results_analysis WHERE symbol = :symbol ORDER BY period_end DESC NULLS LAST, updated_at DESC LIMIT 1"
+  - "SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND symbol = :symbol"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "snapshot_date_valid"
+  - "period_end_valid"
+synthesis_guidance: "{'narrative': 'Interpret financial metrics and scores to deliver a cohesive narrative focusing on investment potential and risks.', 'contextual': 'Provide insights within the framework of macroeconomic conditions in the Indian market.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:07"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

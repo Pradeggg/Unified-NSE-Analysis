@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:43:42"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 3 months; response style: ranked candidates."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0250_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Selects top VCP candidates from the last 3 months with strong fundamentals."
+    template: "WITH top_candidates AS (\n    SELECT \n        p.symbol,\n        p.company_name,\n        p.price,\n        MAX(e.trade_date) AS last_trade_date,\n        e.close\n    FROM \n        scores.stage2_vcp_picks p\n    JOIN \n        market.equity_eod e\n    ON \n        p.symbol = e.symbol\n    WHERE \n        p.snapshot_date >= date('now', '-3 months')\n        AND p.enhanced_fund_score >= 70\n        AND e.volume > 100000\n    GROUP BY \n        p.symbol, p.company_name, p.price, e.close\n    ORDER BY \n        p.vcp_score DESC\n)\nSELECT \n    *\nFROM \n    top_candidates\nLIMIT 50;"
+status: "validated"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_3_months"
+  - "ranked_candidates"
+title: "VCP Breakouts With Fundamentals Variant 0250"
+tool_plan_template:
+
+validation_rules:
+  - "Ensure results are ranked by VCP score."
+  - "Limit results to those with a strong enhanced fundamental score (>= 70)."
+  - "Filter by significant trading volume."
+version: 1

@@ -1,0 +1,60 @@
+id: "report_link_data_validation_0788_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0788"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: intraday context; response style: QA checklist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for intraday context: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  steps:
+    - "Fetch run metadata and verify if timestamps are correctly populated for intraday reports."
+    - "Identify any missing stock data for the filtered stocks."
+    - "Check for broken report links and validate link integrity."
+    - "Analyze position-sizing context based on current stocks' metrics."
+sql_templates:
+  -
+    name: "fetch_run_metadata"
+    description: "Retrieve metadata for enhanced report runs for intraday context."
+    sql: "SELECT run_id, run_ts, analysis_date, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts BETWEEN ? AND ?"
+  -
+    name: "identify_missing_stock_data"
+    description: "Find stocks with missing data fields from filtered stock rows."
+    sql: "SELECT symbol FROM report.enhanced_filtered_stocks WHERE (current_price IS NULL OR open_price IS NULL) AND run_id = ?"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure timestamps are within the intraday timeframe."
+  - "Verify all filtered stocks have populated price fields."
+synthesis_guidance: "Use findings from SQL templates to generate a comprehensive QA checklist focusing on data integrity, completeness, and intraday context application."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:46"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

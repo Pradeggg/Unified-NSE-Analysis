@@ -1,0 +1,62 @@
+id: "report_link_data_validation_1712_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1712"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: latest EOD; response style: QA checklist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for latest EOD: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "latest_EOD"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "{evidence_selection}{review_plan}{anomaly_reproduction}{link_verification}{reporting_plan}"
+sql_templates:
+  -
+    purpose: "Retrieve latest enhanced report runs and their filtered stocks"
+    template: "SELECT r.run_id, r.run_ts, r.analysis_date, r.universe_size, r.stocks_analyzed, r.stocks_filtered, r.indices_analyzed, r.market_composite_score, r.market_sentiment, s.symbol, s.rank, s.score FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks s ON r.run_id = s.run_id WHERE r.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+  -
+    purpose: "List missing data in report files"
+    template: "SELECT s.symbol FROM report.enhanced_filtered_stocks s WHERE s.run_id NOT IN (SELECT run_id FROM report.enhanced_runs);"
+python_tools:
+  - "required_function"
+  - "language"
+  - "mode"
+  - "inputs"
+  - "outputs"
+  - "approved_tables"
+  - "code"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure that all SQL templates are read-only and use only approved tables and columns."
+  - "Check that the SQL adheres to the latest PostgreSQL syntax guidelines."
+  - "Validate that input patterns align with the aimed QA processes."
+synthesis_guidance: "['Focus on identifying discrepancies in report metadata and linked resources.', 'Assess patterns of missing data against expected stock availability.', 'Provide a structured QA checklist for manual review based on findings.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:16"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

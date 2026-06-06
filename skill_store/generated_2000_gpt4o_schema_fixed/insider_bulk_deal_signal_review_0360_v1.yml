@@ -1,0 +1,54 @@
+id: "insider_bulk_deal_signal_review_0360_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0360"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for quarter to date: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as exceptions and gaps first"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  template: "Review {{timeframe}} insider and bulk deal activity for {{symbols}} and assess technical confirmations. Focus on identifying accumulation patterns with gaps and exceptions highlighted."
+sql_templates:
+  -
+    id: "fetch_latest_bulk_deals_with_stages"
+    description: "Select latest bulk/block deals along with stage snapshots to identify recent activities with stage context."
+    template: "WITH latest_stages AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_bulk_deals AS (SELECT * FROM signals.bulk_block_deals WHERE deal_date > CURRENT_DATE - INTERVAL '3 months') SELECT bd.symbol, bd.deal_date, bd.entity, bd.qty, bd.price, bd.deal_type, ss.stage, ss.trading_signal FROM latest_bulk_deals AS bd JOIN latest_stages AS ss ON bd.symbol = ss.symbol WHERE ss.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all symbols in deal_summary have corresponding entries in the insider_context."
+  - "Check each symbol's trading_signal is either 'BUY' or 'STRONG_BUY' in ranked_symbols."
+synthesis_guidance: "{'message': 'Analyze latest quarter insider and bulk activities with a focus on buy signals. Highlight symbols with persistent accumulation patterns and potential technical confirmations.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

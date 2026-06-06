@@ -1,0 +1,74 @@
+id: "portfolio_incremental_add_trim_0195_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0195"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: weekly review; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "weekly_review"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    -
+      scores: "stage_snapshots"
+    -
+      portfolio: "holdings"
+tool_plan_template: "Generate SQL to retrieve current holdings and relevant scores for add/trim decision-making."
+sql_templates:
+  -
+    template: "SELECT h.symbol, h.qty, h.avg_cost, s.sector, s.market_cap_cat, s.change_1w_pct, s.trend_signal, s.trading_signal, s.rsi FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.stage_score IS NOT NULL;"
+python_tools:
+  -
+    id: "score_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      snapshot_scores: "scores.stage_snapshots"
+      portfolio_data: "portfolio.holdings"
+    outputs:
+      add_candidates: "List[dict]"
+      trim_candidates: "List[dict]"
+      risk_flags: "List[dict]"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    snapshots = context['snapshot_scores']\n    holdings = context['portfolio_data']\n    # Perform analysis to determine add/trim candidates and identify risk\n    # Example analysis: Compare technical indicators to portfolio holdings\n    return {\n        'add_candidates': [],\n        'trim_candidates': [],\n        'risk_flags': []\n    }"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure that current portfolio holdings are mapped to the latest stage snapshot scores."
+  - "Verify sector exposure for diversified risk management."
+synthesis_guidance: "{'approach': 'Narrative synthesis should combine quantitative evidence with qualitative insights based on current market conditions in India.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:42:46"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table h.avg_cost"
+  - "unknown table h.qty"
+  - "unknown table h.symbol"
+  - "unknown table s.change_1w_pct"
+  - "unknown table s.market_cap_cat"
+  - "unknown table s.rsi"
+  - "unknown table s.sector"
+  - "unknown table s.snapshot_date"
+  - "unknown table s.stage_score"
+  - "unknown table s.symbol"
+  - "unknown table s.trading_signal"
+  - "unknown table s.trend_signal"
+  - "unknown table {'portfolio': 'holdings'}"
+  - "unknown table {'scores': 'stage_snapshots'}"

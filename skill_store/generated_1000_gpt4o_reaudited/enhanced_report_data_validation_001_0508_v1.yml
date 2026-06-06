@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:48:36"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, ensuring completeness of filtered stock data and identifying source trail issues. Focus: Indian market, position-sizing context; timeframe: today."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "enhanced_report_data_validation_001_0508_v1"
+input_patterns:
+  - "ensure data completeness in report"
+  - "validate report run metadata accuracy"
+  - "identify missing data in stock reports"
+  - "focus on today: ensure report data integrity"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    description: "Fetch recent report runs and validate stocks analyzed."
+    template: "SELECT run_id, run_ts, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts = CURRENT_DATE"
+  -
+    description: "Retrieve filtered stock details for validation."
+    template: "WITH recent_runs AS (SELECT run_id FROM report.enhanced_runs WHERE run_ts = CURRENT_DATE) SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM recent_runs)"
+status: "validated"
+synthesis_guidance: "Summarize findings visually with focus on completeness and anomaly identification. Emphasize any discrepancies in stock data related to today\u2019s market activities."
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "position-sizing_context"
+  - "Indian_market"
+  - "research-only"
+  - "data_completeness"
+title: "Enhanced Report Data Validation"
+tool_plan_template:
+  approach: "Research data integrity issues within report metadata with emphasis on position-sizing strategies."
+  steps:
+    - "Retrieve recent report run data."
+    - "Check completeness of filtered stock data."
+    - "Identify anomalies in report metadata."
+validation_rules:
+  - "Ensure consistency between stocks_analyzed and stocks_filtered counts in reports."
+  - "Verify data completeness for current stock listings."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

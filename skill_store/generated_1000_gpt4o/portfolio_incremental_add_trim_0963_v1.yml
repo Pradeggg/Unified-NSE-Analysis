@@ -1,0 +1,52 @@
+id: "portfolio_incremental_add_trim_0963_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0963"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: post results; response style: comparison matrix."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for post results: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+
+sql_templates:
+  sector_exposure: "SELECT sector, SUM(qty * live_price) AS total_value FROM scores.stage_snapshots INNER JOIN portfolio.holdings ON scores.stage_snapshots.symbol = portfolio.holdings.symbol WHERE snapshot_date = CURRENT_DATE GROUP BY sector;"
+  add_candidates: "SELECT symbol, company_name, sector, stage_score FROM scores.stage_snapshots WHERE stage = 'early' AND change_1w_pct > 5;"
+  trim_candidates: "SELECT symbol, company_name, sector, stage_score FROM scores.stage_snapshots WHERE stage = 'late' AND change_1m_pct < -5;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:53:13"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

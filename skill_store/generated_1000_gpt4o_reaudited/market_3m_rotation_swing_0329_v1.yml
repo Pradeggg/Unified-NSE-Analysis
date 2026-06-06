@@ -1,0 +1,59 @@
+created_at: "2026-06-06T12:44:27"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: last 5 sessions; response style: exceptions and gaps first."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0329_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for last 5 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as exceptions and gaps first"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Fetch index performance for the last 3 months."
+    template: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    description: "Analyze sector stage changes over the past 3 months."
+    template: "SELECT snapshot_date, sector, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    description: "Identify VCP candidates from the last 5 sessions."
+    template: "SELECT snapshot_date, symbol, company_name, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '5 days';"
+status: "validated"
+synthesis_guidance: "Combine index performance and stage data to identify strong sectors and potential swing candidates. Highlight exceptions and gaps."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+title: "3M Market Rotation Swing Assessment Variant 0329"
+tool_plan_template: "Analyze market sectors and swing candidates based on historical EOD data and stage analysis."
+validation_rules:
+  - "Ensure all tables and columns are from the approved schema."
+  - "All SQL must use read-only SELECT/WITH templates."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

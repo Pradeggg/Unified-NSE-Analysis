@@ -1,0 +1,59 @@
+id: "market_3m_rotation_swing_0827_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0827"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for last 5 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Assess the latest sector activity and prepare a watchlist for swing trading using the latest stage 2 picks and market data."
+sql_templates:
+  -
+    name: "Market Index Performance"
+    query: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' AND trade_date = (SELECT MAX(trade_date) FROM market.index_eod) ORDER BY trade_date DESC;"
+  -
+    name: "Top Stage 2 Candidates"
+    query: "SELECT s.symbol, s.company_name, s.sector, s.trading_signal FROM scores.stage_snapshots s WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.stage = 'STAGE_2' AND s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY s.stage_score DESC LIMIT 10;"
+  -
+    name: "Sector Performance"
+    query: "SELECT e.symbol, e.close, e.change_pct, s.sector FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY e.change_pct DESC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all primary candidates are from Stage 2 with a rating of 'BUY' or 'STRONG_BUY'."
+  - "Sector performance should reflect top 5 sectors with positive returns."
+synthesis_guidance: "Compile the SQL outputs into an action-ready list focusing on top-performing sectors and strong candidates for immediate attention."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,59 @@
+id: "vcp_breakouts_with_fundamentals_1990_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Enhanced VCP Breakouts With Fundamentals 2023"
+description: "Identify stocks achieving new highs, VCP patterns, and breakouts with robust fundamentals and liquidity for the Indian market."
+input_patterns:
+  - "Identify stocks with new highs or VCP or breakouts showing strong fundamentals"
+  - "Export VCP breakout stocks for TradingView with fundamentals"
+  - "Quality breakouts backed by strong fundamentals"
+  - "TradingView export: intraday context for stocks with new highs or VCP or breakouts with solid fundamentals"
+  - "Comparative analysis for quality breakouts with strong fundamentals"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  task: "Identify VCP breakouts with robust fundamentals for TradingView export"
+  steps:
+    - "Gather recent intraday and EOD equity data."
+    - "Filter for stocks with VCP or breakout formations."
+    - "Select stocks with strong fundamental scores."
+    - "Export data for TradingView as a comparison matrix."
+sql_templates:
+  -
+    name: "VCP_and_Breakout_Stocks"
+    template: "WITH breakout_stocks AS (SELECT symbol, high, volume FROM market.equity_eod WHERE trade_date = CURRENT_DATE AND high = week52_high), vcp_stocks AS (SELECT symbol FROM scores.stage2_vcp_picks WHERE vcp_score > 70) SELECT s.symbol, eod.high, eod.volume, s.company_name, s.sector, s.enhanced_fund_score FROM breakout_stocks b LEFT JOIN vcp_stocks v ON b.symbol = v.symbol JOIN scores.stage_snapshots s ON s.symbol = b.symbol JOIN market.equity_eod eod ON eod.trade_date = s.snapshot_date WHERE s.enhanced_fund_score > 80;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure data is current and accurate."
+  - "Check that selected stocks meet all pattern criteria."
+  - "Verify output format for TradingView compatibility."
+synthesis_guidance: "Integrate approved evidence stages with focus on the Indian market. Create outputs that are TradingView-compatible and emphasize stocks with superior fundamentals."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:58"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

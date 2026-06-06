@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:51:16"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: post results; response style: QA checklist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0761_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 3
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  recent_index_performance:
+    description: "Aggregate change percentage for indices over the last 3 months."
+    query: "SELECT index_symbol, AVG(change_pct) as avg_index_return FROM market.index_eod WHERE trade_date >= (SELECT MAX(trade_date) - INTERVAL '3 months' FROM market.index_eod) GROUP BY index_symbol"
+status: "validated"
+synthesis_guidance: "Focus on summarizing market regime, identifying stage 2 leading sectors, and potential swing candidates quickly and concisely. Highlight risks based on recent performance."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "post_results"
+  - "QA_checklist"
+title: "3M Market Rotation Swing Assessment Variant 0761"
+tool_plan_template:
+  approach: "Generate insights by joining stage snapshots and VCP picks, focusing on stage 2 leadership and market regime over the last 3 months. Output should align with the QA checklist framework."
+validation_errors:
+
+validation_rules:
+  - "output_structure_valid"
+  - "evidence_tables_inclusion"
+version: 1

@@ -1,0 +1,75 @@
+id: "sector_breadth_rotation_watchlist_0895_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0895"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: risk-first review; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "risk-first review for weekly review: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as action watchlist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "risk-first_review"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    task: "Identify improving sectors based on breadth and stage data."
+    table: "breadth.sector_daily"
+    fields:
+      - "sector"
+      - "pct_above_50dma"
+      - "change_5d"
+  -
+    task: "Select stocks in improving sectors with significant Stage 2 participation."
+    table: "breadth.ma_pct_above"
+    fields:
+      - "snapshot_date"
+      - "stage2_pct"
+  -
+    task: "Rank stocks by relative strength and pricing signals."
+    table: "scores.stage_snapshots"
+    fields:
+      - "symbol"
+      - "sector"
+      - "stage"
+      - "relative_strength"
+      - "trading_signal"
+sql_templates:
+  -
+    description: "Select sectors with strong 5-day change and high percentage above 50DMA."
+    template: "SELECT sector FROM breadth.sector_daily WHERE change_5d > 0 AND pct_above_50dma > 50;"
+  -
+    description: "Identify stocks in sectors with high Stage 2 participation."
+    template: "SELECT symbol FROM breadth.ma_pct_above WHERE stage2_pct > 50 AND snapshot_date = CURRENT_DATE;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "All SQL templates must be read-only."
+  - "Python tools must adhere to the read-only policy, when used."
+  - "Approved tables and columns only; no additional ones."
+synthesis_guidance: "Focus on identifying sectors with improving breadth and Stage 2 participation to create a risk-aware watchlist. Ensure selected stocks align with relative strength and momentum signals."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.symbol is not approved"

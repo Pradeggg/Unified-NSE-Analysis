@@ -1,0 +1,58 @@
+id: "corporate_events_results_watchlist_1465_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1465"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: risk-first review; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "risk-first review for post results: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as portfolio-aware output"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "risk-first_review"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    name: "SQL Analysis"
+    goal: "Identify recent corporate events and their financial results to assess watchlist actions."
+    steps:
+      - "Use signals.corporate_events to filter recent corporate events (event_date >= CURRENT_DATE - INTERVAL '1 month')."
+      - "Join with scores.results_analysis for results context aligned on symbol."
+      - "Join with scores.stage_snapshots to obtain recent stage, technical scores, and trading signals."
+sql_templates:
+  -
+    name: "latest_corporate_event_watchlist"
+    description: "Fetch the latest corporate events and associated result analysis for watchlist actions."
+    sql: "WITH recent_events AS (SELECT ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, ce.detail, ce.source FROM signals.corporate_events ce WHERE ce.event_date >= CURRENT_DATE - INTERVAL '1 month'),\nlatest_analysis AS (SELECT DISTINCT ON (ra.symbol) ra.symbol, ra.verdict, ra.filing_date, ra.score FROM scores.results_analysis ra ORDER BY ra.symbol, ra.period_end DESC NULLS LAST, ra.updated_at DESC),\ncurrent_stage AS (SELECT DISTINCT ON (ss.symbol) ss.symbol, ss.stage, ss.trading_signal FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots))\nSELECT re.symbol, re.event_type, re.event_date, re.purpose_raw, re.detail, re.source, la.verdict, la.score, cs.stage, cs.trading_signal FROM recent_events re\nJOIN latest_analysis la ON re.symbol = la.symbol\nJOIN current_stage cs ON re.symbol = cs.symbol LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "{'rule': 'Check output for non-null symbols, valid event types, and consistent stage values.', 'context': 'Ensure symbols have corresponding results and stage data.'}"
+synthesis_guidance: "{'goal': 'Synthesize upcoming corporate events and post-results watchlist actions for portfolio review.', 'focus': 'Emphasize risk-first strategy and alignment with technical indicators.', 'style': 'Use a concise, data-driven narrative with actionable insights.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:51"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

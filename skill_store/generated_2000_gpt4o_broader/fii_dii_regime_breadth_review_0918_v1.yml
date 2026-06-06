@@ -1,0 +1,76 @@
+id: "fii_dii_regime_breadth_review_0918_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0918"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for latest EOD: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as comparison matrix"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Analyze the market context using the latest evidence from institutional flows, regime history, market breadth, and index data to create a comparison matrix for position-sizing decisions."
+sql_templates:
+  -
+    template: "SELECT trade_date, fii_trend, dii_trend, flow_signal FROM signals.fii_dii_flows WHERE trade_date = CURRENT_DATE"
+    description: "Fetch latest FII/DII flows."
+  -
+    template: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date = CURRENT_DATE"
+    description: "Fetch current market regime."
+  -
+    template: "SELECT trade_date, net_ad, ad_signal, market_sentiment FROM breadth.market_daily WHERE trade_date = CURRENT_DATE"
+    description: "Fetch current market breadth."
+  -
+    template: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date = CURRENT_DATE"
+    description: "Fetch latest index EOD data."
+python_tools:
+  -
+    id: "data_analysis_tool_1"
+    language: "python"
+    mode: "read_only"
+    inputs:
+
+    outputs:
+
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context):\n    # Placeholder for potential complex data aggregations\n    pass"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data freshness by checking all tables have entries for the latest EOD."
+  - "Cross-validate flow signals with market regime for consistency."
+synthesis_guidance: "['Interpret FII/DII trends in conjunction with market regime confidence.', 'Align breadth indicators with index trend signals to form a coherent market outlook.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:28"
+generation_model: "gpt-4o"
+validation_errors:
+  - "data_analysis_tool_1: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "data_analysis_tool_1: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

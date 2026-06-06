@@ -1,0 +1,145 @@
+card:
+  created_at: "2026-06-06T12:51:17"
+  created_by: "llm_generated"
+  description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: post results; response style: QA checklist."
+  domain: "market_analysis"
+  evidence_required:
+    tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "market_3m_rotation_swing_0765_v1"
+  input_patterns:
+    - "last 3 months market analysis"
+    - "find swing candidates from recent sector rotation"
+    - "market regime and stage 2 leadership over 3 months"
+    - "risk-first review for post results: last 3 months market analysis"
+    - "market regime and stage 2 leadership over 3 months as QA checklist"
+  output_contract:
+    - "as_of_date"
+    - "index_returns"
+    - "stage_distribution_change"
+    - "leading_sectors"
+    - "primary_candidates"
+    - "risks"
+  python_tools:
+    -
+      approved_tables:
+        - "market.index_eod"
+        - "market.equity_eod"
+        - "scores.stage_snapshots"
+        - "scores.stage2_vcp_picks"
+      code: "# Market Analysis Tool\nclass MarketAnalysisTool:\n    def run(self, context):\n        # Perform read-only analysis using context\n        # Placeholder for analysis logic\n        return {'analysis_result': 'success'}"
+      inputs:
+        - "context"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "analysis_result"
+      required_function: "run"
+  review:
+    attempts: 3
+    findings:
+
+    rationale: "Static audit and test findings drive deterministic review."
+    status: "healed"
+  sql_templates:
+    -
+      name: "Index_Trend_Analysis"
+      query: "SELECT trade_date, index_symbol, change_pct, volume FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 MONTH') GROUP BY trade_date, index_symbol"
+    -
+      name: "Stage2_Leadership"
+      query: "SELECT sector, COUNT(symbol) FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= (CURRENT_DATE - INTERVAL '3 MONTH') GROUP BY sector ORDER BY COUNT(symbol) DESC"
+  status: "generated"
+  synthesis_guidance: "Integrate quantitative SQL insights into qualitative assessment steps to guide user through a risk-first, QA checklist-style review. Highlight sector rotations, stage leadership, and swing trading opportunities. Map findings against known market regimes over the period."
+  tags:
+    - "market_regime"
+    - "sector_rotation"
+    - "stage_analysis"
+    - "swing_trading"
+    - "risk-first_review"
+    - "post_results"
+    - "QA_checklist"
+  title: "3M Market Rotation Swing Assessment Variant 0765"
+  tool_plan_template: "For a market analysis tool on 3M market rotation swing, use the following tables: market.index_eod for index trends, market.equity_eod for equity trends, scores.stage_snapshots for stages and sector leadership, and scores.stage2_vcp_picks for candidate screening. Ensure market trends and leadership changes over the last 3 months are assessed. Highlight risk factors evident in the post-results period."
+  validation_errors:
+
+  validation_rules:
+    - "Verify all returned dates are within the last 3 months."
+    - "Ensure risk assessment aligns with post-result trends."
+  version: 1
+created_at: "2026-06-06T12:51:17"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: post results; response style: QA checklist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0765_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    code: "# Example Python tool placeholder\nclass MarketAnalysisTool:\n    def run(self, context):\n        # Perform read-only analysis using context\n        # Placeholder for analysis logic\n        return {'analysis_result': 'success'}"
+    inputs:
+      - "context"
+    language: "python"
+    mode: "readonly"
+    outputs:
+      - "analysis_result"
+    required_function: "run"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: mode must be read_only"
+    - "<missing-id>: must define run(context)"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    name: "Index_Trend_Analysis"
+    query: "SELECT trade_date, index_symbol, change_pct, volume FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 MONTH') GROUP BY trade_date, index_symbol"
+  -
+    name: "Stage2_Leadership"
+    query: "SELECT sector, COUNT(symbol) FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= (CURRENT_DATE - INTERVAL '3 MONTH') GROUP BY sector ORDER BY COUNT(symbol) DESC"
+status: "test_failed"
+synthesis_guidance: "Integrate quantitative SQL insights into qualitative assessment steps to guide user through a risk-first, QA checklist-style review. Highlight sector rotations, stage leadership, and swing trading opportunities. Map findings against known market regimes over the period."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "post_results"
+  - "QA_checklist"
+title: "3M Market Rotation Swing Assessment Variant 0765"
+tool_plan_template: "For a market analysis tool on 3M market rotation swing, use the following tables: market.index_eod for index trends, market.equity_eod for equity trends, scores.stage_snapshots for stages and sector leadership, and scores.stage2_vcp_picks for candidate screening. Ensure market trends and leadership changes over the last 3 months are assessed. Highlight risk factors evident in the post-results period."
+validation_errors:
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: must define run(context)"
+validation_rules:
+  - "Verify all returned dates are within the last 3 months."
+  - "Ensure risk assessment aligns with post-result trends."
+version: 1

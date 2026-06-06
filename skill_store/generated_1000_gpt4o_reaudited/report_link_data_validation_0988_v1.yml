@@ -1,0 +1,70 @@
+created_at: "2026-06-06T12:53:25"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: intraday context; response style: comparison matrix."
+domain: "report_qa"
+evidence_required:
+  tables:
+
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0988_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for intraday context: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Read-only analysis for gap detection\n    gaps = []\n    for stock in context['report.enhanced_filtered_stocks']:\n        if stock['current_price'] is None:\n            gaps.append(stock['symbol'])\n    return {'analysis_gaps': gaps}"
+    id: "gap_analysis_tool"
+    inputs:
+      - "run_id"
+      - "context"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "analysis_gaps"
+sql_templates:
+  -
+    description: "Get runs with analyzed stocks."
+    template: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE stocks_analyzed > 0"
+  -
+    description: "Validate missing links in filtered stocks."
+    template: "SELECT symbol FROM report.enhanced_filtered_stocks WHERE current_price IS NULL"
+status: "test_failed"
+synthesis_guidance: "['Create a matrix comparing the analyzed stocks versus missing data points.', 'Focus on intraday discrepancies.']"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "comparison_matrix"
+title: "Enhanced Report Data Validation Variant 0988"
+tool_plan_template:
+  code: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE stocks_analyzed > 0"
+  id: "tool_validation_0988"
+  language: "SQL"
+  mode: "read_only"
+validation_rules:
+  - "Ensure all analysis dates are in the correct format."
+  - "Stock data must be present for all filtered stocks."
+version: 1
+validation_errors:
+  - "gap_analysis_tool: execution failed: KeyError: 'report.enhanced_filtered_stocks'"
+review:
+  status: "needs_heal"
+  findings:
+    - "gap_analysis_tool: execution failed: KeyError: 'report.enhanced_filtered_stocks'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

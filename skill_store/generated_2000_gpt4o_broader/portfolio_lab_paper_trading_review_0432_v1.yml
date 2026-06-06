@@ -1,0 +1,58 @@
+id: "portfolio_lab_paper_trading_review_0432_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0432"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for last 20 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Generate a review of paper trading strategies, analyze entries, exits, stops, targets, and overall exposure by leveraging available signals and holding data."
+sql_templates:
+  -
+    template_name: "fetch_recent_trades"
+    template: "SELECT * FROM signals.signal_log WHERE date_issued >= NOW() - INTERVAL '20 days' AND symbol IN (SELECT DISTINCT symbol FROM portfolio.holdings);"
+    description: "Fetch recent trades for symbols in portfolio holdings over the last 20 sessions."
+  -
+    template_name: "fetch_performance_metrics"
+    template: "WITH recent_symbols AS (SELECT DISTINCT symbol FROM signals.signal_log WHERE date_issued >= NOW() - INTERVAL '20 days') SELECT * FROM scores.stage_snapshots WHERE snapshot_date >= NOW() - INTERVAL '20 days' AND symbol IN (SELECT symbol FROM recent_symbols);"
+    description: "Gather performance metrics for symbols with recent signals."
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure the output includes clear separation between paper trading strategies and real holdings."
+  - "Verify that the timeframe of 20 sessions is adequately covered."
+synthesis_guidance: "Focus on a granular analysis of entry and exit strategies, stop losses, and target achievements within the specified timeframe. Ensure clarity in distinguishing between simulated and actual trades."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

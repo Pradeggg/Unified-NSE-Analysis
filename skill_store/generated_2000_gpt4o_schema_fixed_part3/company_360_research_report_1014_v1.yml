@@ -1,0 +1,78 @@
+id: "company_360_research_report_1014_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1014"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: watchlist creation; timeframe: latest EOD; response style: concise table."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "watchlist creation for latest EOD: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as concise table"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  tasks:
+    - "Retrieve latest EOD data and combine with stage snapshot for current stock analysis."
+    - "Analyze quarterly and annual results for financial trends."
+    - "Prepare technical context using EOD data."
+    - "Synthesize findings into coherent company snapshot."
+sql_templates:
+  -
+    description: "Latest stage snapshot and EOD data for watchlist creation."
+    query: "SELECT s.symbol, s.company_name, s.sector, e.close, s.stage, s.trading_signal, s.rsi FROM scores.stage_snapshots s JOIN market.equity_eod e ON s.symbol = e.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    description: "Fetch latest quarterly results for financial assessment."
+    query: "SELECT q.symbol, q.revenue, q.operating_profit, q.pat, q.eps FROM scores.quarterly_results q WHERE q.period_end = (SELECT MAX(period_end) FROM scores.quarterly_results) AND q.period_type = 'quarter';"
+python_tools:
+  -
+    id: "financial_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "latest_financials"
+    outputs:
+      - "financial_trends_summary"
+    approved_tables:
+      - "scores.annual_results"
+      - "scores.quarterly_results"
+    code: "def run(context):\n    financials = context['latest_financials']\n    # Analyze financial trends\n    summary = analyze_trends(financials)\n    return summary"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "ensure_symbols_exist"
+  - "ensure_date_alignment"
+synthesis_guidance: "{'focus_on_latest': 'Highlight the latest available data for actionable insights.', 'narrative_consistency': 'Ensure narrative aligns with numerical data consistently.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:53:56"
+generation_model: "gpt-4o"
+validation_errors:
+  - "financial_analysis_tool: execution failed: KeyError: 'latest_financials'"
+review:
+  status: "needs_heal"
+  findings:
+    - "financial_analysis_tool: execution failed: KeyError: 'latest_financials'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

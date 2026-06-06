@@ -1,0 +1,68 @@
+created_at: "2026-06-06T12:52:08"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 3 months; response style: action watchlist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0842_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  select_vcp_candidates:
+    description: "Select VCP candidates with strong VCP and fundamental scores."
+    query: "SELECT v.symbol, v.company_name, v.price, v.vcp_score, s.fundamental_score \nFROM scores.stage2_vcp_picks v \nJOIN scores.stage_snapshots s ON v.symbol = s.symbol \nWHERE v.vcp_score > 75 AND s.fundamental_score > 80;"
+status: "validated"
+synthesis_guidance: "Synthesize VCP candidates into an actionable watchlist considering institutional insights and 3-month performance."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "action_watchlist"
+title: "VCP Breakouts With Fundamentals Variant 0842"
+tool_plan_template:
+  python_tools:
+    -
+      approved_tables:
+        - "market.equity_eod"
+        - "scores.stage_snapshots"
+        - "scores.stage2_vcp_picks"
+      code: "def run(context):\n    # Perform VCP analysis with provided data\n    pass"
+      id: "vcp_analysis"
+      inputs:
+        - "equity_data"
+        - "snapshot_data"
+        - "vcp_data"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "evaluated_stocks"
+validation_rules:
+  - "Ensure all filters apply to a 3-month timeframe."
+  - "Verify that candidates show convergence of technical and fundamental strengths."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

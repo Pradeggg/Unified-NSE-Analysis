@@ -1,0 +1,70 @@
+created_at: "2026-06-06T12:51:12"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: last 3 months; response style: QA checklist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0749_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  as_of_date:
+    query: "SELECT MAX(trade_date) as as_of_date FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+    status: "generated"
+  index_returns:
+    query: "SELECT index_symbol, SUM(change_pct) as index_return FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol;"
+    status: "generated"
+  leading_sectors:
+    query: "SELECT sector, AVG(change_1m_pct) as avg_change FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_change DESC LIMIT 3;"
+    status: "generated"
+  primary_candidates:
+    query: "SELECT symbol, company_name FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) LIMIT 5;"
+    status: "generated"
+  stage_distribution_change:
+    query: "SELECT stage, COUNT(symbol) as count, (SELECT COUNT(symbol) FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE - INTERVAL '3 months') as previous_count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY stage;"
+    status: "generated"
+status: "test_failed"
+synthesis_guidance: "['Integrate sector performance with index returns.', 'Highlight shifts in market stages with relevant metrics.', 'Present coherent narratives on candidate selection.']"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "QA_checklist"
+title: "3M Market Rotation Swing Assessment Variant 0749"
+tool_plan_template:
+  as_of_date: "Select the most recent date available within the last 3 months from the market.index_eod or market.equity_eod tables."
+  index_returns: "Compute the returns for major indexes over the last 3 months using change_pct from market.index_eod."
+  leading_sectors: "Identify the leading sectors based on their performance using scores.stage_snapshots."
+  primary_candidates: "List swing candidates from scores.stage2_vcp_picks."
+  risks: "Identify potential market risks from the data."
+  stage_distribution_change: "Determine the change in stage distribution using scores.stage_snapshots."
+validation_rules:
+  - "Ensure all queries respect the 3 months timeframe."
+  - "Verify sector data alignment between different sources."
+  - "Confirm swing candidate relevance to current market conditions."
+version: 1
+validation_errors:
+  - "market.index_eod.as_of_date is not approved"
+  - "market.index_eod.index_return is not approved"
+  - "scores.stage_snapshots.avg_change is not approved"

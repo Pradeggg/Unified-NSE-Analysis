@@ -1,0 +1,72 @@
+id: "market_3m_rotation_swing_0687_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0687"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: intraday context; response style: debug trace."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    title: "Fetch Latest Index Returns"
+    template: "SELECT index_symbol, close, change_pct FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+  -
+    title: "Stage Distribution Change Over 3 Months"
+    template: "SELECT sector, COUNT(symbol) AS stage2_count FROM scores.stage_snapshots WHERE stage = 'STAGE_2' AND snapshot_date BETWEEN (CURRENT_DATE - INTERVAL '3 months') AND CURRENT_DATE GROUP BY sector;"
+  -
+    title: "Leading Sectors by Stage 2 Count"
+    template: "SELECT sector, COUNT(symbol) AS count FROM scores.stage_snapshots WHERE stage = 'STAGE_2' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY count DESC LIMIT 5;"
+  -
+    title: "Primary Swing Candidates"
+    template: "SELECT symbol, company_name, price, trading_signal FROM scores.stage_snapshots WHERE stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY relative_strength DESC LIMIT 10;"
+python_tools:
+  -
+    id: "stage_score_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "latest_stage_data"
+    outputs:
+      - "summary_statistics"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    return context['latest_stage_data'].summary_statistics()"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+synthesis_guidance: "{'context': 'Focus on interpreting the 3-month rotation, emphasizing leading sectors and viable candidates for swing.', 'connection': 'Highlight relationships between market returns, sector leadership, and swing candidate qualification.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:42"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.stage2_count is not approved"

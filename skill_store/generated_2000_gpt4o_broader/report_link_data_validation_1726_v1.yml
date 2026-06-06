@@ -1,0 +1,63 @@
+id: "report_link_data_validation_1726_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1726"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Utilize SQL to collect recent run metadata and stock filtering outcomes to verify data integrity and traceability. Incorporate freshness audits over 5 recent sessions."
+sql_templates:
+  - "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered, indices_analyzed FROM report.enhanced_runs WHERE run_ts >= current_date - INTERVAL '5 days';"
+  - "SELECT run_id, rank, symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= current_date - INTERVAL '5 days');"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "analysis_results"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Example read-only processing to capture discrepancies\n    run_data = context['report.enhanced_runs']\n    stock_data = context['report.enhanced_filtered_stocks']\n    # Placeholder for complex analysis\n    analysis_results = []\n    for run in run_data:\n        if run['stocks_analyzed'] != len([stock for stock in stock_data if stock['run_id'] == run['run_id']]):\n            analysis_results.append(f\"Discrepancy in run_id {run['run_id']}\")\n    return analysis_results"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all reported links are valid and point to populated data."
+  - "Verify that data for the last 5 sessions is complete and within expected parameters."
+  - "Cross-check report metadata with actual stock and market data for discrepancies."
+synthesis_guidance: "Focus on producing a structured QA checklist that auditors can follow to ensure report accuracy and freshness. Highlight common discrepancies and suggest potential remediations."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:29"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: execution failed: KeyError: 'report.enhanced_runs'"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: execution failed: KeyError: 'report.enhanced_runs'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

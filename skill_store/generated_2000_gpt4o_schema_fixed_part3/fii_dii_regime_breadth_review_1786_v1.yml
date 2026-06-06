@@ -1,0 +1,51 @@
+id: "fii_dii_regime_breadth_review_1786_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1786"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: intraday context; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for intraday context: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "intraday_context"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Analyze market regime, FII/DII flows, and breadth with freshest intraday data. Generate a QA checklist formatted response explaining current risk environment."
+sql_templates:
+  - "SELECT f.trade_date, f.fii_net_today, f.dii_net_today, rh.regime, rh.confidence, md.advances, md.declines, md.market_sentiment, ie.index_symbol, ie.close FROM signals.fii_dii_flows f JOIN signals.regime_history rh ON f.trade_date = rh.trade_date JOIN breadth.market_daily md ON f.trade_date = md.trade_date JOIN market.index_eod ie ON f.trade_date = ie.trade_date WHERE ie.index_symbol = 'Nifty 50' AND f.trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure fresh trade_date consistency across all tables."
+  - "Confirm that FII/DII flow trends and regime signals align with breadth indicators."
+  - "Ensure index confirmation from Nifty 50 close aligns with regime labeling."
+synthesis_guidance: "['Synthesize FII/DII flows and market regime data with breadth for a comprehensive risk assessment.', 'Use index confirmation as a key indicator of market sentiment and alignment with regime/breadth.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

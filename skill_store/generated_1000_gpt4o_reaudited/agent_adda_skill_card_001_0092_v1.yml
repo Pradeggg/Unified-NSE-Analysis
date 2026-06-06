@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:41:51"
+created_by: "llm_generated"
+description: "A skill card for validating report data with a focus on broken links and missing stock data for weekly review."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_card_001_0092_v1"
+input_patterns:
+  - "review report links not working"
+  - "validate generated report links and missing data as concise table"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    description: "Identify broken report links from the past week."
+    id: "template_001"
+    query: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE analysis_date >= CURRENT_DATE - INTERVAL '7 days' AND (notes IS NULL OR notes LIKE '%link error%');"
+    status: "generated"
+  -
+    description: "Find missing stock data entries."
+    id: "template_002"
+    query: "SELECT symbol, current_price, volume FROM report.enhanced_filtered_stocks WHERE current_price IS NULL OR volume IS NULL AND run_id IN (SELECT run_id FROM report.enhanced_runs WHERE analysis_date >= CURRENT_DATE - INTERVAL '7 days');"
+    status: "generated"
+status: "validated"
+synthesis_guidance: "Analyze SQL results to synthesize key findings regarding broken links and missing data, focus on delivering actionable insights for remediation."
+tags:
+  - "report_qa"
+  - "links"
+  - "data_validation"
+  - "weekly_review"
+title: "Agent Adda: Report Data Validation Skill Card"
+tool_plan_template:
+  analysis: "Investigate report links status from the enhanced_runs metadata and verify stock data completeness in enhanced_filtered_stocks."
+  assessment: "Utilize the enhanced_runs and enhanced_filtered_stocks tables to identify non-functional report links and missing data entries. Focus on those linked to the last week's institutional reviews."
+  table_generation:
+    1: "Generate findings in a concise tabular format."
+validation_rules:
+  - "Ensure queries cover last week's data reviews."
+  - "Only include rows with missing data or known issues."
+  - "Verify link errors through run notes."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

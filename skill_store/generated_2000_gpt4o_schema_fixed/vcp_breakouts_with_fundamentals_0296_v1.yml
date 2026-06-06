@@ -1,0 +1,59 @@
+id: "vcp_breakouts_with_fundamentals_0296_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0296"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: weekly review; response style: ranked candidates."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  tools:
+    -
+      name: "fetch_vcp_candidates"
+      sql_template: "SELECT symbol, company_name, sector, price, trading_signal, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC, rank ASC LIMIT 10;"
+    -
+      name: "fetch_latest_fundamental_scores"
+      sql_template: "SELECT symbol, enhanced_fund_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2';"
+sql_templates:
+
+python_tools:
+  - "fetch_rsi"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure data freshness for the latest 7 days."
+  - "Verify fundamentals using enhanced_fund_score > 7."
+synthesis_guidance: "Create a list of top VCP breakout candidates, prioritized by VCP score and fundamental strength, for TradingView visibility. Ensure coverage of new highs and breakouts."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:05"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

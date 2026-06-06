@@ -1,0 +1,74 @@
+id: "data_freshness_readiness_audit_1351_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1351"
+description: "Ensure data freshness for Agent Adda workflows. Focus: quick scan; timeframe: quarter to date; respond with exceptions and gaps first."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for quarter to date: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as exceptions and gaps first"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  - "Assess the latest data by verifying the max trade dates from essential tables against expected freshness metrics."
+  - "Identify any data source gaps or latencies affecting market analysis or narratives."
+sql_templates:
+  -
+    template_id: "freshness_check"
+    select: "SELECT MAX(trade_date) AS latest_date, 'market.index_eod' AS table_name FROM market.index_eod\nUNION ALL\nSELECT MAX(trade_date) AS latest_date, 'market.equity_eod' AS table_name FROM market.equity_eod\nUNION ALL\nSELECT MAX(snapshot_date) AS latest_date, 'scores.stage_snapshots' AS table_name FROM scores.stage_snapshots\nUNION ALL\nSELECT MAX(trade_date) AS latest_date, 'breadth.market_daily' AS table_name FROM breadth.market_daily\nUNION ALL\nSELECT MAX(snapshot_date) AS latest_date, 'breadth.ma_pct_above' AS table_name FROM breadth.ma_pct_above\nUNION ALL\nSELECT MAX(run_ts) AS latest_date, 'report.enhanced_runs' AS table_name FROM report.enhanced_runs;"
+python_tools:
+  -
+    id: "tool_001"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "expected_thresholds"
+    outputs:
+      - "freshness_exceptions"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "breadth.market_daily"
+      - "breadth.ma_pct_above"
+      - "report.enhanced_runs"
+    code: "\ndef run(context):\n    freshness_exceptions = {}\n    for record in context['records']:\n        table_name = record['table_name']\n        latest_date = record['latest_date']\n        if latest_date < context['expected_thresholds'][table_name]:\n            freshness_exceptions[table_name] = latest_date\n    return freshness_exceptions\n"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all tables have entries within the expected timeframe."
+  - "Identify any gap or delay in data updates that could affect analyses."
+synthesis_guidance: "['Use identified freshness gaps to assess potential impact on market narratives.', 'Recommends actions to address identified gaps based on impact severity.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "tool_001: execution failed: KeyError: 'records'"
+review:
+  status: "needs_heal"
+  findings:
+    - "tool_001: execution failed: KeyError: 'records'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

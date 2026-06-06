@@ -1,0 +1,55 @@
+id: "agent_route_failure_diagnostics_1680_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1680"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: pre market; response style: debug trace."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for pre market: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as debug trace"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "pre_market"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze the input patterns, looking for signs of failed route steps, tool validation failures, or symbol resolution loops."
+sql_templates:
+  -
+    purpose: "Identify runs with reduced stock analysis."
+    template: "SELECT run_id, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) AND stocks_analyzed < universe_size ORDER BY run_ts DESC;"
+  -
+    purpose: "Find recent stage snapshots for failed routes."
+    template: "SELECT symbol, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'UNKNOWN';"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure SQL templates use approved tables and columns only."
+  - "Verify compliance with global SQL rules, using PostgreSQL syntax."
+  - "Check for evidence gaps where required schema elements are missing."
+synthesis_guidance: "Utilize the SQL results to trace the root of the route failures, assess potential areas where tool gaps exist, and provide actionable debugging information."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:49"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

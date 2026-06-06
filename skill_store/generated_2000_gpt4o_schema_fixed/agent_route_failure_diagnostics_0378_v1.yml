@@ -1,0 +1,76 @@
+id: "agent_route_failure_diagnostics_0378_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0378"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: pre market; response style: exceptions and gaps first."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for pre market: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as exceptions and gaps first"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze reports for missing tool validations and symbol resolution failures. Check stage snapshots for discrepancy in position-sizing indicators."
+sql_templates:
+  -
+    description: "Identify latest enhanced report runs."
+    template: "SELECT run_id, run_ts FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+  -
+    description: "Find stocks with missing data in latest enhanced reports."
+    template: "SELECT ers.run_id, efs.symbol FROM report.enhanced_runs ers JOIN report.enhanced_filtered_stocks efs ON ers.run_id = efs.run_id WHERE ers.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) AND (efs.tech_score IS NULL OR efs.fund_score IS NULL);"
+  -
+    description: "Get latest stage snapshot for symbol diagnostic."
+    template: "SELECT symbol, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+
+    outputs:
+
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    code: "# Code for analysis if required; python usage should remain read-only and within approved context."
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Verify run_id existence in enhanced reports."
+  - "Confirm no missing scores in filtered stocks."
+  - "Validate stage snapshots are up-to-date."
+synthesis_guidance: "['Supply detailed reasons for failures.', 'Suggest data corrections or retraining where needed.', 'Identify core areas of instability in data resolutions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run: inputs must be a list"
+  - "run: must define run(context)"
+  - "run: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "run: inputs must be a list"
+    - "run: must define run(context)"
+    - "run: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

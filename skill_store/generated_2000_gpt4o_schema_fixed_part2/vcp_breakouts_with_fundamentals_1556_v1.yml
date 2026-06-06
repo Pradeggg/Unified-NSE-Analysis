@@ -1,0 +1,56 @@
+id: "vcp_breakouts_with_fundamentals_1556_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1556"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: quarter to date; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  steps:
+
+sql_templates:
+  -
+    name: "vcp_breakouts_query"
+    description: "Identify VCP breakout stocks with strong fundamentals for the quarter to date."
+    query: "WITH latest_snapshot AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_vcp AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)) SELECT e.symbol, e.company_name, e.sector, e.price, e.change_1d_pct, e.change_1w_pct, e.market_cap_cr FROM market.equity_eod e JOIN latest_snapshot s ON e.symbol = s.symbol JOIN latest_vcp v ON e.symbol = v.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND s.trading_signal IN ('BUY', 'STRONG_BUY') AND v.vcp_score > 80 ORDER BY v.vcp_score DESC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:24"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.change_1d_pct is not approved"
+  - "market.equity_eod.change_1w_pct is not approved"
+  - "market.equity_eod.company_name is not approved"
+  - "market.equity_eod.price is not approved"
+  - "market.equity_eod.sector is not approved"

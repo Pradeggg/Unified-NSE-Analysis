@@ -1,0 +1,62 @@
+id: "report_link_data_validation_0354_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0354"
+description: "Validate enhanced report run metadata and filtered stock rows. Focus on watchlist creation for the Indian market, quarter to date timeframe. Highlight exceptions and gaps first."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for quarter to date: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  type: "sql_analysis"
+  steps:
+    -
+      description: "Fetch all report runs for the quarter to date."
+      sql_template: "SELECT * FROM report.enhanced_runs WHERE analysis_date >= '2023-01-01'"
+    -
+      description: "Identify stocks missing necessary data attributes."
+      sql_template: "SELECT * FROM report.enhanced_filtered_stocks WHERE current_price IS NULL OR open_price IS NULL"
+    -
+      description: "Validate consistency of market sentiment across report runs."
+      sql_template: "SELECT run_id, market_sentiment FROM report.enhanced_runs WHERE market_sentiment IS NULL"
+sql_templates:
+  - "SELECT * FROM report.enhanced_runs WHERE analysis_date >= '2023-01-01'"
+  - "SELECT * FROM report.enhanced_filtered_stocks WHERE current_price IS NULL OR open_price IS NULL"
+  - "SELECT run_id, market_sentiment FROM report.enhanced_runs WHERE market_sentiment IS NULL"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure unique run_id for each report"
+  - "Current price and open price must not be NULL"
+  - "Verify consistent market sentiment scores"
+synthesis_guidance: "Highlight any inconsistencies or missing data first, and suggest required remediation. Contextualize findings for the quarterly Indian market watchlist."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:16"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

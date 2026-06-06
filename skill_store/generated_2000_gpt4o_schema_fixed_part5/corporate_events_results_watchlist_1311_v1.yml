@@ -1,0 +1,68 @@
+id: "corporate_events_results_watchlist_1311_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1311"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: latest EOD; response style: exceptions and gaps first."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for latest EOD: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as exceptions and gaps first"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Using the provided evidence tables, implement queries focusing on upcoming or recent corporate events. Cross-reference stage snapshots for event-driven insights. Highlight exceptions and evidence gaps initially."
+sql_templates:
+  -
+    description: "Find latest corporate events with stages and current technical context."
+    sql: "WITH latest_events AS (SELECT * FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '3 months') SELECT DISTINCT ON (ce.symbol) ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, ss.stage, ss.trading_signal FROM latest_events ce JOIN scores.stage_snapshots ss ON ce.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY ce.symbol, ce.event_date DESC, ss.snapshot_date DESC LIMIT 50;"
+python_tools:
+  -
+    id: "analyze_results"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "event_date"
+    outputs:
+      - "analysis_summary"
+      - "growth_metrics"
+    approved_tables:
+      - "signals.corporate_events"
+      - "scores.results_analysis"
+    code: "def run(context):\n    # Analyze corporate event results with context.\n    return {'analysis_summary': 'example', 'growth_metrics': {}}\n"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure latest EOD rows with applicable trading signals are included."
+  - "Limit result sets to include only relevant stages and signals."
+synthesis_guidance: "Focus on identifying top candidates for event-driven action based on current stages and trading signals."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:37"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analyze_results: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "analyze_results: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

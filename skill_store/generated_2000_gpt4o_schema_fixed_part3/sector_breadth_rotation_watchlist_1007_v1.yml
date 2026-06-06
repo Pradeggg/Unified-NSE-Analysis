@@ -1,0 +1,55 @@
+id: "sector_breadth_rotation_watchlist_1007_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1007"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: today; response style: concise table."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for today: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as concise table"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "{generate_sector_relative_analysis}"
+sql_templates:
+  -
+    template_id: "select_sector_stage_2"
+    sql_text: "WITH latest_breadth AS (\n    SELECT *\n    FROM breadth.sector_daily\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)\n),\nlatest_stage AS (\n    SELECT *\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n        AND stage = 'STAGE_2'\n)\nSELECT lb.sector, lb.breadth_signal, ls.symbol, ls.trading_signal\nFROM latest_breadth lb\nJOIN latest_stage ls ON lb.sector = ls.sector\nORDER BY lb.breadth_signal DESC\nLIMIT 10;"
+    status: "generated"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "sector_ranks must include sector and breadth_signal."
+  - "candidate_symbols must include symbol and trading_signal."
+  - "improving_sectors are those with the highest breadth_signal values."
+synthesis_guidance: "Provide a concise list of sectors and symbols with high breadth and Stage 2 participation."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

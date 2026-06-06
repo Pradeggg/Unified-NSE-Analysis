@@ -1,0 +1,66 @@
+id: "data_freshness_readiness_audit_1869_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1869"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for post results: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as action watchlist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  - "1. Validate data freshness using approved and enhanced reporting variables."
+  - "2. Generate SQL queries for identifying freshness lags and missing data."
+  - "3. Verify and report loader activity and stage snapshot alignment."
+sql_templates:
+  -
+    purpose: "Check latest data availability and freshness."
+    query: "SELECT MAX(trade_date) as latest_equity_date FROM market.equity_eod;"
+    type: "read-only"
+  -
+    purpose: "Validate missing data sources and indexes."
+    query: "SELECT symbol FROM market.equity_eod WHERE trade_date IS NULL;"
+    type: "read-only"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all evidence tables are utilized."
+  - "Verify freshness by comparing with 'max' trade_date."
+  - "Include loader and missing source reporting."
+synthesis_guidance: "['Summarize findings and recommend actions to resolve freshness and source issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_equity_date is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "market.equity_eod.latest_equity_date is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

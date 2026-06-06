@@ -1,0 +1,61 @@
+id: "market_3m_rotation_swing_1611_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1611"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: latest EOD; response style: debug trace."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "latest_EOD"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    description: "Analyze the latest 3 months of market data focusing on regime, sector leadership, and swing candidates. Utilize resources for efficient quick scanning and generating a debug trace."
+sql_templates:
+  -
+    title: "Index Returns Last 3 Months"
+    template: "SELECT index_symbol, AVG(change_pct) AS avg_change_pct FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 months') GROUP BY index_symbol;"
+    description: "Calculates average returns for indices over the last 3 months."
+  -
+    title: "Latest Stage 2 Leaders"
+    template: "SELECT symbol, company_name, sector, stage_score, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY stage_score DESC LIMIT 10;"
+    description: "Fetches top Stage 2 leaders based on latest scores."
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "{'rule_set': ['Ensure latest EOD and snapshot dates are used for freshness.', 'Limit candidate lists to top findings to manage output volume.']}"
+synthesis_guidance: "Highlight market regime changes, sector shifts, and prominent swing candidates. Use debug tracing to detail analytical steps and assumptions."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_change_pct is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "market.index_eod.avg_change_pct is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

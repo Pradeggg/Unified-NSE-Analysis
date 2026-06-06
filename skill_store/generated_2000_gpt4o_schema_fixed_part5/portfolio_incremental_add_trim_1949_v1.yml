@@ -1,0 +1,50 @@
+id: "portfolio_incremental_add_trim_1949_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1949"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for last 3 months: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  -
+    description: "{ 'analysis': 'Construct comparison matrix for add/trim decisions based on holdings data and latest snapshots.', 'inference': 'Determine potential add/trim signals using stage and trading signals.', 'output_format': 'Present results as a matrix with columns for add candidates, trim candidates, and risk flags.' }"
+sql_templates:
+  latest_holding_analysis: "WITH latest_stages AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT ph.symbol, ph.qty, ph.avg_cost, ls.trading_signal, ls.sector, ls.stage FROM portfolio.holdings ph JOIN latest_stages ls ON ph.symbol = ls.symbol WHERE ls.trading_signal IN ('BUY', 'STRONG_BUY') OR ls.stage = 'STAGE_4'"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all symbols in the candidate lists exist in the current holdings."
+  - "Validate that sectors are mapped correctly with exposure data."
+synthesis_guidance: "{'approach': 'Use a data-driven method to reflect market and exposure insights in the recommended actions.', 'style': 'Use a comparison matrix to clearly segregate add and trim candidates, providing a clear and direct analysis.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:40"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

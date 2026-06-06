@@ -1,0 +1,64 @@
+id: "vcp_breakouts_with_fundamentals_1794_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1794"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    filters:
+      - "series = 'EQ' AND symbol IN (SELECT symbol FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks))"
+      - "symbol IN (SELECT symbol FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY'))"
+    candidates: "SELECT DISTINCT e.symbol FROM market.equity_eod e WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND e.symbol IN (SELECT symbol FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) LIMIT 50"
+    tradingview_symbols: "SELECT s.symbol FROM scores.stage_snapshots s WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 50"
+    evidence:
+      - "List of stocks creating new highs and VCP breakouts."
+      - "Assessment of fundamental scores for selection."
+    risks:
+      - "Market volatility may affect breakout sustainability."
+      - "High VCP score may not guarantee long-term growth."
+sql_templates:
+  -
+    description: "Fetch latest VCP candidates with strong fundamentals."
+    template: "SELECT p.symbol, s.enhanced_fund_score FROM scores.stage2_vcp_picks p JOIN scores.stage_snapshots s ON p.symbol = s.symbol WHERE p.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND p.vcp_score > 80 ORDER BY p.vcp_score DESC, s.enhanced_fund_score DESC LIMIT 30"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Verify output contains distinct stock symbols."
+  - "Ensure selected stocks meet both technical and fundamental thresholds."
+synthesis_guidance: "Focus on producing a watchlist with stocks that show potential for growth and technical strength. Prioritize those with clear breakout patterns and robust fundamental scores."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:11"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

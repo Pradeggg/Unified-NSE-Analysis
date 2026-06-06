@@ -1,0 +1,65 @@
+created_at: "2026-06-06T12:53:13"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: pre market; response style: comparison matrix."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0973_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for pre market: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 3
+  findings:
+    - "scores.stage_snapshots.avg_stage_score is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    description: "Fetch index performance and trends."
+    sql: "SELECT trade_date, index_symbol, change_pct, trend_signal FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 MONTH'"
+  -
+    description: "Fetch leading sectors."
+    sql: "SELECT sector, AVG(stage_score) AS avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 MONTH' GROUP BY sector HAVING AVG(stage_score) > 50 ORDER BY avg_stage_score DESC"
+status: "test_failed"
+synthesis_guidance:
+  - "Use a comparison matrix to highlight the differences and similarities in sector performance."
+  - "Focus on actionable insights for pre-market sessions."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "comparison_matrix"
+title: "3M Market Rotation Swing Assessment Variant 0973"
+tool_plan_template:
+  steps:
+    - "Perform market regime analysis over the last 3 months using `market.index_eod`."
+    - "Identify leading sectors based on `scores.stage_snapshots`."
+    - "Select liquid swing candidates from `scores.stage2_vcp_picks`."
+    - "Prepare a comparison matrix summarizing findings."
+validation_errors:
+  - "scores.stage_snapshots.avg_stage_score is not approved"
+validation_rules:
+  - "All SQL must be read-only."
+  - "Ensure the timeframe covers the last 3 months."
+version: 1

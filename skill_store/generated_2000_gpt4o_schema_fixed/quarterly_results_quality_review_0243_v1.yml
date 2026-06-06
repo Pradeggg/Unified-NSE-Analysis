@@ -1,0 +1,52 @@
+id: "quarterly_results_quality_review_0243_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0243"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: ranked candidates."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "daily refresh follow-up for last 3 months: latest quarterly results analysis"
+  - "which companies had strong quarterly results as ranked candidates"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Synthesize quarterly results and classify by performance over the last three months, focusing on revenue growth, PAT growth, and margin trends."
+sql_templates:
+  -
+    name: "LatestQuarterlyResultsAnalysis"
+    template: "WITH latest_results AS (\n  SELECT DISTINCT ON (symbol) symbol, period_end, revenue, pat, opm_pct\n  FROM scores.quarterly_results\n  WHERE period_end > CURRENT_DATE - INTERVAL '3 months'\n  ORDER BY symbol, period_end DESC, fetched_at DESC\n),\nlatest_analysis AS (\n  SELECT DISTINCT ON (symbol) symbol, verdict, growth_yoy_revenue_pct, growth_yoy_pat_pct, opm_delta_pp\n  FROM scores.results_analysis\n  WHERE period_end > CURRENT_DATE - INTERVAL '3 months'\n  ORDER BY symbol, period_end DESC, updated_at DESC\n)\nSELECT lr.symbol, lr.revenue, lr.pat, lr.opm_pct, la.verdict, la.growth_yoy_revenue_pct, la.growth_yoy_pat_pct, la.opm_delta_pp\nFROM latest_results lr\nJOIN latest_analysis la ON lr.symbol = la.symbol\nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure symbols are valid NSE symbols."
+  - "Validate that revenue and PAT figures are positive numbers."
+  - "Verify verdict values are one of the approved labels."
+synthesis_guidance: "['Rank companies based on YoY revenue and PAT growth, OPM percentage change.', 'Consider classification of verdict into beat, miss, or inline.', 'Highlight any significant margin drivers or risks identified in the analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

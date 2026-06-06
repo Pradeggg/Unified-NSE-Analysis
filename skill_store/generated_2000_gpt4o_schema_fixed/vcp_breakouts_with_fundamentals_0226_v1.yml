@@ -1,0 +1,71 @@
+id: "vcp_breakouts_with_fundamentals_0226_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0226"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 5 sessions; response style: ranked candidates."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    tool_type: "sql_query"
+    tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    latest_date_filters:
+      -
+        table: "market.equity_eod"
+        column: "trade_date"
+        filter: "trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+      -
+        table: "scores.stage_snapshots"
+        column: "snapshot_date"
+        filter: "snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+      -
+        table: "scores.stage2_vcp_picks"
+        column: "snapshot_date"
+        filter: "snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)"
+sql_templates:
+  -
+    description: "Fetch stocks with recent breakouts or new highs and strong fundamentals."
+    statement: "SELECT eod.symbol, eod.close, vcp.vcp_score, snaps.enhanced_fund_score FROM market.equity_eod AS eod INNER JOIN scores.stage_snapshots AS snaps ON eod.symbol = snaps.symbol INNER JOIN scores.stage2_vcp_picks AS vcp ON eod.symbol = vcp.symbol WHERE eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND snaps.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND vcp.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND eod.high > eod.week52_high AND snaps.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY vcp.vcp_score DESC, snaps.enhanced_fund_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure at least one candidate is returned if data exists."
+  - "Ensure appropriate columns are selected as specified in SQL templates."
+synthesis_guidance: "['Prioritize stocks with highest VCP and enhanced fundamental scores.', 'Ensure freshness by limiting analysis to the last available session.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:35"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

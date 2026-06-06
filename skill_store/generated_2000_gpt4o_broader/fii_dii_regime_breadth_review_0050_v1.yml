@@ -1,0 +1,66 @@
+id: "fii_dii_regime_breadth_review_0050_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0050"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: last 3 months; response style: concise table."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for last 3 months: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as concise table"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "last_3_months"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  strategy: "Use a set of SQL queries to gather data from the approved tables over the last 3 months. Extract insights using the output contract to form a concise table."
+  steps:
+    - "Review the FII/DII flow trends using signals.fii_dii_flows for the last 3 months."
+    - "Analyze market regime changes from signals.regime_history over the same period."
+    - "Evaluate breadth indicators from breadth.market_daily."
+    - "Verify index confirmation using market.index_eod by assessing the trends and key indicators."
+sql_templates:
+  -
+    description: "Fetch FII and DII net flows and trends for the last 3 months"
+    query: "SELECT trade_date, fii_net_today, dii_net_today, fii_trend, dii_trend FROM signals.fii_dii_flows WHERE trade_date >= current_date - interval '3 months';"
+  -
+    description: "Retrieve market regimes over the last 3 months"
+    query: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date >= current_date - interval '3 months';"
+  -
+    description: "Get market breadth data for the last 3 months"
+    query: "SELECT trade_date, advances, declines, ad_oscillator FROM breadth.market_daily WHERE trade_date >= current_date - interval '3 months';"
+  -
+    description: "Check last 3 months index end-of-day trends"
+    query: "SELECT trade_date, close, trend_signal FROM market.index_eod WHERE trade_date >= current_date - interval '3 months' AND index_symbol = 'NIFTY500';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "consistency_checks"
+synthesis_guidance: "{'instructions': 'Compile a coherent table displaying the current market regime, FII/DII flow context, breadth indicators, and index confirmation status. Highlight any risk-on or risk-off signals.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

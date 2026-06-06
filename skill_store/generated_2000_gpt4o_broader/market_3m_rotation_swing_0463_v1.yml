@@ -1,0 +1,60 @@
+id: "market_3m_rotation_swing_0463_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0463"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze recent market swings and sector rotation using approved databases. Ensure read-only data retrieval and analysis."
+sql_templates:
+  -
+    description: "Retrieve index changes over the last 3 months."
+    template: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= DATEADD(MONTH, -3, CURRENT_DATE) AND trend_signal = 'positive';"
+  -
+    description: "Identify leading sectors based on stage 2 leadership over last 3 months."
+    template: "SELECT symbol, sector, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date >= DATEADD(MONTH, -3, CURRENT_DATE) AND stage = 2 ORDER BY stage_score DESC LIMIT 5;"
+  -
+    description: "Find potential swing trade candidates from VCP picks."
+    template: "SELECT symbol, company_name, sector, price, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATEADD(MONTH, -3, CURRENT_DATE) AND trading_signal = 'buy' ORDER BY vcp_score DESC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Check consistency of date formats across tables."
+  - "Ensure sector names match approved list."
+synthesis_guidance: "Focus on integrating recent market insights into existing portfolio strategies. Highlight sector leadership and potential risks."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:34"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.dateadd is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage2_vcp_picks.dateadd is not approved"
+  - "scores.stage2_vcp_picks.month is not approved"
+  - "scores.stage_snapshots.dateadd is not approved"
+  - "scores.stage_snapshots.month is not approved"

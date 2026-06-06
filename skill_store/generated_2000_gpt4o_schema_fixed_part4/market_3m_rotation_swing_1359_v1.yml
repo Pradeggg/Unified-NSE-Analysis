@@ -1,0 +1,64 @@
+id: "market_3m_rotation_swing_1359_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1359"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as exceptions and gaps first"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    description: "Develop a strategy for identifying leading sectors and swing candidates, focusing on trailing data from the approved tables over the last three months."
+sql_templates:
+  -
+    name: "market_regime_analysis"
+    query: "SELECT index_symbol, AVG(change_pct) AS avg_return FROM market.index_eod WHERE trade_date >= (CURRENT_DATE - INTERVAL '3 months') GROUP BY index_symbol ORDER BY avg_return DESC;"
+  -
+    name: "leading_sectors_identification"
+    query: "SELECT sector, AVG(change_1m_pct) AS avg_1m_change FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector ORDER BY avg_1m_change DESC;"
+  -
+    name: "identify_swing_candidates"
+    query: "SELECT symbol, company_name, trading_signal FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure data correctness and compliance with the latest available records."
+  - "Validate that sector data includes at least two leading sectors."
+  - "Confirm primary candidates list includes actionable signals."
+synthesis_guidance: "['Summarize market regime with a focus on significant changes in index returns.', 'Highlight sector leadership shifts, referencing sectors with the highest growth.', 'List primary swing candidates, ensuring clarity on potential buy signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:38"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_return is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "market.index_eod.avg_return is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

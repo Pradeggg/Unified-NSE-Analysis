@@ -1,0 +1,70 @@
+id: "fii_dii_regime_breadth_review_0344_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0344"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: last 3 months; response style: exceptions and gaps first."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for last 3 months: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as exceptions and gaps first"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  python_tool_policy:
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    required_fields:
+      - "id"
+      - "language"
+      - "mode"
+      - "inputs"
+      - "outputs"
+      - "approved_tables"
+      - "code"
+sql_templates:
+  -
+    description: "Fetch FII/DII flow trend, market regime, and breadth for the last 3 months"
+    template: "WITH FiiDiiLast3Months AS (SELECT trade_date, fii_net_5d, dii_net_5d, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'), RegimeLast3Months AS (SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'), BreadthLast3Months AS (SELECT trade_date, ad_signal, market_sentiment FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months') SELECT f.trade_date, f.flow_signal, r.regime, r.confidence, b.ad_signal, b.market_sentiment FROM FiiDiiLast3Months f JOIN RegimeLast3Months r ON f.trade_date = r.trade_date JOIN BreadthLast3Months b ON f.trade_date = b.trade_date;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all data is within the last 3 months"
+  - "Flag if flow or breadth signals are contradictory"
+synthesis_guidance: "['Focus on connecting FII/DII flows with market regime and breadth', 'Highlight data gaps and exceptions', 'Provide clear risk-on or risk-off context']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

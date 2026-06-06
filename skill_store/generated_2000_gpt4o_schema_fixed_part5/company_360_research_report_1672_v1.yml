@@ -1,0 +1,63 @@
+id: "company_360_research_report_1672_v1"
+version: 1
+status: "review_pending"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1672"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: deep institutional review; timeframe: pre market; response style: debug trace."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "deep institutional review for pre market: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as debug trace"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Using tables: {evidence_required.tables}. Gather company snapshot, financial trends, technical setup, valuation gaps, thesis, risks."
+sql_templates:
+  company_snapshot: "SELECT * FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  financial_trends: "WITH latest_financials AS (SELECT DISTINCT ON (symbol) symbol, period_end, revenue, pat FROM scores.annual_results WHERE symbol = 'RELIANCE' ORDER BY symbol, period_end DESC) SELECT * FROM latest_financials;"
+  technical_setup: "SELECT * FROM market.equity_eod WHERE symbol = 'RELIANCE' AND series = 'EQ' AND trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+  valuation_gaps: "SELECT fundamental_score, enhanced_fund_score FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  thesis: "SELECT narrative, stance FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  risks: "SELECT key_risks FROM scores.results_analysis WHERE symbol = 'RELIANCE' AND period_end = (SELECT MAX(period_end) FROM scores.results_analysis WHERE symbol = 'RELIANCE');"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "Verify that only approved columns are used."
+  - "Output keys must match output_contract."
+synthesis_guidance: "Integrate content into a coherent narrative that reflects institutional research standards and market context."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

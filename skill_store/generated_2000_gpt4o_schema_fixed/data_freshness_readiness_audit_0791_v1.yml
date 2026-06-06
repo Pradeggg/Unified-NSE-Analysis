@@ -1,0 +1,89 @@
+id: "data_freshness_readiness_audit_0791_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0791"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for weekly review: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Data Freshness Readiness Audit Plan"
+sql_templates:
+  -
+    name: "latest_market_index"
+    description: "Fetch the latest date for market index EOD data to check freshness."
+    query: "SELECT MAX(trade_date) AS latest_trade_date FROM market.index_eod;"
+  -
+    name: "latest_equity_eod"
+    description: "Fetch the latest date for equity EOD data to check freshness."
+    query: "SELECT MAX(trade_date) AS latest_trade_date FROM market.equity_eod;"
+  -
+    name: "latest_stage_snapshot"
+    description: "Fetch the latest snapshot date for stage snapshots to check freshness."
+    query: "SELECT MAX(snapshot_date) AS latest_snapshot_date FROM scores.stage_snapshots;"
+  -
+    name: "latest_market_daily"
+    description: "Fetch the latest trade date for market daily data to check freshness."
+    query: "SELECT MAX(trade_date) AS latest_trade_date FROM breadth.market_daily;"
+  -
+    name: "latest_ma_pct_above"
+    description: "Fetch the latest snapshot date for MA percentage above data to check freshness."
+    query: "SELECT MAX(snapshot_date) AS latest_snapshot_date FROM breadth.ma_pct_above;"
+  -
+    name: "latest_enhanced_runs"
+    description: "Fetch the latest run timestamp for enhanced report runs to check freshness."
+    query: "SELECT MAX(run_ts) AS latest_run_ts FROM report.enhanced_runs;"
+python_tools:
+  -
+    id: "date_comparison_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "latest_dates"
+      - "expected_timeframes"
+    outputs:
+      - "freshness_status"
+    approved_tables:
+
+    code: "def run(context):\n    latest_dates = context['inputs']['latest_dates']\n    expected_timeframes = context['inputs']['expected_timeframes']\n    freshness_status = {}\n    for table, date_info in latest_dates.items():\n        freshness_status[table] = 'Fresh' if date_info >= expected_timeframes[table] else 'Stale'\n    return {'freshness_status': freshness_status}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure dates fetched are within the expected freshness timeframes."
+  - "Highlight tables with missing data or delays in data updates."
+  - "Generate verification queries to confirm data loading and updating issues."
+synthesis_guidance: "['Cross-reference the latest dates obtained with the expected freshness standards.', 'Identify and prioritize actions for tables and data sources with inconsistent or outdated data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:55"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.latest_snapshot_date is not approved"
+  - "breadth.market_daily.latest_trade_date is not approved"
+  - "market.equity_eod.latest_trade_date is not approved"
+  - "market.index_eod.latest_trade_date is not approved"
+  - "report.enhanced_runs.latest_run_ts is not approved"
+  - "scores.stage_snapshots.latest_snapshot_date is not approved"

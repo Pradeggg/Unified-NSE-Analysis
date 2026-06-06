@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:46:43"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: portfolio-aware output."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0438_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "Select_VCP_Breakouts"
+    template: "WITH vcp_data AS (SELECT symbol, company_name, sector, price, vcp_breakout_pct FROM scores.stage2_vcp_picks WHERE vcp_score > 70 AND vcp_breakout_pct > 5 ORDER BY vcp_score DESC) SELECT d.symbol, d.company_name, d.sector, d.price, e.close, e.volume FROM vcp_data d JOIN market.equity_eod e ON d.symbol = e.symbol WHERE e.trade_date BETWEEN CURRENT_DATE - INTERVAL '20 days' AND CURRENT_DATE;"
+status: "validated"
+synthesis_guidance: "Synthesize insights from both technical VCP breakouts and fundamental strengths, emphasizing recent trading behavior and portfolio integration."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+title: "VCP Breakouts With Fundamentals Variant 0438"
+tool_plan_template: "Retrieve stocks creating new highs, exhibiting VCP patterns, or breaking out with strong fundamentals, focusing on liquidity and portfolio fit."
+validation_rules:
+  - "Ensure symbols align with current market activity."
+  - "Verify data freshness with current snapshot timing."
+version: 1

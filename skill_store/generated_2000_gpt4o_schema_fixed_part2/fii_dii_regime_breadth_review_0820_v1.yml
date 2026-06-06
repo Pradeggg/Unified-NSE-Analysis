@@ -1,0 +1,53 @@
+id: "fii_dii_regime_breadth_review_0820_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0820"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for latest EOD: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as action watchlist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Analyze FII/DII flow trends, market regime, and breadth to determine the current market context. Use SQL to fetch the latest market data and provide insights for the TradingView export."
+sql_templates:
+  -
+    name: "latest_market_context"
+    description: "Fetch the latest market context combining FII/DII flows, market regime, breadth, and index data."
+    sql: "WITH latest_date AS (SELECT MAX(trade_date) as max_date FROM market.index_eod),\nlatest_flows AS (\n    SELECT * FROM signals.fii_dii_flows\n    WHERE trade_date = (SELECT max_date FROM latest_date)\n),\nlatest_regime AS (\n    SELECT * FROM signals.regime_history\n    WHERE trade_date = (SELECT max_date FROM latest_date)\n),\nlatest_breadth AS (\n    SELECT * FROM breadth.market_daily\n    WHERE trade_date = (SELECT max_date FROM latest_date)\n),\nlatest_index AS (\n    SELECT * FROM market.index_eod\n    WHERE trade_date = (SELECT max_date FROM latest_date)\n)\nSELECT \n    f.trade_date, \n    f.flow_signal, \n    r.regime, \n    b.ad_signal, \n    i.index_symbol, \n    i.change_pct\nFROM latest_flows f\nJOIN latest_regime r ON f.trade_date = r.trade_date\nJOIN latest_breadth b ON f.trade_date = b.trade_date\nJOIN latest_index i ON f.trade_date = i.trade_date\nWHERE i.index_symbol = 'Nifty 50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure the response includes regime insights, flow trends, breadth indicators, and index confirmations."
+  - "Check if the data reflects the latest available EOD context."
+synthesis_guidance: "['Summarize the current market regime influenced by FII/DII flows and breadth.', 'Highlight any conflict or alignment between breadth signals and regime.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:15"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

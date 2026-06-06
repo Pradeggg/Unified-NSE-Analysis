@@ -1,0 +1,64 @@
+id: "vcp_breakouts_with_fundamentals_0842_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0842"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 3 months; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  inputs:
+    - "period"
+  steps:
+    - "Use SQL to find stocks with new highs from last 3 months in market.equity_eod."
+    - "Check VCP scores and fundamental strength from scores.stage_snapshots and scores.stage2_vcp_picks."
+    - "Ensure liquidity and fundamental quality using enhanced_fund_score and financial_strength."
+  outputs:
+    - "candidates"
+    - "tradingview_symbols"
+sql_templates:
+  -
+    name: "find_new_highs"
+    description: "Find stocks that hit new highs in the last 3 months."
+    template: "SELECT symbol, trade_date, high FROM market.equity_eod WHERE series = 'EQ' AND trade_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) AND high = week52_high;"
+  -
+    name: "find_vcp_candidates"
+    description: "Identify VCP candidates with strong fundamentals."
+    template: "SELECT symbol, company_name, sector, price, vcp_score, enhanced_fund_score, financial_strength FROM scores.stage2_vcp_picks WHERE vcp_score > 0.5 AND enhanced_fund_score > 70 AND financial_strength > 70;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Use only SELECT statements."
+  - "Ensure all queries are read-only."
+  - "Maintain compliance with Indian market data semantics."
+synthesis_guidance: "['Prioritize strong fundamentals and high liquidity.', 'Focus on recent performance indicators.', 'Consider sector trends and institutional backing.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:39"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.date_sub is not approved"
+  - "market.equity_eod.month is not approved"

@@ -1,0 +1,59 @@
+id: "portfolio_incremental_add_trim_1165_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1165"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: post results; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for post results: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "post_results"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  evidence_queries:
+    -
+      description: "Fetch latest stage snapshots for current holdings."
+      query: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT p.symbol, p.qty, p.avg_cost, s.stage, s.stage_score, s.technical_score FROM portfolio.holdings p JOIN latest_snapshots s ON p.symbol = s.symbol;"
+sql_templates:
+  -
+    description: "Identify add candidates from holdings."
+    sql: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT p.symbol, p.qty, p.avg_cost, s.stage, s.trading_signal FROM portfolio.holdings p JOIN latest_snapshots s ON p.symbol = s.symbol WHERE s.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+  -
+    description: "Identify trim candidates from holdings."
+    sql: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT p.symbol, p.qty, p.avg_cost, s.stage, s.trading_signal FROM portfolio.holdings p JOIN latest_snapshots s ON p.symbol = s.symbol WHERE s.trading_signal = 'SELL' LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure fields map accurately to approved schema for both tables."
+  - "Check that JOIN conditions use _join_rules precisely."
+  - "Validate SQL queries reflect _global_rules and PostgreSQL syntax correctly."
+  - "Ensure candidate lists are bounded with appropriate LIMIT."
+synthesis_guidance: "['Narratives should be risk-first and highlight decisions for adding or trimming holdings based on evidence.', 'Integrate insights from SQL evidence to elucidate the current portfolio state and sector exposures.', 'Frame outputs in context of Indian market conditions post-results.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:41:30"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

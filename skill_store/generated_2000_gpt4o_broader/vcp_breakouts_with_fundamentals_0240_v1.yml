@@ -1,0 +1,52 @@
+id: "vcp_breakouts_with_fundamentals_0240_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0240"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Generate a list of candidate stocks based on the criteria involving new highs, VCP patterns, and breakouts with robust fundamental scores. Focus on data from the last 20 sessions and prepare for TradingView export."
+sql_templates:
+  -
+    template_id: "select_vcp_breakouts"
+    template: "SELECT symbol, company_name, sector, price, change_1d_pct, relative_strength, trading_signal, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '20 days' AND enhanced_fund_score > 70 ORDER BY relative_strength DESC, enhanced_fund_score DESC LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all output candidates match input criteria."
+  - "Verify TradingView symbols are correctly formatted."
+synthesis_guidance: "Rank stocks based on relative strength and enhanced fundamental score. Prepare for integration into TradingView with all necessary export formatting."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:56"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

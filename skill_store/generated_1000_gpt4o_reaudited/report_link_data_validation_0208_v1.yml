@@ -1,0 +1,60 @@
+created_at: "2026-06-06T12:43:20"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: today; response style: ranked candidates."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0208_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for today: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    name: "fetch_runs"
+    template: "SELECT run_id, run_ts, stocks_analyzed FROM report.enhanced_runs WHERE analysis_date = CURRENT_DATE;"
+    type: "SELECT"
+  -
+    name: "fetch_filtered_stocks"
+    template: "SELECT run_id, symbol, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = :run_id;"
+    type: "SELECT"
+status: "validated"
+synthesis_guidance: "['Rank findings by impact on position sizing.', 'Highlight key stocks with missing data.']"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "today"
+  - "ranked_candidates"
+title: "Enhanced Report Data Validation Variant 0208"
+tool_plan_template:
+  sequence:
+    - "Fetch metadata and stocks data"
+    - "Analyze inconsistencies"
+    - "Identify broken or missing components"
+  type: "report_qa"
+validation_rules:
+  - "Ensure that run timestamps are within expected timeframe."
+  - "Check completeness of stocks data for today."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

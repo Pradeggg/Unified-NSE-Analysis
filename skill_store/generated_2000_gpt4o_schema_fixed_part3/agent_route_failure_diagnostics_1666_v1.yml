@@ -1,0 +1,77 @@
+id: "agent_route_failure_diagnostics_1666_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1666"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: post results; response style: debug trace."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for post results: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as debug trace"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "post_results"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "1. Analyze enhanced runs for any unexpected deviation in universe size, stock counts, or sentiment."
+  - "2. Check filtered stocks against common failure modes involving symbol, score, or recommendation."
+  - "3. Correlate stage snapshots to verify latest stage data against reported metrics like RSI or technical scores."
+sql_templates:
+  -
+    template_id: "check_latest_runs"
+    description: "Verify latest enhanced run data and potential anomalies."
+    template: "SELECT run_id, stocks_analyzed, stocks_filtered, notes FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+  -
+    template_id: "stock_failure_modes"
+    description: "Identify stocks with potential resolution or data quality issues."
+    template: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = (SELECT MAX(run_id) FROM report.enhanced_runs) AND (score < 0 OR recommendation IS NULL);"
+  -
+    template_id: "latest_stage_validation"
+    description: "Validate latest stage snapshots with expected technical indicators."
+    template: "SELECT symbol, rsi, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+  -
+    id: "analyze_routes"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "evidence"
+    outputs:
+      - "diagnostic_report"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Read-only analysis code\n    pass"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure the evidence tables contain the necessary recent data."
+  - "Check for null or unexpected values in key analytical columns."
+synthesis_guidance: "['Summarize potential failure modes using output contracts.', 'Provide a traceable source trail for diagnostics.', 'Suggest actionable route fixes based on evidence.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:44"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analyze_routes: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "analyze_routes: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

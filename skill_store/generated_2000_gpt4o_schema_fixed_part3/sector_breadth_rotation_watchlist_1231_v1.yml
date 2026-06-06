@@ -1,0 +1,55 @@
+id: "sector_breadth_rotation_watchlist_1231_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1231"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for last 20 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as ranked candidates"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Your task is to create a quick sector-relative watchlist based on breadth, stage 2 participation, RS, and momentum for the last 20 sessions. Output must be ranked candidates ready for TradingView."
+sql_templates:
+  -
+    name: "sector_breadth_rotation_query"
+    description: "Query to find improving sectors and candidate stocks based on breadth and stage 2 participation."
+    template: "SELECT sd.sector, COUNT(ss.symbol) AS stage2_count, MAX(s.relative_strength) AS max_relative_strength\nFROM breadth.sector_daily sd\nJOIN scores.stage_snapshots ss ON sd.sector = ss.sector\nWHERE sd.snapshot_date >= CURRENT_DATE - INTERVAL '20 days'\nAND ss.stage = 'STAGE_2'\nAND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nGROUP BY sd.sector\nORDER BY stage2_count DESC, max_relative_strength DESC\nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure SQL query is read-only and adheres to schema constraints."
+  - "Output ranked sectors and candidate symbols ready for TradingView."
+  - "Verify result set accuracy with stage 2 and breadth metrics."
+synthesis_guidance: "Rely on sector breadth and stage 2 metrics to formulate a ranked watchlist. Focus on sectors showing improvement and stocks with strong relative strength. Ensure results fit TradingView format."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:56"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

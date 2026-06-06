@@ -1,0 +1,62 @@
+id: "fii_dii_regime_breadth_review_0568_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0568"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for post results: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as research-only summary"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "To provide insights into current FII/DII flows, market regime, breadth, and index action while maintaining a research-only summary."
+sql_templates:
+  -
+    query: "SELECT fii.trade_date, fii.flow_signal, fii.fii_trend, fii.dii_trend, regime.regime, regime.confidence, breadth.ad_signal, market.nifty500_close FROM signals.fii_dii_flows AS fii JOIN signals.regime_history AS regime ON fii.trade_date = regime.trade_date JOIN breadth.market_daily AS breadth ON fii.trade_date = breadth.trade_date JOIN market.index_eod AS market ON fii.trade_date = market.trade_date WHERE market.index_symbol = 'Nifty 50' AND fii.trade_date = (SELECT MAX(trade_date) FROM market.index_eod)"
+python_tools:
+  -
+    id: "fii_dii_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "trade_date"
+      - "flow_signal"
+      - "regime"
+    outputs:
+      - "risk_assessment"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+    code: "def run(context):\n    # Dummy implementation: Detailed assessment logic\n    return 'risk_on' if context['flow_signal'] == 'inflow' and context['regime'] == 'BULL' else 'risk_off'"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure trade_date is the most recent available date."
+  - "Confirm the presence of latest flow and breadth signals."
+synthesis_guidance: "['Integrate flow, regime, and breadth context to assess market regime.', 'Determine risk-on or risk-off posture based on the combined evidence.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:25:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.market_daily is not approved"
+  - "market.index_eod.index_eod is not approved"
+  - "market.index_eod.nifty500_close is not approved"

@@ -1,0 +1,67 @@
+id: "vcp_breakouts_with_fundamentals_0296_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0296"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: weekly review; response style: ranked candidates."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "SELECT symbol, company_name, price, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE vcp_breakout_pct >= 0.05 AND enhanced_fund_score >= 70 ORDER BY vcp_score DESC LIMIT 10;"
+sql_templates:
+  -
+    description: "Fetch top VCP breakout stocks with strong fundamentals, sorted by VCP score."
+    type: "main"
+    statement: "SELECT symbol, company_name, price, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE vcp_breakout_pct >= 0.05 AND enhanced_fund_score >= 70 ORDER BY vcp_score DESC LIMIT 10;"
+python_tools:
+  -
+    id: "calculate_stock_freshness"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "last_price"
+      - "week52_high"
+    outputs:
+      - "freshness_audit_score"
+    approved_tables:
+      - "market.equity_eod"
+    code: "def run(context):\n  last_price = context['last_price']\n  week52_high = context['week52_high']\n  freshness_audit_score = (last_price / week52_high) * 100\n  return {'freshness_audit_score': freshness_audit_score}"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "candidates_max"
+  - "enhanced_fund_score_min"
+  - "vcp_breakout_pct_min"
+synthesis_guidance: "{'rank_by': 'vcp_score', 'supplement_by': 'enhanced_fund_score'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:37"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_stock_freshness: execution failed: KeyError: 'last_price'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_stock_freshness: execution failed: KeyError: 'last_price'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,55 @@
+id: "report_link_data_validation_0340_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0340"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: last 20 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Examine the report links and metadata in the context of Indian markets using TradingView exports from the last 20 sessions. Highlight exceptions and evidence gaps."
+sql_templates:
+  -
+    name: "validate_enhanced_runs"
+    purpose: "Verify correct metadata for report runs in the last 20 sessions."
+    sql: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE run_ts >= (CURRENT_DATE - INTERVAL '20 days');"
+  -
+    name: "check_filtered_stocks"
+    purpose: "Check for filtered stock data inconsistencies."
+    sql: "SELECT run_id, symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= (CURRENT_DATE - INTERVAL '20 days'));"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Check for gaps in report runs metadata."
+  - "Ensure all analyzed stocks have corresponding records."
+synthesis_guidance: "Focus on exceptions first and identify trends or data gaps evident over the last 20 sessions in TradingView exports."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:03"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

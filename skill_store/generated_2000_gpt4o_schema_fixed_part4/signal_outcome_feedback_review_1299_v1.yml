@@ -1,0 +1,48 @@
+id: "signal_outcome_feedback_review_1299_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Weekly Signal Outcome Review"
+description: "Evaluate prior signal outcomes to refine strategy and skill selection. Focuses on source-trail validation and improvement for the Indian market."
+input_patterns:
+  - "review signal outcomes for weekly insights"
+  - "learn from targets hit and stop events"
+  - "analyze successful and failed recommendations"
+tags:
+  - "signal_log"
+  - "evaluation"
+  - "outcome_analysis"
+  - "weekly_review"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Review signal outcomes by gathering data from the specified evidence tables and applying Indian market contexts."
+sql_templates:
+  -
+    template_name: "signal_outcome_analysis"
+    template: "SELECT sl.symbol, sl.date_issued, sl.signal, sl.hit_target, sl.hit_stop, sl.return_pct, ss.stage_score FROM signals.signal_log sl INNER JOIN scores.stage_snapshots ss ON sl.symbol = ss.symbol WHERE sl.date_resolved >= CURRENT_DATE - INTERVAL '1 week' AND sl.date_issued >= CURRENT_DATE - INTERVAL '3 months' LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winning_patterns"
+  - "failure_patterns"
+  - "improvement_areas"
+  - "next_steps"
+validation_rules:
+  - "Ensure that data consistency is maintained between signal outcomes and stage snapshots."
+  - "Verify SQL adherence to join rules and latest-date filters, especially within the Indian market context."
+synthesis_guidance: "['Highlight key patterns from successful and unsuccessful signals.', 'Suggest actionable improvements based on data-driven insights.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:56"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

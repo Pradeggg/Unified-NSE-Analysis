@@ -1,0 +1,58 @@
+id: "market_3m_rotation_swing_1527_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1527"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: research-only summary."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for last 5 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as research-only summary"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    description: "Research and analyze the latest 3-month market data focusing on sector rotation and stage 2 leadership using the approved tables."
+sql_templates:
+  index_returns: "SELECT index_symbol, AVG(change_pct) as average_return FROM market.index_eod WHERE trade_date >= current_date - INTERVAL '3 months' GROUP BY index_symbol ORDER BY average_return DESC LIMIT 5;"
+  leading_sectors: "WITH latest_snapshot AS (SELECT MAX(snapshot_date) as latest FROM scores.stage_snapshots) SELECT sector, COUNT(*) as sector_count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT latest FROM latest_snapshot) AND stage = 'STAGE_2' GROUP BY sector ORDER BY sector_count DESC LIMIT 5;"
+  stage_distribution_change: "SELECT sector, stage, COUNT(*) as stage_count FROM scores.stage_snapshots WHERE snapshot_date IN ((SELECT MAX(snapshot_date) FROM scores.stage_snapshots), (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) - INTERVAL '5 days') GROUP BY sector, stage;"
+  primary_candidates: "SELECT symbol, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure that the latest dates from each table are utilized."
+  - "Results should focus on stage 2 leadership and sector rotations within the last 3 months."
+synthesis_guidance: "Focus the summary on recent market trends, highlighting strong sector performances and potential investment candidates. Consider framing risks associated with market volatility."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:47"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.average_return is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "market.index_eod.average_return is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

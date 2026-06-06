@@ -1,0 +1,53 @@
+id: "vcp_breakouts_with_fundamentals_0982_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0982"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "For stock screening, identify stocks reaching new highs, VCP patterns, or breakouts with solid fundamentals from approved tables and join rules."
+sql_templates:
+  -
+    template: "WITH latest_eod AS (\n  SELECT *\n  FROM market.equity_eod\n  WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)\n    AND series = 'EQ'\n),\nlatest_snapshots AS (\n  SELECT *\n  FROM scores.stage_snapshots\n  WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n),\nlatest_vcp AS (\n  SELECT *\n  FROM scores.stage2_vcp_picks\n  WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)\n)\nSELECT e.symbol, e.close, s.stage, v.vcp_score, v.enhanced_fund_score\nFROM latest_eod e\nJOIN latest_snapshots s ON e.symbol = s.symbol\nJOIN latest_vcp v ON e.symbol = v.symbol\nWHERE s.stage = 'STAGE_2'\n  AND s.trading_signal IN ('BUY', 'STRONG_BUY')\n  AND e.close >= e.week52_high * 0.95\nORDER BY v.vcp_score DESC\nLIMIT 10;"
+    description: "Selects stocks that are recent VCP candidates with a strong breakout near 52-week highs by joining latest EOD, stage snapshots, and VCP picks."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure symbols are not stale."
+  - "VCP score must be considered for ranking."
+  - "Limit result set to 10 for performance."
+synthesis_guidance: "['Focus on providing a comparison matrix with strong candidates ranked by VCP score and enhanced fundamentals.', 'Highlight factors such as breakout potential and institutional interest for each stock.', 'Provide TradingView-friendly symbols for easy lookup.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:59"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

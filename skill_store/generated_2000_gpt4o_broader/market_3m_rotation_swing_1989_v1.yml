@@ -1,0 +1,61 @@
+id: "market_3m_rotation_swing_1989_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1989"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  plan_steps:
+    - "Analyze recent sector leadership using approved tables."
+    - "Identify swing candidates from sector rotation and stage analysis."
+    - "Conduct source-trail validation via a comparison matrix for an intraday context."
+sql_templates:
+  sector_leadership:
+    query: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY change_pct DESC;"
+    description: "Retrieve top index movements over the last 3 months."
+  swing_candidates:
+    query: "SELECT symbol, sector, stage, trading_signal FROM scores.stage_snapshots WHERE stage = '2' AND snapshot_date >= CURRENT_DATE - INTERVAL '3 months';"
+    description: "Identify Stage 2 candidates suitable for swing trades."
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Verify data span over the last 3 months."
+  - "Check sector rotation evidence for leadership changes."
+  - "Validate stage 2 and swing candidate signals."
+synthesis_guidance: "{'approach': 'Create a summary comparing intraday trends to stage changes over 3 months.', 'focus': 'Highlight sectors with significant gain/loss and identify liquid swing candidates.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:59"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

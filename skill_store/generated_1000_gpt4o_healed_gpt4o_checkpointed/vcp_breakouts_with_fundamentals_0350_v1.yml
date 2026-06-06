@@ -1,0 +1,57 @@
+created_at: "2026-06-06T12:45:54"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 3 months; response style: exceptions and gaps first."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0350_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    name: "high_volume_breakouts"
+    query: "WITH recent_highs AS (SELECT symbol, MAX(high) AS high_last_3m FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY symbol), breakouts AS (SELECT s3.symbol, s3.company_name, s3.sector, s3.price, s3.rsi, s3.trading_signal FROM scores.stage2_vcp_picks AS s3 JOIN recent_highs AS rh ON s3.symbol = rh.symbol WHERE s3.vcp_breakout_pct > 0.05 AND rh.high_last_3m = s3.price), result AS (SELECT symbol, company_name, sector FROM breakouts WHERE symbol IN (SELECT symbol FROM scores.stage_snapshots WHERE enhanced_fund_score > 7)) SELECT symbol, company_name, sector FROM result;"
+status: "validated"
+synthesis_guidance:
+  - "Focus on gaps in evidence and exceptions first."
+  - "Ensure TradingView symbols are clearly distinct and ready for export."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+title: "VCP Breakouts With Fundamentals Variant 0350"
+tool_plan_template:
+
+validation_errors:
+  - "market.equity_eod.live_price is not approved"
+validation_rules:
+  - "Ensure all breakout stocks with enhanced fund score above 7 are included."
+  - "Verify query pulls data for the last 3 months."
+version: 1
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"

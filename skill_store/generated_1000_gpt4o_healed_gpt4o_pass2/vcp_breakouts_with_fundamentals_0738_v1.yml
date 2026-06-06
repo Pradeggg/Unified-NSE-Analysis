@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:51:11"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: QA checklist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0738_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Select stocks creating new highs or VCP or breakouts with strong fundamentals in the last 20 sessions."
+    template: "WITH recent_prices AS (SELECT symbol, MAX(high) OVER (PARTITION BY symbol ORDER BY trade_date ROWS BETWEEN 19 PRECEDING AND CURRENT ROW) AS recent_high FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days'),\nvcp_candidates AS (SELECT symbol, company_name, enhanced_fund_score, vcp_score FROM scores.stage2_vcp_picks WHERE vcp_breakout_pct > 0 AND snapshot_date >= CURRENT_DATE - INTERVAL '20 days'),\nfundamental_candidates AS (SELECT symbol, enhanced_fund_score FROM scores.stage_snapshots WHERE enhanced_fund_score > 70 AND price_date = CURRENT_DATE)\nSELECT r.symbol, r.recent_high, v.enhanced_fund_score, v.vcp_score\nFROM recent_prices r\nJOIN vcp_candidates v ON r.symbol = v.symbol\nJOIN fundamental_candidates f ON r.symbol = f.symbol;"
+status: "validated"
+synthesis_guidance: "['Integrate the outputs into a comprehensive QA checklist.', 'Provide clear insights on position-sizing and breakout opportunities.', 'Emphasize fundamental strengths and readiness for VCP breakout.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "QA_checklist"
+title: "VCP Breakouts With Fundamentals Variant 0738"
+tool_plan_template:
+
+validation_rules:
+  - "Ensure all SQL queries adhere to the read-only requirement."
+  - "Check that all columns used in SQL queries exist in the approved schema."
+  - "Verify that no unauthorized tables are used."
+version: 1

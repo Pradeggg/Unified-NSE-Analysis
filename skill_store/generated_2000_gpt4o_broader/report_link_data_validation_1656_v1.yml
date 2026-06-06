@@ -1,0 +1,49 @@
+id: "report_link_data_validation_1656_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1656"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for quarter to date: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "{{sql_templates}}"
+sql_templates:
+  -
+    description: "Fetch run details for the current quarter."
+    query: "SELECT run_id, run_ts, analysis_date, universe_size FROM report.enhanced_runs WHERE analysis_date >= date_trunc('quarter', current_date);"
+  -
+    description: "Identify stocks with missing data for quarter to date."
+    query: "SELECT symbol, run_id FROM report.enhanced_filtered_stocks WHERE day_change_pct IS NULL AND rank < 10;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all report run data is from the current quarter."
+  - "Verify that no top-ranked stocks have missing daily change percentages."
+synthesis_guidance: "['Focus on debugging areas with missing data or broken links within the specified quarter.', 'Provide clear remediation steps for any identified issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.date_trunc is not approved"

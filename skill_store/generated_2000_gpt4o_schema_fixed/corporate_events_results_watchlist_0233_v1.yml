@@ -1,0 +1,50 @@
+id: "corporate_events_results_watchlist_0233_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0233"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for last 20 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as ranked candidates"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Identify corporate events and analyze related results, refreshing daily over the past 20 sessions."
+sql_templates:
+  -
+    query: "WITH latest_stages AS (SELECT DISTINCT ON (symbol) symbol, stage, snapshot_date FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY symbol, snapshot_date DESC) SELECT ce.symbol, ce.event_type, ce.event_date, ra.verdict, ls.stage FROM signals.corporate_events ce JOIN scores.results_analysis ra ON ce.symbol = ra.symbol JOIN latest_stages ls ON ce.symbol = ls.symbol WHERE ce.event_date >= CURRENT_DATE - INTERVAL '20 days' AND ce.event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM') ORDER BY ce.event_date DESC LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure 'eve' event types occur within the last 20 sessions."
+  - "Results must have supporting analysis evidence and verdict."
+synthesis_guidance: "Rank candidate stocks by event relevance and result impact over the last 20 sessions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

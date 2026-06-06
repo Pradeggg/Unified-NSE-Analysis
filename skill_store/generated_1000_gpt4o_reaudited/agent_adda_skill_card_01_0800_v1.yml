@@ -1,0 +1,67 @@
+created_at: "2026-06-06T12:51:44"
+created_by: "llm_generated"
+description: "Skill card for validating TradingView export in weekly reviews using enhanced report data."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_card_01_0800_v1"
+input_patterns:
+  - "review report links not working"
+  - "validate generated report links and missing data"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+  -
+    approved_tables:
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Simulated validation logic\n    validity_check = []\n    for symbol in context['symbol_data']:\n        if symbol['weekly_signal'] is None:\n            validity_check.append({'symbol': symbol['symbol'], 'issue': 'missing weekly signal'})\n    return {'validity_check': validity_check, 'report_summary': 'Validation complete.'}"
+    id: "run_report_validation"
+    inputs:
+      - "run_id"
+      - "symbol_data"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "validity_check"
+      - "report_summary"
+sql_templates:
+  -
+    description: "Retrieves essential run metadata for today's analysis."
+    query: "SELECT run_id, run_ts, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE analysis_date = CURRENT_DATE"
+  -
+    description: "Identifies stocks missing weekly signals based on run ID."
+    query: "SELECT symbol, weekly_signal FROM report.enhanced_filtered_stocks WHERE run_id = ? AND weekly_signal IS NULL"
+status: "test_failed"
+synthesis_guidance: "['Summarize discrepancies and propose remediation steps.']"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "weekly_review"
+  - "QA_checklist"
+title: "TradingView Export QA Checklist"
+tool_plan_template:
+  - "Verify enhanced report's run metadata against trading records."
+  - "Ensure all filtered stocks have corresponding data entries."
+  - "Check weekly signals for completeness and accuracy."
+validation_rules:
+  - "Ensure non-empty result sets from SQL queries."
+  - "Cross-reference filtered stocks with market data."
+version: 1
+validation_errors:
+  - "run_report_validation: execution failed: KeyError: 'symbol_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_report_validation: execution failed: KeyError: 'symbol_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

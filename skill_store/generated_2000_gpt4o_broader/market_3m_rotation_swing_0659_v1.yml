@@ -1,0 +1,82 @@
+id: "market_3m_rotation_swing_0659_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0659"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  python_tools:
+    run:
+      id: "python_tool_1"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        evidence: "Query and process data for detailed stage and candidate analysis."
+      outputs:
+        result: "Processed market and stage information for reporting."
+      approved_tables:
+        - "market.index_eod"
+        - "market.equity_eod"
+        - "scores.stage_snapshots"
+        - "scores.stage2_vcp_picks"
+      code: "def run(context):\n    # Placeholder for detailed analysis and validation\n    return {'result': 'Processed data'}"
+sql_templates:
+  -
+    description: "Fetch 3-month index change summary."
+    template: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH);"
+    output_fields:
+      - "trade_date"
+      - "index_symbol"
+      - "close"
+      - "change_pct"
+  -
+    description: "Identify significant sector shifts and stage transitions."
+    template: "SELECT sector, stage, COUNT(*) AS frequency FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY sector, stage;"
+    output_fields:
+      - "sector"
+      - "stage"
+      - "frequency"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure index data covers entire 3-month period."
+  - "Cross-reference sector and stage data with multiple sources."
+synthesis_guidance: "['Focus on providing clear debug traces for market regime analysis.', 'Prioritize data accuracy and traceability in sector leadership conclusions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:21"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.frequency is not approved"
+  - "scores.stage_snapshots.month is not approved"

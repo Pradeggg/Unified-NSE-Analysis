@@ -1,0 +1,63 @@
+id: "sector_breadth_rotation_watchlist_1441_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1441"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for last 3 months: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as portfolio-aware output"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    action: "select"
+    details: "Calculate sector ranks based on breadth signal and change over the last 3 months."
+  -
+    action: "select"
+    details: "Identify improving sectors using stage 2 participation and breadth signal."
+sql_templates:
+  -
+    description: "Retrieve sectors with the best breadth improvement over the last 3 months."
+    sql: "SELECT sector, AVG(change_5d) AS avg_change_5d, AVG(pct_above_50dma::numeric) AS avg_breadth FROM breadth.sector_daily WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_change_5d DESC LIMIT 10;"
+  -
+    description: "Identify stocks within improving sectors that are in Stage 2 with a strong buy signal."
+    sql: "WITH improving_sectors AS (SELECT sector FROM breadth.sector_daily WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' AND breadth_signal = 'improved' GROUP BY sector) SELECT symbol, company_name FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal = 'STRONG_BUY' AND sector IN (SELECT sector FROM improving_sectors);"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  -
+    rule: "sector_ranks and improving_sectors cannot have overlapping sectors."
+    error: "Overlap detected in sector classifications."
+  -
+    rule: "All candidate_symbols must correspond to a sector in improving_sectors."
+    error: "Mismatch between candidate symbols and improving sectors."
+synthesis_guidance: "['Consider recent breadth signals and stage participation for sector ranking.', 'Emphasize symbols that align with portfolio strategy in the context of sector improvement.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:56"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.sector_daily.avg_breadth is not approved"
+  - "breadth.sector_daily.avg_change_5d is not approved"

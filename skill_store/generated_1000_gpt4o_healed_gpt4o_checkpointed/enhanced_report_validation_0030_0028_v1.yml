@@ -1,0 +1,73 @@
+created_at: "2026-06-06T12:41:10"
+created_by: "llm_generated"
+description: "Validate position-sizing context in enhanced reports over last 5 sessions using Indian market data."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "enhanced_report_validation_0030_0028_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as concise table"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  check_stock_records:
+    template: "SELECT symbol, current_price, volume, recommendation FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE DATE(run_ts) >= DATE_SUB(CURRENT_DATE, INTERVAL 5 DAY));"
+    type: "read-only"
+  validate_metadata:
+    template: "SELECT run_id, run_ts, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE DATE(run_ts) >= DATE_SUB(CURRENT_DATE, INTERVAL 5 DAY);"
+    type: "read-only"
+status: "test_failed"
+synthesis_guidance:
+  - "Summarize findings in a concise table."
+  - "Provide insights on data quality and integrity."
+  - "Recommend steps for remediation if issues are found."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "concise_table"
+title: "Position-Sizing Report Validation"
+tool_plan_template:
+  status: "generated"
+  steps:
+    -
+      description: "Use read-only SQL queries to inspect data integrity and presence."
+      method: "SQL"
+      task: "Validate report metadata and stock records"
+    -
+      description: "Ensure data aligns with the last 5 trading sessions."
+      method: "Analysis"
+      task: "Cross-verify findings with expected position-sizing context"
+validation_errors:
+  - "report.enhanced_runs.date is not approved"
+  - "report.enhanced_runs.date_sub is not approved"
+  - "report.enhanced_runs.day is not approved"
+validation_rules:
+  - "Ensure all report links are functional."
+  - "Confirm HTML stock files have complete data."
+  - "Assess data based on position-sizing rules."
+version: 1
+review:
+  attempts: 3
+  findings:
+    - "report.enhanced_runs.date is not approved"
+    - "report.enhanced_runs.date_sub is not approved"
+    - "report.enhanced_runs.day is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"

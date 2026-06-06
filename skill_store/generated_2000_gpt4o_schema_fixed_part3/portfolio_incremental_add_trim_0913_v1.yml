@@ -1,0 +1,47 @@
+id: "portfolio_incremental_add_trim_0913_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review - Skill Card"
+description: "Assess the portfolio for potential incremental additions or reductions. Provides a detailed comparison matrix for sector and stock positioning using latest EOD data."
+input_patterns:
+  - "should we add incrementally or reduce exposure?"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  explain: "This skill card evaluates portfolio holdings to identify incremental add or trim opportunities by analyzing current risk, exposure, and technical indicators."
+sql_templates:
+  portfolio_review_query: "SELECT ph.symbol, ph.qty, ph.avg_cost, ss.company_name, ss.sector, ss.trading_signal, ss.stage, ss.price, ss.change_1d_pct, ss.change_1w_pct, ss.change_1m_pct FROM portfolio.holdings ph JOIN scores.stage_snapshots ss ON ph.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.stage IN ('STAGE_2', 'STAGE_3') ORDER BY ss.trading_signal LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Validate all required tables are accessed: scores.stage_snapshots, portfolio.holdings"
+  - "Ensure data pulls from the latest snapshot date"
+synthesis_guidance: "{'methodology_explain': 'Use a comparison matrix approach to highlight which sectors and stocks within the portfolio are suitable for incremental adds or trims based on technical indicators and recent market performance.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

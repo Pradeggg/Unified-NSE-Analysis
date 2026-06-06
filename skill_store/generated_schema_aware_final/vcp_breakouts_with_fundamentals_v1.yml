@@ -1,0 +1,77 @@
+id: "vcp_breakouts_with_fundamentals_v1"
+version: 1
+status: "generated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals"
+description: "Research-only Agent Adda Indian market screen to find NSE stocks showing Stage 2, VCP, breakout or near-new-high characteristics along with stronger fundamental, quality, and liquidity evidence."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "india"
+  - "nse"
+  - "research_only"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+  evidence_gaps:
+    - "True all-time-high detection is not available because only week52_high is present in the approved schema."
+    - "Intraday breakout confirmation, live order book strength, and tick-level volume expansion are not available in the approved schema."
+    - "Detailed VCP base anatomy such as number of contractions, base duration, pivot price, and dry-up volume sequence is not directly available unless reflected in vcp_score, vcp_breakout_pct, and vcp_contraction_pct."
+    - "Full fundamental statements, valuation ratios, promoter holding, pledge, FII/DII activity, and quarterly earnings line items are not available in the approved schema."
+tool_plan_template:
+  steps:
+    -
+      step: 1
+      action: "Resolve the latest available snapshot date and collect materialized Stage 2 VCP picks from scores.stage2_vcp_picks."
+    -
+      step: 2
+      action: "Filter candidates for stronger VCP and breakout evidence using vcp_score, vcp_breakout_pct, vcp_contraction_pct, trading_signal, trend_signal, relative_strength, and rsi."
+    -
+      step: 3
+      action: "Add fundamental quality context from scores.stage_snapshots using fundamental_score, enhanced_fund_score, earnings_quality, sales_growth, financial_strength, can_slim_score, minervini_score, institutional_backing, investment_score, stance, narrative, and fund_details."
+    -
+      step: 4
+      action: "Add price, liquidity, and near-52-week-high context from market.equity_eod using close, high, week52_high, volume, turnover_cr, delivery_qty, delivery_pct, total_trades, and market_cap_cr."
+    -
+      step: 5
+      action: "Return a research-only shortlist with filters used, candidates, TradingView-compatible NSE symbols, evidence, caveats, and risks. Do not provide buy, sell, target, stop-loss, or personalized investment advice."
+sql_templates:
+  latest_vcp_candidates:
+    purpose: "Fetch latest or user-specified Stage 2 VCP candidates with breakout and fundamental scores."
+    template: "SELECT snapshot_date, rank, symbol, company_name, sector, price, live_price, price_date, change_1d_pct, change_1w_pct, rsi, relative_strength, trading_signal, trend_signal, supertrend_state, investment_score, enhanced_fund_score, earnings_quality, sales_growth, financial_strength, vcp_score, vcp_breakout_pct, vcp_contraction_pct, stance, narrative, fund_details, source_report, created_at, updated_at FROM scores.stage2_vcp_picks WHERE snapshot_date = COALESCE(:snapshot_date, (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)) AND vcp_score >= :min_vcp_score AND relative_strength >= :min_relative_strength AND enhanced_fund_score >= :min_enhanced_fund_score ORDER BY vcp_score DESC, investment_score DESC, relative_strength DESC LIMIT :limit"
+  stage_and_fundamental_context:
+    purpose: "Fetch Stage 2, technical, and fundamental snapshot context for shortlisted symbols."
+    template: "SELECT snapshot_date, symbol, company_name, sector, market_cap_cat, price, live_price, price_date, change_1d_pct, change_1w_pct, change_1m_pct, stage, stage_score, technical_score, rsi, trend_signal, trading_signal, relative_strength, supertrend_state, supertrend_value, can_slim_score, minervini_score, fundamental_score, enhanced_fund_score, earnings_quality, sales_growth, financial_strength, institutional_backing, investment_score, stance, narrative, fund_details, source_csv FROM scores.stage_snapshots WHERE snapshot_date = COALESCE(:snapshot_date, (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) AND symbol IN (:symbols) AND stage = :stage_filter ORDER BY investment_score DESC, technical_score DESC, enhanced_fund_score DESC"
+  price_liquidity_new_high_context:
+    purpose: "Fetch EOD liquidity and near-52-week-high evidence for shortlisted symbols."
+    template: "SELECT trade_date, symbol, series, open, high, low, close, last_price, prev_close, change_abs, change_pct, volume, turnover_cr, total_trades, delivery_qty, delivery_pct, week52_high, week52_low, market_cap_cr FROM market.equity_eod WHERE trade_date = COALESCE(:trade_date, (SELECT MAX(trade_date) FROM market.equity_eod)) AND symbol IN (:symbols) AND series = :series AND close >= week52_high * :near_high_multiplier AND turnover_cr >= :min_turnover_cr AND volume >= :min_volume ORDER BY turnover_cr DESC, volume DESC, change_pct DESC"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "status must remain generated."
+  - "Use only read-only SELECT SQL templates."
+  - "Use evidence_required.tables exactly as the source table list."
+  - "Do not reference any table outside market.equity_eod, scores.stage_snapshots, and scores.stage2_vcp_picks."
+  - "Do not reference any column outside the approved schema for those tables."
+  - "If the user asks for all-time highs, intraday breakout confirmation, pivot price, valuation ratios, promoter data, or quarterly financial line items, report the missing concept in evidence_gaps rather than inventing SQL."
+  - "Frame results for Indian NSE market research only."
+  - "Do not generate executable Python."
+  - "Do not provide personalized advice, guaranteed returns, buy calls, sell calls, targets, or stop-loss instructions."
+  - "TradingView symbols should be rendered as NSE:<symbol> in synthesis, using the returned symbol values."
+synthesis_guidance: "{'tone': 'Concise Indian market research assistant; evidence-led and cautious.', 'ranking_logic': ['Prefer candidates present in scores.stage2_vcp_picks with higher vcp_score, higher investment_score, stronger relative_strength, and stronger enhanced_fund_score.', 'Prioritize Stage 2 names with constructive trading_signal, trend_signal, and supertrend_state when available.', 'Require liquidity support using turnover_cr and volume from market.equity_eod.', 'Treat close near week52_high as near-new-high evidence, not as all-time-high evidence.'], 'response_structure': ['State the filters and dates used.', 'Provide a compact candidate table.', 'List TradingView symbols as NSE:<symbol>.', 'Summarize the strongest evidence per candidate.', 'Call out evidence gaps and risks.', 'End with a research-only disclaimer.'], 'research_only_disclaimer': 'This Agent Adda output is for Indian equity market research only and is not investment advice, a recommendation, or a guarantee of future performance.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:16:19"
+generation_model: "gpt-5.5"

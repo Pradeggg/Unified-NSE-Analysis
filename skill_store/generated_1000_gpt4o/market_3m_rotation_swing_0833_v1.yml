@@ -1,0 +1,56 @@
+id: "market_3m_rotation_swing_0833_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0833"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for last 20 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Using available evidence, assess market regime changes, stage 2 leadership, and prepare action watchlist."
+sql_templates:
+  -
+    description: "Select index returns over the last 3 months."
+    template: "SELECT index_symbol, AVG(change_pct) AS avg_return FROM market.index_eod WHERE trade_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE GROUP BY index_symbol"
+  -
+    description: "Identify sectors with leading stage distribution changes."
+    template: "SELECT sector, AVG(stage_score) AS avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE GROUP BY sector ORDER BY avg_stage_score DESC"
+  -
+    description: "List primary swing candidates from recent sector rotation."
+    template: "SELECT symbol, company_name, sector, rsi, relative_strength FROM scores.stage2_vcp_picks WHERE snapshot_date BETWEEN CURRENT_DATE - INTERVAL '20 days' AND CURRENT_DATE AND vcp_score IS NOT NULL ORDER BY vcp_score DESC"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all index symbols are from the approved schema."
+  - "Verify calculation of averages are within logical bounds."
+synthesis_guidance: "Focus on translating data and trends into actionable insights, particularly swing trading opportunities in the context of market regime analysis."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:52:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_return is not approved"
+  - "scores.stage_snapshots.avg_stage_score is not approved"

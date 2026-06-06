@@ -1,0 +1,72 @@
+id: "company_360_research_report_1728_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "RELIANCE Company 360 Research"
+description: "Comprehensive research card on RELIANCE, including overview, financials, fundamentals, technical context, and position-sizing for last 5 sessions. Styled as a QA checklist."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "comprehensive RELIANCE report with fundamentals, technical charts, and narrative"
+  - "institutional grade 360 research for RELIANCE as QA checklist"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+    -
+      id: "tool_001"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "symbol"
+        - "last_5_sessions"
+      outputs:
+        - "technical_setup"
+      approved_tables:
+        - "market.equity_eod"
+        - "scores.stage_snapshots"
+      code: "def run(context):\n pass"
+  evidence_gaps:
+    missing_concepts:
+      - "Position-sizing strategy specifics"
+sql_templates:
+  -
+    description: "Query to fetch latest stage snapshot for RELIANCE"
+    query: "SELECT * FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all symbols retrieve valid data."
+  - "Verify latest data timestamps match current market conditions."
+synthesis_guidance: "['Construct a narrative that aligns financial data with technical indicators.', 'Highlight potential risks and valuation gaps.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:25"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

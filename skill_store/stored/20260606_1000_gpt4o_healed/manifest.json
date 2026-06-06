@@ -1,0 +1,14 @@
+{
+  "model": "gpt-4o",
+  "name": "20260606_1000_gpt4o_healed",
+  "source_generation_notes": "Best completed 1000-card corpus after pass4 healing; stable copy for Agent Adda skill-store ingestion.",
+  "source_jsonl": "skill_store/generated_1000_gpt4o_healed_gpt4o_pass4/healed_skill_cards_20260606_143802.jsonl",
+  "status_counts": {
+    "test_failed": 199,
+    "validated": 801
+  },
+  "stored_at": "2026-06-06T14:41:52",
+  "stored_jsonl": "skill_store/stored/20260606_1000_gpt4o_healed/skill_cards.jsonl",
+  "total_cards": 1000,
+  "unique_ids": 1000
+}

@@ -1,0 +1,54 @@
+id: "report_link_data_validation_0220_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0220"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: latest EOD; response style: ranked candidates."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for latest EOD: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "This skill will use the approved evidence and templates to validate report data and identify any broken links or missing data affecting the TradingView export for latest EOD, resulting in a ranked list of issues and remediation steps."
+sql_templates:
+  -
+    template_id: "enhanced_run_metadata"
+    query: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE analysis_date >= CURRENT_DATE - INTERVAL '1 day';"
+  -
+    template_id: "filtered_stocks_check"
+    query: "SELECT run_id, symbol, current_price, recommendation FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE analysis_date >= CURRENT_DATE - INTERVAL '1 day');"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure data existence for each report run."
+  - "Validate links against known schema."
+  - "Check for completion of data trails."
+synthesis_guidance: "Aggregate findings from SQL queries, providing a coherent list of identified issues, ordered by severity and potential impact. Include clear, actionable recommendations for each identified issue."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:43:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,64 @@
+id: "signal_outcome_feedback_review_0417_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0417"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: portfolio-aware output."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for latest EOD: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as portfolio-aware output"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Analyze prior signal outcomes for target or stop hits using the `signals.signal_log`."
+    - "Compare sector performance against signal outcomes using `scores.stage_snapshots`."
+    - "Confirm current market conditions with `market.equity_eod` data."
+sql_templates:
+  outcome_summary: "SELECT sector, COUNT(*) as total_signals, SUM(hit_target) as targets_hit, SUM(hit_stop) as stops_hit, AVG(return_pct) as avg_return FROM signals.signal_log WHERE date_resolved = (SELECT MAX(trade_date) FROM market.equity_eod) GROUP BY sector;"
+  winner_patterns: "SELECT setup_class, COUNT(*) as frequency FROM signals.signal_log WHERE hit_target = 1 GROUP BY setup_class ORDER BY frequency DESC;"
+  failure_patterns: "SELECT setup_class, COUNT(*) as frequency FROM signals.signal_log WHERE hit_stop = 1 GROUP BY setup_class ORDER BY frequency DESC;"
+python_tools:
+  -
+    id: "compute_trend_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      required:
+        - "signals.signal_log"
+        - "scores.stage_snapshots"
+    outputs:
+
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    signals = context['signals.signal_log']\n    scores = context['scores.stage_snapshots']\n    # Analysis logic here\n    return"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "status"
+synthesis_guidance: "Summarize the outcomes focusing on sector-relative performance, identify patterns in successful and failed signals, and suggest improvements in the signal generation process."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:58"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.frequency is not approved"

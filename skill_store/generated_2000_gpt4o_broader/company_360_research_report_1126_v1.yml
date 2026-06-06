@@ -1,0 +1,78 @@
+id: "company_360_research_report_1126_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Card"
+description: "Generates a detailed company research card including overview, financials, technical context, and narrative evidence. Includes a freshness audit for the last 5 sessions."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "freshness audit for last 5 sessions: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as narrative plus evidence"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Retrieve latest data from scores.stage_snapshots for the company to assess technical scores and recent price changes."
+    - "Compile quarterly and annual results from scores.quarterly_results and scores.annual_results for recent financial performance."
+    - "Assess balance sheet and cash-flow from scores.balance_sheet and scores.cash_flow to analyze financial health."
+    - "Aggregate key insights from scores.results_analysis for a high-level narrative."
+    - "Analyze market.equity_eod for recent price trends and volume data over the last 5 sessions."
+sql_templates:
+  -
+    name: "fetch_latest_technical"
+    query: "SELECT * FROM scores.stage_snapshots WHERE symbol='RELIANCE' ORDER BY snapshot_date DESC LIMIT 1;"
+  -
+    name: "fetch_quarterly_results"
+    query: "SELECT * FROM scores.quarterly_results WHERE symbol='RELIANCE' ORDER BY period_end DESC LIMIT 1;"
+  -
+    name: "fetch_annual_results"
+    query: "SELECT * FROM scores.annual_results WHERE symbol='RELIANCE' ORDER BY period_end DESC LIMIT 1;"
+  -
+    name: "fetch_balance_sheet"
+    query: "SELECT * FROM scores.balance_sheet WHERE symbol='RELIANCE' ORDER BY period_end DESC LIMIT 1;"
+  -
+    name: "fetch_cash_flow"
+    query: "SELECT * FROM scores.cash_flow WHERE symbol='RELIANCE' ORDER BY period_end DESC LIMIT 1;"
+  -
+    name: "fetch_market_data"
+    query: "SELECT * FROM market.equity_eod WHERE symbol='RELIANCE' ORDER BY trade_date DESC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all fetched data corresponds to the last available session for accuracy in technical and financial snapshots."
+  - "Match output with approved company symbol 'RELIANCE'."
+synthesis_guidance: "['Combine financial and technical data into a cohesive narrative.', 'Highlight unique insights for the last 5 sessions to maintain report freshness.', 'Identify any valuation gaps, key risks, and thesis angles based on compiled data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

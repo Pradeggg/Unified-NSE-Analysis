@@ -1,0 +1,72 @@
+id: "corporate_events_results_watchlist_0639_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0639"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for last 20 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as debug trace"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  tool: "PythonEvidenceTool"
+  id: "corporate_events_results_watchlist_0639_tool"
+  purpose: "Generate market insights based on corporate events and results analysis."
+  language: "python"
+  mode: "read_only"
+  inputs:
+    - "approved_tables.signals.corporate_events"
+    - "approved_tables.scores.results_analysis"
+    - "approved_tables.scores.stage_snapshots"
+  outputs:
+    - "output_contract.event_calendar"
+    - "output_contract.symbol_watchlist"
+    - "output_contract.result_context"
+    - "output_contract.action_bucket"
+    - "output_contract.source_trail"
+  approved_tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+  code: "def run(context): pass"
+sql_templates:
+  events_select:
+    table: "signals.corporate_events"
+    query: "SELECT symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date >= NOW() - INTERVAL '20 days';"
+  results_analysis_select:
+    table: "scores.results_analysis"
+    query: "SELECT symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct FROM scores.results_analysis WHERE created_at >= NOW() - INTERVAL '20 days';"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure result_context reflects the latest results analysis."
+  - "Verify action_bucket aligns with event-driven trading signals."
+  - "Trace source trails to validate the data reliability."
+synthesis_guidance: "['Focus on sources reliability when compiling the watchlist.', 'Validate corporate events against recent market data trends.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:13"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.now is not approved"
+  - "signals.corporate_events.now is not approved"

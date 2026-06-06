@@ -1,0 +1,78 @@
+created_at: "2026-06-06T12:51:19"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: QA checklist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0753_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.index_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    results = {\n        'index_returns': context.get('index_return_analysis', {}),\n        'leading_sectors': context.get('sector_leadership_analysis', {}),\n        'primary_candidates': context.get('stage2_vcp_candidates', {})\n    }\n    return results"
+    id: "python_evidence_tool"
+    inputs:
+      - "index_return_analysis"
+      - "sector_leadership_analysis"
+      - "stage2_vcp_candidates"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "index_returns"
+      - "leading_sectors"
+      - "primary_candidates"
+review:
+  attempts: 3
+  findings:
+    - "scores.stage_snapshots.avg_daily_change is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    id: "index_return_analysis"
+    query: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE;"
+  -
+    id: "sector_leadership_analysis"
+    query: "SELECT sector, AVG(change_1d_pct) as avg_daily_change FROM scores.stage_snapshots WHERE snapshot_date BETWEEN CURRENT_DATE - INTERVAL '3 months' AND CURRENT_DATE GROUP BY sector ORDER BY avg_daily_change DESC;"
+  -
+    id: "stage2_vcp_candidates"
+    query: "SELECT symbol, company_name, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 10;"
+status: "test_failed"
+synthesis_guidance: "Combine insights from index and sector performance to determine trends and identify top swing trading candidates in the Indian market over the last quarter."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "QA_checklist"
+title: "3M Market Rotation Swing Assessment Variant 0753"
+tool_plan_template: "Assess market using indices and equities data, identifying sector trends and top performing securities in the Stage 2 phase."
+validation_errors:
+  - "scores.stage_snapshots.avg_daily_change is not approved"
+validation_rules:
+  - "Ensure all indices have 'CURRENT_DATE' data."
+  - "Check sector averages are computed correctly."
+  - "Stage 2 candidates must have valid scores."
+version: 1

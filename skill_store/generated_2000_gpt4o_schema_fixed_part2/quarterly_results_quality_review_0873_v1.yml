@@ -1,0 +1,78 @@
+id: "quarterly_results_quality_review_0873_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0873"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: daily refresh follow-up; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "daily refresh follow-up for pre market: latest quarterly results analysis"
+  - "which companies had strong quarterly results as action watchlist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    task: "Fetch latest quarterly results data."
+    table: "scores.quarterly_results"
+    latest_date_logic: "Use DISTINCT ON (symbol) ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC"
+    filters:
+      - "period_type = 'quarter'"
+  -
+    task: "Analyze results and compare with narratives."
+    join: "scores.quarterly_results -> scores.results_analysis"
+    latest_date_logic: "Use DISTINCT ON (symbol) ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC"
+  -
+    task: "Analyze stage and technical score."
+    table: "scores.stage_snapshots"
+    latest_date_logic: "snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+sql_templates:
+  -
+    template: "WITH latest_results AS (SELECT DISTINCT ON (symbol) symbol, revenue, pat, opm_pct FROM scores.quarterly_results WHERE period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC) SELECT lr.symbol, lr.revenue, lr.pat, lr.opm_pct, ra.verdict FROM latest_results lr JOIN scores.results_analysis ra ON lr.symbol = ra.symbol WHERE ra.verdict IN ('beat', 'miss') LIMIT 50;"
+python_tools:
+  -
+    id: "calculate_growth_rates"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "revenue"
+      - "pat"
+    outputs:
+      - "growth_yoy_revenue_pct"
+      - "growth_yoy_pat_pct"
+    approved_tables:
+      - "scores.quarterly_results"
+    code: "def run(context):\n    data = context['data']\n    for entry in data:\n        entry['growth_yoy_revenue_pct'] = ... # Calculate YOY growth\n        entry['growth_yoy_pat_pct'] = ... # Calculate YOY growth\n    return data"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure data freshness by validating period_end against latest available date."
+  - "Check that the verdict summary aligns with revenue and PAT performance trends."
+synthesis_guidance: "[\"Prioritize companies with a 'beat' verdict as action watchlist candidates.\", 'Highlight margin improvements as key drivers in the analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:55"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_growth_rates: execution failed: KeyError: 'data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_growth_rates: execution failed: KeyError: 'data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,62 @@
+id: "vcp_breakouts_with_fundamentals_1584_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1584"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: intraday context; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "intraday_context"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters:
+    - "symbols with VCP score"
+    - "high fundamental scores"
+    - "strong relative strength"
+  strategies:
+    - "select stocks with >=10% vcp_breakout_pct"
+    - "filter for minimum enhanced_fund_score threshold"
+    - "assess based on institutional backing"
+  outputs:
+    - "candidates list"
+    - "trading symbols for TradingView formatted output"
+    - "summary evidence of selection criteria"
+sql_templates:
+  - "MATCH (snapshot_date, symbol, vcp_breakout_pct, enhanced_fund_score, relative_strength) FROM scores.stage2_vcp_picks WHERE vcp_breakout_pct >= 10 AND enhanced_fund_score >= 50"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all outputs conform to the researched-only summary format"
+  - "Exclude any buy/sell recommendations"
+synthesis_guidance: "Focus primarily on evidence aggregation and research reporting, especially around breakout patterns and underlying fundamentals."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

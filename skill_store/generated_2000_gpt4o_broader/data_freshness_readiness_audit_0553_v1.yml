@@ -1,0 +1,59 @@
+id: "data_freshness_readiness_audit_0553_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0553"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: research-only summary."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for quarter to date: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as research-only summary"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  evidence_gaps:
+    -
+      concept: "market technical narrative unavailable"
+sql_templates:
+  -
+    template_id: "daily_refresh_check"
+    description: "Check data freshness for daily refresh follow-up."
+    sql: "SELECT MAX(trade_date) as last_refreshed FROM market.index_eod UNION SELECT MAX(trade_date) FROM market.equity_eod UNION SELECT MAX(snapshot_date) FROM scores.stage_snapshots UNION SELECT MAX(trade_date) FROM breadth.market_daily UNION SELECT MAX(snapshot_date) FROM breadth.ma_pct_above UNION SELECT MAX(analysis_date) FROM report.enhanced_runs;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure data freshness matches defined thresholds."
+  - "Identify gaps in temporal data coverage."
+synthesis_guidance: "['Focus on identifying sources with the most severe lags.', 'Summarize impact of data freshness on research workflows.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:48:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

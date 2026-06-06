@@ -1,0 +1,68 @@
+id: "vcp_breakouts_with_fundamentals_0730_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0730"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  fetch_candidates:
+    sql: "WITH recent_prices AS ( SELECT symbol, MAX(trade_date) AS max_date FROM market.equity_eod GROUP BY symbol ), new_highs AS ( SELECT e.symbol, e.trade_date, e.high FROM market.equity_eod e JOIN recent_prices rp ON e.symbol = rp.symbol AND e.trade_date = rp.max_date WHERE e.high >= e.week52_high ), vcp_breakouts AS ( SELECT s.symbol, s.price, s.vcp_score FROM scores.stage2_vcp_picks s WHERE s.vcp_breakout_pct > 0.05 AND s.snapshot_date > CURRENT_DATE - INTERVAL '5 days' ) SELECT nh.symbol, sn.fundamental_score, sn.enhanced_fund_score FROM new_highs nh JOIN scores.stage_snapshots sn ON nh.symbol = sn.symbol WHERE sn.snapshot_date = nh.trade_date UNION SELECT vb.symbol, sn.fundamental_score, sn.enhanced_fund_score FROM vcp_breakouts vb JOIN scores.stage_snapshots sn ON vb.symbol = sn.symbol WHERE sn.snapshot_date = vb.snapshot_date;"
+    description: "Fetch stocks that are making new highs or are VCP breakouts with strong fundamentals within the last 5 sessions."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "SQL must only be read-only SELECT with approved tables and columns."
+  - "Python evidence tools must be read-only and quarantined."
+  - "Statuses must remain generated."
+synthesis_guidance: "['Ensure the combination of VCP and breakout with fundamentals is clear.', 'Convert any TradingView specific structures thoughtfully.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:51:04"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table e.high"
+  - "unknown table e.symbol"
+  - "unknown table e.trade_date"
+  - "unknown table e.week52_high"
+  - "unknown table nh.symbol"
+  - "unknown table nh.trade_date"
+  - "unknown table rp.max_date"
+  - "unknown table rp.symbol"
+  - "unknown table s.price"
+  - "unknown table s.snapshot_date"
+  - "unknown table s.symbol"
+  - "unknown table s.vcp_breakout_pct"
+  - "unknown table s.vcp_score"
+  - "unknown table sn.enhanced_fund_score"
+  - "unknown table sn.fundamental_score"
+  - "unknown table sn.snapshot_date"
+  - "unknown table sn.symbol"
+  - "unknown table vb.snapshot_date"
+  - "unknown table vb.symbol"

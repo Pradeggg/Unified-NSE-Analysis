@@ -1,0 +1,58 @@
+created_at: "2026-06-06T12:51:16"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: post results; response style: QA checklist."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0764_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for post results: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+
+status: "validated"
+synthesis_guidance: "['Use the extracted data to validate report links and analyze data completeness.', 'Compile findings into a QA checklist to address potential issues.']"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "post_results"
+  - "QA_checklist"
+title: "Enhanced Report Data Validation Variant 0764"
+tool_plan_template:
+  language: "sql"
+  mode: "read-only"
+  sql_templates:
+    -
+      description: "Fetch metadata for a specific report run."
+      template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered, indices_analyzed, market_composite_score, market_sentiment, notes FROM report.enhanced_runs WHERE run_id = ?;"
+    -
+      description: "Get filtered stock data for a specific report run."
+      template: "SELECT run_id, symbol, score, recommendation, current_price, daily_signal FROM report.enhanced_filtered_stocks WHERE run_id = ?;"
+validation_rules:
+  - "Check if the run_id is valid and links to existing metadata and stock data."
+  - "Ensure all necessary data fields are populated in the stock rows."
+  - "Verify consistency across report metadata and stock data."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

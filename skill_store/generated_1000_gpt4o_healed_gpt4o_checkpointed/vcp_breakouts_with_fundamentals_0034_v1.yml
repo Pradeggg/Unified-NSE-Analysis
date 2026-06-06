@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:41:22"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: concise table."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0034_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Read-only SQL to select VCP breakout stocks with fundamentals in the last 20 sessions."
+    query: "WITH latest_stage AS (SELECT symbol, MAX(snapshot_date) AS max_date FROM scores.stage_snapshots GROUP BY symbol), fundamentals as (SELECT s.symbol, s.company_name, s.sector, s.enhanced_fund_score, s.minervini_score, s.fundamental_score FROM scores.stage_snapshots s JOIN latest_stage l ON s.symbol = l.symbol AND s.snapshot_date = l.max_date WHERE s.enhanced_fund_score > 80), vcp_stocks AS (SELECT p.symbol, p.vcp_score, p.vcp_breakout_pct FROM scores.stage2_vcp_picks p JOIN latest_stage l ON p.symbol = l.symbol AND p.snapshot_date = l.max_date WHERE p.vcp_score > 70) SELECT e.symbol, e.trade_date, e.close as latest_price, f.company_name, f.sector, v.vcp_breakout_pct, f.enhanced_fund_score FROM market.equity_eod e JOIN fundamentals f ON e.symbol = f.symbol JOIN vcp_stocks v ON e.symbol = v.symbol WHERE e.trade_date > CURRENT_DATE - INTERVAL '20 days' AND (v.vcp_breakout_pct > 5 OR e.high = e.week52_high) ORDER BY e.symbol"
+status: "validated"
+synthesis_guidance: "Synthesize evidence into a concise table for easy viewing, focusing on high VCP scores and strong fundamentals."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "concise_table"
+title: "VCP Breakouts With Fundamentals Variant 0034"
+tool_plan_template: "Generate a concise table of stocks showing breakouts with strong fundamentals using evidence and rules."
+validation_rules:
+  - "Ensure results include stocks from the last 20 sessions only."
+  - "Check that the fundamentals and VCP scores are above the specified thresholds."
+version: 1

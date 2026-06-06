@@ -1,0 +1,57 @@
+id: "report_link_data_validation_1852_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1852"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: quarter to date; response style: action watchlist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for quarter to date: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    name: "Verify and Validate Reports"
+    description: "Uses approved schemas and evidence to verify report data integrity."
+    steps:
+      - "Retrieve latest report metadata for quarter to date."
+      - "Identify and list any broken links and missing stock data."
+      - "Provide analysis for any discrepancies."
+    attention: "Ensure all steps align with the Agent Adda evidence and research framework."
+sql_templates:
+  -
+    template: "SELECT er.run_id, er.run_ts, er.analysis_date, er.stocks_filtered, COUNT(efs.symbol) AS filtered_stock_count FROM report.enhanced_runs er LEFT JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id WHERE er.run_ts > CURRENT_DATE - INTERVAL '3 months' GROUP BY er.run_id ORDER BY er.run_ts DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure SELECT queries do not perform write operations."
+  - "Limit result sets appropriately to prevent oversized responses."
+synthesis_guidance: "{'key_focus': 'Data integrity and consistency checks within the defined quarter to date period.', 'indian_market_research': 'Focus on the Indian stock market context for any findings or analyses.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:50"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

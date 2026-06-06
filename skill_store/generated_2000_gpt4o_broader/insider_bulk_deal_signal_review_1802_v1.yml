@@ -1,0 +1,73 @@
+id: "insider_bulk_deal_signal_review_1802_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1802"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for today: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as action watchlist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  sql_templates:
+    -
+      description: "Fetch recent insider alerts for today with positive alerts."
+      template: "SELECT symbol, entity, qty, value_cr, insider_score FROM signals.insider_alerts WHERE alert_date = CURRENT_DATE AND insider_score > 0"
+    -
+      description: "Fetch today's bulk or block deals with notable volume."
+      template: "SELECT symbol, entity, side, qty, price, deal_type FROM signals.bulk_block_deals WHERE deal_date = CURRENT_DATE AND qty > 1000000"
+    -
+      description: "Fetch technical confirmation data for selected symbols."
+      template: "SELECT symbol, technical_score, trend_signal FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE AND trend_signal = 'Positive'"
+sql_templates:
+
+python_tools:
+  -
+    id: "calculate_market_trend"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol_list"
+      - "technical_scores"
+    outputs:
+      - "market_trend_analysis"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    symbols = context['symbol_list']\n    technical_scores = context['technical_scores']\n    return {symbol: 'Bullish' if score > 70 else 'Neutral' for symbol, score in zip(symbols, technical_scores)}"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure symbols in deal_summary have corresponding insider_context entries."
+  - "Verify technical_confirmation matches symbols from insider_context and deal_summary."
+synthesis_guidance: "['Integrate insights from insider alerts and bulk deals for a comprehensive watchlist.', 'Use technical confirmation to prioritize symbols in ranked_symbols.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:12"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_market_trend: execution failed: KeyError: 'symbol_list'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_market_trend: execution failed: KeyError: 'symbol_list'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

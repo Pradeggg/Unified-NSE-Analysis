@@ -1,0 +1,46 @@
+id: "signal_outcome_feedback_review_1999_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Analysis"
+description: "Analyze previous trading signals, their outcomes, and learnings for optimization."
+input_patterns:
+  - "review prior signals"
+  - "evaluate signal outcomes"
+  - "weekly outcome review"
+tags:
+  - "signal_log"
+  - "outcome_tracking"
+  - "learning"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Gather signal logs and correlate with market data to determine effectiveness."
+sql_templates:
+  -
+    description: "Fetch resolved signals and their outcomes."
+    template: "SELECT symbol, date_issued, signal, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_resolved IS NOT NULL;"
+  -
+    description: "Join latest market prices with signal logs."
+    template: "WITH latest_prices AS (SELECT symbol, MAX(trade_date) AS trade_date FROM market.equity_eod GROUP BY symbol) SELECT s.symbol, s.date_issued, e.close AS latest_close FROM signals.signal_log s JOIN latest_prices lp ON s.symbol = lp.symbol JOIN market.equity_eod e ON lp.symbol = e.symbol AND lp.trade_date = e.trade_date WHERE s.date_resolved IS NOT NULL;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+validation_rules:
+  - "Ensure all fields from evidence_request are populated."
+  - "Cross-check outcomes with market trends."
+synthesis_guidance: "Evaluate patterns to identify which signals were successful."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:37"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

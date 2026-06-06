@@ -1,0 +1,64 @@
+id: "vcp_breakouts_with_fundamentals_0002_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0002"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: today; response style: concise table."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "today"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  mode: "read_only"
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+  outputs:
+    - "filters"
+    - "candidates"
+    - "tradingview_symbols"
+    - "evidence"
+    - "risks"
+sql_templates:
+  -
+    description: "Select stocks with new highs or VCP breakouts with strong fundamentals."
+    query: "WITH latest_vcp AS (SELECT symbol, company_name, enhanced_fund_score, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE AND vcp_score > 75 AND enhanced_fund_score > 75), new_highs AS (SELECT symbol, MAX(high) AS recent_high FROM market.equity_eod WHERE trade_date = CURRENT_DATE GROUP BY symbol HAVING recent_high > week52_high) SELECT v.symbol, v.company_name FROM latest_vcp v JOIN new_highs n ON v.symbol = n.symbol ORDER BY v.enhanced_fund_score DESC, v.vcp_score DESC;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure data is pulled from the latest snapshot date."
+  - "Enhanced fundamental scores and VCP scores must be greater than 75."
+  - "Integrate the latest market highs correctly."
+synthesis_guidance: "['Compile results into a concise table format.', 'Ensure clarity and conciseness in the final presentation.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:11"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

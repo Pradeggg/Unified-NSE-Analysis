@@ -1,0 +1,64 @@
+id: "report_link_data_validation_0408_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0408"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for today: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    action: "fetchData"
+    description: "Gather report metadata and stock data for analysis."
+  -
+    action: "validateData"
+    description: "Check for missing data or broken report links."
+  -
+    action: "analyzePositionSizing"
+    description: "Ensure the position-sizing context is valid for today."
+  -
+    action: "generatePortfolioAwareOutput"
+    description: "Create an output focused on portfolio insights."
+sql_templates:
+  -
+    description: "Select metadata for today's report run."
+    template: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE DATE(run_ts) = CURRENT_DATE;"
+    output: "Enhanced Run Metadata"
+  -
+    description: "Select today's filtered stock rows."
+    template: "SELECT * FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE DATE(run_ts) = CURRENT_DATE);"
+    output: "Filtered Stocks Data"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure each report link redirects to a valid file with stock data."
+  - "Check that all required data fields are populated for today."
+  - "Validate integrity and completeness of position-sizing context."
+synthesis_guidance: "Focus on portfolio insights, ensuring clear communication of position size context and linking issues. Prioritize today's data validation and link functionality."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:46:18"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.date is not approved"

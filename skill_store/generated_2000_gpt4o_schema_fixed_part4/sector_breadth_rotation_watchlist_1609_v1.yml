@@ -1,0 +1,56 @@
+id: "sector_breadth_rotation_watchlist_1609_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1609"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: today; response style: debug trace."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for today: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as debug trace"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "today"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    sql_templates:
+      -
+        description: "Get sectors with improvements in breadth and stage 2 participation."
+        template: "WITH latest_sector_data AS (SELECT sector, pct_above_50dma, change_5d, divergence_alert FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)), stage_participation AS (SELECT sector, stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.ma_pct_above)) SELECT lsd.sector, lsd.pct_above_50dma, lsd.change_5d, spa.stage2_pct FROM latest_sector_data lsd JOIN stage_participation spa ON lsd.sector = spa.sector WHERE spa.stage2_pct > 20 ORDER BY lsd.pct_above_50dma DESC, spa.stage2_pct DESC LIMIT 10;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sectors have a stage 2 participation greater than 20%."
+  - "Rank by pct_above_50dma and stage2_pct."
+synthesis_guidance: "['Provide ranked sector list with breadth and stage participation details.', 'Identify top candidates for trading view symbols.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:17"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

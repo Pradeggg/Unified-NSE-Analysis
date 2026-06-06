@@ -1,0 +1,55 @@
+id: "sector_breadth_rotation_watchlist_0237_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0237"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for last 20 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as ranked candidates"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    title: "Sector Breadth and Stage Analysis"
+    description: "Identify sectors with improving breadth and Stage 2 stocks."
+    query: "WITH latest_snapshot AS (SELECT MAX(snapshot_date) AS snapshot_date FROM scores.stage_snapshots), latest_sector_breadth AS (SELECT sd.sector, sd.pct_above_50dma, ma.stage2_pct FROM breadth.sector_daily sd JOIN breadth.ma_pct_above ma ON sd.snapshot_date = ma.snapshot_date WHERE sd.snapshot_date = (SELECT snapshot_date FROM latest_snapshot)), stage2_stocks AS (SELECT s.sector, s.symbol, s.trading_signal FROM scores.stage_snapshots s WHERE s.stage = 'STAGE_2' AND s.trading_signal IN ('BUY', 'STRONG_BUY') AND s.snapshot_date = (SELECT snapshot_date FROM latest_snapshot)) SELECT lsb.sector, lsb.pct_above_50dma, lsb.stage2_pct, count(ss.symbol) AS stage2_count FROM latest_sector_breadth lsb LEFT JOIN stage2_stocks ss ON lsb.sector = ss.sector GROUP BY lsb.sector, lsb.pct_above_50dma, lsb.stage2_pct ORDER BY lsb.stage2_pct DESC, stage2_count DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Check SQL query against schema compliance."
+  - "Ensure output matches output_contract specification."
+synthesis_guidance: "['Consolidate evidence into ranked sectors based on breadth and stage participation.', 'Highlight candidates suitable for TradingView watchlists.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

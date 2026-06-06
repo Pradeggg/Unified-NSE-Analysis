@@ -1,0 +1,58 @@
+created_at: "2026-06-06T12:46:32"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: portfolio-aware output."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0443_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for last 3 months: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as portfolio-aware output"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Get holdings with stage and recent price change data for the last 3 months"
+    template: "SELECT h.symbol, h.qty, h.avg_cost, s.sector, s.market_cap_cat, s.stage, s.stage_score, s.price, s.change_1m_pct FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)"
+status: "validated"
+synthesis_guidance: "Generate portfolio insights by analyzing holdings against market trends and sector performance metrics."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh-follow-up"
+  - "last_3_months"
+  - "portfolio-aware_output"
+title: "Portfolio Incremental Add Trim Review Variant 0443"
+tool_plan_template:
+  inputs:
+    - "Current market conditions"
+    - "Portfolio holdings data"
+    - "Sector exposure insights"
+  outputs:
+    - "Portfolio state analysis"
+    - "Add and trim recommendations"
+validation_rules:
+  - "Ensure all sectors have been reviewed"
+  - "Recommend add/trims based on stage_score > average"
+  - "Flag stocks with poor monthly performance for trimming"
+version: 1

@@ -1,0 +1,57 @@
+id: "sector_breadth_rotation_watchlist_1483_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1483"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: portfolio-aware output."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for intraday context: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as portfolio-aware output"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "sector_breadth_analysis"
+    description: "Analyze sector breadth and identify improving sectors."
+    sql: "WITH sector_trends AS (SELECT sector, AVG(pct_above_50dma) AS avg_breadth_50dma FROM breadth.sector_daily WHERE snapshot_date = CURRENT_DATE GROUP BY sector) SELECT st.sector, st.avg_breadth_50dma FROM sector_trends st ORDER BY st.avg_breadth_50dma DESC LIMIT 10;"
+  -
+    name: "stage2_participation"
+    description: "Rank sectors by Stage 2 participation."
+    sql: "SELECT sector, AVG(stage2_pct) AS avg_stage2 FROM breadth.ma_pct_above WHERE snapshot_date = CURRENT_DATE GROUP BY sector ORDER BY avg_stage2 DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:09:05"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.avg_stage2 is not approved"
+  - "breadth.ma_pct_above.sector is not approved"

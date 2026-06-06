@@ -1,0 +1,69 @@
+id: "fii_dii_regime_breadth_review_1338_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1338"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as exceptions and gaps first"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+  tool_plan_template: "Summarize FII/DII flows, market regime trends, breadth, and index movements for identifying market context."
+  sql_templates:
+    -
+      name: "Latest_FII_DII_Regime_Breadth_Index"
+      sql: "WITH latest_flows AS (SELECT trade_date, fii_net_today, dii_net_today, fii_trend, dii_trend, flow_signal FROM signals.fii_dii_flows ORDER BY trade_date DESC LIMIT 20), latest_regime AS (SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date IN (SELECT trade_date FROM latest_flows)), latest_breadth AS (SELECT trade_date, advances, declines, ad_signal FROM breadth.market_daily WHERE trade_date IN (SELECT trade_date FROM latest_flows)), latest_index AS (SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date IN (SELECT trade_date FROM latest_flows) AND index_symbol = 'Nifty 50') SELECT f.trade_date, f.fii_trend, f.dii_trend, r.regime, b.ad_signal, i.close, i.change_pct FROM latest_flows f JOIN latest_regime r ON f.trade_date = r.trade_date JOIN latest_breadth b ON f.trade_date = b.trade_date JOIN latest_index i ON f.trade_date = i.trade_date;"
+  output_contract:
+    - "regime"
+    - "flow_context"
+    - "breadth_context"
+    - "index_confirmation"
+    - "risk_flags"
+  validation_rules:
+    - "Ensure the SQL template accurately reflects the join conditions from approved schema."
+    - "Verify that all included columns are from the approved schema."
+  synthesis_guidance:
+    - "Identify gaps or exceptions in data first."
+    - "Contextualize insights to position-sizing over the last 20 sessions."
+tool_plan_template:
+
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:56"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

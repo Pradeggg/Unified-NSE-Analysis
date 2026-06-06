@@ -1,0 +1,66 @@
+id: "vcp_breakouts_with_fundamentals_0996_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0996"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: weekly review; response style: comparison matrix."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "weekly_review"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Produce a comparison matrix for VCP breakout stocks with strong fundamentals using weekly review freshness audit."
+sql_templates:
+  -
+    description: "Fetch latest VCP picks with strong fundamentals."
+    sql: "WITH latest_vcp AS (\n    SELECT symbol, \n           company_name, \n           sector, \n           price, \n           change_1d_pct, \n           change_1w_pct, \n           vcp_score, \n           enhanced_fund_score\n    FROM scores.stage2_vcp_picks\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)\n    ORDER BY vcp_score DESC, rank ASC\n    LIMIT 10\n)\nSELECT latest_vcp.symbol, \n       latest_vcp.company_name, \n       latest_vcp.sector, \n       eod.week52_high, \n       eod.week52_low, \n       latest_vcp.price, \n       latest_vcp.change_1d_pct, \n       latest_vcp.change_1w_pct, \n       latest_vcp.vcp_score, \n       latest_vcp.enhanced_fund_score\nFROM latest_vcp\nJOIN market.equity_eod AS eod\nON latest_vcp.symbol = eod.symbol\nWHERE eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+python_tools:
+  -
+    id: "calculate_vcp_signal_strength"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "vcp_score"
+      - "enhanced_fund_score"
+    outputs:
+      - "signal_strength"
+    approved_tables:
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    scores = context['inputs']\n    signal_strength = []\n    for score in scores:\n        strength = score['vcp_score'] * score['enhanced_fund_score']\n        signal_strength.append({'symbol': score['symbol'], 'signal_strength': strength})\n    return {'outputs': signal_strength}"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all fetched symbols are within the latest snapshot date."
+  - "Validate enhanced_fund_score against predefined thresholds for strong fundamentals."
+synthesis_guidance: "['Provide a clear matrix layout comparing VCP stocks by sector.', 'Highlight stocks with strong price movements and fundamental scores.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:51:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_vcp_signal_strength: execution failed: KeyError: 'inputs'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_vcp_signal_strength: execution failed: KeyError: 'inputs'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

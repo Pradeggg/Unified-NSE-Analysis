@@ -1,0 +1,71 @@
+id: "market_3m_rotation_swing_1933_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1933"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for last 20 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as comparison matrix"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  steps:
+    - "Analyze broad market regime changes based on index data."
+    - "Identify leading sectors using recent trends and technical indicators."
+    - "Evaluate stage distribution change over the last 3 months."
+    - "Select primary swing trading candidates using stage analysis."
+    - "Assess potential risks in the market using recent data."
+sql_templates:
+  -
+    description: "Retrieve index performance over the last 3 months."
+    sql: "SELECT trade_date, index_symbol, change_pct, momentum_50d, relative_strength FROM market.index_eod WHERE trade_date >= DATEADD(MONTH, -3, CURRENT_DATE) AND trade_date <= CURRENT_DATE;"
+  -
+    description: "Analyze sector performance from stage snapshots."
+    sql: "SELECT sector, AVG(change_1m_pct) AS avg_1m_change, AVG(stage_score) AS avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date >= DATEADD(MONTH, -3, CURRENT_DATE) AND snapshot_date <= CURRENT_DATE GROUP BY sector;"
+  -
+    description: "Identify top VCP picks over the last 20 sessions."
+    sql: "SELECT symbol, company_name, vcp_score, change_1w_pct FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATEADD(DAY, -20, CURRENT_DATE) ORDER BY vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+synthesis_guidance: "Combine SQL outputs into a coherent comparison matrix highlighting key insights and recommendations."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:27"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.dateadd is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage2_vcp_picks.dateadd is not approved"
+  - "scores.stage2_vcp_picks.day is not approved"
+  - "scores.stage_snapshots.avg_1m_change is not approved"
+  - "scores.stage_snapshots.avg_stage_score is not approved"
+  - "scores.stage_snapshots.dateadd is not approved"
+  - "scores.stage_snapshots.month is not approved"

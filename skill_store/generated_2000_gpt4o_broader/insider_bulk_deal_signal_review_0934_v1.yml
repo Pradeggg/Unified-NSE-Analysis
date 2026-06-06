@@ -1,0 +1,82 @@
+id: "insider_bulk_deal_signal_review_0934_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0934"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for last 20 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as comparison matrix"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Prepare to analyze insider alerts and bulk deals. Use the last 20 sessions of data to identify potential accumulation or distribution signals."
+  - "Analyze technical confirmations related to these symbols to strengthen the setup."
+  - "Build a watchlist based on the confirmed signals and compare using a matrix format."
+sql_templates:
+  -
+    name: "fetch_insider_alerts"
+    description: "Fetches insider alerts for the last 20 sessions."
+    sql: "SELECT * FROM signals.insider_alerts WHERE alert_date >= (CURRENT_DATE - INTERVAL '20 days')"
+  -
+    name: "fetch_bulk_deals"
+    description: "Fetches bulk and block deals for the last 20 sessions."
+    sql: "SELECT * FROM signals.bulk_block_deals WHERE deal_date >= (CURRENT_DATE - INTERVAL '20 days')"
+  -
+    name: "fetch_technical_snapshots"
+    description: "Fetches technical snapshots relevant to the symbols for technical confirmation."
+    sql: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '20 days')"
+python_tools:
+  -
+    id: "insider_bulk_deal_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "fetch_insider_alerts"
+      - "fetch_bulk_deals"
+      - "fetch_technical_snapshots"
+    outputs:
+      - "ranked_symbols"
+      - "risk_notes"
+    approved_tables:
+      - "signals.insider_alerts"
+      - "signals.bulk_block_deals"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Assuming context includes data extracted from SQL templates\n    # Analyze insider alerts and bulk deals\n    insider_data = context['fetch_insider_alerts']\n    bulk_deal_data = context['fetch_bulk_deals']\n    technical_data = context['fetch_technical_snapshots']\n    # Perform analysis (simplified)\n    ranked_symbols = [] # Placeholder for actual ranking logic\n    risk_notes = [] # Placeholder for risk notes logic\n    return {'ranked_symbols': ranked_symbols, 'risk_notes': risk_notes}"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all fetched data aligns with the last 20 sessions criteria."
+  - "Confirm that technical confirmations are robust and derived from legitimate changes in scores."
+synthesis_guidance: "['Blend insights from insider and bulk deal data to identify strong signals.', 'Use technical data to validate or refute accumulation hypotheses.', 'Rank symbols by strength of signals and provide clear context.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "insider_bulk_deal_analysis_tool: execution failed: KeyError: 'fetch_insider_alerts'"
+review:
+  status: "needs_heal"
+  findings:
+    - "insider_bulk_deal_analysis_tool: execution failed: KeyError: 'fetch_insider_alerts'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

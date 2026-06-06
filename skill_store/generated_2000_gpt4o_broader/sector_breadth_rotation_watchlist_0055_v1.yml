@@ -1,0 +1,57 @@
+id: "sector_breadth_rotation_watchlist_0055_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0055"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: risk-first review; timeframe: quarter to date; response style: concise table."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "risk-first review for quarter to date: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as concise table"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "risk-first_review"
+  - "quarter_to_date"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Use sector breadth and stage participation to rank sectors. Focus on improving sectors and identify candidate symbols for TradingView."
+sql_templates:
+  -
+    name: "sector_ranking"
+    query: "SELECT sector, AVG(change_5d) AS avg_change, AVG(stage2_pct) AS avg_stage2 FROM breadth.sector_daily JOIN breadth.ma_pct_above ON sector_daily.snapshot_date = ma_pct_above.snapshot_date WHERE sector_daily.snapshot_date = CURRENT_DATE GROUP BY sector ORDER BY avg_change DESC, avg_stage2 DESC;"
+  -
+    name: "candidate_stocks"
+    query: "SELECT symbol, company_name, sector FROM scores.stage_snapshots WHERE stage = 2 AND change_1m_pct > 5 AND relative_strength > 70 ORDER BY change_1m_pct DESC;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all SQL is read-only."
+  - "Use only approved tables and columns."
+  - "Output must match the specified contract structure."
+synthesis_guidance: "Focus on sectors showing broad participation in Stage 2 with positive momentum. Highlight key stocks for potential watchlist additions."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:41"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

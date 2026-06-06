@@ -1,0 +1,62 @@
+id: "quarterly_results_quality_review_1881_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1881"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for intraday context: latest quarterly results analysis"
+  - "which companies had strong quarterly results as action watchlist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Sequence SQL templates to extract and synthesize relevant quarterly results data and analysis for action watchlist creation."
+sql_templates:
+  -
+    title: "Latest Quarterly Results"
+    description: "Retrieve the latest quarterly results for each company."
+    template: "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.revenue, qr.pat, qr.opm_pct FROM scores.quarterly_results qr WHERE qr.period_type = 'quarter' ORDER BY qr.symbol, qr.period_end DESC NULLS LAST, qr.fetched_at DESC LIMIT 10;"
+    frames:
+      - "latest_results_frame"
+  -
+    title: "Results Analysis and Verdict"
+    description: "Match latest quarterly results with analysis and verdict."
+    template: "SELECT ra.symbol, ra.verdict, ra.growth_yoy_revenue_pct, ra.growth_yoy_pat_pct FROM scores.results_analysis ra WHERE (ra.symbol, ra.period_end) IN (SELECT qr.symbol, qr.period_end FROM scores.quarterly_results qr WHERE qr.period_type = 'quarter' ORDER BY qr.symbol, qr.period_end DESC NULLS LAST, qr.fetched_at DESC);"
+    frames:
+      - "results_analysis_frame"
+  -
+    title: "Current Stage and Signals"
+    description: "Retrieve current stage and trading signals for action candidates."
+    template: "SELECT ss.symbol, ss.stage, ss.trading_signal FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal IN ('BUY', 'STRONG_BUY');"
+    frames:
+      - "stage_signals_frame"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "The SQL templates must use only SELECT statements."
+  - "The results should align across tables through the approved join conditions."
+synthesis_guidance: "Combine frames to construct an action watchlist highlighting companies with strong latest results and constructive stage signals."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:47"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.quarterly_results.qr is not approved"

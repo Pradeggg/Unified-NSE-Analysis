@@ -1,0 +1,62 @@
+created_at: "2026-06-06T12:52:11"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: quarter to date; response style: action watchlist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0853_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for quarter to date: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Fetch index performance for the last 3 months"
+    template: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= (SELECT MAX(trade_date) FROM market.index_eod) - INTERVAL 3 MONTH"
+  -
+    description: "Identify strongest sectors"
+    template: "SELECT sector, AVG(stage_score) AS avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date >= (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) - INTERVAL 3 MONTH GROUP BY sector ORDER BY avg_stage_score DESC"
+  -
+    description: "Retrieve Stage 2 VCP swing candidates"
+    template: "SELECT symbol, company_name, price, vcp_score, relative_strength FROM scores.stage2_vcp_picks WHERE vcp_score > 80 AND snapshot_date >= (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) - INTERVAL 3 MONTH"
+status: "validated"
+synthesis_guidance: "Combine market index trends, sector performance, and high-potential swing candidates into a coherent watchlist suggesting actionable insights."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "quarter_to_date"
+  - "action_watchlist"
+title: "3M Market Rotation Swing Assessment Variant 0853"
+tool_plan_template: "Analyze the evidence using SQL templates and Python tools. Provide insights into current market conditions, sector leadership, and potential swing trading opportunities. Create an action watchlist."
+validation_errors:
+
+validation_rules:
+  - "Ensure all dates are within the last 3 months"
+  - "Verify sectors have valid stage scores"
+  - "Check candidate VCP scores above threshold"
+version: 1
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"

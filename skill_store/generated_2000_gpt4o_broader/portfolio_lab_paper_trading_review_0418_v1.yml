@@ -1,0 +1,56 @@
+id: "portfolio_lab_paper_trading_review_0418_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Strategy Review"
+description: "A review tool for analyzing paper trading strategies separate from real holdings. It focuses on entries, exits, stops, targets, and exposure using a portfolio-aware lens."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "position-sizing context for latest EOD: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Evaluate paper trading portfolio using provided evidence tables focusing on strategy, position-sizing, and exposure context."
+sql_templates:
+  fetch_portfolio_entries:
+    template: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings"
+    description: "Fetch current holdings for review of trading entries and exits."
+  fetch_signals:
+    template: "SELECT symbol, date_issued, signal, stop_loss, target_1, price_at_issue FROM signals.signal_log WHERE action_bucket = 'Open' AND date_resolved IS NULL"
+    description: "Fetch open signals for strategy analysis."
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all open trades are aligned with defined strategy rules."
+  - "Verify entry and exit points against market conditions."
+synthesis_guidance: "Combine insights from evidence tables to generate a comprehensive report on paper trading strategies, ensuring separation from actual portfolio performances."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:56"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

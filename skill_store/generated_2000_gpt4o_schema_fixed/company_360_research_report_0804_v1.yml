@@ -1,0 +1,89 @@
+id: "company_360_research_report_0804_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0804"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: watchlist creation; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "watchlist creation for today: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as action watchlist"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "watchlist_creation"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    -
+      action: "Query SQL"
+      importance: "high"
+      notes: "Extract latest technical and stage information for the symbol."
+      template: "SELECT symbol, company_name, stage, stage_score, trading_signal, price, change_1d_pct, change_1w_pct\nFROM scores.stage_snapshots\nWHERE symbol = ? AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    -
+      action: "Query SQL"
+      importance: "high"
+      notes: "Fetch recent quarterly financial results."
+      template: "SELECT period_label, revenue, expenses, operating_profit, eps\nFROM scores.quarterly_results\nWHERE symbol = ? AND period_type = 'quarter'\nORDER BY period_end DESC LIMIT 1;"
+    -
+      action: "Query SQL"
+      importance: "medium"
+      notes: "Get the annual financial insights for context."
+      template: "SELECT period_label, revenue, expenses, operating_profit, eps, dividend_payout_pct\nFROM scores.annual_results\nWHERE symbol = ? AND period_type = 'annual'\nORDER BY period_end DESC LIMIT 1;"
+    -
+      action: "Query SQL"
+      importance: "low"
+      notes: "Retrieve latest EOD data for price trends."
+      template: "SELECT close, volume, turnover_cr, week52_high, week52_low\nFROM market.equity_eod\nWHERE symbol = ? AND trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+sql_templates:
+  -
+    template: "SELECT symbol, company_name, stage, stage_score, trading_signal, price, change_1d_pct, change_1w_pct\nFROM scores.stage_snapshots\nWHERE symbol = ? AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    description: "Extract latest technical and stage information for the symbol."
+  -
+    template: "SELECT period_label, revenue, expenses, operating_profit, eps\nFROM scores.quarterly_results\nWHERE symbol = ? AND period_type = 'quarter'\nORDER BY period_end DESC LIMIT 1;"
+    description: "Fetch recent quarterly financial results."
+  -
+    template: "SELECT period_label, revenue, expenses, operating_profit, eps, dividend_payout_pct\nFROM scores.annual_results\nWHERE symbol = ? AND period_type = 'annual'\nORDER BY period_end DESC LIMIT 1;"
+    description: "Get the annual financial insights for context."
+  -
+    template: "SELECT close, volume, turnover_cr, week52_high, week52_low\nFROM market.equity_eod\nWHERE symbol = ? AND trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+    description: "Retrieve latest EOD data for price trends."
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL queries are restricted to SELECT statements."
+  - "Validate that stage data is the latest available."
+  - "Check financial records for the latest quarterly and annual data."
+  - "Cross-verify technical indicators align with the most recent EOD."
+synthesis_guidance: "Combine extracted financial and technical insights to present a comprehensive company narrative, emphasizing critical elements for today's market watchlist with a focus on actionability."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

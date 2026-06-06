@@ -1,0 +1,54 @@
+id: "portfolio_incremental_add_trim_1963_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1963"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: post results; response style: comparison matrix."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for post results: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as comparison matrix"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh-follow-up"
+  - "post_results"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  -
+    steps:
+      - "Retrieve latest stage and score data for portfolio symbols."
+      - "Identify securities with constructive signals for addition."
+      - "Identify securities signaling potential trimming."
+sql_templates:
+  latest_stage_scores: "SELECT ss.symbol, ss.company_name, ss.sector, ss.stage, ss.trading_signal, ss.stage_score, ss.technical_score, ph.qty, ph.avg_cost FROM scores.stage_snapshots ss JOIN portfolio.holdings ph ON ph.symbol = ss.symbol WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  add_candidates: "SELECT symbol, company_name, sector FROM scores.stage_snapshots WHERE trading_signal IN ('BUY', 'STRONG_BUY') AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 10;"
+  trim_candidates: "SELECT symbol, company_name, sector FROM scores.stage_snapshots WHERE trading_signal = 'SELL' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "{'portfolio_state': 'Must contain current holdings, quantities, and cost basis.', 'sector_exposure': 'Must include sector breakdown with existing allocations.', 'add_candidates': 'Limited to top 10 buy-signal candidates.', 'trim_candidates': 'Limited to top 10 sell-signal candidates.', 'risk_flags': 'Identify any holdings with high market risk.'}"
+synthesis_guidance: "Utilize data from evidence tables to build a comprehensive review of portfolio actions. Ensure that the focus is on Indian market dynamics and present findings in a comparison matrix."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:49"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

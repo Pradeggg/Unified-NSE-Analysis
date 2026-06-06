@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:44:05"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: pre market; response style: ranked candidates."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0274_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  - "SELECT sp.symbol, sp.company_name, sp.vcp_score, sp.enhanced_fund_score, me.market_cap_cr, me.high, sp.trend_signal FROM scores.stage2_vcp_picks sp JOIN market.equity_eod me ON sp.symbol = me.symbol WHERE sp.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND sp.vcp_score > 70 AND sp.enhanced_fund_score > 80"
+status: "validated"
+synthesis_guidance: "['Rank candidates by enhanced_fund_score.', 'Include market cap and trading signals for context.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "pre_market"
+  - "ranked_candidates"
+title: "VCP Breakouts With Fundamentals Variant 0274"
+tool_plan_template:
+  status: "generated"
+  steps:
+    - "Identify recent VCP breakout stocks with strong fundamentals using approved tables."
+  type: "schema_safe"
+validation_rules:
+  - "Output must include 'candidates' with symbols."
+  - "Ensure 'filters' reflect input patterns like VCP score > 70."
+version: 1

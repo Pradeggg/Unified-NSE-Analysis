@@ -1,0 +1,68 @@
+id: "vcp_breakouts_with_fundamentals_1542_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1542"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 3 months; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    tools:
+
+    filters:
+      - "snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+      - "stage = 'STAGE_2'"
+      - "trading_signal IN ('BUY', 'STRONG_BUY')"
+    joins:
+      - "_join_rules"
+    order:
+      - "vcp_score DESC"
+      - "rank ASC"
+    limit: 50
+sql_templates:
+  -
+    name: "GetVCPBreakoutsWithFundamentals"
+    description: "Retrieve stocks hitting new highs or VCP with strong fundamentals from the last 3 months."
+    sql: "WITH latest_stage_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), vcp_picks AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)) SELECT v.symbol, s.company_name, v.price, v.vcp_score, s.enhanced_fund_score FROM vcp_picks v JOIN latest_stage_snapshots s ON v.symbol = s.symbol WHERE s.stage = 'STAGE_2' AND s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY v.vcp_score DESC, v.rank ASC LIMIT 50"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure SQL templates are read-only SELECT/WITH statements."
+  - "Ensure all columns are sourced from approved tables."
+  - "Check all joins adhere to _join_rules."
+  - "Validate against _global_rules for syntax and logic."
+synthesis_guidance: "Compile findings into a research-only summary, focusing on stocks with the highest VCP scores and strong fundamentals as indicated by enhanced_fund_score."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

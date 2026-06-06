@@ -1,0 +1,65 @@
+id: "report_link_data_validation_0088_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0088"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: intraday context; response style: concise table."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for intraday context: review report links not working"
+  - "validate generated report links and missing data as concise table"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Analyze and verify enhanced report data by cross-referencing `report.enhanced_runs` and `report.enhanced_filtered_stocks`. Focus on identifying data gaps and erroneous links related to stock positions in an intraday context. Summarize findings in a concise table format."
+sql_templates:
+  -
+    description: "Retrieve recent enhanced report data and validate missing entries."
+    query: "SELECT er.run_id, ef.symbol, ef.current_price, er.analysis_date FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id WHERE er.run_ts >= CURRENT_DATE - INTERVAL '1 day';"
+python_tools:
+  -
+    id: "tool_report_validator"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_data"
+      - "stock_data"
+    outputs:
+      - "validation_result"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    run_data = context['run_data']\n    stock_data = context['stock_data']\n    # Process the data strictly read-only to produce validation results\n    validation_result = []\n    for run in run_data:\n        related_stocks = [s for s in stock_data if s['run_id'] == run['run_id']]\n        if not related_stocks:\n            validation_result.append({'run_id': run['run_id'], 'issue': 'No related stocks found'})\n    return validation_result"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure the query only retrieves data from the approved tables `report.enhanced_runs` and `report.enhanced_filtered_stocks`."
+  - "Verify the constraints and filters adhere strictly to conditions defined in `approved_schema._global_rules`."
+  - "Confirm that no additional or invented tables/columns are leveraged."
+synthesis_guidance: "Summarize validation outcomes effectively to identify and address broken links or missing data in the report links. Focus on position-sizing and the intraday timeframe while providing remediation plans."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:32"
+generation_model: "gpt-4o"
+validation_errors:
+  - "tool_report_validator: execution failed: KeyError: 'run_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "tool_report_validator: execution failed: KeyError: 'run_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,61 @@
+id: "corporate_events_results_watchlist_0975_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0975"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: risk-first review; timeframe: pre market; response style: comparison matrix."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "risk-first review for pre market: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as comparison matrix"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "risk-first_review"
+  - "pre_market"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    -
+      table: "signals.corporate_events"
+      description: "Corporate events such as results, dividends, splits, bonus issues, and AGMs."
+    -
+      table: "scores.results_analysis"
+      description: "LLM-authored daily results analysis with growth, margin, narrative, and source-trail fields."
+    -
+      table: "scores.stage_snapshots"
+      description: "Point-in-time Weinstein stage, technical, fundamental, and composite scores."
+tool_plan_template: "Create a comparison matrix for upcoming corporate events focusing on risk assessment."
+sql_templates:
+  -
+    name: "fetch_upcoming_events"
+    query: "SELECT symbol, event_type, event_date, detail, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE AND (event_type = 'results' OR event_type = 'dividends' OR event_type = 'AGM') ORDER BY event_date ASC"
+  -
+    name: "fetch_recent_results_analysis"
+    query: "SELECT symbol, period_end, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct, opm_delta_pp, eps_yoy_pct FROM scores.results_analysis WHERE filing_date IS NOT NULL ORDER BY filing_date DESC"
+  -
+    name: "fetch_technical_scores"
+    query: "SELECT symbol, stage, stage_score, technical_score, rsi FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY technical_score DESC"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all event types are included in the response."
+  - "Verify results analysis matches the most recent filing date."
+synthesis_guidance: "['Emphasize risks associated with upcoming events.', 'Provide a balanced view with technical and fundamental scores.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:50"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table {'table': 'scores.results_analysis', 'description': 'LLM-authored daily results analysis with growth, margin, narrative, and source-trail fields.'}"
+  - "unknown table {'table': 'scores.stage_snapshots', 'description': 'Point-in-time Weinstein stage, technical, fundamental, and composite scores.'}"
+  - "unknown table {'table': 'signals.corporate_events', 'description': 'Corporate events such as results, dividends, splits, bonus issues, and AGMs.'}"

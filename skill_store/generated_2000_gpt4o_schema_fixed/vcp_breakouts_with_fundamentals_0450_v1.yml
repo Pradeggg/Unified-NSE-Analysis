@@ -1,0 +1,51 @@
+id: "vcp_breakouts_with_fundamentals_0450_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals"
+description: "Card to identify VCP breakout stocks with solid fundamentals over the past three months in the Indian market, focusing on TradingView exports and portfolio-aware insights."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Identify top performing VCP candidates with strong fundamentals using the latest data."
+sql_templates:
+  -
+    template: "WITH latest_vcp_picks AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)), latest_stage_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT lvp.symbol, lvp.company_name, lvp.price, lvp.change_1d_pct, lvp.relative_strength, lvp.trading_signal, lvp.vcp_score FROM latest_vcp_picks lvp JOIN latest_stage_snapshots lss ON lvp.symbol = lss.symbol WHERE lvp.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY lvp.vcp_score DESC, lvp.rank ASC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure 'trading_signal' values are among approved labels ('BUY', 'STRONG_BUY')."
+  - "Limit result set to top 50 candidates based on VCP score."
+synthesis_guidance: "Focus on stocks with highest VCP scores and strong buy signals."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,64 @@
+id: "fii_dii_regime_breadth_review_1954_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1954"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for quarter to date: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as comparison matrix"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    description: "Analyze FII/DII flow trends, market regime, and breadth indicators to assess risk-on or risk-off conditions and suggest a watchlist."
+sql_templates:
+  -
+    purpose: "FII/DII Flows and Regime Assessment"
+    query: "SELECT f.trade_date, f.fii_net_5d, f.dii_net_5d, r.regime, r.confidence FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date WHERE f.trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    purpose: "Market Breadth Analysis"
+    query: "SELECT m.trade_date, m.advances, m.declines, m.adv_volume, m.dec_volume, m.ad_signal FROM breadth.market_daily m WHERE m.trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    purpose: "Index Movement Confirmation"
+    query: "SELECT i.trade_date, i.index_symbol, i.close, i.change_pct, i.trend_signal FROM market.index_eod i WHERE i.trade_date >= CURRENT_DATE - INTERVAL '3 months' AND i.index_symbol = 'Nifty 50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure the quarter-to-date timeframe is applied correctly."
+  - "Verify the outputs align with the input patterns requested."
+synthesis_guidance: "Combine flow, regime, and breadth data to highlight market conditions. Present findings in a comparison matrix for clarity."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:55"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.m is not approved"
+  - "market.index_eod.i is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "breadth.market_daily.m is not approved"
+    - "market.index_eod.i is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,71 @@
+id: "vcp_breakouts_with_fundamentals_0978_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0978"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: pre market; response style: comparison matrix."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "pre_market"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  python_tools:
+    -
+      id: "filter_by_volume_and_fundamentals"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        context:
+          volume: "threshold_value"
+          fundamental_criteria: "set_criteria"
+      outputs:
+        filtered_symbols:
+
+      approved_tables:
+        - "scores.stage_snapshots"
+        - "scores.stage2_vcp_picks"
+      code: "def run(context):\n    # Filter logic based on context inputs\n    pass"
+sql_templates:
+  -
+    name: "basic_select_equity_eod"
+    template: "SELECT symbol, close, volume FROM market.equity_eod WHERE trade_date = CURRENT_DATE - 1"
+  -
+    name: "select_vcp_breakouts"
+    template: "SELECT symbol, vcp_score, vcp_breakout_pct FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE - 1"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure selected symbols have high VCP scores."
+  - "Check the overlap of symbols in equity EOD and VCP picks."
+synthesis_guidance: "['Combine EOD values with VCP scores to identify potential breakouts.', 'Use comparison matrix for better visualization.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:53:24"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

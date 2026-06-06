@@ -1,0 +1,79 @@
+id: "company_360_research_report_1364_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1364"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: watchlist creation; timeframe: post results; response style: exceptions and gaps first."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "watchlist creation for post results: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as exceptions and gaps first"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "watchlist_creation"
+  - "post_results"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    task_options:
+      -
+        task_type: "analysis"
+        task_description: "Perform comprehensive research analysis focusing on exceptions and gaps."
+    task_parameters:
+
+sql_templates:
+  -
+    description: "Fetch latest stage and price information for the given symbol."
+    template: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol = '{{ symbol }}';"
+  -
+    description: "Fetch latest quarterly results for the given symbol."
+    template: "SELECT DISTINCT ON (symbol) * FROM scores.quarterly_results WHERE symbol = '{{ symbol }}' AND period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC;"
+python_tools:
+  -
+    id: "fetch_financial_overview"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+    outputs:
+      - "financial_summary"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "scores.quarterly_results"
+    code: "def run(context):\n    symbol = context['symbol']\n    financial_summary = {}\n    # Example logic for fetching financial summary\n    return financial_summary"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "{'approved_tables': ['scores.stage_snapshots', 'scores.quarterly_results', 'scores.annual_results', 'scores.balance_sheet', 'scores.cash_flow', 'scores.results_analysis', 'market.equity_eod'], 'approved_schema': 'Using only approved tables and columns.', 'global_sql_rules': 'Following PostgreSQL syntax and using parameterized template queries.'}"
+synthesis_guidance: "{'guidance_points': ['Prioritize gaps and exceptions in research findings.', 'Ensure clarity and conciseness in narrative text.', 'Adhere to approved schemas and global rules.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:05"
+generation_model: "gpt-4o"
+validation_errors:
+  - "fetch_financial_overview: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "fetch_financial_overview: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,60 @@
+id: "data_freshness_readiness_audit_1449_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1449"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for last 3 months: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as portfolio-aware output"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Analyze data freshness and identify missing data in Agent Adda."
+sql_templates:
+  index_freshness_check:
+    description: "Check freshness of index data"
+    template: "SELECT index_symbol, MAX(trade_date) AS last_update FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol;"
+  equity_freshness_check:
+    description: "Check freshness of equity data"
+    template: "SELECT symbol, MAX(trade_date) AS last_update FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY symbol;"
+  stage_snapshot_freshness:
+    description: "Check freshness of stage snapshots"
+    template: "SELECT symbol, MAX(snapshot_date) AS last_update FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY symbol;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  -
+    name: "Schema Validity"
+    details: "Ensure SQL queries use only approved columns and tables from the schema."
+synthesis_guidance: "['Assess data freshness and provide recommendations on loader actions.', 'Identify missing sources and potential data update issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:23"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.last_update is not approved"
+  - "market.index_eod.last_update is not approved"
+  - "scores.stage_snapshots.last_update is not approved"

@@ -1,0 +1,3 @@
+def run(context):
+    # Hypothetical validation logic for contextuality and freshness...
+    return validated_results

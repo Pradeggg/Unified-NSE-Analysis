@@ -1,0 +1,54 @@
+id: "vcp_breakouts_with_fundamentals_1206_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1206"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: today; response style: ranked candidates."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "today"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "fetch_vcp_candidates"
+    statement: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_vcp AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)) SELECT v.symbol, v.company_name, v.vcp_score, v.enhanced_fund_score FROM latest_vcp v INNER JOIN latest_snapshots s ON v.symbol = s.symbol WHERE vcp_score > 80 AND enhanced_fund_score > 60 AND s.trading_signal IN ('BUY', 'STRONG_BUY') AND s.stage = 'STAGE_2' ORDER BY v.vcp_score DESC, v.rank ASC LIMIT 10;"
+    description: "Finds top VCP candidates with strong fundamentals."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "symbols_required"
+  - "score_range"
+synthesis_guidance: "{'highlight': 'Ranked VCP breakout candidates with high fundamental scores.', 'context': 'Focus on latest data to ensure freshness and market relevance.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:41:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

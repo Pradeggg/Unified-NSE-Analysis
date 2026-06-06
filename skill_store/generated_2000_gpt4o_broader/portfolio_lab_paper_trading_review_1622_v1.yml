@@ -1,0 +1,62 @@
+id: "portfolio_lab_paper_trading_review_1622_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1622"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: debug trace."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for last 5 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as debug trace"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  purpose: "To analyze and review paper trading strategies using Indian market context."
+  steps:
+    - "Extract and analyze trading signals for the last 5 sessions."
+    - "Review entry, exit points, targets and stops from `signals.signal_log`."
+    - "Compare strategy performance against EOD data from `market.equity_eod`."
+    - "Synthesize insights into a debug trace format."
+sql_templates:
+  -
+    description: "Fetch trading signals for last 5 sessions."
+    template: "SELECT id, date_issued, symbol, signal, entry_low, entry_high, stop_loss, target_1, target_2, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_issued >= (SELECT MAX(trade_date) - INTERVAL '5 days' FROM market.equity_eod);"
+  -
+    description: "Fetch EOD market data for comparison."
+    template: "SELECT trade_date, symbol, close, volume FROM market.equity_eod WHERE trade_date >= (SELECT MAX(trade_date) - INTERVAL '5 days' FROM market.equity_eod);"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all trading signals are within the last 5 sessions."
+  - "EOD data must be consistent and complete for covered sessions."
+synthesis_guidance: "['Utilize debug trace format to illustrate decision points and outcomes.', 'Highlight significant deviations or insights from normal performance.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:30"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

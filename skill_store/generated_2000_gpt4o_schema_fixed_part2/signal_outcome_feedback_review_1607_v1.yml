@@ -1,0 +1,67 @@
+id: "signal_outcome_feedback_review_1607_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review"
+description: "Evaluate prior signals and outcomes for improving skills in the context of the Indian market. Focus: sector-relative comparisons and today's timeframe, with debug trace response."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for today: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as debug trace"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "today"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Perform a signal outcome feedback review focusing on today's sector-relative comparison. Analyze prior signals that succeeded or failed."
+sql_templates:
+  -
+    description: "Select outcome summaries for signals issued today."
+    template: "WITH latest_snapshot AS (SELECT MAX(snapshot_date) AS max_date FROM scores.stage_snapshots) SELECT ss.symbol, ss.sector, ss.technical_score, l.return_pct, l.hit_target, l.hit_stop FROM signals.signal_log l JOIN scores.stage_snapshots ss ON l.symbol = ss.symbol WHERE l.date_issued >= CURRENT_DATE AND ss.snapshot_date = (SELECT max_date FROM latest_snapshot);"
+python_tools:
+  -
+    id: "run_feedback_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "outcome_summary"
+      - "sector"
+    outputs:
+      - "winner_patterns"
+      - "failure_patterns"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+    code: "# Analyze outcome summaries to identify winning and failing patterns.\ndef run(context):\n    outcomes = context['outcome_summary']\n    winner_patterns = []\n    failure_patterns = []\n\n    for outcome in outcomes:\n        if outcome['hit_target']:\n            winner_patterns.append(outcome['sector'])\n        if outcome['hit_stop']:\n            failure_patterns.append(outcome['sector'])\n\n    return {'winner_patterns': set(winner_patterns), 'failure_patterns': set(failure_patterns)}"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure only today's issued signals are considered."
+  - "Patterns extracted must provide insights into sector-relative performance."
+synthesis_guidance: "Focus on identifying key patterns in successful and unsuccessful signals with a detailed debug trace."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:08"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_feedback_analysis: execution failed: KeyError: 'outcome_summary'"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_feedback_analysis: execution failed: KeyError: 'outcome_summary'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

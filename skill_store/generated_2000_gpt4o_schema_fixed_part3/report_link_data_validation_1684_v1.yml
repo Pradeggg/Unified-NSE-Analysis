@@ -1,0 +1,49 @@
+id: "report_link_data_validation_1684_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Intraday Watchlist Report Validation"
+description: "Performs validation on intraday watchlist report data, focusing on broken links and missing data in the Indian market context."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Use SQL to validate report metadata and filtered stocks for discrepancies in links and data."
+sql_templates:
+  -
+    type: "read-only"
+    statement: "SELECT er.run_id, er.run_ts, er.analysis_date, sr.symbol, sr.current_price FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks sr ON er.run_id = sr.run_id WHERE er.run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Verify SQL templates conform to read-only constraints."
+  - "Ensure findings include checks for watchlist link integrity."
+synthesis_guidance: "Compile evidence to diagnose report link failures and incomplete stock data."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:50"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,61 @@
+id: "portfolio_incremental_add_trim_1571_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1571"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for pre market: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as research-only summary"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+
+sql_templates:
+  -
+    template_name: "Fetch_Portfolio_Stage_Snapshots"
+    description: "Fetch latest snapshots for current portfolio holdings with stage, scores, and signals."
+    sql: "WITH latest_stage_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT h.symbol, h.qty, h.avg_cost, s.stage, s.stage_score, s.trading_signal FROM portfolio.holdings h INNER JOIN latest_stage_snapshots s ON h.symbol = s.symbol;"
+  -
+    template_name: "Select_Add_Candidates"
+    description: "Identify add candidates based on positive signals and Stage 2 condition."
+    sql: "WITH latest_stage_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT s.symbol, s.company_name, s.sector, s.trading_signal FROM latest_stage_snapshots s WHERE s.trading_signal IN ('BUY', 'STRONG_BUY') AND s.stage = 'STAGE_2' ORDER BY s.stage_score DESC LIMIT 10;"
+  -
+    template_name: "Select_Trim_Candidates"
+    description: "Identify trim candidates based on negative signals or Stage 4 condition."
+    sql: "WITH latest_stage_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT s.symbol, s.company_name, s.sector, s.trading_signal FROM latest_stage_snapshots s WHERE s.trading_signal = 'SELL' OR s.stage = 'STAGE_4' ORDER BY s.stage_score ASC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:19"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

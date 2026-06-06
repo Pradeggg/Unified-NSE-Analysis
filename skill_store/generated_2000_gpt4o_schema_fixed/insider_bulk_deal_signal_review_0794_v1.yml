@@ -1,0 +1,52 @@
+id: "insider_bulk_deal_signal_review_0794_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0794"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for weekly review: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as QA checklist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review insider alerts and bulk deals weekly; ensure technical confirmation for watchlist inclusion."
+sql_templates:
+  -
+    template: "SELECT ia.symbol, ia.entity, ia.qty, ia.value_cr, ia.alert_date FROM signals.insider_alerts ia WHERE ia.alert_date > CURRENT_DATE - INTERVAL '7 days' AND ia.insider_score > 50 ORDER BY ia.alert_date DESC LIMIT 20;"
+  -
+    template: "SELECT bd.symbol, bd.qty, bd.price FROM signals.bulk_block_deals bd WHERE bd.deal_date > CURRENT_DATE - INTERVAL '7 days' AND bd.deal_type = 'BUY' ORDER BY bd.deal_date DESC LIMIT 20;"
+  -
+    template: "SELECT ss.symbol, ss.trading_signal, ss.stage FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 20;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all SQL queries are read-only and use parameterized inputs where necessary."
+  - "Verify SQL templates align with approved schema rules and do not modify data."
+synthesis_guidance: "['Combine alerts and deals with stage data to form a coherent watchlist.', 'Prioritize symbols based on insider score and trading signals.', 'Include technical scores and summary for each symbol in the watchlist.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:57"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.bulk_block_deals.bd is not approved"
+  - "signals.insider_alerts.ia is not approved"

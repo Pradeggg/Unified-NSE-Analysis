@@ -1,0 +1,74 @@
+id: "insider_bulk_deal_signal_review_1746_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1746"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: last 3 months; response style: QA checklist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for last 3 months: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as QA checklist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "last_3_months"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  sql_stage: "review"
+  structure: "QA checklist"
+sql_templates:
+  -
+    query: "SELECT symbol, alert_date, entity, qty, value_cr FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '3 months' AND alert_type IN ('buy', 'accumulate')"
+    description: "Fetch recent insider buying alerts for the last 3 months."
+  -
+    query: "SELECT symbol, deal_date, entity, side, qty, price FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '3 months' AND side = 'buy'"
+    description: "Fetch recent bulk deal buying for the last 3 months."
+  -
+    query: "SELECT symbol, snapshot_date, technical_score, trend_signal, trading_signal FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' AND trading_signal = 'positive'"
+    description: "Determine technical confirmations based on positive trading signals in the last 3 months."
+python_tools:
+  -
+    id: "calculate_ranked_symbols"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "insider_context"
+      - "technical_confirmation"
+    outputs:
+      - "ranked_symbols"
+    approved_tables:
+      - "signals.insider_alerts"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    insider_alerts = context['insider_context']\n    tech_confirms = context['technical_confirmation']\n    combined = []\n    for symbol in insider_alerts:\n        if symbol in tech_confirms:\n            combined.append((symbol, tech_confirms[symbol]['technical_score']))\n    ranked = sorted(combined, key=lambda x: x[1], reverse=True)\n    return ranked"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "All results must use only data from the last 3 months."
+  - "Ensure alignment between insider alerts and bulk deal data."
+synthesis_guidance: "['Prioritize symbols with consistent insider buying and positive technical scores.', \"Assess risk notes based on the entity's historical behavior and market conditions.\"]"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_ranked_symbols: execution failed: KeyError: 'insider_context'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_ranked_symbols: execution failed: KeyError: 'insider_context'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

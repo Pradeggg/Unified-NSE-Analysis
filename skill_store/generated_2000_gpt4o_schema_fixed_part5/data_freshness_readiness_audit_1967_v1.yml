@@ -1,0 +1,77 @@
+id: "data_freshness_readiness_audit_1967_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Skill"
+description: "Audits data freshness for Agent Adda evidence sources focusing on sector-relative comparison after results."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for post results: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as comparison matrix"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    description: "Create a matrix comparing data freshness across sectors for post-result analysis. Ensure the data used is current."
+sql_templates:
+  -
+    template: "SELECT MAX(trade_date) AS latest_equity_date, MAX(snapshot_date) AS latest_stage_date FROM market.equity_eod, scores.stage_snapshots;"
+    name: "sector_relative_max_dates"
+python_tools:
+  -
+    id: "validate_freshness"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "latest_equity_date"
+      - "latest_stage_date"
+    outputs:
+      - "is_fresh"
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    latest_equity = context['latest_equity_date']\n    latest_stage = context['latest_stage_date']\n    is_fresh = latest_equity == latest_stage\n    return {'is_fresh': is_fresh}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure dates align with the latest entries for accuracy in reporting."
+  - "Check for missing data sources and highlight any critical gaps."
+synthesis_guidance: "['Create an understandable comparison matrix to visualize data freshness across sectors.', 'Highlight any critical data freshness issues affecting report generation.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:03"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_equity_date is not approved"
+  - "market.equity_eod.latest_stage_date is not approved"
+  - "market.equity_eod.snapshot_date is not approved"
+  - "validate_freshness: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "market.equity_eod.latest_equity_date is not approved"
+    - "market.equity_eod.latest_stage_date is not approved"
+    - "market.equity_eod.snapshot_date is not approved"
+    - "validate_freshness: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

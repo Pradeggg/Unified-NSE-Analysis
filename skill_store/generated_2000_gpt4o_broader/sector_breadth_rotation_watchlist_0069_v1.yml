@@ -1,0 +1,54 @@
+id: "sector_breadth_rotation_watchlist_0069_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0069"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: post results; response style: concise table."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for post results: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as concise table"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "post_results"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  goal: "Identify sectors showing improvement in breadth and Stage 2 participation post-result, and generate a concise table for TradingView inclusion."
+sql_templates:
+  sector_rank_query:
+    description: "Rank sectors by most improved breadth and stage participation."
+    query: "WITH sector_breadth AS (SELECT sector, change_5d, stage2_pct FROM breadth.sector_daily JOIN breadth.ma_pct_above ON sector_daily.snapshot_date = ma_pct_above.snapshot_date WHERE sector_daily.snapshot_date = CURRENT_DATE) SELECT sector, change_5d, stage2_pct FROM sector_breadth WHERE change_5d > 0 ORDER BY stage2_pct DESC, change_5d DESC;"
+  symbol_selection_query:
+    description: "Select symbols from sectors with improved metrics."
+    query: "SELECT symbol, company_name FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE AND sector IN (SELECT sector FROM sector_breadth) AND stage = 'Stage 2' ORDER BY relative_strength DESC, change_1m_pct DESC;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sectors are filtered for positive 5-day change."
+  - "Order by Stage 2 participation using stage2_pct."
+  - "Focus on sectors with improved participation signals."
+synthesis_guidance: "{'focus': 'Concisely summarize actionable insights for sector rotation, noting TradingView applicability.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.sector_breadth is not approved"

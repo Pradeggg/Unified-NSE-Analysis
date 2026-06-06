@@ -1,0 +1,61 @@
+id: "data_freshness_readiness_audit_1589_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1589"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: intraday context; response style: research-only summary."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for intraday context: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as research-only summary"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  - "1. Validate the latest data availability in each evidence table."
+  - "2. Identify any missing sources or delayed updates."
+  - "3. Check for blocking gaps in the data pipeline."
+  - "4. Provide suggestions for loader actions if necessary."
+  - "5. Document verification queries for future audits."
+sql_templates:
+  check_freshness:
+    sql: "SELECT 'market.index_eod' AS table_name, MAX(trade_date) AS latest_date FROM market.index_eod UNION ALL SELECT 'market.equity_eod', MAX(trade_date) FROM market.equity_eod UNION ALL SELECT 'scores.stage_snapshots', MAX(snapshot_date) FROM scores.stage_snapshots UNION ALL SELECT 'breadth.market_daily', MAX(trade_date) FROM breadth.market_daily UNION ALL SELECT 'breadth.ma_pct_above', MAX(snapshot_date) FROM breadth.ma_pct_above UNION ALL SELECT 'report.enhanced_runs', MAX(run_ts) FROM report.enhanced_runs;"
+    params:
+
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all necessary tables are checked for data freshness."
+  - "Report any discrepancies or missing data."
+synthesis_guidance: "['Summarize findings in a research-focused narrative.', 'Explain the impact of any identified data gaps on market narratives.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:46"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

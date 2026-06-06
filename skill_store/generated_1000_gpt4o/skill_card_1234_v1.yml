@@ -1,0 +1,59 @@
+id: "skill_card_1234_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Pre Market Report Data Validation"
+description: "Analyze and validate pre-market report data for freshness and completeness."
+input_patterns:
+  - "review report links not working"
+  - "validate generated report links and missing data"
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "freshness_audit"
+  - "pre_market"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Validate report run metadata and stock rows for data integrity before market opens."
+sql_templates:
+  -
+    template_name: "validate_run_freshness"
+    template: "SELECT run_id, run_ts FROM report.enhanced_runs WHERE analysis_date = CURRENT_DATE"
+  -
+    template_name: "validate_filtered_stock_data"
+    template: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = ?"
+python_tools:
+  -
+    id: "check_missing_data"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+    outputs:
+      - "missing_symbols"
+    approved_tables:
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Check for stocks with missing recommendation\n    result = [row['symbol'] for row in context.query('SELECT symbol FROM report.enhanced_filtered_stocks WHERE run_id = ? AND recommendation IS NULL', [context.inputs['run_id']])]\n    return {'missing_symbols': result}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure report run timestamps are within acceptable freshness limits."
+  - "Verify essential stock data exists for all filtered stocks."
+synthesis_guidance: "Produce a debug trace to identify issues in report data generation and suggest remediation steps."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:50:41"
+generation_model: "gpt-4o"
+validation_errors:
+  - "check_missing_data: execution failed: AttributeError: 'dict' object has no attribute 'query'"
+review:
+  status: "needs_heal"
+  findings:
+    - "check_missing_data: execution failed: AttributeError: 'dict' object has no attribute 'query'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

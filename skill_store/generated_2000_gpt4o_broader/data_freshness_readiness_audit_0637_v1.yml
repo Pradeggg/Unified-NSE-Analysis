@@ -1,0 +1,65 @@
+id: "data_freshness_readiness_audit_0637_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0637"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for last 20 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as debug trace"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Examine freshness using approved tables, evaluating data latency and availability in context of sector-relative comparison."
+sql_templates:
+  freshness_check: "SELECT DISTINCT trade_date FROM market.index_eod ORDER BY trade_date DESC LIMIT 1"
+  sector_comparison: "WITH recent_data AS (SELECT sector, max(trade_date) as last_date FROM scores.stage_snapshots WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days' GROUP BY sector) SELECT * FROM recent_data ORDER BY last_date DESC"
+python_tools:
+  -
+    id: "check_freshness"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "trade_date_threshold"
+    outputs:
+      - "freshness_status"
+    approved_tables:
+      - "market.index_eod"
+    code: "def run(context):\n    current_date = context.get('trade_date_threshold')\n    # Pseudo context: Fetch the latest trade date from market.index_eod\n    latest_trade_date = get_latest_trade_date()\n    freshness_status = 'fresh' if latest_trade_date >= current_date else 'stale'\n    return {'freshness_status': freshness_status}"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "assertions"
+synthesis_guidance: "Ensure that dataset latency and sector comparison insights are accurately captured while identifying missing sources if data is not fresh enough."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:13"
+generation_model: "gpt-4o"
+validation_errors:
+  - "check_freshness: execution failed: NameError: name 'get_latest_trade_date' is not defined"
+review:
+  status: "needs_heal"
+  findings:
+    - "check_freshness: execution failed: NameError: name 'get_latest_trade_date' is not defined"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

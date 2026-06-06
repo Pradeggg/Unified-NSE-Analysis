@@ -1,0 +1,65 @@
+id: "signal_outcome_feedback_review_0767_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0767"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: post results; response style: QA checklist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for post results: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as QA checklist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  sql_templates:
+    -
+      template: "WITH latest_signals AS (SELECT * FROM signals.signal_log WHERE date_resolved = (SELECT MAX(date_resolved) FROM signals.signal_log) AND hit_target IS NOT NULL) SELECT sector, COUNT(*) as signal_count, SUM(CASE WHEN hit_target THEN 1 ELSE 0 END) as targets_hit, SUM(CASE WHEN hit_stop THEN 1 ELSE 0 END) as stops_hit FROM latest_signals GROUP BY sector;"
+      description: "Generate a summary of signal outcomes by sector."
+  python_tools:
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    inputs: "context"
+    outputs: "summary"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n  outcomes = context['sql'][0]['result']\n  summary = {\n    'outcome_summary': [],\n    'winner_patterns': [],\n    'failure_patterns': [],\n    'route_improvements': [],\n    'next_checks': []\n  }\n  for row in outcomes:\n    sector = row['sector']\n    targets_hit = row['targets_hit']\n    stops_hit = row['stops_hit']\n    signal_count = row['signal_count']\n    summary['outcome_summary'].append({'sector': sector, 'targets_hit': targets_hit, 'stops_hit': stops_hit, 'total_signals': signal_count})\n    if targets_hit > stops_hit:\n      summary['winner_patterns'].append(sector)\n    else:\n      summary['failure_patterns'].append(sector)\n  return summary"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure the outcome summary includes all valid sectors."
+  - "Confirm winner_patterns and failure_patterns are correctly categorized."
+synthesis_guidance: "['Sector comparison is a priority.', 'Focus on identifying patterns of successful and unsuccessful signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

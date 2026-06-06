@@ -1,0 +1,59 @@
+id: "corporate_events_results_watchlist_1297_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1297"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: sector-relative comparison; timeframe: weekly review; response style: ranked candidates."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "sector-relative comparison for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as ranked candidates"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Generate a weekly ranked watchlist of companies based on recent and upcoming corporate events, comparing sector performance and providing context with source-trail evidence."
+sql_templates:
+  -
+    name: "upcoming_events"
+    template: "SELECT symbol, event_type, event_date, detail FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY event_date ASC;"
+  -
+    name: "recent_results_analysis"
+    template: "SELECT symbol, period_end, growth_yoy_revenue_pct, growth_qoq_revenue_pct, eps_yoy_pct FROM scores.results_analysis WHERE period_end >= (CURRENT_DATE - INTERVAL '7 days') ORDER BY period_end DESC;"
+  -
+    name: "sector_comparison"
+    template: "SELECT symbol, company_name, sector, change_1w_pct, relative_strength FROM scores.stage_snapshots WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '7 days') ORDER BY change_1w_pct DESC;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "Verify the timeframe for events and results analysis is respected."
+  - "Validate sector-relative comparisons are accurate and sourced from approved tables."
+  - "Confirm output includes appropriate rankings and source trails."
+synthesis_guidance: "Merge event data with results and sector analysis to generate a meaningful ranked watchlist for investors."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,62 @@
+id: "agent_route_failure_diagnostics_1092_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1092"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: weekly review; response style: concise table."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for weekly review: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as concise table"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Assess failures across runs, identify missing tools, and resolve symbol discrepancies using the evidence tables."
+sql_templates:
+  -
+    name: "latest_runs"
+    template: "SELECT run_id, run_ts, universe_size, stocks_analyzed, notes FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+  -
+    name: "filtered_stocks_issues"
+    template: "SELECT es.run_id, es.symbol, ef.recommendation, ef.rank FROM scores.stage_snapshots AS es JOIN report.enhanced_filtered_stocks AS ef ON es.symbol = ef.symbol WHERE es.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ef.run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs));"
+python_tools:
+  -
+    id: "symbol_resolution_check"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol_list"
+    outputs:
+      - "resolved_symbols"
+      - "unresolved_symbols"
+    approved_tables:
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context): resolved, unresolved = [], [] # hypothetical logic return {'resolved_symbols': resolved, 'unresolved_symbols': unresolved}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  -
+    rule: "Ensure the latest runs and stock data match expected results for symbolic consistency."
+    type: "consistency"
+synthesis_guidance: "Generate a concise table summarizing the diagnostic results using the provided evidence and SQL templates."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:55:04"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.run_id is not approved"

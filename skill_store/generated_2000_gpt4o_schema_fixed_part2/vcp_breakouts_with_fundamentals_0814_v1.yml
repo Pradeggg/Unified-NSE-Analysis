@@ -1,0 +1,53 @@
+id: "vcp_breakouts_with_fundamentals_0814_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0814"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Screen for VCP breakouts with strong fundamentals."
+sql_templates:
+  -
+    name: "latest_vcp_fundamentals"
+    description: "Query to retrieve the latest VCP picks with strong fundamentals."
+    template: "WITH latest_vcp AS (\n    SELECT \n        vcp.symbol, \n        vcp.price, \n        ss.enhanced_fund_score, \n        ss.stage \n    FROM \n        scores.stage2_vcp_picks vcp \n    JOIN \n        scores.stage_snapshots ss \n    ON \n        vcp.symbol = ss.symbol \n    WHERE \n        vcp.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)\n        AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n        AND ss.trading_signal IN ('BUY', 'STRONG_BUY')\n        AND ss.enhanced_fund_score > 8 \n    ORDER BY \n        ss.enhanced_fund_score DESC, \n        vcp.vcp_score DESC\n    LIMIT 50\n) \nSELECT \n    symbol, \n    price, \n    enhanced_fund_score, \n    stage \nFROM \n    latest_vcp;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure symbols meet trading signal and fundamental score criteria."
+  - "Limit output to top 50 candidates by scores."
+synthesis_guidance: "['Prioritize high fundamental scores and VCP quality.', 'Use trading signals to enhance selection.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:13"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

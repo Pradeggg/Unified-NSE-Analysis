@@ -1,0 +1,65 @@
+id: "portfolio_incremental_add_trim_1585_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1585"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: intraday context; response style: research-only summary."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for intraday context: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as research-only summary"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "intraday_context"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Research and analyze portfolio holdings to determine incremental add/trim actions using evidence from approved tables."
+sql_templates:
+  - "SELECT symbol, qty, avg_cost FROM portfolio.holdings"
+  - "SELECT symbol, sector, market_cap_cat, change_1d_pct, change_1w_pct, change_1m_pct, trend_signal, stage_score FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE"
+python_tools:
+  -
+    id: "risk_assessment_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      snapshot_data: "scores.stage_snapshots"
+      holdings_data: "portfolio.holdings"
+    outputs:
+      - "risk_flags"
+      - "add_candidates"
+      - "trim_candidates"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    # Risk assessment code here to identify add/trim candidates\n    pass"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "status"
+  - "output_must_include"
+synthesis_guidance: "Focus on risk-first analysis, providing intraday insights on adding or trimming positions based on current data."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "risk_assessment_tool: inputs must be a list"
+review:
+  status: "needs_heal"
+  findings:
+    - "risk_assessment_tool: inputs must be a list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

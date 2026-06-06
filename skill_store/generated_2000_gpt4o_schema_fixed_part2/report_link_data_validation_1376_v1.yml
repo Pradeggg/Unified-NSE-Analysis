@@ -1,0 +1,57 @@
+id: "report_link_data_validation_1376_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Pre-Market Report Link Validation"
+description: "Validate the report links and ensure data freshness for pre-market reports focusing on exceptions and gaps first."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for pre-market: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+  joins:
+    -
+      left_table: "report.enhanced_runs"
+      left_column: "run_id"
+      right_table: "report.enhanced_filtered_stocks"
+      right_column: "run_id"
+      condition: "report.enhanced_runs.run_id = report.enhanced_filtered_stocks.run_id"
+      notes: "Use for report QA and broken/missing enhanced-report stock data checks."
+tool_plan_template: "Validate report data linking using SQL checks and raise exceptions for gaps in freshness or availability."
+sql_templates:
+  -
+    template: "SELECT r.run_id, r.analysis_date, fs.symbol, fs.current_price FROM report.enhanced_runs r LEFT JOIN report.enhanced_filtered_stocks fs ON r.run_id = fs.run_id WHERE r.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) AND (fs.current_price IS NULL OR fs.symbol IS NULL) ORDER BY r.run_id LIMIT 100;"
+    description: "Find missing stock data for the latest report runs."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "rules"
+synthesis_guidance: "Focus on identifying quick wins for report validation by surfacing any missing data elements as primary findings."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:39"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,52 @@
+id: "corporate_events_results_watchlist_0891_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0891"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as action watchlist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze corporate events and results to identify trading signals and construct a quick-scan weekly watchlist."
+sql_templates:
+  event_calendar:
+    sql: "SELECT e.symbol, e.event_date, e.event_type, e.purpose_raw FROM signals.corporate_events e WHERE e.event_date >= CURRENT_DATE AND e.event_type IN ('RESULTS', 'DIVIDEND', 'SPLIT', 'BONUS', 'AGM') ORDER BY e.event_date LIMIT 100;"
+    description: "Retrieve upcoming corporate events from signals.corporate_events."
+    status: "generated"
+  symbol_watchlist:
+    sql: "SELECT DISTINCT ON (s.symbol) s.symbol, s.stage FROM scores.stage_snapshots s JOIN signals.corporate_events e ON e.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY s.symbol LIMIT 50;"
+    description: "Generate symbol watchlist based on current stage snapshots and trading signals."
+    status: "generated"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure SQL templates are read-only."
+  - "Check that only approved tables and columns are used."
+synthesis_guidance: "Summarize events and analysis to create an action-focused watchlist for immediate opportunities."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:27"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.corporate_events.e is not approved"

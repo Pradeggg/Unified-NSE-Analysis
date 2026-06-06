@@ -1,0 +1,55 @@
+id: "agent_route_failure_diagnostics_1764_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1764"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: post results; response style: QA checklist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for post results: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as QA checklist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "post_results"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  route_checklist:
+    - "Verify universe size in report.enhanced_runs matches expectations"
+    - "Ensure symbols in report.enhanced_filtered_stocks have associated scores"
+    - "Cross-check market sentiment with scores.stage_snapshots"
+sql_templates:
+  universe_size_verification: "SELECT run_id, universe_size FROM report.enhanced_runs WHERE run_ts BETWEEN :start_time AND :end_time;"
+  symbol_score_verification: "SELECT symbol, score FROM report.enhanced_filtered_stocks WHERE run_id = :run_id;"
+  sentiment_cross_check: "SELECT market_sentiment, market_composite_score FROM report.enhanced_runs WHERE run_id = :run_id;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure SQL templates are only using SELECT queries."
+  - "Cross-verify the evidence tables against the provided schema."
+synthesis_guidance: "['Focus on Indian market data-specific failures.', 'Provide step-by-step QA checklists for each failure scenario.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

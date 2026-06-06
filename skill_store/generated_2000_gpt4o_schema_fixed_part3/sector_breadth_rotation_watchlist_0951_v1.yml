@@ -1,0 +1,56 @@
+id: "sector_breadth_rotation_watchlist_0951_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0951"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: quarter to date; response style: comparison matrix."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for quarter to date: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as comparison matrix"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    template_name: "sector_breadth_analysis"
+    description: "Analyze sector breadth and stage participation for a quick sector rotation watchlist."
+    sql: "WITH sector_breadth AS (SELECT sector, pct_above_50dma, change_5d, breadth_signal FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)), latest_stage AS (SELECT symbol, sector, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY')) SELECT sb.sector, sb.pct_above_50dma, sb.change_5d, sb.breadth_signal, ls.symbol FROM sector_breadth sb JOIN latest_stage ls ON sb.sector = ls.sector ORDER BY sb.pct_above_50dma DESC LIMIT 15;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure that breadth_signal values are correctly interpreted from SQL results."
+  - "Limit results to ensure manageable TradingView symbol lists."
+  - "Validate output sector ranks align with SQL breadth analysis."
+synthesis_guidance: "['Transform SQL outputs into a user-friendly matrix format for decision making.', 'Provide context on sector improvements over the quarter to date.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:35"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

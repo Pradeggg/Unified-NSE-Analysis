@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:53:07"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: quarter to date; response style: comparison matrix."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0952_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for quarter to date: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    description: "Fetch report metadata for a given timeframe."
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered, market_composite_score, market_sentiment FROM report.enhanced_runs WHERE DATE(run_ts) >= {start_date} AND DATE(run_ts) <= {end_date}"
+  -
+    description: "Retrieve stock data related to a specific report run."
+    template: "SELECT run_id, symbol, score, recommendation, current_price, day_change_pct FROM report.enhanced_filtered_stocks WHERE run_id = {run_id}"
+status: "test_failed"
+synthesis_guidance: "Compile extracted data into a comparison matrix format, highlighting discrepancies and gaps in report links and stock data."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "comparison_matrix"
+title: "Enhanced Report Data Validation Variant 0952"
+tool_plan_template:
+  introduction: "Initiate a detailed institutional review of report links and underlying data for the specified quarter."
+  steps:
+    - "Extract metadata and stock information using SQL queries."
+    - "Analyze the fetched data to identify gaps in report links and stock details."
+validation_rules:
+  - "Ensure all SQL queries adhere to the approved schema and are read-only."
+  - "Confirm that the tool execution is in a read-only context."
+version: 1
+validation_errors:
+  - "report.enhanced_runs.date is not approved"
+  - "report.enhanced_runs.end_date is not approved"
+  - "report.enhanced_runs.start_date is not approved"

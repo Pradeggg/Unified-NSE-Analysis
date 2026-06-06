@@ -1,0 +1,59 @@
+id: "vcp_breakouts_with_fundamentals_0418_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0418"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: latest EOD; response style: portfolio-aware output."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  tasks:
+    - "Identify stocks reaching new highs or displaying VCP breakout patterns with strong fundamental scores."
+sql_templates:
+  -
+    name: "Select Highs or VCP Breakouts"
+    sql: "WITH ranked_stocks AS ( SELECT v.symbol, v.company_name, v.price, v.vcp_score, v.enhanced_fund_score, e.high, e.week52_high FROM scores.stage2_vcp_picks v JOIN market.equity_eod e ON v.symbol = e.symbol WHERE e.trade_date = CURRENT_DATE AND (v.vcp_breakout_pct > 0 OR e.high >= e.week52_high) ), filtered_stocks AS ( SELECT symbol, company_name, price FROM ranked_stocks WHERE enhanced_fund_score > 80 ) SELECT symbol, company_name, price FROM filtered_stocks;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure output contains viable stocks only if strong fundamentals (>80) are met."
+  - "Check daily for new high and VCP breakout presence."
+synthesis_guidance: "['Interpret outputs within an Indian market context.', 'Frame responses to aid portfolio decision-making.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:46:18"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table e.high"
+  - "unknown table e.symbol"
+  - "unknown table e.trade_date"
+  - "unknown table e.week52_high"
+  - "unknown table v.company_name"
+  - "unknown table v.enhanced_fund_score"
+  - "unknown table v.price"
+  - "unknown table v.symbol"
+  - "unknown table v.vcp_breakout_pct"
+  - "unknown table v.vcp_score"

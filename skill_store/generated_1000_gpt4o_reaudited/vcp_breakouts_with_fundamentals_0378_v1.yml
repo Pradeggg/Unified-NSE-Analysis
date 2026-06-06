@@ -1,0 +1,64 @@
+created_at: "2026-06-06T12:46:06"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: pre market; response style: exceptions and gaps first."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0378_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for pre market: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    # Analyze VCP breakout based on fundamentals and VCP score\n    return {'analysis': 'Detailed report for trading decisions.'}"
+    id: "analyze_vcp_breakouts"
+    inputs:
+      - "symbol"
+      - "vcp_score"
+      - "fundamentals"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "analysis"
+sql_templates:
+  -
+    purpose: "Select stocks with a high VCP score and recent trading information."
+    query: "SELECT e.symbol, e.close, e.high, e.volume, v.vcp_score FROM market.equity_eod e JOIN scores.stage2_vcp_picks v ON e.symbol = v.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND v.vcp_score > 50;"
+status: "validated"
+synthesis_guidance: "Identify stocks with VCP characteristics and strong fundamentals, focusing on market anomalies and pre-market signals."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+title: "VCP Breakouts With Fundamentals Variant 0378"
+tool_plan_template: "Use equity EOD data and VCP picks for screening breakouts and assessing fundamentals."
+validation_rules:
+  - "Ensure SQL uses read-only operations."
+  - "Check that evidence tables are valid and columns aren't invented."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

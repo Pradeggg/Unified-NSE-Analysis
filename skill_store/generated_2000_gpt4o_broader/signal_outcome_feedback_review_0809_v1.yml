@@ -1,0 +1,80 @@
+id: "signal_outcome_feedback_review_0809_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0809"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for today: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as action watchlist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  table_plans:
+    -
+      table: "signals.signal_log"
+      access_type: "read"
+      purpose: "Review signal outcomes, hits, stops, and performance."
+    -
+      table: "scores.stage_snapshots"
+      access_type: "read"
+      purpose: "Correlate snapshot stages and technical setup."
+    -
+      table: "market.equity_eod"
+      access_type: "read"
+      purpose: "Assess equity price movements and market context."
+sql_templates:
+  -
+    description: "Select outcomes of signals that hit targets or stops for analysis."
+    template: "SELECT id, symbol, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_resolved = CURRENT_DATE;"
+python_tools:
+  -
+    id: "analyze_signal_performance"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signal_outcomes"
+    outputs:
+      - "outcome_summary"
+      - "winner_patterns"
+      - "failure_patterns"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context):\n    outcomes = context['signal_outcomes']\n    outcome_summary = {}\n    winner_patterns = []\n    failure_patterns = []\n    # Process logic\n    for outcome in outcomes:\n        # Example logic can be implemented here\n        pass\n    return {'outcome_summary': outcome_summary, 'winner_patterns': winner_patterns, 'failure_patterns': failure_patterns}"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Status must be generated."
+  - "Ensure SQL templates are read-only SELECT or WITH."
+  - "Use only approved tables and columns."
+synthesis_guidance: "['Identify improvements based on signal outcomes.', 'Validate source trails and outcomes.', 'Summarize results in actionable steps.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "analyze_signal_performance: execution failed: KeyError: 'signal_outcomes'"
+review:
+  status: "needs_heal"
+  findings:
+    - "analyze_signal_performance: execution failed: KeyError: 'signal_outcomes'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

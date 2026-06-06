@@ -1,0 +1,98 @@
+id: "company_360_research_report_0202_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 0202"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: deep institutional review; timeframe: today; response style: ranked candidates."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "deep institutional review for today: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as ranked candidates"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "deep_institutional_review"
+  - "today"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  sql_templates:
+    -
+      query: "SELECT * FROM scores.stage_snapshots WHERE symbol = 'RELIANCE';"
+      evidence: "stage_snapshot"
+    -
+      query: "SELECT * FROM scores.quarterly_results WHERE symbol = 'RELIANCE';"
+      evidence: "quarterly_results"
+    -
+      query: "SELECT * FROM scores.annual_results WHERE symbol = 'RELIANCE';"
+      evidence: "annual_results"
+    -
+      query: "SELECT * FROM scores.balance_sheet WHERE symbol = 'RELIANCE';"
+      evidence: "balance_sheet"
+    -
+      query: "SELECT * FROM scores.cash_flow WHERE symbol = 'RELIANCE';"
+      evidence: "cash_flow"
+    -
+      query: "SELECT * FROM market.equity_eod WHERE symbol = 'RELIANCE';"
+      evidence: "equity_eod"
+  evidence_gaps:
+
+sql_templates:
+
+python_tools:
+  -
+    id: "financial_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "stage_snapshot"
+      - "quarterly_results"
+      - "annual_results"
+      - "balance_sheet"
+      - "cash_flow"
+      - "equity_eod"
+    outputs:
+      - "financial_trends"
+      - "technical_setup"
+      - "valuation_gaps"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "scores.quarterly_results"
+      - "scores.annual_results"
+      - "scores.balance_sheet"
+      - "scores.cash_flow"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Analyze the financial data\n    return {'financial_trends': {...}, 'technical_setup': {...}, 'valuation_gaps': {...}}"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates must be read-only SELECT/WITH templates."
+synthesis_guidance: "Use the extracted evidence to form a comprehensive research narrative, focusing on deep institutional review and current market conditions."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:39"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

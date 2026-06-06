@@ -1,0 +1,56 @@
+id: "insider_bulk_deal_signal_review_1396_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1396"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for weekly review: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as exceptions and gaps first"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Use SQL templates to extract data necessary for the review of insider alerts, bulk/block deals, and technical confirmations for accumulation signals."
+sql_templates:
+  -
+    description: "Fetch insider alerts with the latest technical scores."
+    template: "SELECT ia.symbol, ia.alert_date, ia.entity, ia.qty, ia.value_cr, ia.insider_score, ss.stage, ss.technical_score FROM signals.insider_alerts ia JOIN scores.stage_snapshots ss ON ia.symbol = ss.symbol WHERE ia.alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts) AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 100;"
+  -
+    description: "Fetch bulk or block deals with technical confirmation."
+    template: "SELECT bd.symbol, bd.deal_date, bd.qty, bd.price, ss.stage, ss.trading_signal FROM signals.bulk_block_deals bd JOIN scores.stage_snapshots ss ON bd.symbol = ss.symbol WHERE bd.deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals) AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure that the extracted data aligns with the latest insider alerts and bulk/block deals."
+  - "Confirm the inclusion of stocks with a positive technical setup by checking trading signals."
+synthesis_guidance: "{'exceptions': 'Emphasize any missing data in the freshness audit and highlight stocks that do not meet the criteria.', 'priority': 'Focus on the latest weekly insights and any anomalies.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

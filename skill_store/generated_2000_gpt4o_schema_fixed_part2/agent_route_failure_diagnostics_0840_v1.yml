@@ -1,0 +1,54 @@
+id: "agent_route_failure_diagnostics_0840_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0840"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as action watchlist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Generate a sequence of steps to diagnose and debug agent route failures with a focus on symbols and tools using the TradingView data from the past 20 sessions."
+sql_templates:
+  symbol_resolution_issues:
+    query: "SELECT symbol, COUNT(*) AS error_count FROM report.enhanced_filtered_stocks WHERE recommendation = 'ERROR' GROUP BY symbol ORDER BY error_count DESC LIMIT 10;"
+    description: "Identify the most frequent symbol resolution issues."
+  route_diagnostics:
+    query: "SELECT run_id, notes FROM report.enhanced_runs WHERE stocks_filtered < stocks_analyzed AND run_ts >= (CURRENT_DATE - INTERVAL '20 days') ORDER BY run_ts DESC;"
+    description: "Extract run details with potential diagnostics in notes over the last 20 days."
+  stage_analysis:
+    query: "SELECT symbol, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage IN ('STAGE_3', 'STAGE_4') ORDER BY stage_score DESC LIMIT 10;"
+    description: "Find symbols in less favorable stages for further investigation."
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure symbol error counts match expected errors for recent sessions."
+  - "Verify run diagnostics are consistent with notes."
+  - "Validate stage scores align with user-defined thresholds."
+synthesis_guidance: "Combine diagnostics to form a cohesive narrative on potential route failures, emphasizing quick wins and patterns of interest."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:20"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_filtered_stocks.error_count is not approved"

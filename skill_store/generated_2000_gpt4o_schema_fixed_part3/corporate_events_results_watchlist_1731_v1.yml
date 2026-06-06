@@ -1,0 +1,65 @@
+id: "corporate_events_results_watchlist_1731_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1731"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for last 20 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as QA checklist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Generate a QA-style checklist with symbol watchlist, corporate event details, result context, action buckets, and source trails."
+sql_templates:
+  -
+    purpose: "Fetch event-driven watchlist with current stage and technical context."
+    template: "SELECT ce.symbol, ce.event_type, ce.event_date, ss.stage, ss.trading_signal FROM signals.corporate_events ce JOIN scores.stage_snapshots ss ON ce.symbol = ss.symbol WHERE ce.event_date > CURRENT_DATE - INTERVAL '1 month' AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY ce.event_date ASC LIMIT 50;"
+python_tools:
+  -
+    id: "tool_results_summary"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+    outputs:
+      - "results_summary"
+    approved_tables:
+      - "scores.results_analysis"
+    code: "def run(context):\n    symbol = context['symbol']\n    # Implementation logic goes here\n    return {'results_summary': 'Sample Summary'}"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+synthesis_guidance: "{'task': 'Synthesize data into a concise QA checklist addressing event watchlist, actions, and context.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:34"
+generation_model: "gpt-4o"
+validation_errors:
+  - "tool_results_summary: execution failed: KeyError: 'symbol'"
+review:
+  status: "needs_heal"
+  findings:
+    - "tool_results_summary: execution failed: KeyError: 'symbol'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

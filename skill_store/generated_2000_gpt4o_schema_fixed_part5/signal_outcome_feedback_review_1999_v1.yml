@@ -1,0 +1,59 @@
+id: "signal_outcome_feedback_review_1999_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1999"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: weekly review; response style: comparison matrix."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for weekly review: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as comparison matrix"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    strategy: "SQL_READ_ONLY"
+    research_question: "How do signals perform against targets and stops over time?"
+    steps:
+      - "1. Retrieve resolved signals from signals.signal_log."
+      - "2. Join with current scores.stage_snapshots for latest context."
+      - "3. Use market.equity_eod for price history alignment."
+sql_templates:
+  -
+    template: "WITH latest_signals AS (\n    SELECT *\n    FROM signals.signal_log\n    WHERE date_resolved IS NOT NULL\n),\nlatest_scores AS (\n    SELECT *\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n)\nSELECT \n    ls.symbol, ls.signal, ls.date_issued, ls.price_at_resolution, \n    ss.stage, ss.technical_score, ss.investment_score\nFROM latest_signals ls\nJOIN latest_scores ss ON ls.symbol = ss.symbol\nWHERE ls.hit_target = true OR ls.hit_stop = true\nLIMIT 50;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure outcome_summary captures both successful and failed signals."
+  - "Winner_patterns must identify causing factors for signal success."
+  - "Failure_patterns must highlight reasons for failure at the signal level."
+synthesis_guidance: "{'focus': 'Comparison matrix for learning effective strategies and avoid pitfalls based on resolved signal outcomes.', 'style': 'Analytical and objective with actionable insights.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

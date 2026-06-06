@@ -1,0 +1,51 @@
+id: "report_link_data_validation_1614_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Debug Report Link and Data Validation"
+description: "Validate and debug report links and data completeness for latest EOD watchlist creation. Focus is on broken links and incomplete stock data."
+input_patterns:
+  - "validate latest EOD report links"
+  - "check stock data completeness"
+  - "debug latest report information"
+  - "review latest EOD watchlist issues"
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "debug"
+  - "latest_EOD"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    python_tools:
+
+    sql_templates:
+      -
+        description: "Retrieve latest enhanced runs and check for missing filtered stocks."
+        query: "WITH latest_run AS (SELECT run_id, run_ts FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 1) SELECT r.run_id, r.run_ts, f.symbol FROM latest_run r LEFT JOIN report.enhanced_filtered_stocks f ON r.run_id = f.run_id WHERE f.symbol IS NULL OR f.current_price IS NULL;"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure report IDs have matching stock data."
+  - "Identify missing stock symbols or incomplete price data."
+synthesis_guidance: "['Aggregate data to understand root causes of missing or incomplete reports.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:54"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

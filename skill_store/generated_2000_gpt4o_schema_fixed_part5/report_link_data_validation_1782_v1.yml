@@ -1,0 +1,68 @@
+id: "report_link_data_validation_1782_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1782"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: intraday context; response style: QA checklist."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for intraday context: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    description: "SELECT * FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months' LIMIT 100;"
+sql_templates:
+  -
+    query: "SELECT * FROM report.enhanced_runs LIMIT 100;"
+    description: "Fetch a sample set of enhanced report runs."
+  -
+    query: "SELECT * FROM report.enhanced_filtered_stocks LIMIT 100;"
+    description: "Fetch a sample set of enhanced filtered stocks."
+python_tools:
+  -
+    id: "link_verification_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "url_list"
+    outputs:
+      - "accessible"
+      - "inaccessible"
+    approved_tables:
+      - "http_response"
+    code: "def run(context):\n    # dummy implementation\n    return {'accessible': [], 'inaccessible': []}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Check for rows present in report.enhanced_runs and report.enhanced_filtered_stocks."
+  - "Ensure no missing data in critical columns like run_id, symbol, and score."
+synthesis_guidance: "['Review all queried rows for NULL values in pivotal columns relevant to QA checks.', 'For report links, verify the HTTP accessibility of HTML reports at sample of stored URLs.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "link_verification_tool: execution failed: process exited 1"
+review:
+  status: "needs_heal"
+  findings:
+    - "link_verification_tool: execution failed: process exited 1"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,53 @@
+id: "sector_breadth_rotation_watchlist_1763_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1763"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: post results; response style: QA checklist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for post results: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as QA checklist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Select sectors with improving breadth and high stage 2 participation."
+    query: "WITH latest_breadth AS (SELECT * FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)), latest_stages AS (SELECT sector, COUNT(*) AS stage2_count, AVG(relative_strength) AS avg_rs FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector) SELECT lb.sector, lb.pct_above_50dma, lb.change_5d, ls.stage2_count, ls.avg_rs FROM latest_breadth lb INNER JOIN latest_stages ls ON lb.sector = ls.sector WHERE lb.breadth_signal = 'IMPROVING' ORDER BY ls.stage2_count DESC, lb.pct_above_50dma DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "sql_templates"
+synthesis_guidance: "Synthesize a sector-relative watchlist prioritizing those sectors showing improving breadth and stage 2 participation. Provide a QA checklist format for reviewing the top 10 sectors and their leading symbols."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

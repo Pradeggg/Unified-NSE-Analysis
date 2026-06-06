@@ -1,0 +1,74 @@
+created_at: "2026-06-06T12:50:59"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: QA checklist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0717_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.index_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Calculate risk metrics based on index returns and sector volatility\n    index_mean_return = sum(context['index_returns']) / len(context['index_returns'])\n    sector_vol_mean = sum(context['sector_volatility']) / len(context['sector_volatility'])\n    risk_score = index_mean_return / sector_vol_mean\n    return {'risk_assessment': risk_score}"
+    id: "calculate_risk_metrics"
+    inputs:
+      - "index_returns"
+      - "sector_volatility"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "risk_assessment"
+sql_templates:
+  market_regime_analysis:
+    template: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 MONTH' ORDER BY trade_date DESC;"
+  sector_leadership:
+    template: "WITH recent_stages AS (SELECT sector, stage, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 MONTH' GROUP BY sector, stage), relative_strength AS (SELECT sector, AVG(relative_strength) as avg_strength FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 MONTH' GROUP BY sector) SELECT s.sector, rs.avg_strength FROM recent_stages s JOIN relative_strength rs ON s.sector = rs.sector ORDER BY rs.avg_strength DESC;"
+  swing_candidates:
+    template: "SELECT symbol, company_name, sector, price, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 10;"
+status: "test_failed"
+synthesis_guidance: "{'combine_data': 'Integrate index returns with sector strength to map market regime; detail top sectors and swing candidates.', 'contextualize_risks': 'Highlight potential market risks based on recent index signals and sector volatility.'}"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "QA_checklist"
+title: "3M Market Rotation Swing Assessment Variant 0717"
+tool_plan_template:
+  steps:
+    - "Analyze market regime and stage distribution."
+    - "Identify sector leaders based on relative strength and returns."
+    - "Select primary swing candidates using VCP criteria."
+validation_rules:
+  - "Ensure all dates align with latest EOD data."
+  - "Cross-reference sector leaders with recent relative strength."
+version: 1
+validation_errors:
+  - "calculate_risk_metrics: execution failed: KeyError: 'index_returns'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_risk_metrics: execution failed: KeyError: 'index_returns'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

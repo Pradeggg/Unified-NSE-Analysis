@@ -1,0 +1,60 @@
+id: "data_freshness_readiness_audit_1309_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1309"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: today; response style: exceptions and gaps first."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for today: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as exceptions and gaps first"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "today"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Check for exceptions and gaps by validating data freshness and completeness across approved tables. Focus on today's data and identify potential outliers or missing data points."
+sql_templates:
+  -
+    name: "Check Index EOD Freshness"
+    query: "SELECT MAX(trade_date) AS last_trade_date FROM market.index_eod WHERE trade_date = CURRENT_DATE;"
+  -
+    name: "Check Equity EOD Freshness"
+    query: "SELECT MAX(trade_date) AS last_trade_date FROM market.equity_eod WHERE trade_date = CURRENT_DATE;"
+  -
+    name: "Check Market Daily"
+    query: "SELECT MAX(trade_date) AS last_trade_date FROM breadth.market_daily WHERE trade_date = CURRENT_DATE;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Data must be available for CURRENT_DATE"
+  - "Highlight any table without data for today as a blocking gap"
+  - "Ensure source-trail validation completes without error"
+synthesis_guidance: "Focus on ensuring all critical data elements are load-ready by EOD. Gaps in the data must be highlighted, and actions for remediation should be advised."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:54"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.last_trade_date is not approved"
+  - "market.equity_eod.last_trade_date is not approved"
+  - "market.index_eod.last_trade_date is not approved"

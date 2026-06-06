@@ -1,0 +1,67 @@
+id: "vcp_breakouts_with_fundamentals_0098_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0098"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: weekly review; response style: concise table."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters:
+    instructions: "Identify VCP stocks with new-highs or breakouts and strong fundamentals for position-sizing context and weekly review."
+  candidates:
+    instructions: "Present results as a concise table matching the input pattern."
+  tradingview_symbols:
+    instructions: "Format output suitable for TradingView symbols and alerts."
+  evidence:
+    instructions: "Provide supporting data from approved tables."
+  risks:
+    instructions: "Highlight potential risks in selected candidates."
+sql_templates:
+  -
+    template: "SELECT eod.symbol, eod.high, eod.close, eod.volume, snapshots.company_name, snapshots.market_cap_cat, snapshots.fundamental_score, snapshots.enhanced_fund_score FROM market.equity_eod eod JOIN scores.stage_snapshots snapshots ON eod.symbol = snapshots.symbol WHERE eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND eod.close >= eod.week52_high * 0.95 AND snapshots.stage_score > 70 AND snapshots.fundamental_score > 60 ORDER BY eod.volume DESC LIMIT 10"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'guidance': 'Ensure outputs are concise, aimed at Indian market VCP and breakout strategies.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:41:54"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table eod.close"
+  - "unknown table eod.high"
+  - "unknown table eod.symbol"
+  - "unknown table eod.trade_date"
+  - "unknown table eod.volume"
+  - "unknown table eod.week52_high"
+  - "unknown table snapshots.company_name"
+  - "unknown table snapshots.enhanced_fund_score"
+  - "unknown table snapshots.fundamental_score"
+  - "unknown table snapshots.market_cap_cat"
+  - "unknown table snapshots.stage_score"
+  - "unknown table snapshots.symbol"

@@ -1,0 +1,54 @@
+id: "sector_breadth_rotation_watchlist_1245_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1245"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: risk-first review; timeframe: last 3 months; response style: ranked candidates."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "risk-first review for last 3 months: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as ranked candidates"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "risk-first_review"
+  - "last_3_months"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "{}"
+sql_templates:
+  -
+    template: "WITH latest_stage AS (\n    SELECT sector, \n           MAX(snapshot_date) AS max_snapshot_date\n    FROM scores.stage_snapshots\n    WHERE stage = 'STAGE_2'\n    GROUP BY sector\n), \nranked_sectors AS (\n    SELECT sd.sector, \n           sd.breadth_signal, \n           ma.stage2_pct\n    FROM breadth.sector_daily sd\n    JOIN breadth.ma_pct_above ma\n    ON sd.snapshot_date = ma.snapshot_date\n    JOIN latest_stage ls\n    ON sd.sector = ls.sector\n    WHERE sd.snapshot_date = ls.max_snapshot_date\n    AND sd.snapshot_date >= CURRENT_DATE - INTERVAL '3 months'\n    ORDER BY ma.stage2_pct DESC\n    LIMIT 10\n)\nSELECT * FROM ranked_sectors;"
+    description: "Rank sectors by breadth signal and Stage 2 participation within the last 3 months."
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure SQL is read-only and uses approved columns."
+  - "Align point-in-time data using join rules."
+  - "Ensure latest date filters are applied as per global rules."
+synthesis_guidance: "Focus on highlighting sectors with significant Stage 2 migration and present them as ranked candidates."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:19"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

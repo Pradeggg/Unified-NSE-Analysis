@@ -1,0 +1,77 @@
+created_at: "2026-06-06T12:52:20"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: post results; response style: action watchlist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0865_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    # Analysis logic here\n    pass"
+    id: "RunAnalysis"
+    inputs:
+      - "index_returns"
+      - "sector_leadership"
+      - "swing_candidates"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "action_watchlist"
+      - "risk_assessment"
+sql_templates:
+  -
+    name: "IndexReturns"
+    query: "SELECT trade_date, index_symbol, close, prev_close, change_pct FROM market.index_eod WHERE trade_date >= [START_DATE] AND trade_date <= [END_DATE] AND index_symbol = '[INDEX_SYMBOL]'"
+  -
+    name: "SectorLeadership"
+    query: "SELECT sector, AVG(relative_strength) AS average_strength FROM scores.stage_snapshots WHERE snapshot_date >= [START_DATE] AND snapshot_date <= [END_DATE] GROUP BY sector ORDER BY average_strength DESC"
+  -
+    name: "SwingCandidates"
+    query: "SELECT symbol, company_name, price, stage, trading_signal FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= [START_DATE] AND snapshot_date <= [END_DATE] ORDER BY trading_signal DESC"
+status: "test_failed"
+synthesis_guidance: "Combine data from SQL queries to identify actionable swing trade candidates. Highlight risk factors and ensure all outputs are relevant to the Indian market."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "post_results"
+  - "action_watchlist"
+title: "3M Market Rotation Swing Assessment Variant 0865"
+tool_plan_template: "Assess the market regime, identify leading sectors and stage 2 leadership stocks. Evaluate risk factors for each candidate."
+validation_rules:
+  - "Ensure index returns include major indices for the Indian market."
+  - "Sector leadership should be evaluated based on relative strength."
+  - "Stage 2 stocks should have an active trading signal for potential swings."
+  - "Risk factors must be identified with focus on market volatility."
+version: 1
+validation_errors:
+  - "market.index_eod.end_date is not approved"
+  - "market.index_eod.start_date is not approved"
+  - "scores.stage_snapshots.average_strength is not approved"
+  - "scores.stage_snapshots.end_date is not approved"
+  - "scores.stage_snapshots.start_date is not approved"

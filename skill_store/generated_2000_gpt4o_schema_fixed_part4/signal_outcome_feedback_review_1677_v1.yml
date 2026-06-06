@@ -1,0 +1,55 @@
+id: "signal_outcome_feedback_review_1677_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1677"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: pre market; response style: debug trace."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for pre market: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as debug trace"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "debug_trace"
+evidence_required:
+  tables:
+
+tool_plan_template:
+  -
+    template: "1. Fetch signal logs with resolutions. 2. Retrieve stage/scores on resolution date. 3. Compare results with sector performance."
+sql_templates:
+  -
+    description: "Fetch resolved signals and their outcomes."
+    template: "SELECT symbol, sector, company, signal, setup_class, target_1, target_2, stop_loss, date_issued, date_resolved, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_resolved IS NOT NULL;"
+  -
+    description: "Fetch latest stage snapshot for symbols."
+    template: "SELECT symbol, sector, stage, technical_score, investment_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure SQL queries return expected columns."
+  - "Validate outcomes match with market movement."
+synthesis_guidance: "{'guidance': 'Analyze outcomes from signal actions in context of sector performance to identify successful patterns and avoidable mistakes.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:56"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

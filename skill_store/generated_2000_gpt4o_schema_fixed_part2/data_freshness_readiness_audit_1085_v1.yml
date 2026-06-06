@@ -1,0 +1,60 @@
+id: "data_freshness_readiness_audit_1085_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1085"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: risk-first review; timeframe: intraday context; response style: concise table."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "risk-first review for intraday context: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as concise table"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "risk-first_review"
+  - "intraday_context"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  plan: "Generate a concise readiness table using SQL templates to assess data freshness across multiple tables. Address any missing elements via evidence gaps."
+sql_templates:
+  -
+    name: "Latest Index Data Freshness"
+    template: "SELECT MAX(trade_date) AS latest_index_date FROM market.index_eod;"
+  -
+    name: "Latest Equity Data Freshness"
+    template: "SELECT MAX(trade_date) AS latest_equity_date FROM market.equity_eod WHERE series = 'EQ';"
+  -
+    name: "Latest Snapshot Data"
+    template: "SELECT MAX(snapshot_date) AS latest_snapshot_date FROM scores.stage_snapshots;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure latest dates are within acceptable freshness thresholds."
+  - "Identify missing or delayed data that impacts reporting readiness."
+synthesis_guidance: "['Focus first on risk-prone data sources such as market index and equity tables.', 'Summarize findings in a table format that highlights key freshness metrics.', 'Prioritize addressing gaps impacting daily operations and reporting.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:06"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_equity_date is not approved"
+  - "market.index_eod.latest_index_date is not approved"
+  - "scores.stage_snapshots.latest_snapshot_date is not approved"

@@ -1,0 +1,71 @@
+created_at: "2026-06-06T12:46:20"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: portfolio-aware output."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0417_card_1_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+output_contract:
+  - "as_of_date"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    equities = context.get('equity_data', [])\n    analyzed = []\n    for equity in equities:\n        if equity.get('relative_strength', 0) > 70 and equity.get('trading_signal', '') == 'buy':\n            analyzed.append(equity)\n    return {'analyzed_equities': analyzed}"
+    id: "equity_analysis_tool"
+    inputs:
+      - "equity_data"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "analyzed_equities"
+review:
+  attempts: 3
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "index_performance"
+    query: "SELECT trade_date, index_symbol, SUM(change_pct) FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY trade_date, index_symbol ORDER BY trade_date DESC;"
+  -
+    name: "sector_leadership"
+    query: "SELECT sector, AVG(technical_score) FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months' AND stage = 2 GROUP BY sector ORDER BY AVG(technical_score) DESC LIMIT 5;"
+  -
+    name: "swing_candidates"
+    query: "SELECT symbol, company_name, sector, price, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND vcp_score > 80 ORDER BY vcp_score DESC LIMIT 10;"
+status: "validated"
+synthesis_guidance: "Focus on interpreting data for portfolio-aligned decisions. Offer insights on regime shifts and sector dynamics."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "portfolio-aware_output"
+title: "3M Market Rotation Swing Assessment Variant 0417"
+tool_plan_template: "query_and_analyze(data_sources=$evidence_required.tables, methodology='sector-relative analysis')"
+validation_errors:
+
+validation_rules:
+  - "Ensure output matches portfolio goals."
+  - "Prioritize sectors with high relative strength."
+version: 1

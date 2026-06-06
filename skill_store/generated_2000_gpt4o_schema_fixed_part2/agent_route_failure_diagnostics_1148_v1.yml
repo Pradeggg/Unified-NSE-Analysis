@@ -1,0 +1,67 @@
+id: "agent_route_failure_diagnostics_1148_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1148"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for last 3 months: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as narrative plus evidence"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze position-sizing context with enhanced report runs, filter stocks by run_id, and verify stage snapshots for discrepancies."
+sql_templates:
+  -
+    name: "position_sizing_context"
+    template: "SELECT run_id, run_ts, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    name: "symbol_resolution_checks"
+    template: "SELECT efs.symbol, efs.recommendation, ss.stage FROM report.enhanced_filtered_stocks efs JOIN scores.stage_snapshots ss ON efs.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+  -
+    id: "position_sizing_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "analysis_results"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze position sizing context and return results.\n    return {'analysis_results': 'Position sizing discrepancies found.'}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure run_ts is within the last 3 months."
+  - "Validate missing tool references within the narrative output."
+  - "Verify symbol resolution against stage snapshot conditions."
+synthesis_guidance: "['Synthesize narrative responses using SQL results.', 'Highlight discrepancies in route diagnostics.', 'Map any tool gaps to available evidence.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

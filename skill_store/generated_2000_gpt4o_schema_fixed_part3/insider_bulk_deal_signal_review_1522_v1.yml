@@ -1,0 +1,56 @@
+id: "insider_bulk_deal_signal_review_1522_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1522"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: last 5 sessions; response style: research-only summary."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for last 5 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as research-only summary"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "last_5_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Extract the latest insider alerts with positive technical indicators."
+    query: "WITH latest_snapshots AS (SELECT symbol, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), insider_alerts AS (SELECT symbol, alert_date, qty, value_cr FROM signals.insider_alerts WHERE alert_date >= CURRENT_DATE - INTERVAL '5 days') SELECT ia.symbol, SUM(ia.qty) AS total_qty, SUM(ia.value_cr) AS total_value FROM insider_alerts ia JOIN latest_snapshots ls ON ia.symbol = ls.symbol WHERE ls.trading_signal IN ('BUY', 'STRONG_BUY') GROUP BY ia.symbol ORDER BY total_value DESC LIMIT 10;"
+  -
+    description: "Find bulk and block deals with related stage and performance context."
+    query: "WITH latest_stages AS (SELECT symbol, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), bulk_deals AS (SELECT symbol, deal_date, qty, price FROM signals.bulk_block_deals WHERE deal_date >= CURRENT_DATE - INTERVAL '5 days') SELECT bd.symbol, bd.qty, bd.price, ls.stage, ls.stage_score FROM bulk_deals bd JOIN latest_stages ls ON bd.symbol = ls.symbol ORDER BY bd.deal_date DESC LIMIT 20;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all date conditions fall within the last 5 sessions."
+  - "Check join conditions align exactly with approved schema."
+synthesis_guidance: "Focus on summarizing institutional insights from insider activity and bulk deals with a research-only lens, highlighting key accumulation patterns."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

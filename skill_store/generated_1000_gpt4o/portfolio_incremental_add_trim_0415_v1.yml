@@ -1,0 +1,70 @@
+id: "portfolio_incremental_add_trim_0415_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0415"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: latest EOD; response style: portfolio-aware output."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for latest EOD: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "latest_EOD"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  - "Examine current portfolio for risk and exposure."
+  - "Determine add/trim actions based on market signals and holdings\u2019 performance."
+sql_templates:
+  -
+    description: "Fetch latest stage snapshots and holdings."
+    template: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT ls.symbol, ls.company_name, ls.sector, ls.stage, ls.stage_score, ls.technical_score, ls.fundamental_score, ls.relative_strength, h.qty, h.avg_cost FROM latest_snapshots ls JOIN portfolio.holdings h ON ls.symbol = h.symbol;"
+python_tools:
+  -
+    id: "risk_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "portfolio_state"
+      - "sector_exposure"
+    outputs:
+      - "risk_flags"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "# Analyze risk based on compiled data\ndef run(context):\n    # Calculate risk based on input data\n    pass"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data consistency."
+  - "Verify the latest snapshot is used for decision-making."
+synthesis_guidance: "['Prioritize risk mitigation in proposed actions.', 'Balance sector exposure considering market signals.', 'Identify key opportunities for adding or trimming positions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:46:18"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table h.avg_cost"
+  - "unknown table h.qty"
+  - "unknown table h.symbol"
+  - "unknown table ls.company_name"
+  - "unknown table ls.fundamental_score"
+  - "unknown table ls.relative_strength"
+  - "unknown table ls.sector"
+  - "unknown table ls.stage"
+  - "unknown table ls.stage_score"
+  - "unknown table ls.symbol"
+  - "unknown table ls.technical_score"

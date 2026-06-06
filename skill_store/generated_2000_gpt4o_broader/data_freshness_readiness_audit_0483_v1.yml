@@ -1,0 +1,95 @@
+id: "data_freshness_readiness_audit_0483_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0483"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: portfolio-aware output."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for intraday context: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as portfolio-aware output"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Determine evidence recency across approved tables and output relevant actions."
+sql_templates:
+  -
+    template_id: "check_freshness_index_eod"
+    query: "SELECT MAX(trade_date) AS last_update FROM market.index_eod;"
+  -
+    template_id: "check_freshness_equity_eod"
+    query: "SELECT MAX(trade_date) AS last_update FROM market.equity_eod;"
+  -
+    template_id: "check_freshness_stage_snapshots"
+    query: "SELECT MAX(snapshot_date) AS last_update FROM scores.stage_snapshots;"
+  -
+    template_id: "check_freshness_market_daily"
+    query: "SELECT MAX(trade_date) AS last_update FROM breadth.market_daily;"
+  -
+    template_id: "check_freshness_ma_pct_above"
+    query: "SELECT MAX(snapshot_date) AS last_update FROM breadth.ma_pct_above;"
+  -
+    template_id: "check_freshness_enhanced_runs"
+    query: "SELECT MAX(run_ts) AS last_update FROM report.enhanced_runs;"
+python_tools:
+  -
+    id: "freshness_evaluation_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "index_eod_freshness"
+      - "equity_eod_freshness"
+      - "stage_snapshots_freshness"
+      - "market_daily_freshness"
+      - "ma_pct_above_freshness"
+      - "enhanced_runs_freshness"
+    outputs:
+      - "freshness_matrix"
+      - "missing_sources"
+      - "blocking_gaps"
+      - "loader_actions"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "breadth.market_daily"
+      - "breadth.ma_pct_above"
+      - "report.enhanced_runs"
+    code: "def run(context):\n    current_date = date.today()\n    freshness_matrix = {}\n    missing_sources = []\n    blocking_gaps = []\n    loader_actions = []\n\n    tables = ['index_eod', 'equity_eod', 'stage_snapshots', 'market_daily', 'ma_pct_above', 'enhanced_runs']\n    for table in tables:\n        last_update = context.get(f'{table}_freshness', current_date)\n        freshness_matrix[table] = last_update\n        if (current_date - last_update).days > 1:\n            missing_sources.append(table)\n            blocking_gaps.append(f'{table} data is older than expected')\n            loader_actions.append(f'Investigate data flow for {table}')\n\n    return {\n        'freshness_matrix': freshness_matrix,\n        'missing_sources': missing_sources,\n        'blocking_gaps': blocking_gaps,\n        'loader_actions': loader_actions\n    }"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Verify all selected tables for the most recent update."
+  - "Establish threshold dates for expected recency."
+  - "Flag any sources not meeting freshness thresholds."
+synthesis_guidance: "['Use recency data to inform portfolio-level actions.', 'Highlight gaps that block narrative formation.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.last_update is not approved"
+  - "breadth.market_daily.last_update is not approved"
+  - "market.equity_eod.last_update is not approved"
+  - "market.index_eod.last_update is not approved"
+  - "report.enhanced_runs.last_update is not approved"
+  - "scores.stage_snapshots.last_update is not approved"

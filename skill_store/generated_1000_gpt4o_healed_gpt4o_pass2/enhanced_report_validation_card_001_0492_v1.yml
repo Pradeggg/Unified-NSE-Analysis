@@ -1,0 +1,59 @@
+created_at: "2026-06-06T12:48:29"
+created_by: "llm_generated"
+description: "Skill card for validating enhanced report data and links, focusing on weekly reviews and portfolio-aware outputs."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "enhanced_report_validation_card_001_0492_v1"
+input_patterns:
+  - "validate report data links"
+  - "check data presence in stock HTML"
+  - "deep review of report links"
+  - "weekly institutional review"
+  - "portfolio-aware report validation"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation_plan"
+  - "verification_details"
+python_tools:
+
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    template: "SELECT run_id, analysis_date, universe_size, notes FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '7 days' AND notes IS NOT NULL;"
+    template_name: "validate_report_links"
+  -
+    template: "SELECT run_id, symbol, score, current_price FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '7 days');"
+    template_name: "verify_stock_presence"
+status: "validated"
+synthesis_guidance: "Synthesize findings into a coherent overview that highlights gaps in data validation and suggests remediation strategies."
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "links_check"
+  - "portfolio_aware"
+  - "weekly_review"
+title: "Enhanced Report Data Validation Card"
+tool_plan_template:
+  steps:
+    - "Check report links using evidence tables for broken URLs."
+    - "Assess presence of data in HTML representations."
+    - "Validate filters used in weekly report generation."
+    - "Ensure output is aligned with portfolio needs."
+validation_errors:
+
+validation_rules:
+  - "Ensure SQL uses only SELECT/WITH templates."
+  - "Do not invent columns or tables."
+  - "Use only approved tables and columns."
+version: 1

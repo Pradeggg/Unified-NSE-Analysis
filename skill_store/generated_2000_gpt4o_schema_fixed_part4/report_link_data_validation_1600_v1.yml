@@ -1,0 +1,56 @@
+id: "report_link_data_validation_1600_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1600"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for weekly review: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    status: "generated"
+    target_table: "report.enhanced_filtered_stocks"
+    frequency: "weekly"
+sql_templates:
+  -
+    type: "SQL"
+    status: "generated"
+    template: "SELECT r.run_id, r.run_ts, r.analysis_date, r.stocks_analyzed, r.stocks_filtered, r.notes, f.symbol, f.current_price, f.weekly_signal FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks f ON r.run_id = f.run_id WHERE r.run_ts > CURRENT_DATE - INTERVAL '7 days' ORDER BY r.run_ts DESC LIMIT 10;"
+    notes: "Fetch the latest runs and filtered stocks for weekly review."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure run_ts is within the last week."
+  - "Check for null or empty values in report fields."
+synthesis_guidance: "{'method': 'Summarize issues related to broken links, missing data, and provide research context.', 'notes': 'Focus on data integrity and link validation in the TradingView export context.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:07"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

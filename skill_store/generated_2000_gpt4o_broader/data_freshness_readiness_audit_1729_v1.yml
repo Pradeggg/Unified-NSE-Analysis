@@ -1,0 +1,71 @@
+id: "data_freshness_readiness_audit_1729_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1729"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for last 5 sessions: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as QA checklist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    step: "Evaluate data freshness across evidence tables."
+    query:
+      purpose: "Check recent updates to ensure data is fresh."
+      sql_template: "SELECT MAX(trade_date) as last_trade_date FROM {table};"
+  -
+    step: "Validate source-trail consistency for the last 5 sessions."
+    query:
+      purpose: "Verify data completeness for recent sessions."
+      sql_template: "SELECT trade_date, COUNT(*) as record_count FROM {table} WHERE trade_date >= CURRENT_DATE - INTERVAL '5 days' GROUP BY trade_date;"
+sql_templates:
+  -
+    name: "check_max_trade_date"
+    template: "SELECT MAX(trade_date) as last_trade_date FROM {table};"
+    description: "Check the most recent trade date for data freshness."
+  -
+    name: "count_records_last_5_days"
+    template: "SELECT trade_date, COUNT(*) as record_count FROM {table} WHERE trade_date >= CURRENT_DATE - INTERVAL '5 days' GROUP BY trade_date;"
+    description: "Count records for the last 5 trade days to validate data completeness."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure data recentness for all evidence-required tables."
+  - "Identify any missing sessions or data gaps."
+  - "Propose actions to update loaders if stale data is detected."
+synthesis_guidance: "['Format findings in a QA checklist.', 'Highlight any data latency issues.', 'Recommend loader updates or data patching if required.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:30"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

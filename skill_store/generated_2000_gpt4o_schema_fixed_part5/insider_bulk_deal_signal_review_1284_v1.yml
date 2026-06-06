@@ -1,0 +1,82 @@
+id: "insider_bulk_deal_signal_review_1284_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1284"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for intraday context: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as ranked candidates"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Identify bulk deals and insider buying signals from tables."
+  - "Join with the latest technical stage and scores for context."
+  - "Filter for positive technical signals and sort candidates."
+sql_templates:
+  - "WITH insider_deals AS (SELECT ia.symbol, ia.insider_score FROM signals.insider_alerts ia WHERE ia.alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts) AND ia.insider_score IS NOT NULL), bulk_deals AS (SELECT bd.symbol, bd.qty, bd.price FROM signals.bulk_block_deals bd WHERE bd.deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals)), technical_context AS (SELECT ss.symbol, ss.stage, ss.technical_score FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.stage IN ('STAGE_2', 'STAGE_3') AND ss.trading_signal IN ('BUY', 'STRONG_BUY')) SELECT id.symbol, bd.qty, bd.price, tc.stage, tc.technical_score, id.insider_score FROM insider_deals id JOIN bulk_deals bd ON id.symbol = bd.symbol JOIN technical_context tc ON bd.symbol = tc.symbol ORDER BY tc.technical_score DESC, id.insider_score DESC LIMIT 10;"
+python_tools:
+  -
+    id: "run"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "ranked_symbols"
+    approved_tables:
+      -
+        name: "signals.insider_alerts"
+        columns:
+          - "symbol"
+          - "insider_score"
+      -
+        name: "signals.bulk_block_deals"
+        columns:
+          - "symbol"
+          - "qty"
+          - "price"
+      -
+        name: "scores.stage_snapshots"
+        columns:
+          - "symbol"
+          - "stage"
+          - "technical_score"
+    code: "def run(context): pass"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all symbols in the output have a positive technical score."
+  - "Check for the presence of both insider deals and bulk deals in results."
+  - "Output must include stages and trading signals for context."
+synthesis_guidance: "['Focus on generating a ranked list of symbols that present high potential based on insider and bulk deal activity combined with positive technical indicators.', 'Include contextual summaries for each symbol to explain its rank.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:16"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run: approved_tables must contain only strings"
+review:
+  status: "needs_heal"
+  findings:
+    - "run: approved_tables must contain only strings"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

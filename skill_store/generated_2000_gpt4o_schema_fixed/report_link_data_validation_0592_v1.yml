@@ -1,0 +1,50 @@
+id: "report_link_data_validation_0592_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0592"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for weekly review: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "SELECT run_id, analysis_date, universe_size, stocks_filtered FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+sql_templates:
+  -
+    name: "check_broken_links"
+    query: "SELECT run_id, symbol FROM report.enhanced_filtered_stocks WHERE run_id NOT IN (SELECT run_id FROM report.enhanced_runs);"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure run_id exists in both report.enhanced_runs and report.enhanced_filtered_stocks."
+  - "Verify timestamps are consistent with the latest report runs."
+synthesis_guidance: "Summarize the report QA findings focusing on data integrity, missing links and stocks, providing research-oriented insights."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:25:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,50 @@
+id: "signal_outcome_feedback_review_1957_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review"
+description: "Analyze and compare the outcomes of trading signals quarter to date. Generate a sector-relative matrix for performance insight."
+input_patterns:
+  - "sector-relative comparison for quarter to date: review prior signals hit target or stop"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Extract and analyze prior signal performance using stage and market data. Generate sector-specific insights."
+sql_templates:
+  -
+    table: "signals.signal_log"
+    query: "SELECT sector, COUNT(*) AS total_signals, SUM(CASE WHEN hit_target THEN 1 ELSE 0 END) AS hit_target_count, SUM(CASE WHEN hit_stop THEN 1 ELSE 0 END) AS hit_stop_count FROM signals.signal_log WHERE date_issued >= (CURRENT_DATE - INTERVAL '3 months') GROUP BY sector"
+  -
+    table: "scores.stage_snapshots"
+    query: "SELECT symbol, sector, AVG(investment_score) AS avg_investment_score, AVG(technical_score) AS avg_technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY symbol, sector"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure sector-based summary is generated."
+  - "Verify quarter date range captures appropriate data."
+  - "Confirm data integrity across joins."
+synthesis_guidance: "Describe sector performance using a matrix format. Highlight sectors with consistent target hits and those frequently hitting stops. Suggest exploratory actions for future signal improvement."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:04"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.hit_stop_count is not approved"
+  - "signals.signal_log.hit_target_count is not approved"
+  - "signals.signal_log.total_signals is not approved"

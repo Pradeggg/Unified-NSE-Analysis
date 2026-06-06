@@ -1,0 +1,72 @@
+id: "quarterly_results_quality_review_1055_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1055"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: risk-first review; timeframe: quarter to date; response style: concise table."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "risk-first review for quarter to date: latest quarterly results analysis"
+  - "which companies had strong quarterly results as concise table"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "risk-first_review"
+  - "quarter_to_date"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  status: "generated"
+  use_cases:
+    - "Analyze latest quarterly results focusing on revenue and PAT growth."
+    - "Identify margin trends and filing freshness issues."
+sql_templates:
+  latest_results_query:
+    sql: "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.revenue, qr.pat, ra.growth_yoy_revenue_pct, ra.growth_yoy_pat_pct, ra.opm_delta_pp FROM scores.quarterly_results qr JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end WHERE qr.period_type = 'quarter' AND qr.period_end > CURRENT_DATE - INTERVAL '3 months' ORDER BY qr.symbol, qr.period_end DESC, qr.fetched_at DESC;"
+    description: "Fetch latest quarterly results, revenue growth, PAT growth, and margin movement."
+  stage_context_query:
+    sql: "SELECT ss.symbol, ss.stage, ss.trading_signal FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    description: "Get current stage and trading signal information."
+python_tools:
+  -
+    id: "latest_results_analyzer"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "quarterly_results"
+    outputs:
+      - "analyzed_data"
+    approved_tables:
+      - "scores.quarterly_results"
+      - "scores.results_analysis"
+    code: "def run(context):\n    results = context['quarterly_results']\n    # Analyze the results for risks and trends\n    analyzed_data = []\n    for result in results:\n        # simple analysis logic\n        analyzed_data.append({ 'symbol': result['symbol'], 'growth': result['growth_yoy_revenue_pct'] })\n    return analyzed_data"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "status"
+  - "sql_read_only"
+  - "evidence_table_use"
+synthesis_guidance: "{'response_format': 'concise table', 'highlight_focus': 'risk-first review; timeframe: quarter to date'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:54:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "latest_results_analyzer: execution failed: KeyError: 'quarterly_results'"
+review:
+  status: "needs_heal"
+  findings:
+    - "latest_results_analyzer: execution failed: KeyError: 'quarterly_results'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

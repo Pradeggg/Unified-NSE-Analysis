@@ -1,0 +1,68 @@
+id: "report_link_data_validation_1698_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Report Link Data Validation Skill"
+description: "Validate report links and verify filtered stock data for discrepancies. Focus on identifying broken links and missing data in position-sizing context during weekly reviews."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for weekly review: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    description: "Using provided evidence, detect broken report links and verify if relevant stock data is missing. Perform detailed analysis to understand impact on position-sizing context."
+sql_templates:
+  -
+    template_name: "check_missing_data"
+    sql: "SELECT efr.run_id, efr.symbol FROM report.enhanced_filtered_stocks AS efr LEFT JOIN report.enhanced_runs AS er ON efr.run_id = er.run_id WHERE efr.current_price IS NULL OR efr.volume IS NULL LIMIT 100;"
+python_tools:
+  -
+    id: "tool_validate_links"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      run_ids: "List of report run IDs"
+    outputs:
+      invalid_links: "List of links that are not working"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Validate report links using run_ids\n    invalid_links = []\n    # Perform validation logic here\n    return {'invalid_links': invalid_links}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure SQL only reads data."
+  - "Verify output matches expected findings format."
+  - "Check all required evidence is gathered and used."
+synthesis_guidance: "['Summarize discrepancies found in links or data.', 'Provide analysis on potential impacts on weekly reviews.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "tool_validate_links: inputs must be a list"
+  - "tool_validate_links: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "tool_validate_links: inputs must be a list"
+    - "tool_validate_links: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

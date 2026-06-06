@@ -1,0 +1,94 @@
+id: "vcp_breakouts_with_fundamentals_1640_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1640"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    steps:
+      -
+        description: "Identify breakout stocks from the last 20 sessions."
+        table: "market.equity_eod"
+        action: "filter"
+        filters:
+          - "trade_date >= CURRENT_DATE - INTERVAL '20 days'"
+          - "series = 'EQ'"
+      -
+        description: "Filter for Stage 2 stocks with strong buy signals."
+        table: "scores.stage_snapshots"
+        action: "filter"
+        filters:
+          - "snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+          - "stage = 'STAGE_2'"
+          - "trading_signal IN ('BUY', 'STRONG_BUY')"
+sql_templates:
+  -
+    description: "Select candidate stocks with latest VCP and fundamental scores."
+    sql: "WITH latest_vcp AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)) SELECT e.symbol, e.close, s.enhanced_fund_score, v.vcp_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) JOIN latest_vcp v ON e.symbol = v.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND e.series = 'EQ' AND s.stage = 'STAGE_2' AND s.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 100"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    required_fields:
+      - "id"
+      - "language"
+      - "mode"
+      - "inputs"
+      - "outputs"
+      - "approved_tables"
+      - "code"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all output symbols are valid NSE symbols."
+  - "Verify candidate scores exceed thresholds for fundamentals and VCP."
+synthesis_guidance: "['Compile the list of symbols for TradingView export.', 'Produce a debug trace of the filtering process, documenting criteria.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:23"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: code is required"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

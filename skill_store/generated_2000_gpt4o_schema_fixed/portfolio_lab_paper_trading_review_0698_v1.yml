@@ -1,0 +1,54 @@
+id: "portfolio_lab_paper_trading_review_0698_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Strategy Review"
+description: "Evaluate weekly paper trading strategies focusing on position-sizing, entry/exit rules, stops, and targets without mixing with real holdings."
+input_patterns:
+  - "Weekly evaluation of paper trading strategies with specified entry and exit rules"
+  - "Separate review of my portfolio and paper trading activities"
+  - "Paper trading report with position-sizing insights"
+tags:
+  - "portfolio"
+  - "strategy_review"
+  - "position-sizing"
+  - "entry_exit_rules"
+  - "weekly"
+  - "paper_trading"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  strategy_state: "Analyzing paper trading strategies..."
+  open_trades: "Identifying strategies with open positions..."
+  entry_exit_rules: "Assessing the efficacy of specified entry and exit points..."
+  exposure: "Determining portfolio exposure limits..."
+  exceptions: "Logging any discrepancies or errors..."
+sql_templates:
+  latest_strategy_scores:
+    template: "WITH latest_stages AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT ss.symbol, ss.stage, ss.technical_score FROM latest_stages as ss JOIN signals.signal_log as sl ON ss.symbol = sl.symbol WHERE sl.signal = 'BUY';"
+    description: "Retrieve latest stage and technical scores for buy signals."
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all symbols have the corresponding stage snapshot."
+  - "Verify entry and exit prices match expectations."
+synthesis_guidance: "['Focus on position-sizing and its impact on strategy outcomes.', 'Provide clarity on strategy effectiveness through entry and exit analyses.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:50"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

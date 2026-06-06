@@ -1,0 +1,51 @@
+id: "portfolio_incremental_add_trim_1333_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1333"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: last 20 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for last 20 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+
+sql_templates:
+  -
+    template_name: "Review_Stage_Snapshot"
+    template: "SELECT symbol, stage, stage_score, trend_signal, trading_signal FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURRENT_DATE, INTERVAL 20 DAY)"
+  -
+    template_name: "Current_Holdings"
+    template: "SELECT symbol, qty, avg_cost FROM portfolio.holdings"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure compliance with the approved schema."
+  - "Return findings as exceptions and gaps first."
+synthesis_guidance: "Focus on identifying exceptions in holdings for potential add/trim actions. Use recent stage and trading signal data to assess portfolio adjustments."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:59"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.day is not approved"

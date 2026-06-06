@@ -1,0 +1,73 @@
+id: "portfolio_incremental_add_trim_0803_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0803"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for today: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as action watchlist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  approved_tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+  tool_usage: "Primary analysis will utilize the SQL templates for querying, supplemented by Python analysis due to complexity."
+  strategy: "Combine technical scores with current holdings to determine action candidates."
+sql_templates:
+  fetch_current_holdings:
+    query: "SELECT symbol, qty, avg_cost FROM portfolio.holdings"
+    description: "Retrieve current holdings from the portfolio."
+  evaluate_stages:
+    query: "SELECT symbol, stage, stage_score, trend_signal, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE AND symbol IN (SELECT symbol FROM portfolio.holdings)"
+    description: "Gather stage and signal data for current holdings as of today."
+python_tools:
+  -
+    id: "calculate_add_trim_candidates"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "evaluate_stages_results"
+      - "fetch_current_holdings_results"
+    outputs:
+      - "add_candidates"
+      - "trim_candidates"
+    approved_tables:
+      - "portfolio.holdings"
+      - "scores.stage_snapshots"
+    code: "\ndef run(context):\n    add_candidates = []\n    trim_candidates = []\n    for holding in context['fetch_current_holdings_results']:\n        matching_stage = next((s for s in context['evaluate_stages_results'] if s['symbol'] == holding['symbol']), None)\n        if matching_stage:\n            if matching_stage['stage_score'] > 70 and matching_stage['trend_signal'] == 'UP':\n                add_candidates.append(holding['symbol'])\n            elif matching_stage['stage_score'] < 30 or matching_stage['trend_signal'] == 'DOWN':\n                trim_candidates.append(holding['symbol'])\n    return {\n        'add_candidates': add_candidates,\n        'trim_candidates': trim_candidates\n    }\n"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Generated SQL must only use SELECT statements."
+  - "Python functions must not exceed read-only access and use only approved tables."
+synthesis_guidance: "Combine SQL and Python evidence to generate a daily refresh action watchlist focusing on adding or trimming positions."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:51:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_add_trim_candidates: execution failed: KeyError: 'fetch_current_holdings_results'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_add_trim_candidates: execution failed: KeyError: 'fetch_current_holdings_results'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

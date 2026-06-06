@@ -1,0 +1,61 @@
+id: "fii_dii_regime_breadth_review_1758_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1758"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: quarter to date; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for quarter to date: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Utilize the FII/DII flow trends, market regime history, and market breadth data to assess the current market scenario. Combine these insights to provide a clear picture of the risk-on or risk-off condition."
+sql_templates:
+  -
+    name: "FII_DI_Flows_Trend"
+    description: "Retrieve FII/DII flow trends for the latest quarter."
+    template: "SELECT trade_date, fii_trend, dii_trend, flow_signal FROM signals.fii_dii_flows WHERE trade_date >= DATE_TRUNC('quarter', CURRENT_DATE) ORDER BY trade_date DESC;"
+  -
+    name: "Current_Regime"
+    description: "Fetch the current market regime and its confidence."
+    template: "SELECT regime, confidence FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history);"
+  -
+    name: "Market_Breadth"
+    description: "Analyze market breadth indicators for the current day."
+    template: "SELECT ad_signal, market_sentiment, bullish_pct, bearish_pct FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+  -
+    name: "Index_Confirmation"
+    description: "Confirm the market trend using index data."
+    template: "SELECT index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all fields in the 'output_contract' are populated based on the evidence collected."
+  - "Cross-verify flow context, breadth context, and index signals to form coherent conclusions."
+synthesis_guidance: "Combine evidence from various sources to synthesize a coherent market condition report. Highlight any potential discrepancies or confirmatory signals among the data."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.fii_dii_flows.date_trunc is not approved"

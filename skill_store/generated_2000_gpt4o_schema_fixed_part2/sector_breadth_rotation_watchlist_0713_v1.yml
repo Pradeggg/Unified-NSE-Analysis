@@ -1,0 +1,64 @@
+id: "sector_breadth_rotation_watchlist_0713_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0713"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: latest EOD; response style: QA checklist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for latest EOD: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as QA checklist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "latest_EOD"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+  filters:
+    - "snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)"
+    - "trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+    - "stage = 'STAGE_2'"
+tool_plan_template:
+  steps:
+    - "Fetch latest sector breadth data."
+    - "Identify improving sectors with highest Stage 2 participation."
+    - "Select top stocks in these sectors with strong RS and price momentum."
+sql_templates:
+  -
+    purpose: "Retrieve latest sector breadth and stage 2 participation."
+    template: "SELECT sd.sector, sd.breadth_signal, ma.stage2_pct FROM breadth.sector_daily sd JOIN breadth.ma_pct_above ma ON sd.snapshot_date = ma.snapshot_date WHERE sd.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) ORDER BY ma.stage2_pct DESC;"
+  -
+    purpose: "List stocks from sectors with strong Stage 2 participation."
+    template: "SELECT ss.symbol, ss.company_name, ss.relative_strength FROM scores.stage_snapshots ss JOIN breadth.sector_daily sd ON ss.sector = sd.sector WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.stage = 'STAGE_2' AND sd.breadth_signal = 'BULLISH' ORDER BY ss.relative_strength DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Verify the snapshot_date alignment with breadth and stage data."
+  - "Ensure use of latest market data from approved tables."
+synthesis_guidance: "{'approach': 'Use sector rankings by stage 2 participation to focus on trending stocks.', 'evidence_integration': 'Align sector improvement insights with stock selection including RS metrics.', 'output_format': 'Prepare a checklist of sectors and stocks suitable for TradingView import.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:35:54"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

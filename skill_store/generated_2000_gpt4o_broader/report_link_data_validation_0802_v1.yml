@@ -1,0 +1,68 @@
+id: "report_link_data_validation_0802_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Skill Card"
+description: "Skill card for validating enhanced report metadata with Indian market focus."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for today: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  id: "report_link_data_validation_0802_tool_plan"
+  policy: "evidence_frame_read_only"
+  steps:
+    - "Fetch report run metadata for today."
+    - "Identify any broken links in report data."
+    - "Check for missing data in stock HTML files."
+    - "Document findings and proposed remediations."
+sql_templates:
+  -
+    name: "fetch_metadata_today"
+    query: "SELECT * FROM report.enhanced_runs WHERE analysis_date = CURRENT_DATE"
+  -
+    name: "find_broken_links"
+    query: "SELECT run_id, notes FROM report.enhanced_runs WHERE LOCATE('link error', notes) > 0"
+python_tools:
+  -
+    id: "link_check_python_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "url_list"
+    outputs:
+      - "accessibility_report"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context): return {url: 'accessible' for url in context['inputs']['url_list']}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all report links are accessible."
+  - "Verify stock data presence in HTML files."
+  - "Assess integrity of today's analysis metadata."
+synthesis_guidance: "['Correlate findings with institutional insights.', 'Highlight critical data link failures.', 'Propose targeted remediation actions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:59"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.locate is not approved"

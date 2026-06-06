@@ -1,0 +1,57 @@
+id: "market_3m_rotation_swing_1261_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1261"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: post results; response style: ranked candidates."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "post_results"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze last 3 months market trends and identify sector leaders based on stage analysis."
+sql_templates:
+  latest_index_returns: "SELECT trade_date, index_symbol, close FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY trade_date DESC;"
+  stage_distribution_change: "SELECT snapshot_date, stage, COUNT(*) FROM scores.stage_snapshots WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '3 months') GROUP BY snapshot_date, stage ORDER BY snapshot_date DESC;"
+  leading_sectors: "SELECT sector, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY sector ORDER BY count DESC LIMIT 5;"
+  primary_candidates: "SELECT symbol, price, change_1w_pct, change_1m_pct FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY vcp_score DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure as_of_date is the latest data date available."
+  - "Check if index_returns list is non-empty and correctly ordered."
+  - "Confirm stage_distribution_change reflection aligns with historic snapshot dates."
+  - "Ensure leading_sectors includes acceptable sector names."
+  - "Primary candidates must be top-ranked VCP picks."
+synthesis_guidance: "['Provide analysis focused on recent data trends.', 'Highlight key sector rotation developments.', 'Focus on identifying stage 2 investment opportunities.', 'Ensure the narrative ties candidate selection to market data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:51"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

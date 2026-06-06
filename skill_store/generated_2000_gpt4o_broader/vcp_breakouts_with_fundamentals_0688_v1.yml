@@ -1,0 +1,61 @@
+id: "vcp_breakouts_with_fundamentals_0688_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0688"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: intraday context; response style: debug trace."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  required_function: "run(context)"
+  language: "python"
+  mode: "read_only"
+  inputs:
+    - "context"
+  outputs:
+    - "result"
+  approved_tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+  code: "# Read-only Python code template for evidence gathering"
+sql_templates:
+  -
+    description: "Select VCP breakout stocks with strong fundamentals."
+    template: "SELECT s.symbol, s.company_name, s.sector, s.price, s.vcp_score, s.enhanced_fund_score\nFROM scores.stage2_vcp_picks s\nWHERE s.snapshot_date = CURRENT_DATE\nAND s.vcp_score > 75\nAND s.enhanced_fund_score > 80;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  -
+    id: "sql_validation"
+    description: "Ensure SQL uses only approved columns and functions."
+synthesis_guidance: "Generate insights on VCP breakouts with strong fundamentals for intraday context."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:33"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.s is not approved"

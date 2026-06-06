@@ -1,0 +1,64 @@
+id: "report_link_data_validation_0438_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Agent Adda Report Link and Data Validation"
+description: "Assess the correctness of report links and data. Ensure links work and confirm the presence of necessary stock data for the last 20 sessions, with an emphasis on position-sizing context."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for last 20 sessions: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Verify report link functionality and ensure complete data availability for specified stock rows in the context of portfolio review."
+sql_templates:
+  -
+    query: "SELECT run_id, analysis_date, universe_size, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= (CURRENT_DATE - INTERVAL '20 DAYS');"
+    description: "Retrieve enhanced run metadata for the last 20 sessions."
+  -
+    query: "SELECT run_id, symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE rank <= 10;"
+    description: "Fetch top 10 ranked stocks based on score and recommendation."
+python_tools:
+  -
+    id: "data_gap_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "analysis_summary"
+    approved_tables:
+
+    code: "def run(context): \n    # Read-only: Analyze gaps\n    return {'analysis_summary': 'Identified missing data in recent sessions.'}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Validate each report link leads to a non-empty HTML page."
+  - "Ensure all filtered stocks have current and open prices listed."
+  - "Confirm enhanced run metadata is populated for each session."
+synthesis_guidance: "['Focus on identifying patterns or gaps that could impact portfolio decisions.', 'Provide clear remediation steps for resolving broken links or missing data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:24"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

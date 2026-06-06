@@ -1,0 +1,69 @@
+id: "market_3m_rotation_swing_1485_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1485"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: intraday context; response style: portfolio-aware output."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "SELECT * FROM evidence_required.tables;"
+sql_templates:
+  -
+    template: "WITH latest_index AS (SELECT trade_date, index_symbol, close FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' AND trade_date = (SELECT MAX(trade_date) FROM market.index_eod)), latest_stocks AS (SELECT symbol, close, change_pct FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND series = 'EQ'), latest_stages AS (SELECT symbol, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2') SELECT i.trade_date, i.index_symbol, ls.symbol, ls.close, ls.change_pct, st.stage FROM latest_index i JOIN latest_stocks ls ON TRUE JOIN latest_stages st ON ls.symbol = st.symbol;"
+    description: "Get latest index and stock data intersected with Stage 2 stocks."
+python_tools:
+  -
+    id: "context_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "change_pct"
+      - "stage"
+    outputs:
+      - "ranking"
+      - "strategy_recommendation"
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context): return [{'symbol': x['symbol'], 'ranking': 'High', 'strategy_recommendation': 'Monitor closely'} for x in context if x['change_pct'] > 5 and x['stage'] == 'STAGE_2']"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all sectors present in the selected timeframe are analyzed."
+  - "Ensure performance metrics are calculated as per latest methodologies."
+synthesis_guidance: "['Frame the analysis in a risk-first manner, focusing on portfolio implications.', 'Use intraday context to highlight significant trends or shifts.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:38"
+generation_model: "gpt-4o"
+validation_errors:
+  - "context_analysis: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "context_analysis: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

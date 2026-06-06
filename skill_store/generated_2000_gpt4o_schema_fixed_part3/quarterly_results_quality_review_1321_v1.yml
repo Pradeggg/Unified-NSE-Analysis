@@ -1,0 +1,67 @@
+id: "quarterly_results_quality_review_1321_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1321"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: quick scan; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "quick scan for last 5 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as exceptions and gaps first"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "quick_scan"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Perform a quick scan on the latest quarterly results focusing on exceptions and gaps first."
+sql_templates:
+  -
+    description: "Fetch latest quarterly results and analysis with quality indicators for a quick scan."
+    template: "WITH latest_results AS (\n    SELECT DISTINCT ON (symbol) \n        symbol, period_end, period_label, revenue, pat\n    FROM scores.quarterly_results\n    WHERE period_type = 'quarter'\n    ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC\n), latest_analysis AS (\n    SELECT DISTINCT ON (symbol) \n        symbol, period_end, period_label, verdict, key_risks\n    FROM scores.results_analysis\n    ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC\n)\nSELECT lr.symbol, lr.period_label, lr.revenue, lr.pat, la.verdict, la.key_risks\nFROM latest_results lr\nJOIN latest_analysis la ON lr.symbol = la.symbol AND lr.period_end = la.period_end\nORDER BY la.verdict DESC\nLIMIT 10;"
+python_tools:
+  -
+    id: "calculate_growth"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "revenue_current"
+      - "revenue_previous"
+      - "pat_current"
+      - "pat_previous"
+    outputs:
+      - "growth_revenue_pct"
+      - "growth_pat_pct"
+    approved_tables:
+      - "scores.quarterly_results"
+    code: "def run(context):\n    revenue_current = context['revenue_current']\n    revenue_previous = context['revenue_previous']\n    pat_current = context['pat_current']\n    pat_previous = context['pat_previous']\n    growth_revenue_pct = ((revenue_current - revenue_previous) / revenue_previous) * 100\n    growth_pat_pct = ((pat_current - pat_previous) / pat_previous) * 100\n    return {\n        'growth_revenue_pct': growth_revenue_pct,\n        'growth_pat_pct': growth_pat_pct\n    }"
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure the output contains structured data on result beat, miss, and exceptions."
+  - "Verify that revenue and PAT indicators are accurate and recent."
+synthesis_guidance: "Prioritize highlighting companies with exceptional or gap-filled results, focusing on key drivers of performance or lack thereof."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:30"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_growth: execution failed: KeyError: 'revenue_current'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_growth: execution failed: KeyError: 'revenue_current'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

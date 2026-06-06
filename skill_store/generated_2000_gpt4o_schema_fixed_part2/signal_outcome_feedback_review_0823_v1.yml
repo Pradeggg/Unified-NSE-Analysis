@@ -1,0 +1,54 @@
+id: "signal_outcome_feedback_review_0823_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0823"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for last 5 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as action watchlist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Review signals issued in the last 5 sessions and determine the outcome based on targets hit or stop loss triggered."
+  - "Summarize the results focusing on winner patterns, failure patterns, and potential route improvements."
+sql_templates:
+  -
+    template: "WITH latest_signals AS (SELECT * FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '5 days') SELECT symbol, signal, price_at_issue, target_1, stop_loss, date_resolved, price_at_resolution, hit_target, hit_stop FROM latest_signals WHERE date_resolved IS NOT NULL LIMIT 50;"
+  -
+    template: "SELECT ss.symbol, ss.company_name, ss.sector, ss.stage, ss.stage_score, ss.trading_signal, eod.close, eod.change_pct FROM scores.stage_snapshots ss JOIN market.equity_eod eod ON ss.symbol = eod.symbol WHERE eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.symbol IN (SELECT symbol FROM latest_signals) LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure the output contains a summary of outcomes for the last 5 sessions focusing on results versus targets and stops."
+synthesis_guidance: "['Analyze outcomes to identify successful signals and those that failed, offering insights into enhancements for future signal generation and execution routes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:12"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

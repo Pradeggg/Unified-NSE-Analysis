@@ -1,0 +1,55 @@
+id: "report_link_data_validation_0516_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0516"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: latest EOD; response style: research-only summary."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for latest EOD: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "latest_EOD"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Research-only style assessment focused on identifying missing or outdated data in the latest EOD reports."
+sql_templates:
+  -
+    name: "FetchLatestRunDetails"
+    description: "Retrieve details of the latest enhanced report run."
+    sql: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 1;"
+  -
+    name: "FetchFilteredStocksForLatestRun"
+    description: "Retrieve filtered stocks for the latest report run."
+    sql: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = (SELECT run_id FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 1);"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure data freshness by checking the latest EOD reports."
+  - "Verify all generated report links are working and contain valid data."
+synthesis_guidance: "Compile findings into a research-focused summary, highlighting key issues with data timeliness and completeness."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:48:43"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

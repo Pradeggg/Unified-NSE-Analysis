@@ -1,0 +1,57 @@
+id: "vcp_breakouts_with_fundamentals_0802_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0802"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze stocks using the given evidence tables to identify VCP breakouts and quality fundamentals."
+sql_templates:
+  -
+    template: "SELECT e.symbol, e.close, e.volume, s.fundamental_score, s.enhanced_fund_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date = CURRENT_DATE AND (s.vcp_score > 80 OR e.close = e.week52_high) AND s.enhanced_fund_score > 70 ORDER BY s.fundamental_score DESC;"
+    description: "Identify high-quality breakout stocks using fundamentals."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure that the stocks selected have a strong fundamental score."
+  - "Validate whether the identified stocks have reached a new 52-week high or are confirmed VCP breakout candidates."
+synthesis_guidance: "Focus on stocks demonstrating both technical breakouts and strong fundamentals to compile a robust action watchlist. Highlight potential risks based on current market conditions."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:51:40"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.vcp_score is not approved"
+  - "unknown table e.close"
+  - "unknown table e.symbol"
+  - "unknown table e.trade_date"
+  - "unknown table e.volume"
+  - "unknown table e.week52_high"
+  - "unknown table s.enhanced_fund_score"
+  - "unknown table s.fundamental_score"
+  - "unknown table s.symbol"
+  - "unknown table s.vcp_score"

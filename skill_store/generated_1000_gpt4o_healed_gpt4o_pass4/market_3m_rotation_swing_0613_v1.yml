@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:50:02"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: latest EOD; response style: debug trace."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0613_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  index_returns:
+    mode: "read-only"
+    template: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months' ORDER BY trade_date DESC;"
+  stage_distribution_change:
+    mode: "read-only"
+    template: "SELECT snapshot_date, stage, COUNT(symbol) as count FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY snapshot_date, stage;"
+status: "validated"
+synthesis_guidance: "Correlate index performance with stage transitions to identify leading sectors and potential swing candidates."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "latest_EOD"
+  - "debug_trace"
+title: "3M Market Rotation Swing Assessment Variant 0613"
+tool_plan_template: "Assess market swings and identify leading sectors and candidates."
+validation_rules:
+  - "Ensure data is within the latest 3 months."
+  - "Check for sector consistency across sources."
+version: 1

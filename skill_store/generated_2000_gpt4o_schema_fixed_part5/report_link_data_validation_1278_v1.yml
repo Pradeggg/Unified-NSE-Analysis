@@ -1,0 +1,46 @@
+id: "report_link_data_validation_1278_v1"
+version: 1
+status: "review_pending"
+domain: "market_analysis"
+title: "Enhanced Report Data Validation"
+description: "Validate the integrity of enhanced market analysis reports with a focus on pre-market position-sizing context."
+input_patterns:
+  - "Review report links not working"
+  - "Validate generated report links and missing data"
+  - "Position-sizing context for pre market"
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "position-sizing_context"
+  - "pre_market"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+
+sql_templates:
+  -
+    purpose: "Identify broken report links and missing data"
+    template: "SELECT r.run_id, r.market_sentiment, s.symbol, s.rank FROM report.enhanced_runs r INNER JOIN report.enhanced_filtered_stocks s ON r.run_id = s.run_id WHERE r.stocks_filtered = 0 OR s.current_price IS NULL ORDER BY s.rank LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure SQL templates use only authorized tables and columns."
+  - "Verify that all recommendations are ranked appropriately."
+synthesis_guidance: "['Focus on data presence and report link functionality.', 'Provide insights based on missing or incomplete report data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:13"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

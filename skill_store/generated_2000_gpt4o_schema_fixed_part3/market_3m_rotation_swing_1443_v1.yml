@@ -1,0 +1,53 @@
+id: "market_3m_rotation_swing_1443_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1443"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze latest market and equity data, identify recent sector leadership shifts, assess Stage 2 candidates, and highlight potential swing trades along with associated risks."
+sql_templates:
+  - "WITH latest_index AS ( SELECT * FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) ), latest_equity AS ( SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) ), latest_stage_snapshots AS ( SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ), latest_stage2_vcp AS ( SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ) SELECT i.index_symbol, i.change_pct AS index_returns, s.sector, COUNT(s.symbol) AS stage_distribution_change, (SELECT sector FROM latest_stage_snapshots WHERE stage = 'STAGE_2' GROUP BY sector ORDER BY COUNT(symbol) DESC LIMIT 1) AS leading_sectors, ARRAY(SELECT symbol FROM latest_stage2_vcp ORDER BY vcp_score DESC LIMIT 5) AS primary_candidates FROM latest_index AS i JOIN latest_stage_snapshots AS s ON i.index_symbol = s.symbol GROUP BY i.index_symbol, s.sector;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Check that index returns are not null."
+  - "Ensure that stage distribution change is positive."
+  - "Verify that leading sectors are listed correctly."
+  - "Primary candidates should have valid symbols."
+synthesis_guidance: "['Summarize changes in sector leadership and stage distribution.', 'Highlight top Stage 2 candidates based on VCP scoring.', 'Discuss potential risks based on index and equity movements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:57"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

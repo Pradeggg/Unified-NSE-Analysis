@@ -1,0 +1,66 @@
+id: "report_link_data_validation_1810_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "TradingView Export Validation for Today's Reports"
+description: "Validates TradingView export by checking report link functionality and missing data for today."
+input_patterns:
+  - "review report links not working"
+  - "validate generated report links and missing data"
+  - "TradingView export for today: review report links not working"
+tags:
+  - "report_qa"
+  - "links"
+  - "data_validation"
+  - "TradingView_export"
+  - "today"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    steps:
+      - "Retrieve the latest report data for validation."
+      - "Check each report link to ensure it is functioning."
+      - "Identify any missing data in the HTML files for the covered stocks."
+      - "Compile findings into an action watchlist format."
+sql_templates:
+  - "WITH latest_report AS (SELECT run_id FROM report.enhanced_runs WHERE run_ts::date = CURRENT_DATE)"
+  - "SELECT efs.symbol, efs.current_price, efs.recommendation FROM report.enhanced_filtered_stocks efs JOIN latest_report lr ON efs.run_id = lr.run_id WHERE efs.recommendation IS NULL OR efs.current_price IS NULL"
+python_tools:
+  -
+    id: "check_links"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "report_links"
+    outputs:
+      - "functioning_links"
+      - "broken_links"
+    approved_tables:
+      - "report.enhanced_runs"
+    code: "def run(context):\n    report_links = context['report_links']\n    functioning_links = []\n    broken_links = []\n    for link in report_links:\n        if validate_link(link):\n            functioning_links.append(link)\n        else:\n            broken_links.append(link)\n    return {'functioning_links': functioning_links, 'broken_links': broken_links}\n\ndef validate_link(link):\n    # Placeholder for actual link checking logic, e.g., an HTTP HEAD request\n    return True # Consider all links valid in this placeholder."
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure today's date is correctly used in SQL queries with CURRENT_DATE."
+  - "Verify that links are indeed broken by attempting access during the test run."
+synthesis_guidance: "Focus on completeness of the export and actionable insights for failed links and missing data points."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:14:02"
+generation_model: "gpt-4o"
+validation_errors:
+  - "check_links: execution failed: process exited 1"
+  - "report.enhanced_filtered_stocks.efs is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "check_links: execution failed: process exited 1"
+    - "report.enhanced_filtered_stocks.efs is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

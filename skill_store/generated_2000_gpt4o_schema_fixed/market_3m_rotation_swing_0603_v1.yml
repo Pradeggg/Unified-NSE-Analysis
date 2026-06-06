@@ -1,0 +1,55 @@
+id: "market_3m_rotation_swing_0603_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0603"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: today; response style: debug trace."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze market regime and sector leadership over the last three months. Identify liquid swing candidates with a focus on Stage 2 stocks."
+sql_templates:
+  index_returns: "SELECT trade_date, index_symbol, close FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY trade_date DESC;"
+  stage_distribution_change: "SELECT snapshot_date, stage, COUNT(*) FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY snapshot_date, stage ORDER BY snapshot_date DESC;"
+  leading_sectors: "SELECT sector, COUNT(DISTINCT symbol) FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector ORDER BY COUNT(DISTINCT symbol) DESC LIMIT 5;"
+  primary_candidates: "SELECT vcp.symbol, vcp.company_name FROM scores.stage2_vcp_picks vcp WHERE vcp.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp.vcp_score DESC, vcp.rank ASC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure index returns cover the full date range."
+  - "Limit sector count to top performers only."
+  - "Verify alignment of snapshot dates for accuracy."
+synthesis_guidance: "['Combine index return insights with sector leadership to contextualize market regime.', 'Highlight swing candidates based on Stage 2 and VCP scores.', 'Evaluate risks with respect to market volatility signals.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:26:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

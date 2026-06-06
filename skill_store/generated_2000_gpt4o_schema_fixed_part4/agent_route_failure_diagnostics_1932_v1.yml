@@ -1,0 +1,72 @@
+id: "agent_route_failure_diagnostics_1932_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1932"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as comparison matrix"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+sql_templates:
+  -
+    description: "Select latest sessions and analyze route diagnostics"
+    select_template: "WITH latest_stage_data AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), enhanced_run_data AS (SELECT r.run_id, r.run_ts, r.stocks_analyzed, e.symbol, e.recommendation FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks e ON r.run_id = e.run_id WHERE r.run_ts >= CURRENT_DATE - INTERVAL '3 months') SELECT e.symbol, COUNT(e.recommendation) AS recommendation_count FROM enhanced_run_data e JOIN latest_stage_data s ON e.symbol = s.symbol GROUP BY e.symbol;"
+python_tools:
+  -
+    id: "symbol_resolution_checker"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      symbols: "List of symbols from enhanced_run_data"
+    outputs:
+      resolution_status: "Resolution status for each symbol"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    symbols = context['inputs']['symbols']\n    # Perform resolution checks\n    resolution_status = {symbol: 'resolved' for symbol in symbols}  # Example logic\n    return {'resolution_status': resolution_status}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure evidence aligns with the last 20 sessions."
+  - "Validate symbol resolution processes."
+synthesis_guidance: "['Format results in a comparison matrix.', 'Focus on identifying missing tools and symbol resolution issues.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:51"
+generation_model: "gpt-4o"
+validation_errors:
+  - "symbol_resolution_checker: inputs must be a list"
+  - "symbol_resolution_checker: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "symbol_resolution_checker: inputs must be a list"
+    - "symbol_resolution_checker: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

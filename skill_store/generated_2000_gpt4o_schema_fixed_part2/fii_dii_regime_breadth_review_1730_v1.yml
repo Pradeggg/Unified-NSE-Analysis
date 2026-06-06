@@ -1,0 +1,63 @@
+id: "fii_dii_regime_breadth_review_1730_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1730"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for last 5 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  input_concepts:
+    - "market regime"
+    - "FII DII flows"
+    - "breadth"
+    - "index confirmation"
+  transformation_steps:
+    - "Join tables on trade_date for same-day context"
+    - "Filter data for the last 5 sessions"
+    - "Analyze flows, breadths, regimes, and index actions"
+  framing: "Using provided data, interpret the FII/DII flows, market regime, breadth, and index confirmation to determine if the market is in a risk-on or risk-off state."
+sql_templates:
+  -
+    type: "SELECT"
+    template: "WITH recent_flows AS (SELECT trade_date, fii_net_5d, dii_net_5d FROM signals.fii_dii_flows ORDER BY trade_date DESC LIMIT 5), recent_regimes AS (SELECT trade_date, regime FROM signals.regime_history ORDER BY trade_date DESC LIMIT 5), recent_breadth AS (SELECT trade_date, net_ad, ad_signal FROM breadth.market_daily ORDER BY trade_date DESC LIMIT 5), recent_index AS (SELECT trade_date, close, change_pct FROM market.index_eod WHERE index_symbol = 'Nifty 50' ORDER BY trade_date DESC LIMIT 5) SELECT rf.trade_date, rf.fii_net_5d, rf.dii_net_5d, rr.regime, rb.net_ad, rb.ad_signal, ri.close, ri.change_pct FROM recent_flows rf JOIN recent_regimes rr ON rf.trade_date = rr.trade_date JOIN recent_breadth rb ON rf.trade_date = rb.trade_date JOIN recent_index ri ON rf.trade_date = ri.trade_date;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all concepts are covered within the provided timeframe."
+  - "Check data integrity after joins."
+  - "Confirm calculation logic in the final output."
+synthesis_guidance: "['Interpret the quantitative data qualitatively.', 'Ensure explanations align with Indian market context.', 'Use QA checklist style for the final response.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:28"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

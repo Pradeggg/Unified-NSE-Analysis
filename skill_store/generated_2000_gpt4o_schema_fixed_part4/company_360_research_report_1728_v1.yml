@@ -1,0 +1,96 @@
+id: "company_360_research_report_1728_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Agent Adda Skill Card: Comprehensive Research on Reliance Industries"
+description: "Generate a comprehensive research report for Reliance Industries, encompassing company overview, financials, technical context, and narrative insights for position-sizing decisions."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "position-sizing context for last 5 sessions: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as QA checklist"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "scores.quarterly_results"
+      - "market.equity_eod"
+    plan: "1. Retrieve the latest stage snapshot for Reliance Industries.\n2. Gather quarterly and annual financial results for fundamental analysis.\n3. Extract technical indicators from EOD data for the last 5 sessions.\n4. Synthesize findings into a QA-style checklist for position-sizing."
+sql_templates:
+  -
+    name: "latest_stage_snapshot"
+    query: "SELECT * FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    name: "latest_quarterly_financials"
+    query: "SELECT DISTINCT ON (symbol) * FROM scores.quarterly_results WHERE symbol = 'RELIANCE' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC LIMIT 1;"
+  -
+    name: "recent_eod_technical"
+    query: "SELECT * FROM market.equity_eod WHERE symbol = 'RELIANCE' AND series = 'EQ' ORDER BY trade_date DESC LIMIT 5;"
+python_tools:
+  -
+    complementary_analysis:
+      id: "complementary_analysis_tool"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "financial_data"
+        - "technical_indicators"
+      outputs:
+        - "integrated_analysis"
+      approved_tables:
+        - "scores.stage_snapshots"
+        - "scores.quarterly_results"
+        - "market.equity_eod"
+      code: "def run(context):\n    # Analyze financial and technical context\n    financial_data = context['financial_data']\n    technical_indicators = context['technical_indicators']\n    # Synthesize into a meaningful report\n    integrated_analysis = {}  # Synthesize the insights\n    return integrated_analysis"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure SQL queries return expected columns based on schema."
+  - "Validate the presence of stage score, technical score, and financial metrics in the result set."
+  - "Check the output contract for completeness and accuracy against input patterns."
+synthesis_guidance: "['Integrate financial results with narratives for a coherent report.', 'Align technical insights with fundamental data to provide actionable position-sizing context.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:38"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: language must be python"
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: code is required"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: language must be python"
+    - "<missing-id>: mode must be read_only"
+    - "<missing-id>: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

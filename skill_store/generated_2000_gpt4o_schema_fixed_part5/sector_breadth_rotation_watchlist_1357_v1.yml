@@ -1,0 +1,59 @@
+id: "sector_breadth_rotation_watchlist_1357_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1357"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for quarter to date: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as exceptions and gaps first"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Use available tables to identify and rank sectors improving in breadth and stage 2 participation, finding candidate symbols for TradingView."
+sql_templates:
+  -
+    description: "Fetch latest sector breadth data with Stage 2 participation."
+    template: "SELECT sd.sector, sd.breadth_signal, ma.stage2_pct \nFROM breadth.sector_daily sd \nJOIN breadth.ma_pct_above ma ON sd.snapshot_date = ma.snapshot_date \nWHERE sd.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)\nORDER BY ma.stage2_pct DESC LIMIT 10;"
+  -
+    description: "Identify symbols in improving sectors with strong buy signals."
+    template: "SELECT ss.symbol, ss.company_name, ss.trading_signal \nFROM scores.stage_snapshots ss \nJOIN breadth.sector_daily sd ON ss.sector = sd.sector \nWHERE sd.breadth_signal = 'IMPROVING' \nAND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nAND ss.trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all SQL uses approved tables and follow join rules."
+  - "Limit result sets to prevent excessive data retrieval."
+  - "Stage values should match predefined labels."
+synthesis_guidance: "['Display sectors ordered by improvement and stage 2 participation.', 'Highlight candidate symbols with strong trading signals.', 'Provide insights on overall market sector trends.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,67 @@
+id: "portfolio_lab_paper_trading_review_1818_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Agent Adda Skill Card: Portfolio Review with Latest EOD Analysis"
+description: "Analyzes paper trading strategies with a focus on position sizing and latest EOD context. Generates watchlist actions for Indian market strategies."
+input_patterns:
+  - "paper trading portfolio strategy EOD watchlist"
+  - "review position-sizing in paper trading strategy"
+  - "latest EOD context for paper trading review"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "EOD_analysis"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Analyze current portfolio standings and strategy entries/exits using the latest EOD data."
+  - "Generate position-sizing context specific to the Indian market for paper trading review."
+sql_templates:
+  -
+    template_name: "latest_eod_data_query"
+    sql: "SELECT eod.symbol, eod.close, eod.volume, stage_snapshot.stage, stage_snapshot.technical_score FROM market.equity_eod AS eod JOIN scores.stage_snapshots AS stage_snapshot ON eod.symbol = stage_snapshot.symbol WHERE eod.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND stage_snapshot.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 100"
+  -
+    template_name: "portfolio_strategy_analysis"
+    sql: "SELECT holdings.symbol, holdings.qty, signal_log.signal, signal_log.entry_low, signal_log.entry_high, signal_log.stop_loss, signal_log.target_1 FROM portfolio.holdings AS holdings JOIN signals.signal_log ON holdings.symbol = signals.signal_log.symbol WHERE signal_log.date_issued > CURRENT_DATE - INTERVAL '1 month'"
+python_tools:
+  -
+    id: "calculate_risk_exposure"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "portfolio_holdings"
+      - "market_data"
+    outputs:
+      - "exposure_analysis"
+    approved_tables:
+      - "portfolio.holdings"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Calculate exposure based on current holdings and market data\n    pass"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all symbols in output are valid NSE symbols."
+  - "Verify that the latest EOD data is used in analysis."
+synthesis_guidance: "['For analysis synthesis, emphasize market conditions affecting the strategy outcomes for the paper trading scenario.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:08"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_risk_exposure: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_risk_exposure: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

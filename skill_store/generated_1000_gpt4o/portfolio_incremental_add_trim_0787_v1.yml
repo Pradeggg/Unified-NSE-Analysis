@@ -1,0 +1,72 @@
+id: "portfolio_incremental_add_trim_0787_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0787"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: intraday context; response style: QA checklist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for intraday context: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "intraday_context"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Review portfolio holdings against sector performance using approved data sources."
+sql_templates:
+  portfolio_state: "SELECT ph.symbol, ph.qty, ph.avg_cost, ss.price, ss.change_1d_pct, ss.relative_strength, ss.stage_score FROM portfolio.holdings ph JOIN scores.stage_snapshots ss ON ph.symbol = ss.symbol WHERE ss.snapshot_date = CURRENT_DATE;"
+  sector_exposure: "SELECT ss.sector, SUM(ph.qty * ss.price) AS total_value FROM portfolio.holdings ph JOIN scores.stage_snapshots ss ON ph.symbol = ss.symbol WHERE ss.snapshot_date = CURRENT_DATE GROUP BY ss.sector;"
+  add_candidates: "SELECT ph.symbol FROM portfolio.holdings ph JOIN scores.stage_snapshots ss ON ph.symbol = ss.symbol WHERE ss.snapshot_date = CURRENT_DATE AND ss.stage = '2' AND ss.trend_signal = 'buy';"
+  trim_candidates: "SELECT ph.symbol FROM portfolio.holdings ph JOIN scores.stage_snapshots ss ON ph.symbol = ss.symbol WHERE ss.snapshot_date = CURRENT_DATE AND ss.stage = '4' AND ss.trend_signal = 'sell';"
+  risk_flags: "SELECT ph.symbol, ss.market_cap_cat FROM portfolio.holdings ph JOIN scores.stage_snapshots ss ON ph.symbol = ss.symbol WHERE ss.snapshot_date = CURRENT_DATE AND ss.change_1d_pct < -2;"
+python_tools:
+  -
+    id: "evaluate_exposure_risk"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "portfolio_state"
+      - "sector_exposure"
+    outputs:
+      - "risk_evaluation"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    # Analyze risk based on exposure and provide evaluations\n    return {}"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all SQL views are read-only."
+  - "Validate data mappings conform to approved schema."
+synthesis_guidance: "Provide analysis focused on sector-relative comparisons with a checklist approach."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:51:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table ph.avg_cost"
+  - "unknown table ph.qty"
+  - "unknown table ph.symbol"
+  - "unknown table ss.change_1d_pct"
+  - "unknown table ss.market_cap_cat"
+  - "unknown table ss.price"
+  - "unknown table ss.relative_strength"
+  - "unknown table ss.sector"
+  - "unknown table ss.snapshot_date"
+  - "unknown table ss.stage"
+  - "unknown table ss.stage_score"
+  - "unknown table ss.symbol"
+  - "unknown table ss.trend_signal"

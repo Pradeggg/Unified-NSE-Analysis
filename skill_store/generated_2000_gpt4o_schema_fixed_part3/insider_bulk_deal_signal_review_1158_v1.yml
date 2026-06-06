@@ -1,0 +1,50 @@
+id: "insider_bulk_deal_signal_review_1158_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1158"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: quarter to date; response style: narrative plus evidence."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for quarter to date: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as narrative plus evidence"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+tool_plan_template: "Review the insights from insider alerts and bulk/block deals with a focus on position-sizing context. Analyze the timeframe for quarter to date. Combine technical confirmations to enhance understanding."
+sql_templates:
+  insider_alerts_query: "SELECT INSIDE.id, INSIDE.alert_date, INSIDE.symbol, INSIDE.alert_type, INSIDE.entity, INSIDE.qty, INSIDE.value_cr, STAGE.stage, STAGE.trading_signal FROM signals.insider_alerts INSIDE JOIN scores.stage_snapshots STAGE ON INSIDE.symbol = STAGE.symbol WHERE STAGE.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND STAGE.trading_signal IN ('BUY', 'STRONG_BUY');"
+  bulk_block_deals_query: "SELECT DEALS.id, DEALS.deal_date, DEALS.symbol, DEALS.side, DEALS.qty, DEALS.price, DEALS.deal_type, STAGE.stage, STAGE.trading_signal FROM signals.bulk_block_deals DEALS JOIN scores.stage_snapshots STAGE ON DEALS.symbol = STAGE.symbol WHERE STAGE.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND STAGE.trading_signal IN ('BUY', 'STRONG_BUY');"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all evidence is derived from approved schema tables."
+  - "Validate SQL syntax adheres to global rules and join rules."
+synthesis_guidance: "['Frame the analysis in terms of accumulation or distribution trends observed from insider and bulk deals.', 'Use technical confirmation as a key decision-making factor.', 'Narrate findings with context on position-sizing and potential market implications.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:56:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

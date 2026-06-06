@@ -1,0 +1,58 @@
+id: "portfolio_lab_paper_trading_review_0824_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0824"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: last 5 sessions; response style: action watchlist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for last 5 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as action watchlist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "last_5_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  context: "Retrieve and analyze paper trading strategy details while keeping them separate from actual holdings."
+  steps:
+    - "Identify relevant signals for paper trading over the last 5 sessions."
+    - "Generate a structured action watchlist based on trading signals, considering entries, exits, stops, targets, and exposure."
+    - "Ensure results focus exclusively on paper trading without mingling with actual holdings."
+sql_templates:
+  -
+    template: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), recent_signals AS (SELECT * FROM signals.signal_log WHERE date_issued >= (CURRENT_DATE - INTERVAL '5 days')) SELECT rs.symbol, rs.signal, rs.price_at_issue, ss.stage, ss.trading_signal FROM recent_signals rs JOIN latest_snapshots ss ON rs.symbol = ss.symbol WHERE ss.trading_signal IN ('BUY', 'STRONG_BUY');"
+    description: "Fetch recent trading signals and context from the last 5 sessions, focusing on strong buy signals."
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure results are solely derived from recent signals in paper trading context."
+  - "Verify that stage and trading signals are relevant and up-to-date."
+synthesis_guidance: "['For synthesizing results, emphasize actionable insights based on the latest trading signals and stage context.', 'Provide a clear differentiation between paper trading strategies and real holdings.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:11"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

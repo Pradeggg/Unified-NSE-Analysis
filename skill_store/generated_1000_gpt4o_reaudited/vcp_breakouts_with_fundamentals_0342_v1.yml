@@ -1,0 +1,60 @@
+created_at: "2026-06-06T12:45:44"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 3 months; response style: exceptions and gaps first."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0342_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Retrieve stocks showing VCP breakout with strong fundamentals in the last 3 months."
+    template: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months') SELECT s.symbol, s.company_name, s.sector, s.stage_score, s.minervini_score, s.enhanced_fund_score FROM latest_snapshots s JOIN scores.stage2_vcp_picks v ON s.symbol = v.symbol WHERE v.vcp_breakout_pct > 0.1 AND v.enhanced_fund_score > 80;"
+status: "validated"
+synthesis_guidance: "Focus on identifying stocks with the strongest breakout signals and exceptional fundamental support, highlighting exceptions and evidence gaps."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+title: "VCP Breakouts With Fundamentals Variant 0342"
+tool_plan_template:
+  steps:
+    -
+      action: "Run SQL to gather potential candidates from approved tables."
+      description: "Select stocks with VCP patterns and strong fundamentals."
+    -
+      action: "Refine selection using snapshot scores and EOD data."
+      description: "Filter candidates based on recent performance and fundamentals."
+validation_rules:
+  - "Ensure the symbols align with approved equity symbols."
+  - "Confirm fundamental scores are above threshold."
+  - "Check for the presence of VCP patterns."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

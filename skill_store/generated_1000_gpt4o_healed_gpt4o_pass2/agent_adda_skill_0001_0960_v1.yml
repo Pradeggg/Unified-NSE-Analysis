@@ -1,0 +1,77 @@
+created_at: "2026-06-06T12:53:04"
+created_by: "llm_generated"
+description: "Skill to validate report links and analyze missing data for TradingView export during the quarter to date period."
+domain: "report_qa"
+evidence_required:
+  tables:
+    -
+      columns:
+        - "run_id"
+        - "rank"
+        - "symbol"
+        - "score"
+        - "recommendation"
+        - "current_price"
+        - "open_price"
+        - "high_price"
+        - "low_price"
+        - "volume"
+        - "trading_value_cr"
+        - "weekly_signal"
+        - "daily_signal"
+        - "day_change_pct"
+        - "rsi"
+        - "above_50dma"
+        - "above_200dma"
+        - "tech_score"
+        - "fund_score"
+        - "rs_score"
+        - "macd_signal"
+        - "week52_position"
+        - "volume_ratio"
+        - "rs_vs_nifty500"
+      table_name: "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_0001_0960_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for quarter to date: review report links not working"
+  - "validate generated report links and missing data as comparison matrix"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+review:
+  attempts: 3
+  findings:
+    - "unknown table {'columns': ['run_id', 'rank', 'symbol', 'score', 'recommendation', 'current_price', 'open_price', 'high_price', 'low_price', 'volume', 'trading_value_cr', 'weekly_signal', 'daily_signal', 'day_change_pct', 'rsi', 'above_50dma', 'above_200dma', 'tech_score', 'fund_score', 'rs_score', 'macd_signal', 'week52_position', 'volume_ratio', 'rs_vs_nifty500'], 'table_name': 'report.enhanced_filtered_stocks'}"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    query: "SELECT run_id, rank, symbol, score, recommendation, current_price, open_price, high_price, low_price, volume, trading_value_cr, weekly_signal, daily_signal, day_change_pct, rsi, above_50dma, above_200dma, tech_score, fund_score, rs_score, macd_signal, week52_position, volume_ratio, rs_vs_nifty500 FROM report.enhanced_filtered_stocks;"
+    template_name: "filtered_stocks_data"
+status: "test_failed"
+synthesis_guidance: "Review findings to ensure accurate and complete data in reports. Report major data gaps and suggest areas for improvement."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "comparison_matrix"
+title: "Validate and Analyze Report Links"
+tool_plan_template: "Analyze report links and stock data to identify broken links and missing data."
+validation_errors:
+  - "unknown table {'columns': ['run_id', 'rank', 'symbol', 'score', 'recommendation', 'current_price', 'open_price', 'high_price', 'low_price', 'volume', 'trading_value_cr', 'weekly_signal', 'daily_signal', 'day_change_pct', 'rsi', 'above_50dma', 'above_200dma', 'tech_score', 'fund_score', 'rs_score', 'macd_signal', 'week52_position', 'volume_ratio', 'rs_vs_nifty500'], 'table_name': 'report.enhanced_filtered_stocks'}"
+validation_rules:
+  - "All linked reports should return valid data."
+  - "No stock symbols should consistently lack data."
+version: 1

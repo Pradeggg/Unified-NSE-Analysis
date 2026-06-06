@@ -1,0 +1,53 @@
+id: "report_link_data_validation_0760_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Report Link Data Validation"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Focus on TradingView export and quarter-to-date timeframe."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for quarter to date: review report links not working"
+  - "validate generated report links and missing data as QA checklist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Execute TradingView export validation for quarter-to-date reports."
+sql_templates:
+  -
+    description: "Fetch run metadata for the latest quarter-to-date report."
+    template: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed, stocks_filtered, indices_analyzed FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '3 months' ORDER BY run_ts DESC;"
+  -
+    description: "Verify filtered stock data for the latest quarter-to-date report."
+    template: "SELECT efs.run_id, efs.symbol, efs.rank, efs.score FROM report.enhanced_filtered_stocks efs JOIN report.enhanced_runs er ON efs.run_id = er.run_id WHERE er.run_ts > CURRENT_DATE - INTERVAL '3 months' ORDER BY efs.score DESC;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure links are valid and data completeness is verified."
+  - "Cross-check against TradingView export guidelines and quarter-to-date timeframe. Verify synchronization with metadata."
+synthesis_guidance: "Provide QA checklist and remedial actions for any discrepancies. Align output with Indian market standards."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:17"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

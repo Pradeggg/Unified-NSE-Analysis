@@ -1,0 +1,49 @@
+id: "signal_outcome_feedback_review_1271_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1271"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: quick scan; timeframe: pre market; response style: ranked candidates."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for pre market: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as ranked candidates"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review signal outcomes in the context of pre-market analysis and identify successful and unsuccessful patterns to guide future strategies."
+sql_templates:
+  -
+    name: "signal_outcome_evaluation"
+    query: "SELECT symbol, date_issued, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '7' DAY;"
+    description: "Fetches signals issued in the last 7 days along with their target and stop outcomes."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure that the data reflects outcomes within the pre-market review timeframe."
+  - "Prioritize clarity and ranking in presenting outcome patterns."
+synthesis_guidance: "Use SQL results to discern potential improvements in signal strategy. Aggregate data into meaningful insights that guide pre-market decisions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:23"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.day is not approved"

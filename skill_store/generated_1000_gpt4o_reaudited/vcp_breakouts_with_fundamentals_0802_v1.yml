@@ -1,0 +1,48 @@
+created_at: "2026-06-06T12:51:40"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: today; response style: action watchlist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0802_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Identify high-quality breakout stocks using fundamentals."
+    template: "SELECT e.symbol, e.close, e.volume, s.fundamental_score, s.enhanced_fund_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date = CURRENT_DATE AND (s.vcp_score > 80 OR e.close = e.week52_high) AND s.enhanced_fund_score > 70 ORDER BY s.fundamental_score DESC;"
+status: "test_failed"
+synthesis_guidance: "Focus on stocks demonstrating both technical breakouts and strong fundamentals to compile a robust action watchlist. Highlight potential risks based on current market conditions."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "today"
+  - "action_watchlist"
+title: "VCP Breakouts With Fundamentals Variant 0802"
+tool_plan_template: "Analyze stocks using the given evidence tables to identify VCP breakouts and quality fundamentals."
+validation_rules:
+  - "Ensure that the stocks selected have a strong fundamental score."
+  - "Validate whether the identified stocks have reached a new 52-week high or are confirmed VCP breakout candidates."
+version: 1
+validation_errors:
+  - "scores.stage_snapshots.vcp_score is not approved"

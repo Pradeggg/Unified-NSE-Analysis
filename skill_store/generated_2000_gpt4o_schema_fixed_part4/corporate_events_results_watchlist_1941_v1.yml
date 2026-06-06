@@ -1,0 +1,52 @@
+id: "corporate_events_results_watchlist_1941_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1941"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for last 3 months: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as comparison matrix"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  -
+    template: "WITH latest_stage AS (SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), recent_events AS (SELECT ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw FROM signals.corporate_events ce WHERE ce.event_date >= CURRENT_DATE - INTERVAL '3 months') SELECT re.symbol, re.event_type, re.event_date, ls.stage, ls.trading_signal FROM recent_events re JOIN latest_stage ls ON re.symbol = ls.symbol ORDER BY re.event_date DESC LIMIT 50;"
+    notes: "Fetch recent corporate events and their current stage information."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure compliance with PostgreSQL syntax for date filtering."
+  - "Constrain results with LIMIT for manageable output."
+synthesis_guidance: "['Use event-date ordering for comparison matrices.', 'Combine stage and trading signals for a comprehensive watchlist.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:56"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

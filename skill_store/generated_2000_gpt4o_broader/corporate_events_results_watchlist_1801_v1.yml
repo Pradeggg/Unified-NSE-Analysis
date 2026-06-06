@@ -1,0 +1,55 @@
+id: "corporate_events_results_watchlist_1801_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1801"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for today: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as action watchlist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  focus: "Research today's corporate events and results-related actions using provided evidence."
+sql_templates:
+  -
+    description: "Select upcoming or recent corporate events for watchlist construction."
+    query: "SELECT symbol, event_date, event_type, detail FROM signals.corporate_events WHERE event_date = CURRENT_DATE ORDER BY event_date;"
+  -
+    description: "Analyze recent quarterly results for key financial insights."
+    query: "SELECT symbol, company_name, growth_yoy_revenue_pct, growth_qoq_revenue_pct, eps_yoy_pct, filing_date FROM scores.results_analysis WHERE filing_date = CURRENT_DATE ORDER BY filing_date;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "SQL statements must be read-only and use approved columns only."
+  - "Output contract fields must cover event calendar, watchlist symbols, and analytical context."
+synthesis_guidance: "Combine SQL data with narrative insights for an actionable watchlist, focusing on today's context."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:11"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

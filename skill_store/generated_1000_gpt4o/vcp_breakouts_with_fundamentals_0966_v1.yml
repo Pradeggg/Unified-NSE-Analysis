@@ -1,0 +1,53 @@
+id: "vcp_breakouts_with_fundamentals_0966_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0966"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: post results; response style: comparison matrix."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "post_results"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Extract stocks with high VCP scores and good fundamentals from the market data tables."
+sql_templates:
+  -
+    name: "fetch_vcp_breakouts"
+    query: "SELECT e.symbol, e.close, s.enhanced_fund_score, s.vcp_score FROM market.equity_eod e JOIN scores.stage2_vcp_picks s ON e.symbol = s.symbol WHERE e.trade_date = CURRENT_DATE AND s.vcp_score > 7 ORDER BY s.enhanced_fund_score DESC;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure SQL templates are read-only and valid."
+  - "Ensure output contract has all required fields."
+synthesis_guidance: "Use the highest scoring VCP stocks with strong fundamentals to create a comprehensive comparison matrix."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:53:15"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table e.close"
+  - "unknown table e.symbol"
+  - "unknown table e.trade_date"
+  - "unknown table s.enhanced_fund_score"
+  - "unknown table s.symbol"
+  - "unknown table s.vcp_score"

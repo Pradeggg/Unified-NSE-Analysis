@@ -1,0 +1,59 @@
+id: "sector_breadth_rotation_watchlist_0979_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0979"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: pre market; response style: comparison matrix."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for pre market: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as comparison matrix"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "pre_market"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  type: "comparison_matrix"
+  description: "Generate a sector-relative comparison matrix using sector breadth, stage participation, and price momentum."
+  context: "Pre market analysis in the Indian market."
+sql_templates:
+  sector_ranking:
+    sql: "WITH latest_breadth AS (SELECT snapshot_date, sector, pct_above_50dma, change_5d FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)), latest_stage AS (SELECT sector, AVG(stage2_pct) AS avg_stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.ma_pct_above) GROUP BY sector) SELECT lb.sector, lb.pct_above_50dma, lb.change_5d, ls.avg_stage2_pct FROM latest_breadth lb JOIN latest_stage ls ON lb.sector = ls.sector ORDER BY ls.avg_stage2_pct DESC, lb.pct_above_50dma DESC;"
+    description: "Rank sectors by breadth participation and Stage 2 percentage."
+  stage_2_candidates:
+    sql: "SELECT symbol, company_name, sector FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY relative_strength DESC LIMIT 50;"
+    description: "List top Stage 2 stock candidates with strong buy signals."
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "sector_ranks"
+  - "candidate_symbols"
+synthesis_guidance: "Combine sector rankings with top candidate symbols to suggest a diversified trading watchlist for pre-market assessments."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:58"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

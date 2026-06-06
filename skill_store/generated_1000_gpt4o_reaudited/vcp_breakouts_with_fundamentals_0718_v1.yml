@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:50:56"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: latest EOD; response style: QA checklist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0718_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as QA checklist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+
+status: "validated"
+synthesis_guidance: "{'strategy': 'Focus on identifying high-quality breakout stocks with strong fundamentals. Emphasize those showing VCP patterns and new highs. Ensure data is the latest available for accuracy in trading decisions.'}"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "QA_checklist"
+title: "VCP Breakouts With Fundamentals Variant 0718"
+tool_plan_template:
+  sql_templates:
+    -
+      description: "Select VCP breakout stocks with strong fundamentals."
+      name: "select_vcp_breakouts"
+      template: "WITH ranked_vcp AS (SELECT symbol, rank FROM scores.stage2_vcp_picks WHERE snapshot_date = :snapshot_date ORDER BY vcp_score DESC LIMIT 10)\nSELECT e.symbol, e.close, e.volume, s.fundamental_score \nFROM market.equity_eod e \nJOIN ranked_vcp r ON e.symbol = r.symbol \nJOIN scores.stage_snapshots s ON e.symbol = s.symbol \nWHERE e.trade_date = :trade_date AND s.fundamental_score > 85;"
+validation_rules:
+  - "must_include"
+  - "optional"
+  - "excluded"
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

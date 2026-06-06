@@ -1,0 +1,53 @@
+id: "vcp_breakouts_with_fundamentals_0814_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0814"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "Fetch VCP Breakout Candidates"
+    query: "WITH latest_eod AS (SELECT * FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)), latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_vcp AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)) SELECT e.symbol, e.high, e.close, s.company_name, s.market_cap_cat, s.stage_score, s.fundamental_score FROM latest_eod e JOIN latest_snapshots s ON e.symbol = s.symbol JOIN latest_vcp v ON e.symbol = v.symbol WHERE e.high > e.week52_high * 0.95 AND s.enhanced_fund_score > 70 ORDER BY v.vcp_score DESC, s.market_cap_cat DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure candidate stocks are creating new highs or VCP or breakouts with good fundamentals."
+  - "Validate that the fundamentals and technical scores align with the selection criteria."
+synthesis_guidance: "['Highlight industries or sectors with the most VCP candidates.', 'Discuss potential for movement based on RSI and relative strength indicators.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:13"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

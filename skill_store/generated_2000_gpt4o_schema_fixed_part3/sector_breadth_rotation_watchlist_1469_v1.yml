@@ -1,0 +1,72 @@
+id: "sector_breadth_rotation_watchlist_1469_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1469"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for post results: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as portfolio-aware output"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  id: "sector_watchlist_python_tool"
+  language: "python"
+  mode: "read_only"
+  inputs:
+    - "sector_rank_data"
+    - "stage2_data"
+  outputs:
+    - "sector_ranks"
+    - "improving_sectors"
+    - "candidate_symbols"
+    - "tradingview_symbols"
+  approved_tables:
+    - "breadth.sector_daily"
+    - "scores.stage_snapshots"
+  code: "def run(context):\n    sector_ranks = context['sector_rank_data']\n    stage2_data = context['stage2_data']\n    improving_sectors = [sector for sector in sector_ranks if sector in stage2_data]\n    candidate_symbols = []  # Placeholder logic for extracting candidate symbols\n    tradingview_symbols = []  # Placeholder logic for preparing TradingView symbols\n    return {'sector_ranks': sector_ranks, 'improving_sectors': improving_sectors, 'candidate_symbols': candidate_symbols, 'tradingview_symbols': tradingview_symbols}"
+sql_templates:
+  -
+    template_name: "Sector_Rank"
+    template_sql: "WITH sector_rankings AS (SELECT sector, AVG(pct_above_50dma)::numeric AS avg_pct_above FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) GROUP BY sector) SELECT * FROM sector_rankings ORDER BY avg_pct_above DESC LIMIT 5;"
+  -
+    template_name: "Stage2_Participation"
+    template_sql: "SELECT sector, COUNT(symbol) AS stage2_count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector ORDER BY stage2_count DESC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sector_ranks are ordered by performance."
+  - "Validate that improving_sectors are filtered correctly."
+  - "Ensure symbols are within approved table constraints."
+synthesis_guidance: "Focus on sectors showing recent improvement in breadth and transitioning into Stage 2. Align with post-results insights for portfolio enhancement."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

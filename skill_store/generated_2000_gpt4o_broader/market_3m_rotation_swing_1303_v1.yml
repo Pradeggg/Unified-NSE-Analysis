@@ -1,0 +1,57 @@
+id: "market_3m_rotation_swing_1303_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1303"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: today; response style: exceptions and gaps first."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as exceptions and gaps first"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Analyze the last 3 months of data from the approved tables to determine market regime, sector leadership, stage distributions, and identify swing trading candidates with the exception and gap approach."
+sql_templates:
+  index_performance: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND trade_date <= CURDATE()"
+  sector_leadership: "SELECT snapshot_date, sector, AVG(stage_score) as avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND snapshot_date <= CURDATE() GROUP BY sector ORDER BY avg_stage_score DESC"
+  swing_candidates: "SELECT symbol, company_name, price, rsi, relative_strength FROM scores.stage2_vcp_picks WHERE snapshot_date = CURDATE() AND trend_signal = 'Buy'"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure the data covers the last 3 months."
+  - "Only include sectors with significant stage score changes."
+  - "Candidates must have a positive trend signal."
+synthesis_guidance: "['Present index performance trends first, then highlight sector leadership shifts.', 'List swing trading candidates with supporting data.', 'Identify and explain exceptions and gaps in the data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:44"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage2_vcp_picks.curdate is not approved"
+  - "scores.stage_snapshots.avg_stage_score is not approved"
+  - "scores.stage_snapshots.curdate is not approved"
+  - "scores.stage_snapshots.date_sub is not approved"
+  - "scores.stage_snapshots.month is not approved"

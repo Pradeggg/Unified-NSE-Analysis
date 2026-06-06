@@ -1,0 +1,75 @@
+id: "company_360_research_report_1700_v1"
+version: 1
+status: "review_pending"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1700"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: TradingView export; timeframe: weekly review; response style: debug trace."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "TradingView export for weekly review: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as debug trace"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "TradingView_export"
+  - "weekly_review"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    steps:
+      - "Fetch the latest snapshot for RELIANCE from scores.stage_snapshots for stage and technical scores."
+      - "Retrieve the latest quarterly and annual results from scores.quarterly_results and scores.annual_results."
+      - "Get balance sheet and cash flow details from scores.balance_sheet and scores.cash_flow."
+      - "Acquire the latest equity end-of-day (EOD) data from market.equity_eod."
+      - "Synthesize results analysis from scores.results_analysis."
+sql_templates:
+  -
+    name: "fetch_latest_snapshot"
+    query: "SELECT * FROM scores.stage_snapshots WHERE symbol = '{{symbol}}' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 1;"
+  -
+    name: "fetch_latest_quarterly_results"
+    query: "SELECT DISTINCT ON (symbol) * FROM scores.quarterly_results WHERE symbol = '{{symbol}}' AND period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC;"
+  -
+    name: "fetch_latest_annual_results"
+    query: "SELECT DISTINCT ON (symbol) * FROM scores.annual_results WHERE symbol = '{{symbol}}' AND period_type = 'annual' ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC;"
+  -
+    name: "fetch_balance_sheet_cash_flow"
+    query: "SELECT * FROM scores.balance_sheet bs JOIN scores.cash_flow cf ON bs.symbol = cf.symbol AND bs.period_end = cf.period_end WHERE bs.symbol = '{{symbol}}' AND bs.period_type = 'annual' ORDER BY bs.period_end DESC LIMIT 1;"
+  -
+    name: "fetch_latest_eod"
+    query: "SELECT * FROM market.equity_eod WHERE symbol = '{{symbol}}' AND trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "{'snapshot_dates': 'Ensure date fields align with max(s) rules.', 'symbols': 'Verify all queries use the correct NSE symbol.'}"
+synthesis_guidance: "{'narratives': 'Combine technical, financial, and narrative data from evidence tables.', 'debug_trace': 'Provide detailed tracing information in outputs.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,52 @@
+id: "insider_bulk_deal_signal_review_0094_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0094"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: weekly review; response style: concise table."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for weekly review: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as concise table"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "SELECT symbol, SUM(value_cr) AS total_value, MAX(insider_score) AS max_insider_score, MIN(entity) AS entity\nFROM signals.insider_alerts\nWHERE alert_date >= CURRENT_DATE - INTERVAL '1 week'\nGROUP BY symbol\nORDER BY total_value DESC, max_insider_score DESC\nLIMIT 10;"
+sql_templates:
+  -
+    template_name: "latest_bulk_deals"
+    query: "SELECT bd.symbol, bd.deal_date, bd.qty, ss.technical_score, ss.trading_signal\nFROM signals.bulk_block_deals bd\nJOIN scores.stage_snapshots ss ON bd.symbol = ss.symbol\nWHERE bd.deal_date >= CURRENT_DATE - INTERVAL '1 week'\nAND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nAND ss.trading_signal IN ('BUY', 'STRONG_BUY')\nORDER BY bd.deal_date DESC\nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure query results comply with the approved schema."
+  - "Validate that the SQL returns data only from approved tables."
+synthesis_guidance: "Concisely present top accumulation opportunities with insider buying confirmation for weekly review, emphasizing simplicity and clarity."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:18:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,50 @@
+id: "report_link_data_validation_1866_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Validation"
+description: "Validate enhanced report run metadata and filtered stock data with focus on freshness audit and post-results validation."
+input_patterns:
+  - "review report links not working"
+  - "validate generated report links"
+  - "resolve missing data issues"
+  - "audit for data freshness"
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "freshness_audit"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  context: "Agent is tasked with validating report metadata and stock data quality post report generation."
+  steps:
+    - "Fetch latest report run metadata."
+    - "Review filtered stock data for completeness."
+    - "Check if metrics match desired data quality standards."
+sql_templates:
+  -
+    query: "SELECT er.run_id, er.run_ts, er.analysis_date, COUNT(e.symbol) as stock_count FROM report.enhanced_runs er LEFT JOIN report.enhanced_filtered_stocks e ON er.run_id = e.run_id WHERE er.run_ts >= (CURRENT_DATE - INTERVAL '3 months') GROUP BY er.run_id;"
+    description: "Fetch report runs and count of associated stock data within the last three months."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure report runs have associated stock data."
+  - "Verify run timestamps are within the audit window."
+synthesis_guidance: "['Summarize key insights from report-data validation.', 'List action items for data quality improvement.', 'Highlight any critical missing data or broken links.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:32"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

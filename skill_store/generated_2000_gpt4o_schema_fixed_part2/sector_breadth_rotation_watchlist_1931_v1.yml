@@ -1,0 +1,54 @@
+id: "sector_breadth_rotation_watchlist_1931_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1931"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: last 20 sessions; response style: comparison matrix."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for last 20 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as comparison matrix"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "last_20_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "{id} identifies sector and stock candidates for watchlist construction, focusing on breadth and stage 2 participation."
+sql_templates:
+  -
+    description: "Latest snapshot of sector breadth and Stage 2 participation."
+    sql: "WITH latest_breadth AS (SELECT * FROM breadth.sector_daily WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '20 days')), latest_stage AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '20 days') AND stage = 'STAGE_2') SELECT s.sector, COUNT(*) AS stage2_count FROM latest_breadth b JOIN latest_stage s ON b.sector = s.sector GROUP BY s.sector ORDER BY stage2_count DESC;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sector_ranks are based on stage2_count descending."
+  - "improving_sectors should have a positive breadth improvement."
+  - "candidate_symbols should be from sectors with increasing participation."
+synthesis_guidance: "['Focus on sectors with increasing breadth and Stage 2 migration.', 'Consider symbols with high stage2_count for actionable insights.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:40"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

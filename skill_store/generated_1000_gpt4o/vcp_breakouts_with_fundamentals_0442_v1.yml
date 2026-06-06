@@ -1,0 +1,54 @@
+id: "vcp_breakouts_with_fundamentals_0442_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0442"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Identify strong VCP breakout stocks using equity EOD data and composite scores; include institutional backing and liquidity checks."
+sql_templates:
+  - "WITH recent_eod AS (SELECT * FROM market.equity_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 MONTHS'), vcp_candidates AS (SELECT ss.symbol, ss.company_name, ss.sector, ss.enhanced_fund_score FROM scores.stage_snapshots ss JOIN recent_eod re ON ss.symbol = re.symbol WHERE ss.stage = '2' AND ss.stage_score > 70 AND re.close = re.week52_high) SELECT symbol, company_name, sector, enhanced_fund_score FROM vcp_candidates WHERE enhanced_fund_score > 80"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all fields are not null"
+  - "Verify that candidates have an enhanced fund score > 80"
+synthesis_guidance: "Focus on liquidity and institutional backing for finalized stock list."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:46:32"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table re.close"
+  - "unknown table re.symbol"
+  - "unknown table re.week52_high"
+  - "unknown table ss.company_name"
+  - "unknown table ss.enhanced_fund_score"
+  - "unknown table ss.sector"
+  - "unknown table ss.stage"
+  - "unknown table ss.stage_score"
+  - "unknown table ss.symbol"

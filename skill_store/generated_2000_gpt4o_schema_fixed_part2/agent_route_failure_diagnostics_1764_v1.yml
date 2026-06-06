@@ -1,0 +1,62 @@
+id: "agent_route_failure_diagnostics_1764_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1764"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: post results; response style: QA checklist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for post results: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as QA checklist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "post_results"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  - "Collect evidence using enhanced runs and filtered stocks tables."
+  - "Validate symbol resolution using latest stage snapshot data."
+  - "Create watchlist from stocks filtered table with post results analysis."
+  - "Assess tools missing in the route diagnostics and validate against expected symbols."
+sql_templates:
+  route_diagnostics:
+    type: "SELECT"
+    template: "SELECT r.run_id, r.analysis_date, s.symbol, s.score, s.recommendation FROM report.enhanced_filtered_stocks s JOIN report.enhanced_runs r ON r.run_id = s.run_id WHERE r.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) AND s.recommendation IN ('BUY', 'STRONG_BUY');"
+    notes: "Fetch valid recommendations for latest enhanced run."
+  symbol_resolution:
+    type: "SELECT"
+    template: "SELECT ss.symbol, ss.stage, ss.snapshot_date FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.stage = 'STAGE_2';"
+    notes: "Resolve symbols in STAGE_2 for the latest snapshot."
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure the latest enhanced run is used to fetch diagnostics data."
+  - "Validate recommendations are assessed for 'BUY' or 'STRONG_BUY'."
+  - "Ensure symbol resolutions match expected stages in the latest snapshot."
+  - "Watchlists must be created accurately for post results."
+synthesis_guidance: "['Highlight any missing tools or incorrect symbol resolutions.', 'Diagnose fallback loops and potential route fixes.', 'Ensure QA checks validate current data against expected outcomes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:45"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

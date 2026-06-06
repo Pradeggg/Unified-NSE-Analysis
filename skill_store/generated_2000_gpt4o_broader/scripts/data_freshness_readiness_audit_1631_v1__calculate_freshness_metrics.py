@@ -1,0 +1,1 @@
+def run(context): return {'freshness_metrics': [{'table': k, 'last_update': max(v)} for k, v in context.items()]}

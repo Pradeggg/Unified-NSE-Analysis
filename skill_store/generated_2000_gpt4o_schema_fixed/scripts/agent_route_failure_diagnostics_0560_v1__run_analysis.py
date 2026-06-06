@@ -1,0 +1,1 @@
+['def run(context):', '    # Simulated analysis function', "    return {'diagnostic_report': 'Sample Analysis Result'}"]

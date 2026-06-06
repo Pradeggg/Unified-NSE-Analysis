@@ -1,0 +1,76 @@
+id: "signal_outcome_feedback_review_0739_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0739"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for last 20 sessions: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as QA checklist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Retrieve signal data for the last 20 sessions from signals.signal_log."
+    - "Analyze which signals hit targets or stops and retrieve necessary market context using joins with scores.stage_snapshots."
+    - "Summarize outcomes and identify winner and failure patterns."
+    - "Propose route improvements based on derived insights."
+sql_templates:
+  -
+    description: "Retrieve signal outcomes for the last 20 sessions."
+    template: "SELECT id, date_issued, symbol, signal, price_at_issue, target_1, stop_loss, date_resolved, price_at_resolution, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued > (CURRENT_DATE - INTERVAL '20 DAYS') AND symbol IS NOT NULL;"
+  -
+    description: "Join signals with the latest stage snapshots for current context."
+    template: "SELECT sl.symbol, sl.signal, sl.hit_target, sl.hit_stop, ss.stage, ss.trading_signal FROM signals.signal_log sl JOIN scores.stage_snapshots ss ON sl.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+  -
+    id: "evaluate_patterns"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "signal_data"
+      - "stage_data"
+    outputs:
+      - "outcome_summary"
+      - "winner_patterns"
+      - "failure_patterns"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    signal_data = context['signal_data']\n    stage_data = context['stage_data']\n    # Analyze data and return insights\n    return {'outcome_summary': ..., 'winner_patterns': ..., 'failure_patterns': ...}"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all data used comes from approved tables and columns."
+  - "Verify all SQL is read-only and compliant with given rules."
+synthesis_guidance: "['Focus on identifying patterns in successful and unsuccessful signals.', 'Suggest actionable insights for future skill enhancement.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:24"
+generation_model: "gpt-4o"
+validation_errors:
+  - "evaluate_patterns: execution failed: KeyError: 'signal_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "evaluate_patterns: execution failed: KeyError: 'signal_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

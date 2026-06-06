@@ -1,0 +1,61 @@
+id: "fii_dii_regime_breadth_review_1842_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1842"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: last 3 months; response style: action watchlist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for last 3 months: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as action watchlist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  sql_templates:
+    -
+      template_name: "GetFiiDiiAndRegimeData"
+      select_statement: "SELECT f.trade_date, f.fii_net_today, f.dii_net_today, f.fii_trend, f.dii_trend, r.regime, r.confidence FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date WHERE f.trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+    -
+      template_name: "GetMarketBreadthData"
+      select_statement: "SELECT b.trade_date, b.advances, b.declines, b.ad_signal FROM breadth.market_daily b WHERE b.trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+    -
+      template_name: "GetIndexConfirmationData"
+      select_statement: "SELECT i.trade_date, i.index_symbol, i.close, i.trend_signal FROM market.index_eod i WHERE i.trade_date >= CURRENT_DATE - INTERVAL '3 months' AND i.index_symbol = 'Nifty 50';"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:15"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

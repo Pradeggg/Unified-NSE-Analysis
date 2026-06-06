@@ -1,0 +1,1 @@
+def run(context): data = context['outcome_data'] analyze_outcomes(data) return generate_summary(data)

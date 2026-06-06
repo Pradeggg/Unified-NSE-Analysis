@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:42:25"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: quarter to date; response style: narrative plus evidence."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0154_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Retrieve stocks with high VCP scores, ordered by weekly performance."
+    template: "SELECT symbol, company_name, sector, price, change_1d_pct, change_1w_pct, vcp_score FROM scores.stage2_vcp_picks WHERE vcp_score > 70 ORDER BY change_1w_pct DESC;"
+status: "validated"
+synthesis_guidance:
+  evidence: "Present data on the selected stocks in terms of price changes, scores, and sector information."
+  narrative: "Explain how stocks were selected based on their VCP patterns and strong fundamentals. Discuss their market context and performance indicators."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+title: "VCP Breakouts With Fundamentals Variant 0154"
+tool_plan_template:
+
+validation_errors:
+
+validation_rules:
+  - "status"
+version: 1

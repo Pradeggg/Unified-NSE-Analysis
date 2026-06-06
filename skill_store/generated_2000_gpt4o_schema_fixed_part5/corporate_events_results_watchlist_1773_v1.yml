@@ -1,0 +1,66 @@
+id: "corporate_events_results_watchlist_1773_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1773"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: pre market; response style: QA checklist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for pre market: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as QA checklist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Use the evidence from corporate_events, results_analysis, and stage_snapshots to identify key stocks for watchlisting based on upcoming or recent events. Focus on corporate events using join conditions defined in approved_schema._join_rules."
+sql_templates:
+  -
+    name: "Upcoming_Corporate_Events"
+    query: "SELECT ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, ce.source FROM signals.corporate_events ce WHERE ce.event_date >= CURRENT_DATE AND ce.event_date < CURRENT_DATE + INTERVAL '1 week' LIMIT 100;"
+    description: "Fetch upcoming corporate events happening within the next week."
+  -
+    name: "Recent_Results_Analysis"
+    query: "SELECT DISTINCT ON (ra.symbol) ra.symbol, ra.company_name, ra.industry, ra.verdict FROM scores.results_analysis ra ORDER BY ra.symbol, ra.period_end DESC NULLS LAST, ra.updated_at DESC LIMIT 50;"
+    description: "Fetch the most recent results analysis for distinct symbols."
+  -
+    name: "Latest_Stage_Snapshots"
+    query: "SELECT ss.symbol, ss.price, ss.stage, ss.trading_signal FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 100;"
+    description: "Fetch the latest stage snapshots for symbols."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all SQL queries follow the approved schema and join rules."
+  - "Verify that output includes event calendar and symbol watchlist with context."
+synthesis_guidance: "Consolidate evidence from corporate events, results analysis, and stage snapshots to provide a cohesive action plan for watching event-driven stocks."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.ra is not approved"
+  - "signals.corporate_events.ce is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "scores.results_analysis.ra is not approved"
+    - "signals.corporate_events.ce is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

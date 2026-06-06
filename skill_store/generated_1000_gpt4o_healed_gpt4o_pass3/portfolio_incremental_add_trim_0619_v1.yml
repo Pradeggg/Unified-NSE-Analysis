@@ -1,0 +1,50 @@
+created_at: "2026-06-06T12:50:14"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: latest EOD; response style: debug trace."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0619_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for latest EOD: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Get the latest EOD data for portfolio holdings"
+    template: "SELECT p.symbol, p.qty, p.avg_cost, s.live_price, s.change_1d_pct, s.change_1w_pct, s.change_1m_pct, s.stage_score, s.trend_signal FROM portfolio.holdings p JOIN scores.stage_snapshots s ON p.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.snapshot_date = s.price_date;"
+status: "validated"
+synthesis_guidance: "Integrate data from evidence tables to determine sector exposure and potential candidates for adding or trimming positions. Highlight risk areas as debug trace."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "debug_trace"
+title: "Portfolio Incremental Add Trim Review Variant 0619"
+tool_plan_template: "Analyze current portfolio holdings and scores to validate potential incremental add or trim actions based on recent trends and other evidence from the approved schema."
+validation_rules:
+  - "Ensure all data is retrieved from approved tables only."
+  - "Maintaining read-only access and ensuring validation traceability."
+version: 1

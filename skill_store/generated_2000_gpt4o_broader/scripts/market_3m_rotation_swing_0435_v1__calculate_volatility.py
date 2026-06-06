@@ -1,0 +1,1 @@
+def run(context): return calculate_volatility(context['market.index_eod'])

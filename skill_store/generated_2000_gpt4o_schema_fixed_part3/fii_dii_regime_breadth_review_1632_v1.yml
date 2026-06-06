@@ -1,0 +1,53 @@
+id: "fii_dii_regime_breadth_review_1632_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1632"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: last 20 sessions; response style: debug trace."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as debug trace"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "last_20_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Skill Card tool plan will be generated as required."
+sql_templates:
+  -
+    template_name: "fii_dii_flow_regime_breadth_index"
+    description: "Compile FII/DII flow, regime history, market breadth, and index confirmation for the last 20 sessions."
+    sql: "WITH latest_flows AS (\n    SELECT trade_date, fii_net_today, dii_net_today, fii_trend, dii_trend, flow_signal\n    FROM signals.fii_dii_flows\n    WHERE trade_date > CURRENT_DATE - INTERVAL '20 days'\n), latest_regime AS (\n    SELECT trade_date, regime, confidence, days_in_regime\n    FROM signals.regime_history\n    WHERE trade_date > CURRENT_DATE - INTERVAL '20 days'\n), latest_breadth AS (\n    SELECT trade_date, advances, declines, net_ad, ad_signal, trin, market_sentiment\n    FROM breadth.market_daily\n    WHERE trade_date > CURRENT_DATE - INTERVAL '20 days'\n), latest_index AS (\n    SELECT trade_date, index_symbol, close, change_pct, trend_signal\n    FROM market.index_eod\n    WHERE trade_date > CURRENT_DATE - INTERVAL '20 days' AND index_symbol = 'Nifty 50'\n)\nSELECT \n    f.trade_date,\n    f.fii_net_today, f.dii_net_today, f.fii_trend, f.dii_trend, f.flow_signal,\n    r.regime, r.confidence, r.days_in_regime,\n    b.advances, b.declines, b.net_ad, b.ad_signal, b.trin, b.market_sentiment,\n    i.close, i.change_pct, i.trend_signal\nFROM latest_flows f\nJOIN latest_regime r ON f.trade_date = r.trade_date\nJOIN latest_breadth b ON f.trade_date = b.trade_date\nJOIN latest_index i ON f.trade_date = i.trade_date"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure columns from all joins align correctly with respect to approved schema."
+  - "Avoid aggregation unless specified; retain individual records for last 20 trading sessions."
+synthesis_guidance: "['Focus on tracing changes in regime, flow, and market breadth to signal risk-on or risk-off contexts.', 'Leverage debug trace methodology to highlight step-by-step synthesis and interpretation of evidence.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:11"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,51 @@
+id: "corporate_events_results_watchlist_1199_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1199"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: weekly review; response style: narrative plus evidence."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as narrative plus evidence"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "SELECT ..."
+sql_templates:
+  -
+    template: "WITH ranked_events AS (\n    SELECT \n        ce.symbol, \n        ce.event_date, \n        ce.event_type, \n        ce.purpose_raw, \n        ce.detail, \n        ce.source, \n        ROW_NUMBER() OVER (PARTITION BY ce.symbol ORDER BY ce.event_date DESC) as rnk\n    FROM signals.corporate_events ce\n    WHERE ce.event_date >= CURRENT_DATE - INTERVAL '7 days'\n)\nSELECT \n    re.symbol, \n    re.event_date, \n    re.event_type, \n    re.purpose_raw, \n    re.detail, \n    ra.company_name, \n    ra.industry, \n    ra.verdict, \n    ss.stage, \n    ss.trading_signal\nFROM ranked_events re\nJOIN scores.results_analysis ra ON re.symbol = ra.symbol\nJOIN scores.stage_snapshots ss ON re.symbol = ss.symbol\nWHERE re.rnk = 1;"
+    description: "Selects latest events for each symbol that occurred within the last week, joining with results analysis and stage snapshot data."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "status"
+  - "queries"
+synthesis_guidance: "Generate a narrative summary about the identified corporate events and their impacts based on the results and technical analysis."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:41:41"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

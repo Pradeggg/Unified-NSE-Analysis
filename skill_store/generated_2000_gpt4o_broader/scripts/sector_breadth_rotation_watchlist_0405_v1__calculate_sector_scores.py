@@ -1,0 +1,1 @@
+def run(context):\n    sector_data = context['sector_data']\n    stage_data = context['stage_data']\n    price_data = context['price_data']\n    # Combine data to calculate scores\n    # Rank sectors based on combined score\n    # Return ranked sectors\n    pass

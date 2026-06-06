@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:50:22"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: last 3 months; response style: debug trace."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0642_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select VCP candidates with strong fundamentals and recent breakout patterns."
+    template: "WITH recent_vcp AS (SELECT symbol, company_name, live_price, price_date FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' AND vcp_score > 70 AND enhanced_fund_score > 70) SELECT r.symbol, e.close, e.volume, s.live_price FROM recent_vcp r JOIN market.equity_eod e ON r.symbol = e.symbol JOIN scores.stage_snapshots s ON r.symbol = s.symbol WHERE e.trade_date = s.snapshot_date AND e.trade_date >= CURRENT_DATE - INTERVAL '1 day' AND s.trend_signal = 'Up'"
+status: "validated"
+synthesis_guidance: "Focus on stocks showing strong fundamentals, institutional interest, and positive technical signals. Highlight liquidity and volatility considerations."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "debug_trace"
+title: "VCP Breakouts With Fundamentals Variant 0642"
+tool_plan_template: "Step 1: Identify breakout stocks with strong fundamentals using approved tables. Step 2: Validate findings with historical data for consistency."
+validation_rules:
+  - "Ensure all selected stocks have a VCP score above 70."
+  - "Ensure selected stocks' enhanced fundamental score is above 70."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

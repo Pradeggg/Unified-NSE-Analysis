@@ -1,0 +1,55 @@
+id: "corporate_events_results_watchlist_1563_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1563"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for post results: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as research-only summary"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh-follow-up"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    steps:
+      - "Identify upcoming or recent corporate events from signals.corporate_events."
+      - "Use scores.results_analysis for additional context around result events."
+      - "Combine with scores.stage_snapshots to capture stage and technical context."
+sql_templates:
+  -
+    template: "WITH latest_stage_snapshots AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY snapshot_date DESC) AS rn FROM scores.stage_snapshots) SELECT e.symbol, e.event_type, e.event_date, ra.company_name, ra.filing_date, ra.verdict, ss.stage FROM signals.corporate_events e INNER JOIN scores.results_analysis ra ON e.symbol = ra.symbol INNER JOIN latest_stage_snapshots ss ON e.symbol = ss.symbol AND ss.rn = 1 WHERE e.event_date > CURRENT_DATE - INTERVAL '1 week' ORDER BY e.event_date LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure the output matches the research-only summary style."
+  - "Output should be bound by LIMIT 50 to maintain performance."
+synthesis_guidance: "['Focus on connecting corporate events with results and market stages.', 'Highlight significant events such as results, dividends, and AGMs.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:22"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

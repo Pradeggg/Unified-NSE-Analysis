@@ -1,0 +1,61 @@
+created_at: "2026-06-06T12:48:53"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: last 20 sessions; response style: research-only summary."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0533_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for last 20 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as research-only summary"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 3
+  findings:
+    - "scores.stage_snapshots.avg_change is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  market_performance:
+    description: "Calculate index returns over the last 20 sessions."
+    sql: "SELECT index_symbol, ((MAX(close) - MIN(close)) / MIN(close)) * 100 as change_pct FROM market.index_eod WHERE trade_date BETWEEN CURRENT_DATE - INTERVAL '20 days' AND CURRENT_DATE GROUP BY index_symbol;"
+  sector_leadership:
+    description: "Identify leading sectors based on average returns."
+    sql: "SELECT sector, AVG(change_1m_pct) as avg_change FROM scores.stage_snapshots WHERE snapshot_date BETWEEN CURRENT_DATE - INTERVAL '90 days' AND CURRENT_DATE GROUP BY sector ORDER BY AVG(change_1m_pct) DESC LIMIT 5;"
+  swing_candidates:
+    description: "Select primary swing candidates from Stage 2 VCP picks."
+    sql: "SELECT symbol, company_name, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE ORDER BY vcp_score DESC LIMIT 5;"
+status: "test_failed"
+synthesis_guidance: "Combine SQL outputs and synthesize a coherent market analysis overview focusing on swing trading opportunities and sector leadership trends over the last 3 months."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "last_20_sessions"
+  - "research-only_summary"
+title: "3M Market Rotation Swing Assessment Variant 0533"
+tool_plan_template: "Analyze market data using SQL queries and generate swing trading insights."
+validation_errors:
+  - "scores.stage_snapshots.avg_change is not approved"
+validation_rules:
+  - "All SQL queries should be read-only and only SELECT or WITH clauses are allowed."
+  - "Fields should map directly from the approved schema."
+version: 1

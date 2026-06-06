@@ -1,0 +1,51 @@
+id: "agent_route_failure_diagnostics_0490_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0490"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: intraday context; response style: portfolio-aware output."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for intraday context: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as portfolio-aware output"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze agent route failures with TradingView export focus. Perform diagnostic checks on symbol resolution loops and tool validation errors."
+sql_templates:
+  -
+    description: "Identify top-ranked stocks for latest stage snapshots limited to enhanced filtered ranks."
+    template: "SELECT es.symbol, ef.rank, es.stage, ef.recommendation FROM report.enhanced_filtered_stocks ef JOIN scores.stage_snapshots es ON ef.symbol = es.symbol WHERE es.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ef.rank <= 10;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "must_follow_approved_schema"
+  - "status"
+synthesis_guidance: "Focus narrative on TradingView export and provide portfolio-aware suggestions for resolving identified diagnostic issues."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:12"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

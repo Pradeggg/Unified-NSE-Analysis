@@ -1,0 +1,68 @@
+id: "vcp_breakouts_with_fundamentals_0070_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0070"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: post results; response style: concise table."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as concise table"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "post_results"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "{}"
+sql_templates:
+  -
+    template_id: "select_vcp_breakouts"
+    sql: "WITH filtered_stocks AS (SELECT e.symbol, e.trade_date, e.high, e.close, e.volume, ss.stage, ss.fundamental_score FROM market.equity_eod e JOIN scores.stage_snapshots ss ON e.symbol = ss.symbol WHERE e.high = e.week52_high AND ss.fundamental_score > 70), vcp_stocks AS (SELECT sp.symbol, sp.vcp_score, sp.vcp_breakout_pct, sp.enhanced_fund_score FROM scores.stage2_vcp_picks sp WHERE sp.vcp_score > 5) SELECT f.symbol, f.trade_date, f.high, f.close, f.volume, v.vcp_breakout_pct, v.enhanced_fund_score FROM filtered_stocks f JOIN vcp_stocks v ON f.symbol = v.symbol;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure stocks are at their 52-week high."
+  - "Verify VCP score and breakout percentage are above thresholds."
+synthesis_guidance: "['Focus on clear and concise reporting.', 'Avoid data manipulation outside the SQL scope.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:41:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table e.close"
+  - "unknown table e.high"
+  - "unknown table e.symbol"
+  - "unknown table e.trade_date"
+  - "unknown table e.volume"
+  - "unknown table e.week52_high"
+  - "unknown table f.close"
+  - "unknown table f.high"
+  - "unknown table f.symbol"
+  - "unknown table f.trade_date"
+  - "unknown table f.volume"
+  - "unknown table sp.enhanced_fund_score"
+  - "unknown table sp.symbol"
+  - "unknown table sp.vcp_breakout_pct"
+  - "unknown table sp.vcp_score"
+  - "unknown table ss.fundamental_score"
+  - "unknown table ss.stage"
+  - "unknown table ss.symbol"
+  - "unknown table v.enhanced_fund_score"
+  - "unknown table v.symbol"
+  - "unknown table v.vcp_breakout_pct"

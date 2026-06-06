@@ -1,0 +1,42 @@
+id: "portfolio_lab_paper_trading_review_1272_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Pre-Market Paper Trading Strategy Review"
+description: "Conduct a pre-market analysis of paper trading strategies, separate from real holdings."
+input_patterns:
+  - "Review paper trading strategies before market opens"
+  - "Analyze paper trading results separate from my portfolio"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "pre_market"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+tool_plan_template: "Generate a report of paper trading strategies before market opens, focusing on strategy performance without affecting actual holdings."
+sql_templates:
+  latest_strategy_analysis: "SELECT sl.symbol, sl.signal, sl.entry_low, sl.entry_high, sl.stop_loss, sl.target_1, sl.target_2, ss.stage, ss.technical_score FROM signals.signal_log sl JOIN scores.stage_snapshots ss ON sl.symbol = ss.symbol WHERE sl.signal IN ('BUY', 'SELL') AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure result contains recommended actions for each strategy."
+  - "Confirm result consistency with latest market data."
+synthesis_guidance: "Describe each strategy's potential actions and risks for the upcoming market session."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:07:50"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

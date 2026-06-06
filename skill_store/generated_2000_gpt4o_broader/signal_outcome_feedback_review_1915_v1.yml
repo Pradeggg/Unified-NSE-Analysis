@@ -1,0 +1,63 @@
+id: "signal_outcome_feedback_review_1915_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1915"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: risk-first review; timeframe: latest EOD; response style: comparison matrix."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "risk-first review for latest EOD: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as comparison matrix"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "risk-first_review"
+  - "latest_EOD"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Compile outcome data from signal logs."
+    - "Create comparison matrix to identify winner and failure patterns."
+    - "Provide route improvements and next steps for future signals."
+  inputs:
+    latest_outcomes: "Latest signal outcomes EOD."
+    signal_effectiveness: "Comparison matrix based on signal log outcomes."
+  outputs:
+    action_matrix: "Summary of actions for skill store enhancement."
+    improvement_areas: "Suggested areas for signal improvement."
+sql_templates:
+  -
+    template_id: "fetch_latest_signals"
+    query: "SELECT id, date_issued, symbol, company, signal, price_at_issue, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_resolved = CURRENT_DATE"
+    description: "Fetch latest resolved signals with outcomes."
+  -
+    template_id: "signal_performance_summary"
+    query: "SELECT signal, COUNT(*) as count, AVG(return_pct) as average_return FROM signals.signal_log WHERE date_resolved = CURRENT_DATE GROUP BY signal"
+    description: "Summary of signal performance for the latest EOD."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all signal outcomes are reviewed for the latest EOD."
+  - "Comparison matrix must highlight both positive and negative patterns."
+synthesis_guidance: "['Focus on actionable insights that emphasize learning from both successful and unsuccessful signals.', 'Use a risk-first approach to prioritize improvements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.average_return is not approved"

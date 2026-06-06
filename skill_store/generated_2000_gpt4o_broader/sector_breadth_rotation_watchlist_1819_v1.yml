@@ -1,0 +1,56 @@
+id: "sector_breadth_rotation_watchlist_1819_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1819"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for latest EOD: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as action watchlist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "{}"
+sql_templates:
+  -
+    description: "Retrieve sector ranks by breadth signal and stage 2 participation."
+    template: "WITH sector_breadth AS (SELECT sector, (pct_above_50dma + change_5d) AS score FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily)), stage_participation AS (SELECT sector, AVG(stage2_pct) AS stage2_score FROM breadth.ma_pct_above WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.ma_pct_above) GROUP BY sector) SELECT sb.sector, sb.score, sp.stage2_score FROM sector_breadth sb JOIN stage_participation sp ON sb.sector = sp.sector ORDER BY sb.score DESC, sp.stage2_score DESC;"
+  -
+    description: "Find symbols with improving stage scores and relative strength."
+    template: "SELECT ss.symbol, ss.company_name FROM scores.stage_snapshots ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.stage = 2 AND ss.relative_strength > 50 ORDER BY ss.relative_strength DESC, ss.stage_score DESC;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure SQL returns correct sectors ranked by breadth and stage 2 participation."
+  - "Validate symbols based on improved stage and relative strength."
+synthesis_guidance: "Use latest snapshot data to identify leading sectors and symbols for action watchlist."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:24"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

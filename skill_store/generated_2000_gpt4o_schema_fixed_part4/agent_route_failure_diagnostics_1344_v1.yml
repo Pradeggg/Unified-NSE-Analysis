@@ -1,0 +1,54 @@
+id: "agent_route_failure_diagnostics_1344_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1344"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: last 3 months; response style: exceptions and gaps first."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for last 3 months: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as exceptions and gaps first"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "1. Validate if all relevant tools were available for Agent Adda processing.\n2. Examine symbol resolution correctness by checking combinations of symbols and analysis_dates from the last three months.\n3. Identify unclear fallback loop paths affecting route diagnostics.\n4. Compile a watchlist based on the extracted diagnostics; focus on exceptions and gaps."
+sql_templates:
+  -
+    query: "WITH enhanced_runs_filtered AS (SELECT * FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '3 months') SELECT efr.symbol, efr.score, efr.recommendation, er.universe_size, er.analysis_date FROM report.enhanced_filtered_stocks efr JOIN enhanced_runs_filtered er ON efr.run_id = er.run_id WHERE efr.score IS NULL OR er.universe_size IS NULL;"
+    description: "Identify route diagnostics issues in the last three months focusing on missing scores and universe sizes in reports."
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure the query captures route failures, tool gaps, and diagnostics appropriately."
+  - "Validate that the timeframe is strictly the last three months."
+  - "Route issues must be tied back to symbol or tool failures."
+synthesis_guidance: "Highlight exceptions and gaps first when synthesizing insights and constructing the final watchlist."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:31"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

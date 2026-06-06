@@ -1,0 +1,53 @@
+id: "sector_breadth_rotation_watchlist_1791_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1791"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: weekly review; response style: QA checklist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for weekly review: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as QA checklist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "weekly_review"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "scores.stage_snapshots"
+tool_plan_template: "Use SQL templates to rank sectors by breadth and stage 2 participation. Generate watchlist for TradingView."
+sql_templates:
+  -
+    title: "Rank Sectors by Breadth and Stage 2 Participation"
+    description: "Ranks sectors based on weekly changes in breadth and stage participation."
+    sql: "WITH latest_stage AS (SELECT sector, stage, COUNT(*) AS stage2_count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector, stage), sector_breadth AS (SELECT sector, AVG(change_5d) AS avg_change_5d FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) GROUP BY sector) SELECT sb.sector, sb.avg_change_5d, ls.stage2_count FROM sector_breadth sb JOIN latest_stage ls ON sb.sector = ls.sector ORDER BY ls.stage2_count DESC, sb.avg_change_5d DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sector breadth covers the latest week."
+  - "Check stage 2 participation count for ranking."
+  - "Limit sector ranks to top 10 based on criteria."
+synthesis_guidance: "['Provide QA checklist for improving sectors.', 'Highlight top candidate symbols for TradingView addition.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

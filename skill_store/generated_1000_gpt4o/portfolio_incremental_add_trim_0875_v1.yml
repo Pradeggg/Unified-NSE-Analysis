@@ -1,0 +1,65 @@
+id: "portfolio_incremental_add_trim_0875_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0875"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for pre market: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as action watchlist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  steps:
+    - "identify underperforming holdings with risks for trimming"
+    - "find potential candidates for incremental addition based on technical and fundamental strengths"
+    - "assess sector exposure to balance risk"
+sql_templates:
+  underperforming_holdings: "SELECT h.symbol, h.qty, h.avg_cost, s.market_cap_cat, s.change_1m_pct, s.stage_score, s.technical_score FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.stage_score < 2 AND s.change_1m_pct < -5"
+  add_candidates: "SELECT s.symbol, s.company_name, s.sector, s.stage, s.trend_signal FROM scores.stage_snapshots s WHERE s.trend_signal = 'Positive' AND s.stage IN ('1', '2') ORDER BY s.relative_strength DESC LIMIT 5"
+  sector_exposure: "WITH sector_vals AS (SELECT s.sector, COUNT(*) as count, SUM(h.qty * s.live_price) as total_value FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol GROUP BY s.sector) SELECT sector, (total_value / (SELECT SUM(total_value) FROM sector_vals)) * 100 as exposure_pct FROM sector_vals"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "ensure unique symbols in add/trim candidates"
+  - "validate exposure percentages sum to 100"
+  - "confirm stage and trend signals align with recommended actions"
+synthesis_guidance: "['prioritize sectors with high potential but low current exposure', 'focus on trimming positions in declining stages or technical scores', 'recommend incremental adds mainly in companies with strong trend signals']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:52:31"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.s is not approved"
+  - "unknown table h.avg_cost"
+  - "unknown table h.qty"
+  - "unknown table h.symbol"
+  - "unknown table s.change_1m_pct"
+  - "unknown table s.company_name"
+  - "unknown table s.live_price"
+  - "unknown table s.market_cap_cat"
+  - "unknown table s.relative_strength"
+  - "unknown table s.sector"
+  - "unknown table s.stage"
+  - "unknown table s.stage_score"
+  - "unknown table s.symbol"
+  - "unknown table s.technical_score"
+  - "unknown table s.trend_signal"

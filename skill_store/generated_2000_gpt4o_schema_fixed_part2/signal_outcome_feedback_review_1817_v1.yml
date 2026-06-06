@@ -1,0 +1,52 @@
+id: "signal_outcome_feedback_review_1817_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1817"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for latest EOD: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as action watchlist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review signal outcomes using a combination of data from signals, scores, and market tables. Generate summary and patterns."
+sql_templates:
+  -
+    template: "SELECT \n    symbol, \n    sector, \n    company, \n    signal, \n    investment_score, \n    technical_score, \n    hit_target, \n    hit_stop, \n    return_pct \nFROM \n    signals.signal_log \nWHERE \n    date_resolved = (SELECT MAX(date_resolved) FROM signals.signal_log) \n    AND (hit_target = true OR hit_stop = true)"
+    description: "Extract latest resolved signals hitting either target or stop. Focus on performance metrics."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all relevant tags are applied."
+  - "Check SQL templates align with approved schemas and are read-only."
+synthesis_guidance: "['Synthesize signal outcomes into actionable insights for portfolio improvement.', 'Present patterns that inform future signal adjustments.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:16"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,72 @@
+id: "fii_dii_regime_breadth_review_0540_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0540"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: last 20 sessions; response style: research-only summary."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for last 20 sessions: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as research-only summary"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "For evidence synthesis, use SQL read-only templates to gather data. Utilize SQL and Python tools for complex analyses while adhering to approved schema."
+sql_templates:
+  - "SELECT trade_date, fii_net_today, dii_net_today, flow_signal FROM signals.fii_dii_flows WHERE trade_date > CURRENT_DATE - INTERVAL '20 days';"
+  - "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date > CURRENT_DATE - INTERVAL '20 days';"
+  - "SELECT trade_date, advances, declines, ad_signal FROM breadth.market_daily WHERE trade_date > CURRENT_DATE - INTERVAL '20 days';"
+  - "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '20 days';"
+python_tools:
+  -
+    id: "flow_analysis_tool_001"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "fii_dii_data"
+      - "regime_data"
+      - "breadth_data"
+      - "index_data"
+    outputs:
+      - "flow_signal_analysis"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context):\n    # Perform analysis using inputs\n    pass"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure the synthesis uses approved tables and columns only."
+  - "Maintain compliance with read-only data access."
+  - "Research framing should focus on Indian market insights."
+synthesis_guidance: "Cross-reference FII/DII flows with market regime to determine overall trend. Analyze breadth for market sentiment and confirm with index changes."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:48:15"
+generation_model: "gpt-4o"
+validation_errors:
+  - "flow_analysis_tool_001: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "flow_analysis_tool_001: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

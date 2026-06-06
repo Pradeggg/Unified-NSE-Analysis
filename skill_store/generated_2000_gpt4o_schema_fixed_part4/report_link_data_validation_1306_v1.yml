@@ -1,0 +1,54 @@
+id: "report_link_data_validation_1306_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Enhanced Report Data Freshness Audit"
+description: "Conduct a freshness audit on enhanced report data, ensuring report links are functioning and data is current. Focus on identifying exceptions and gaps."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for today: review report links not working"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "today"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    description: "Utilize SQL templates to extract the latest metadata and stock data for enhanced reports, ensuring data freshness."
+sql_templates:
+  -
+    description: "Fetch the latest report runs for today to validate freshness."
+    sql: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts = CURRENT_DATE;"
+  -
+    description: "Identify stocks from the latest report runs with missing data."
+    sql: "SELECT symbol, current_price, recommendation FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts = CURRENT_DATE) AND (current_price IS NULL OR recommendation IS NULL);"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure run_ts is equal to CURRENT_DATE for report freshness."
+  - "Check for NULL values in important stock fields like current_price and recommendation."
+synthesis_guidance: "Prioritize listing exceptions and gaps in report data quality, focusing on today's data."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:06"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

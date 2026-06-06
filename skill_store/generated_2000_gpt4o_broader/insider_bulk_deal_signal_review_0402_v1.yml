@@ -1,0 +1,52 @@
+id: "insider_bulk_deal_signal_review_0402_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0402"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: deep institutional review; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "deep institutional review for today: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as portfolio-aware output"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "deep_institutional_review"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Generate insights from insider alerts and bulk deals with technical confirmation for potential accumulation or distribution signals."
+sql_templates:
+  -
+    template_name: "bulk_deal_insider_technical_confirm"
+    query: "SELECT iad.symbol, iad.entity, iad.qty, sss.technical_score, sss.trend_signal FROM signals.insider_alerts iad JOIN scores.stage_snapshots sss ON iad.symbol = sss.symbol WHERE iad.alert_date = CURRENT_DATE AND iad.qty > 100000 AND sss.trend_signal = 'Positive'"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all output_contract fields are present."
+  - "Validate technical confirmation aligns with trend signals."
+synthesis_guidance: "Synthesize insights by correlating insider activities with bulk and block deals while confirming with technical indicators."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:46:49"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

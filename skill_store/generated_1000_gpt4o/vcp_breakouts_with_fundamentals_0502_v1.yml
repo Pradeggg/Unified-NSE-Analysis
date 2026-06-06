@@ -1,0 +1,64 @@
+id: "vcp_breakouts_with_fundamentals_0502_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0502"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: today; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "today"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  filters: "Select stocks meeting the criteria of strong fundamentals and potential for breakout."
+  candidates: "List of stocks that are new highs, VCPs, or breakouts with fundamental strength."
+  tradingview_symbols: "Symbols of identified stocks for quick reference on TradingView."
+  evidence: "Supporting data from each table for candidate stocks."
+  risks: "Potential risks associated with each identified candidate."
+sql_templates:
+  market.equity_eod: "SELECT symbol, close, market_cap_cr FROM market.equity_eod WHERE trade_date = CURRENT_DATE AND close > week52_high"
+  scores.stage_snapshots: "SELECT symbol, fundamental_score, enhanced_fund_score FROM scores.stage_snapshots WHERE date(snapshot_date) = CURRENT_DATE AND fundamental_score >= 70"
+  scores.stage2_vcp_picks: "SELECT symbol, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE AND vcp_score >= 80"
+python_tools:
+  -
+    id: "calculate_enhanced_score"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "fundamental_score"
+      - "market_cap_cr"
+    outputs:
+      - "enhanced_score"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context): return context['fundamental_score'] * 1.2 if context['market_cap_cr'] > 500 else context['fundamental_score']"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "schema"
+  - "status"
+synthesis_guidance: "{'summary': 'Combine filtered candidates with evidence to create a coherent research-only summary suitable for presentations or reports.', 'context': 'Ensure that all information is contextualized within the Indian market conditions, focusing on institutional review.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:48:38"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.date is not approved"

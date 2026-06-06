@@ -1,0 +1,53 @@
+id: "agent_route_failure_diagnostics_1624_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1624"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: last 5 sessions; response style: debug trace."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for last 5 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as debug trace"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "last_5_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Plan tools for diagnostics concentrating on route steps, tools, and symbols."
+sql_templates:
+  -
+    description: "Fetch latest session data within last 5 sessions"
+    sql: "WITH latest_runs AS (SELECT run_id, run_ts FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 5) SELECT e.run_id, e.symbol, e.rank, e.score, e.recommendation FROM report.enhanced_filtered_stocks e JOIN latest_runs l ON e.run_id = l.run_id WHERE e.recommendation IN ('BUY', 'STRONG_BUY');"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure the SQL query fetches relevant diagnostics data for debugging."
+  - "Verify the latest 5 sessions are correctly ordered and limited."
+  - "Ensure mappings between run IDs in diagnostics SQL."
+  - "Check SQL against approved schema and join rules."
+synthesis_guidance: "Focus on identifying root causes of route failures, missing tools, and symbol misresolution observed in the last 5 sessions."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

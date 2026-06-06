@@ -1,0 +1,68 @@
+id: "insider_bulk_deal_signal_review_1410_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1410"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for today: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as portfolio-aware output"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze today's insider and bulk deal alerts along with technical signals to generate a comprehensive watchlist."
+sql_templates:
+  -
+    template: "WITH latest_signals AS (SELECT symbol, alert_date, insider_score FROM signals.insider_alerts WHERE alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts)), latest_deals AS (SELECT symbol, deal_date, qty FROM signals.bulk_block_deals WHERE deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals)), latest_technical AS (SELECT symbol, trading_signal, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND trading_signal IN ('BUY', 'STRONG_BUY')) SELECT DISTINCT e.symbol, e.close, s.trading_signal FROM market.equity_eod e JOIN latest_signals s ON e.symbol = s.symbol JOIN latest_deals d ON e.symbol = d.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) LIMIT 10;"
+python_tools:
+  -
+    id: "run_insider_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol_data"
+      - "deal_data"
+      - "technical_data"
+    outputs:
+      - "ranked_symbols"
+      - "deal_summary"
+      - "insider_context"
+    approved_tables:
+      - "signals.insider_alerts"
+      - "signals.bulk_block_deals"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Analyze and rank symbols based on insider activity and technical data\n    sorted_symbols = sorted(context['symbol_data'], key=lambda x: x['insider_score'], reverse=True)\n    return sorted_symbols[:5], 'Summary of significant deals.', 'Context of insider actions.'"
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "type_checks"
+synthesis_guidance: "['Summarize findings as a concise watchlist.', 'Highlight any key insider accumulations with technical confirmations.', 'Provide actionable outputs suitable for a portfolio manager.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_insider_analysis: execution failed: KeyError: 'symbol_data'"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_insider_analysis: execution failed: KeyError: 'symbol_data'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

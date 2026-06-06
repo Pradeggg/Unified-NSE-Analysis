@@ -1,0 +1,56 @@
+id: "insider_bulk_deal_signal_review_1326_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1326"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for last 5 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as exceptions and gaps first"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Critically analyze insider alerts and bulk deals for accumulation insights across the last 5 sessions. Prioritize exceptions and gaps."
+  - "Verify any technical confirmation."
+sql_templates:
+  -
+    id: "technical_confirmation_check"
+    template: "SELECT\n    b.symbol,\n    b.deal_date,\n    b.side,\n    b.qty,\n    s.trading_signal,\n    s.stage\nFROM\n    signals.bulk_block_deals b\nJOIN\n    scores.stage_snapshots s\nON\n    b.symbol = s.symbol\nWHERE\n    b.deal_date >= CURRENT_DATE - INTERVAL '5 days'\n    AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n    AND s.trading_signal IN ('BUY', 'STRONG_BUY')\nLIMIT 100;"
+    description: "Retrieve bulk/block deals with positive technical setup from the last 5 sessions."
+    status: "generated"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure dates are within the last 5 sessions."
+  - "Confirm technical signals are consistently defined."
+synthesis_guidance: "['Emphasize unexplained gaps or inconsistencies in data.', 'Focus on recent patterns and their validation against technical indicators.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:29"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

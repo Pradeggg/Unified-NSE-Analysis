@@ -1,0 +1,77 @@
+created_at: "2026-06-06T12:44:21"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: today; response style: exceptions and gaps first."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0306_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+output_contract:
+  -
+    description: "Filters applied to evidence data to narrow down candidates."
+    type: "filters"
+  -
+    description: "Resulting candidates meeting all criteria."
+    type: "candidates"
+  -
+    description: "Symbols formatted for TradingView use."
+    type: "tradingview_symbols"
+  -
+    description: "Raw evidence data before filtering."
+    type: "evidence"
+  -
+    description: "Identified risks or uncertainties in the candidate selection."
+    type: "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  validate_highs: "SELECT symbol, high FROM market.equity_eod WHERE trade_date = CURRENT_DATE AND high >= week52_high;"
+status: "validated"
+synthesis_guidance: "{'strategy': 'Synthesize evidence showing strong momentum and fundamental metrics first.'}"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "today"
+  - "exceptions_and_gaps_first"
+title: "VCP Breakouts With Fundamentals Variant 0306"
+tool_plan_template:
+  python_tools:
+    -
+      approved_tables:
+        - "market.equity_eod"
+        - "scores.stage_snapshots"
+        - "scores.stage2_vcp_picks"
+      code: "def run(context):\n    # Filter VCP stocks\n    vcp_stocks = context['scores.stage2_vcp_picks']\n    candidates = [stock for stock in vcp_stocks if stock['vcp_score'] > 80 and stock['enhanced_fund_score'] > 70]\n    return {'candidates': candidates}"
+      id: "FilterEvidence"
+      inputs:
+        evidence_tables:
+          - "scores.stage2_vcp_picks"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        candidates:
+
+validation_rules:
+  - "Ensure outputs adhere to trading criteria."
+  - "Validate evidence with correct table constraints."
+  - "Check SQL and Python tool integrity."
+version: 1

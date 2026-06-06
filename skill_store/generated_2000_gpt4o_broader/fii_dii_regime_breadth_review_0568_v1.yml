@@ -1,0 +1,70 @@
+id: "fii_dii_regime_breadth_review_0568_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0568"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for post results: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as research-only summary"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  python_tools:
+
+  sql_templates:
+    -
+      name: "fii_dii_trend_analysis"
+      description: "Analyze FII and DII net flow trends and signals."
+      template: "SELECT trade_date, fii_net_5d, dii_net_5d, flow_signal, fii_trend, dii_trend FROM signals.fii_dii_flows WHERE trade_date BETWEEN ? AND ?"
+    -
+      name: "regime_context_extraction"
+      description: "Extract current market regime and confidence."
+      template: "SELECT trade_date, regime, confidence, days_in_regime FROM signals.regime_history ORDER BY trade_date DESC LIMIT 1"
+    -
+      name: "breadth_analysis"
+      description: "Analyze market breadth using advance/decline ratios."
+      template: "SELECT trade_date, advances, declines, net_ad, ad_oscillator, trig_signal FROM breadth.market_daily WHERE trade_date = ?"
+    -
+      name: "index_momentum_check"
+      description: "Check index momentum indicators like RSI and trend signal."
+      template: "SELECT trade_date, index_symbol, close, rsi, trend_signal FROM market.index_eod WHERE trade_date = ? AND index_symbol = ?"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure the latest market regime is consistent with FII/DII flow trends."
+  - "Verify if breadth indicators align with risk-on/off signals."
+  - "Cross-check index momentum indicators for confluence with flow and breadth."
+synthesis_guidance: "Synthesize data into a coherent narrative on market regime and risk context, considering all evidence without altering approved schema usage."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:58:29"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

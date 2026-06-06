@@ -1,0 +1,62 @@
+created_at: "2026-06-06T12:50:16"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: latest EOD; response style: debug trace."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0618_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "fetch_vcp_breakouts"
+    template: "SELECT symbol, company_name, vcp_score, vcp_breakout_pct FROM scores.stage2_vcp_picks WHERE vcp_score > 0.7 ORDER BY vcp_breakout_pct DESC;"
+  -
+    name: "fetch_fundamentals"
+    template: "SELECT symbol, fundamental_score, enhanced_fund_score FROM scores.stage_snapshots WHERE fundamental_score > 70;"
+  -
+    name: "fetch_latest_market_data"
+    template: "SELECT symbol, last_price, week52_high FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+status: "validated"
+synthesis_guidance: "['Integrate VCP breakout data with fundamental scores.', 'Ensure candidates meet new high criteria.', 'Prepare TradingView compatible symbols.']"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "debug_trace"
+title: "VCP Breakouts With Fundamentals Variant 0618"
+tool_plan_template:
+  - "Extract VCP breakout stock data from scores.stage2_vcp_picks."
+  - "Validate and extract financial fundamentals from scores.stage_snapshots."
+  - "Cross-reference with latest market data from market.equity_eod."
+validation_rules:
+  - "Ensure VCP score is greater than 0.7."
+  - "Ensure fundamental score is above 70."
+  - "Confirm latest price data is included."
+version: 1

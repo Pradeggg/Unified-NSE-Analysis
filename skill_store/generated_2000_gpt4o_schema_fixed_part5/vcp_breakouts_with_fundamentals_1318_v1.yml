@@ -1,0 +1,53 @@
+id: "vcp_breakouts_with_fundamentals_1318_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1318"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: latest EOD; response style: exceptions and gaps first."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    description: "Search for stocks meeting VCP criteria, new highs, and breakouts with strong fundamentals. Use latest EOD and position-sizing context."
+sql_templates:
+  - "SELECT DISTINCT e.symbol, e.close, s.stage, s.trading_signal, s.enhanced_fund_score, v.vcp_score\nFROM market.equity_eod e\nJOIN scores.stage_snapshots s ON e.symbol = s.symbol\nJOIN scores.stage2_vcp_picks v ON v.symbol = s.symbol\nWHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)\nAND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nAND v.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)\nAND s.stage = 'STAGE_2'\nAND s.trading_signal IN ('BUY', 'STRONG_BUY')\nAND e.close >= e.week52_high\nORDER BY v.vcp_score DESC, s.enhanced_fund_score DESC\nLIMIT 50;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL uses latest snapshot_date and trade_date where applicable."
+  - "Check correct usage of series = 'EQ' for equity filters."
+  - "Verify data fields match approved table columns."
+synthesis_guidance: "Highlight candidates with the strongest fundamental scores first. Address gaps in fundamental data or stage labeling."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:36"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

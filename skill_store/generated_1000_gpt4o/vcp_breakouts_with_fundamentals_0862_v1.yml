@@ -1,0 +1,69 @@
+id: "vcp_breakouts_with_fundamentals_0862_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0862"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for post results: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  python_tools:
+    -
+      id: "calculate_investment_potential"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "vcp_score"
+        - "enhanced_fund_score"
+        - "rsi"
+      outputs:
+        - "investment_potential"
+      approved_tables:
+        - "scores.stage2_vcp_picks"
+      code: "def run(context):\n    # Calculation logic goes here\n    investment_potential = context['vcp_score'] * context['enhanced_fund_score'] * context['rsi']\n    return investment_potential"
+sql_templates:
+  -
+    template_name: "select_vcp_breakouts"
+    template: "SELECT v.symbol, v.company_name, v.price, v.relative_strength, e.market_cap_cr FROM scores.stage2_vcp_picks v JOIN market.equity_eod e ON v.symbol = e.symbol WHERE v.vcp_score > 80 AND v.enhanced_fund_score > 70 AND v.trading_signal = 'BUY'"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "status"
+synthesis_guidance: "{'framework': 'Follow the institutional review for identifying stocks with strong fundamentals that are also showing price momentum.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:52:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table e.market_cap_cr"
+  - "unknown table e.symbol"
+  - "unknown table v.company_name"
+  - "unknown table v.enhanced_fund_score"
+  - "unknown table v.price"
+  - "unknown table v.relative_strength"
+  - "unknown table v.symbol"
+  - "unknown table v.trading_signal"
+  - "unknown table v.vcp_score"

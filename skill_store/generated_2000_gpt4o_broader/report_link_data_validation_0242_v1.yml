@@ -1,0 +1,50 @@
+id: "report_link_data_validation_0242_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0242"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: deep institutional review; timeframe: last 3 months; response style: ranked candidates."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for last 3 months: review report links not working"
+  - "validate generated report links and missing data as ranked candidates"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "{}"
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts, universe_size FROM report.enhanced_runs WHERE run_ts >= NOW() - INTERVAL '3 months';"
+    note: "Select recent runs within the last 3 months."
+  -
+    template: "SELECT run_id, symbol, score FROM report.enhanced_filtered_stocks WHERE run_id = ? ORDER BY score DESC;"
+    note: "Retrieve ranked filtered stocks for a specific run."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all links are functional."
+  - "Confirm presence of data in linked HTML files."
+  - "Rank candidates based on report analysis."
+synthesis_guidance: "Compile and rank findings to present viable solutions for data validation issues in the Indian market context."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:05"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.now is not approved"

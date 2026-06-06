@@ -1,0 +1,63 @@
+id: "data_freshness_readiness_audit_1379_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1379"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: pre market; response style: exceptions and gaps first."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for pre market: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as exceptions and gaps first"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Check the latest data freshness across specified tables focusing on gaps and missing sources. Ensure reads include 'trade_date' or 'generated_at' aligned to current data requirements."
+sql_templates:
+  check_index_eod_freshness:
+    template: "SELECT MAX(trade_date) AS latest_eod FROM market.index_eod;"
+    is_read_only: true
+  check_equity_eod_freshness:
+    template: "SELECT MAX(trade_date) AS latest_equity_eod FROM market.equity_eod WHERE series = 'EQ';"
+    is_read_only: true
+  check_stage_snapshots_freshness:
+    template: "SELECT MAX(snapshot_date) AS latest_stage_snapshot FROM scores.stage_snapshots;"
+    is_read_only: true
+  check_market_daily_freshness:
+    template: "SELECT MAX(trade_date) AS latest_market_daily FROM breadth.market_daily;"
+    is_read_only: true
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "All queries must be read-only following approved SQL templates."
+  - "Latest data must align with approved_schema._global_rules for date comparisons."
+synthesis_guidance: "Focus on identifying freshness readiness issues. Present exceptions and gaps as primary output, highlighting any critical blocking elements in data pipelines."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:40"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.latest_market_daily is not approved"
+  - "market.equity_eod.latest_equity_eod is not approved"
+  - "market.index_eod.latest_eod is not approved"
+  - "scores.stage_snapshots.latest_stage_snapshot is not approved"

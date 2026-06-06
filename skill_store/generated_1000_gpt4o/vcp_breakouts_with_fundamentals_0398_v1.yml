@@ -1,0 +1,61 @@
+id: "vcp_breakouts_with_fundamentals_0398_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0398"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Select stocks with VCP or making new highs with strong fundamentals."
+    template: "SELECT s.symbol, s.company_name, s.sector, s.price, s.trading_signal, s.rsi, s.enhanced_fund_score, s.investment_score FROM scores.stage2_vcp_picks s JOIN market.equity_eod e ON s.symbol = e.symbol WHERE s.trading_signal = 'breakout' AND s.enhanced_fund_score > 70 AND (e.high >= e.week52_high OR s.vcp_score > 70) AND e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+python_tools:
+  - "read_only_tool"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates must be read-only SELECT/WITH templates."
+synthesis_guidance: "['Identify stocks with breakout signals and strong fundamentals.', 'Focus on weekly performance and exceptions.', 'Consider liquidity and market capitalization in analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:46:13"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table e.high"
+  - "unknown table e.symbol"
+  - "unknown table e.trade_date"
+  - "unknown table e.week52_high"
+  - "unknown table s.company_name"
+  - "unknown table s.enhanced_fund_score"
+  - "unknown table s.investment_score"
+  - "unknown table s.price"
+  - "unknown table s.rsi"
+  - "unknown table s.sector"
+  - "unknown table s.symbol"
+  - "unknown table s.trading_signal"
+  - "unknown table s.vcp_score"

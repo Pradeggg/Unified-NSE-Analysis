@@ -1,0 +1,103 @@
+created_at: "2026-06-06T12:41:54"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: weekly review; response style: concise table."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0095_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as concise table"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    # Example analysis logic\n    stage_data = context['stage_snapshots']\n    holdings_data = context['holdings']\n    # Perform computations\n    return {'max_risk_sector': 'example_sector'}"
+    id: "risk_assessment_tool"
+    inputs:
+      -
+        context:
+          holdings: "portfolio.holdings"
+          stage_snapshots: "scores.stage_snapshots"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      -
+        max_risk_sector: "Sector with highest risk exposure."
+review:
+  status: "needs_heal"
+  findings:
+    - "portfolio.holdings.total_qty is not approved"
+    - "risk_assessment_tool: inputs must contain only strings"
+    - "risk_assessment_tool: outputs must contain only strings"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    sql: "SELECT symbol, sector, AVG(change_1w_pct) avg_weekly_change FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY symbol, sector"
+  -
+    sql: "SELECT symbol, SUM(qty) AS total_qty FROM portfolio.holdings GROUP BY symbol"
+status: "test_failed"
+synthesis_guidance:
+  - "Combine data from SQL queries and Python analysis to generate a comprehensive risk-first review."
+  - "Focus on concise, tabular representations of add/trim decisions and risk exposure."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "weekly_review"
+  - "concise_table"
+title: "Portfolio Incremental Add Trim Review Variant 0095"
+tool_plan_template:
+  -
+    inputs:
+      holdings: "SELECT * FROM portfolio.holdings"
+      stage_snapshots: "SELECT * FROM scores.stage_snapshots"
+    outputs:
+      add_candidates: "Candidates for incremental addition."
+      portfolio_state: "List of current holdings with details."
+      risk_flags: "Any risks identified."
+      sector_exposure: "Exposure by sector."
+      trim_candidates: "Candidates for reduction."
+    python_tools:
+      -
+        approved_tables:
+          - "scores.stage_snapshots"
+          - "portfolio.holdings"
+        code: "def run(context):\n    # Example analysis logic\n    stage_data = context['stage_snapshots']\n    holdings_data = context['holdings']\n    # Perform computations\n    return {'max_risk_sector': 'example_sector'}"
+        id: "risk_assessment_tool"
+        inputs:
+          -
+            context:
+              holdings: "portfolio.holdings"
+              stage_snapshots: "scores.stage_snapshots"
+        language: "python"
+        mode: "read_only"
+        outputs:
+          -
+            max_risk_sector: "Sector with highest risk exposure."
+    tool: "Portfolio Analysis"
+validation_errors:
+  - "portfolio.holdings.total_qty is not approved"
+  - "risk_assessment_tool: inputs must contain only strings"
+  - "risk_assessment_tool: outputs must contain only strings"
+validation_rules:
+  - "Ensure the output includes all required sections."
+  - "Validate that SQL queries return correctly grouped and aggregated data."
+  - "Python tool outputs must be derived from inputs using appropriate logic."
+version: 1

@@ -1,0 +1,64 @@
+id: "agent_route_failure_diagnostics_0252_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0252"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: quarter to date; response style: ranked candidates."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for quarter to date: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as ranked candidates"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Identify potential route failures using enhanced report metadata, filtered stock performance, and snapshot scores."
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts, universe_size FROM report.enhanced_runs WHERE analysis_date >= DATE_TRUNC('quarter', CURRENT_DATE);"
+    description: "Fetch recent quarter enhanced run metadata."
+  -
+    template: "SELECT run_id, symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE score < 0.5;"
+    description: "Identify poorly performing stocks in the enhanced filtered list."
+  -
+    template: "SELECT symbol, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date >= DATE_TRUNC('quarter', CURRENT_DATE);"
+    description: "Review stage data for insights on potential agent route diagnostics."
+python_tools:
+  -
+    id: "symbol_resolution_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "list_of_symbols"
+    outputs:
+      - "symbol_resolution_issues"
+    approved_tables:
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    return [symbol for symbol in context.inputs['list_of_symbols'] if not valid_symbol(symbol)]"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure analysis only references approved tables/columns."
+  - "Review synthesized responses for accuracy related to evidence data."
+synthesis_guidance: "Rank and return possible routes and solutions for diagnostics via enhanced metadata and snapshots."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.date_trunc is not approved"
+  - "scores.stage_snapshots.date_trunc is not approved"

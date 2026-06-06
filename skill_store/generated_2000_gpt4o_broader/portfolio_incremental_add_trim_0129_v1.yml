@@ -1,0 +1,57 @@
+id: "portfolio_incremental_add_trim_0129_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0129"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: last 5 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for last 5 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "fetch_recent_stage_snapshots"
+    description: "Selects stage snapshots for the last 5 sessions for source-trail validation."
+    query: "SELECT symbol, stage, stage_score, trend_signal, trading_signal, change_1w_pct FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '5 days';"
+  -
+    name: "fetch_portfolio_holdings"
+    description: "Retrieves current holdings with relevant details."
+    query: "SELECT symbol, qty, avg_cost FROM portfolio.holdings;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "status"
+  - "SQL_templates_read_only"
+  - "python_tool_evidence_only"
+synthesis_guidance: "{'narrative_style': 'Combine evidence from recent stage snapshots and current holdings to present a clear recommendation on whether to incrementally add or trim positions.', 'evidence_integration': 'Use SQL templates for data extraction and fill evidence gaps if necessary using read-only Python tools.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:33"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,54 @@
+id: "agent_route_failure_diagnostics_1134_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1134"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as narrative plus evidence"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Using available evidence, identify Agent Adda route failures in symbol resolution or missing tools. Provide a watchlist for the last 20 sessions."
+sql_templates:
+  -
+    template_name: "fetch_latest_enhanced_runs"
+    template: "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE run_ts >= (CURRENT_DATE - INTERVAL '20 days') ORDER BY run_ts DESC;"
+  -
+    template_name: "fetch_filtered_stocks_details"
+    template: "SELECT ers.run_id, efs.symbol, efs.recommendation, efs.current_price FROM report.enhanced_runs ers JOIN report.enhanced_filtered_stocks efs ON ers.run_id = efs.run_id WHERE ers.run_ts >= (CURRENT_DATE - INTERVAL '20 days') ORDER BY ers.run_ts DESC, efs.rank LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all tool gaps in diagnostics are captured."
+  - "Confirm route fixes are feasible within existing Agent Adda infrastructure."
+synthesis_guidance: "Synthesize diagnostics into a narrative report focusing on missing tools and symbol resolution loops, while identifying strategic fixes."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:32"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,55 @@
+id: "data_freshness_readiness_audit_1659_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1659"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: quarter to date; response style: debug trace."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for quarter to date: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as debug trace"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "quarter_to_date"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  assessment: "Determine the freshness of each evidence table relevant to Indian market data and check if any source gaps exist."
+sql_templates:
+  market_data_freshness: "SELECT MAX(trade_date) AS latest_trade_date FROM market.index_eod;"
+  equity_data_freshness: "SELECT MAX(trade_date) AS latest_trade_date FROM market.equity_eod;"
+  snapshot_data_freshness: "SELECT MAX(snapshot_date) AS latest_snapshot_date FROM scores.stage_snapshots;"
+  breadth_data_freshness: "SELECT MAX(trade_date) AS latest_trade_date FROM breadth.market_daily;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "freshness_threshold"
+synthesis_guidance: "{'approach': 'Synthesize findings by collating freshness validation across multiple data tables, identifying stale sources, and recommending actions to address gaps.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.latest_trade_date is not approved"
+  - "market.equity_eod.latest_trade_date is not approved"
+  - "market.index_eod.latest_trade_date is not approved"
+  - "scores.stage_snapshots.latest_snapshot_date is not approved"

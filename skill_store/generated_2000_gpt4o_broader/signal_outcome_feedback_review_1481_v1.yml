@@ -1,0 +1,62 @@
+id: "signal_outcome_feedback_review_1481_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1481"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: quick scan; timeframe: intraday context; response style: portfolio-aware output."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for intraday context: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as portfolio-aware output"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  overview: "Use the evidence from signal logs to determine which signals hit targets or stops within an intraday context. Provide insights for portfolio improvements."
+  steps:
+    - "Query for signals with hit targets or stops."
+    - "Identify patterns of successes and failures."
+    - "Propose route improvements for future signals."
+sql_templates:
+  -
+    template_id: "1"
+    description: "Retrieve signals where target or stop was hit."
+    sql: "SELECT id, symbol, date_issued, price_at_issue, price_at_resolution, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE hit_target = TRUE OR hit_stop = TRUE"
+  -
+    template_id: "2"
+    description: "Fetch current price and stage data for successful signals."
+    sql: "WITH successful_signals AS (SELECT id, symbol FROM signals.signal_log WHERE hit_target = TRUE) SELECT ss.symbol, ss.price, ss.stage_score FROM scores.stage_snapshots AS ss JOIN successful_signals AS sig ON ss.symbol = sig.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure only SELECT read-only SQL templates are used."
+  - "SQL must not make changes to the database."
+synthesis_guidance: "{'summary_type': 'intraday', 'focus': 'portfolio-aware output based on outcome patterns'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:09:05"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

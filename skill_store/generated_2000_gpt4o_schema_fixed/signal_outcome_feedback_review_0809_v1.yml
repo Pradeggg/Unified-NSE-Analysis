@@ -1,0 +1,53 @@
+id: "signal_outcome_feedback_review_0809_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0809"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for today: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as action watchlist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze the effectiveness of prior trading signals by reviewing hits and stops, identifying successful patterns, and suggesting route improvements based on today's source-trail validation."
+sql_templates:
+  -
+    name: "Signal Outcome Analysis"
+    description: "Review outcomes of signals issued within the last 3 months and their resolutions."
+    sql: "WITH recent_signals AS (SELECT * FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 months'), latest_prices AS (SELECT symbol, MAX(trade_date) AS max_date FROM market.equity_eod WHERE series = 'EQ' GROUP BY symbol) SELECT rs.symbol, rs.signal, rs.date_issued, rs.price_at_issue, rs.price_at_resolution, rs.return_pct, rs.hit_target, rs.hit_stop FROM recent_signals rs JOIN latest_prices lp ON rs.symbol = lp.symbol WHERE rs.date_resolved = lp.max_date;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "recent_signals"
+  - "hit_target_stop"
+synthesis_guidance: "Synthesize insights from trading signals with respect to outcome performance, identifying patterns of success and failure to augment decision-making frameworks."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

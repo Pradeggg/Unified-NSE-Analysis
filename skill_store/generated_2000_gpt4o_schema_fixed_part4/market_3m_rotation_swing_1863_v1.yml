@@ -1,0 +1,63 @@
+id: "market_3m_rotation_swing_1863_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1863"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: daily refresh follow-up; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "daily refresh follow-up for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "daily_refresh_follow-up"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    description: "Apply market regime and sector rotation analysis over last 3 months."
+sql_templates:
+  -
+    purpose: "Retrieve index returns over last 3 months"
+    template: "SELECT index_symbol, AVG(change_pct) as average_return FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol;"
+  -
+    purpose: "Identify stage 2 leadership"
+    template: "SELECT symbol, sector, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY');"
+  -
+    purpose: "Select primary swing candidates"
+    template: "SELECT symbol, trading_signal FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) ORDER BY vcp_score DESC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure latest snapshot_date is used for VCP picks and stage snapshots."
+  - "Confirm inclusion of top-ranking sector symbols in VCP picks."
+synthesis_guidance: "['Summarize results into a coherent action watchlist.', 'Emphasize sector leadership changes.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:01"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.average_return is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "market.index_eod.average_return is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

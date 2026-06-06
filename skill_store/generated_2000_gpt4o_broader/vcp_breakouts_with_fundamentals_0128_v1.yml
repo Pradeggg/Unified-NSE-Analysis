@@ -1,0 +1,70 @@
+id: "vcp_breakouts_with_fundamentals_0128_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0128"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: last 5 sessions; response style: narrative plus evidence."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as narrative plus evidence"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  python_tools:
+    -
+      id: "vcp_analysis_tool"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "symbol"
+        - "trade_date"
+        - "price"
+        - "volume"
+        - "fundamental_score"
+      outputs:
+        - "vcp_analysis_details"
+      approved_tables:
+        - "market.equity_eod"
+        - "scores.stage_snapshots"
+      code: "def run(context):\n    # read-only analysis function for VCP breakouts\n    pass"
+sql_templates:
+  -
+    name: "Fetch_Recent_Breakouts"
+    template: "WITH recent_prices AS (SELECT * FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '5 days'),\nvcp_candidates AS (SELECT symbol, company_name, sector, price, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE snapshot_date = CURRENT_DATE AND vcp_score > 80)\nSELECT rp.symbol, rp.close, rp.volume, sc.company_name, sc.sector, sc.enhanced_fund_score FROM recent_prices rp JOIN vcp_candidates sc ON rp.symbol = sc.symbol WHERE rp.close >= sc.price * 1.05"
+    description: "Fetch symbols with recent VCP breakouts and strong fundamentals."
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "structure"
+  - "logic"
+synthesis_guidance: "{'style': 'narrative_plus_evidence', 'focus': 'high-informative value on Indian markets for investors'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:43:36"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

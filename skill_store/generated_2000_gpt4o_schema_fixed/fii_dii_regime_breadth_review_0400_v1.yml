@@ -1,0 +1,78 @@
+id: "fii_dii_regime_breadth_review_0400_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0400"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: weekly review; response style: exceptions and gaps first."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for weekly review: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as exceptions and gaps first"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  -
+    step: "Collect FII/DII Flows"
+    evidence_table: "signals.fii_dii_flows"
+    action: "Review recent flow trends and signal categorizations."
+  -
+    step: "Evaluate Market Regime"
+    evidence_table: "signals.regime_history"
+    action: "Identify current regime and its duration."
+  -
+    step: "Analyze Market Breadth"
+    evidence_table: "breadth.market_daily"
+    action: "Assess breadth signals such as A/D oscillator and TRIN."
+  -
+    step: "Confirm with Index EOD Data"
+    evidence_table: "market.index_eod"
+    action: "Validate findings against major index close levels."
+sql_templates:
+  -
+    query_name: "Latest FII DII Flows"
+    sql: "SELECT trade_date, fii_net_today, dii_net_today, fii_net_5d, dii_net_5d, flow_signal, fii_trend, dii_trend FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+  -
+    query_name: "Current Market Regime"
+    sql: "SELECT trade_date, regime, confidence, days_in_regime FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history);"
+  -
+    query_name: "Current Market Breadth"
+    sql: "SELECT trade_date, advances, declines, adv_volume, dec_volume, ad_oscillator, trin FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+  -
+    query_name: "Latest Index EOD"
+    sql: "SELECT trade_date, index_symbol, close, change_pct, technical_score FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND index_symbol = 'Nifty 50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all SQL templates are read-only SELECT queries."
+  - "Confirm the latest trade date is used across all evidence tables."
+  - "Verify output keys are populated from corresponding queries."
+synthesis_guidance: "['Highlight any discrepancies between index confirmation and breadth context.', 'Emphasize flow signals that contradict the prevailing regime.', 'Prioritize exceptional findings and underlined evidence gaps.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:57"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

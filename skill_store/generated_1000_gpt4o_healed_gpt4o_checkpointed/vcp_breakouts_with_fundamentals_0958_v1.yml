@@ -1,0 +1,74 @@
+created_at: "2026-06-06T12:53:07"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: quarter to date; response style: comparison matrix."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0958_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    # Calculate VCP score using approved data\n    return {'vcp_score': []}"
+    id: "calculate_vcp_score"
+    inputs:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "vcp_score"
+review:
+  attempts: 3
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Select potential breakout stocks with strong fundamentals."
+    sql: "SELECT e.symbol, e.close, e.volume, s.stage, s.fundamental_score, s.enhanced_fund_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.high = e.week52_high OR s.stage IN ('VCP', 'Breakout') AND s.enhanced_fund_score > 80;"
+status: "validated"
+synthesis_guidance:
+  focus: "Position-sizing and trading signals."
+  strategy: "Compare candidates based on enhanced fund score and market trends."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "comparison_matrix"
+title: "VCP Breakouts With Fundamentals Variant 0958"
+tool_plan_template:
+  description: "Query and synthesize data for VCP breakouts with fundamentals in the Indian market."
+  steps:
+    - "Filter for stocks with new highs, VCP, or breakouts."
+    - "Evaluate fundamental and liquidity metrics."
+    - "Prepare comparison matrix."
+validation_errors:
+  - "calculate_vcp_score: run(context) must return a dict"
+validation_rules:
+  - "Ensure enhanced_fund_score is above a predefined threshold."
+  - "Verify liquidity via volume checks."
+version: 1

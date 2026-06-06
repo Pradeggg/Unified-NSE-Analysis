@@ -1,0 +1,55 @@
+id: "fii_dii_regime_breadth_review_1716_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1716"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: latest EOD; response style: QA checklist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for latest EOD: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as QA checklist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "latest_EOD"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Analyze the latest market conditions using current FII/DII flows, regime history, market breadth details, and index movements. Ensure data freshness and present findings in a QA checklist style."
+sql_templates:
+  -
+    title: "Latest FII/DII Flows and Regime"
+    template: "SELECT fii.trade_date, fii.flow_signal, reg.regime, reg.confidence FROM signals.fii_dii_flows fii INNER JOIN signals.regime_history reg ON fii.trade_date = reg.trade_date WHERE fii.trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+  -
+    title: "Market Breadth Context"
+    template: "SELECT breadth.trade_date, breadth.advances, breadth.declines, breadth.ad_signal FROM breadth.market_daily breadth WHERE breadth.trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+  -
+    title: "Index Latest Confirmation"
+    template: "SELECT indx.trade_date, indx.index_symbol, indx.close, indx.change_pct FROM market.index_eod indx WHERE indx.trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND indx.index_symbol = 'Nifty 50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all data points are from the latest available trade date."
+  - "Verify that FII/DII flows are consistent with regime and breadth contexts."
+  - "Check that market regime aligns with index confirmation signals."
+synthesis_guidance: "While synthesizing the output, focus on summarizing the QA findings as per the latest data points and ensure clarity on whether the market context is risk-on or risk-off based on the combined analyses of FII/DII flows, regime, and breadth."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:16"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.market_daily is not approved"

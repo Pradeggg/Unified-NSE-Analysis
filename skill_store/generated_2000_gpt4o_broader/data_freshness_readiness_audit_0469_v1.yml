@@ -1,0 +1,55 @@
+id: "data_freshness_readiness_audit_0469_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0469"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for post results: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as portfolio-aware output"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Audit data freshness for live and report workflows using latest indexes and equity EOD records."
+sql_templates:
+  -
+    template: "SELECT MAX(trade_date) as last_trade_date FROM market.index_eod WHERE index_symbol = 'NIFTY'"
+    description: "Retrieve the latest trade date for NIFTY index."
+  -
+    template: "SELECT MAX(trade_date) as last_trade_date FROM market.equity_eod"
+    description: "Retrieve the latest trade date for equity EOD data."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "max_days_old"
+  - "required_fields"
+synthesis_guidance: "Ensure the latest data aligns with real-time trading expectations."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:41"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.last_trade_date is not approved"
+  - "market.index_eod.last_trade_date is not approved"

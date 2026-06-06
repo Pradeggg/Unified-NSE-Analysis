@@ -1,0 +1,51 @@
+created_at: "2026-06-06T12:41:52"
+created_by: "llm_generated"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: watchlist creation; timeframe: today; response style: narrative plus evidence."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "report_link_data_validation_0104_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for today: review report links not working"
+  - "validate generated report links and missing data as narrative plus evidence"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  -
+    description: "Fetch today's enhanced runs and their related filtered stocks."
+    query: "WITH run_metadata AS (SELECT run_id, run_ts FROM report.enhanced_runs WHERE analysis_date = CURRENT_DATE), filtered_stocks AS (SELECT run_id, symbol, recommendation FROM report.enhanced_filtered_stocks) SELECT a.run_id, b.symbol FROM run_metadata a JOIN filtered_stocks b ON a.run_id = b.run_id WHERE a.run_ts >= CURRENT_DATE;"
+status: "validated"
+synthesis_guidance: "Integrate findings as a narrative supported by SQL evidence. Address gaps using narrative explanation and suggest remediation steps."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "today"
+  - "narrative_plus_evidence"
+title: "Enhanced Report Data Validation Variant 0104"
+tool_plan_template: "To validate the report and ensure the integrity of the data, check the enhanced report run metadata and filtered stock rows for discrepancies in today's records. Focus on watchlist creation and report link generation."
+validation_rules:
+  - "Ensure all report links are accessible."
+  - "Verify that stock data is populated in the HTML files."
+  - "Cross-validate filtered stocks and run metadata are for today."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

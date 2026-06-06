@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:48:58"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: last 5 sessions; response style: research-only summary."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0530_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Identify stocks with new highs or VCP breakouts and strong fundamentals in the last 5 sessions."
+    sql: "\n            WITH recent_highs AS (\n                SELECT symbol, MAX(high) AS recent_high \n                FROM market.equity_eod\n                WHERE trade_date >= CURRENT_DATE - INTERVAL '5' DAY\n                GROUP BY symbol\n            ),\n            breakout_candidates AS (\n                SELECT vcp.symbol, vcp.company_name, vcp.price, vcp.vcp_breakout_pct, ss.fundamental_score\n                FROM scores.stage2_vcp_picks vcp\n                JOIN scores.stage_snapshots ss ON vcp.symbol = ss.symbol\n                WHERE vcp.trading_signal = 'Breakout'\n                AND vcp.snapshot_date = CURRENT_DATE - INTERVAL '1' DAY\n                AND ss.fundamental_score > 70\n            )\n            SELECT rh.symbol, rh.recent_high, bc.vcp_breakout_pct, bc.fundamental_score\n            FROM recent_highs rh\n            JOIN breakout_candidates bc ON rh.symbol = bc.symbol;\n            "
+    type: "SELECT"
+status: "validated"
+synthesis_guidance: "Focus on providing insights into stocks that show potential for breakout with strong fundamental scores, framing it as a research-only output suitable for TradingView export."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "last_5_sessions"
+  - "research-only_summary"
+title: "VCP Breakouts With Fundamentals Variant 0530"
+tool_plan_template: "Research-only summary for TradingView export. Analyze stocks from last 5 sessions that show new highs, VCP, or breakout patterns with strong fundamentals."
+validation_rules:
+  - "Must include only approved tables and columns."
+  - "SQL must be read-only and not include data modification statements."
+version: 1

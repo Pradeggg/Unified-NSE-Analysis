@@ -1,0 +1,59 @@
+id: "portfolio_lab_paper_trading_review_0726_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0726"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: last 5 sessions; response style: QA checklist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for last 5 sessions: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as QA checklist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review the paper trading strategies focusing on entries, exits, and exposure as a QA checklist. Ensure separation from real holdings and conduct a freshness audit for the last 5 sessions."
+sql_templates:
+  -
+    name: "fetch_strategy_entries"
+    template: "SELECT date_issued, symbol, price_at_issue, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued >= (SELECT MAX(trade_date) FROM market.equity_eod WHERE trade_date <= CURRENT_DATE - INTERVAL '5 DAYS') ORDER BY date_issued DESC;"
+  -
+    name: "fetch_recent_trades"
+    template: "SELECT trade_date, symbol, open, close FROM market.equity_eod WHERE trade_date >= (SELECT MAX(trade_date) FROM market.equity_eod WHERE trade_date <= CURRENT_DATE - INTERVAL '5 DAYS') ORDER BY trade_date DESC;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+synthesis_guidance: "Focus on a QA checklist format, ensuring clear separation of paper trading from real holdings and fresh audits of strategy performance over the last five sessions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:07"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

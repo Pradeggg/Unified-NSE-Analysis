@@ -1,0 +1,54 @@
+id: "report_link_data_validation_1320_v1"
+version: 1
+status: "review_pending"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1320"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: TradingView export; timeframe: latest EOD; response style: exceptions and gaps first."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for latest EOD: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    steps:
+      - "Check for missing report data and broken links in both evidence tables."
+      - "Identify gaps or exceptions in the TradingView export related to the latest EOD."
+sql_templates:
+  -
+    description: "Select recent enhanced report runs and filtered stocks for review."
+    sql: "WITH latest_runs AS (SELECT run_id FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)) SELECT r.run_id, r.run_ts, f.symbol, f.score FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks f ON r.run_id = f.run_id WHERE r.run_id IN (SELECT run_id FROM latest_runs);"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all report links are functional."
+  - "Verify that stock data is present and accurate."
+synthesis_guidance: "['Focus on identifying exceptions and gaps.', 'Provide insights into potential remediation steps.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:45"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

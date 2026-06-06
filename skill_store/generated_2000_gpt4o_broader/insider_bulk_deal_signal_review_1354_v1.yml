@@ -1,0 +1,53 @@
+id: "insider_bulk_deal_signal_review_1354_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1354"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for quarter to date: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as exceptions and gaps first"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze insider and bulk deal data with technical indicators."
+sql_templates:
+  -
+    template: "WITH recent_insider_alerts AS (SELECT symbol, SUM(qty) AS total_qty FROM signals.insider_alerts WHERE alert_date > CURRENT_DATE - INTERVAL '90 days' GROUP BY symbol), recent_deals AS (SELECT symbol, SUM(qty) AS total_qty FROM signals.bulk_block_deals WHERE deal_date > CURRENT_DATE - INTERVAL '90 days' AND side = 'BUY' GROUP BY symbol) SELECT a.symbol FROM recent_insider_alerts a JOIN recent_deals b ON a.symbol = b.symbol JOIN scores.stage_snapshots c ON a.symbol = c.symbol WHERE c.trend_signal = 'Positive' AND c.stage_score > 5;"
+    description: "Identify symbols with recent insider buying and bulk deals with a positive technical setup."
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure only approved tables and columns are used."
+  - "SQL must be read-only and follow the given schemas."
+  - "Python tools are only to be used when SQL complexity arises."
+synthesis_guidance: "Focus on identifying gaps and exceptions in insider and bulk deal data first."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:26"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

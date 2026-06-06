@@ -1,0 +1,50 @@
+id: "portfolio_incremental_add_trim_0661_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0661"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: post results; response style: debug trace."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for post results: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as debug trace"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "post_results"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Perform a quick scan of the portfolio based on current holdings and stage snapshots to inform add or trim decisions."
+sql_templates:
+  -
+    description: "Retrieve current portfolio holdings with latest performance metrics."
+    query: "WITH latest_snapshots AS (SELECT symbol, MAX(snapshot_date) AS latest_date FROM scores.stage_snapshots GROUP BY symbol) SELECT h.symbol, h.qty, h.avg_cost, s.sector, s.stage, s.stage_score, s.trend_signal, s.rsi FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol JOIN latest_snapshots ls ON s.symbol = ls.symbol AND s.snapshot_date = ls.latest_date;"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure output lists potential add and trim candidates based on latest data."
+  - "Validate against any anomalies in performance metrics that may skew decisions."
+synthesis_guidance: "Use the latest stage snapshots to guide add/trim decisions, focusing on trend signals and RSI."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:25"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,69 @@
+created_at: "2026-06-06T12:50:03"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: today; response style: debug trace."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0601_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for today: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Fetch recent index returns."
+    name: "index_returns"
+    query: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= '2023-01-01' ORDER BY trade_date DESC;"
+  -
+    description: "Get change in stage distribution over 3 months."
+    name: "stage_distribution_change"
+    query: "SELECT sector, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date >= '2023-01-01' AND stage = 2 GROUP BY sector;"
+  -
+    description: "Find leading sectors based on relative strength today."
+    name: "leading_sectors"
+    query: "SELECT symbol, sector, relative_strength FROM scores.stage_snapshots WHERE snapshot_date = '2023-03-31' AND stage = 2 ORDER BY relative_strength DESC LIMIT 5;"
+  -
+    description: "Identify primary swing trade candidates for today."
+    name: "primary_candidates"
+    query: "SELECT symbol, company_name, price, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = '2023-03-31' ORDER BY vcp_score DESC LIMIT 5;"
+status: "validated"
+synthesis_guidance: "Aggregate results to provide a coherent narrative of market conditions, leadership sectors, and swing candidates."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "today"
+  - "debug_trace"
+title: "3M Market Rotation Swing Assessment Variant 0601"
+tool_plan_template: "Analyze sector rotation, market regime, and stage 2 leadership using the last 3 months of data."
+validation_errors:
+
+validation_rules:
+  - "Ensure all required fields are present in the output."
+  - "Output must reflect data from the last 3 months."
+  - "Correctly order sectors and candidates based on performance metrics."
+version: 1

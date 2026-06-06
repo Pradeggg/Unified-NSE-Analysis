@@ -1,0 +1,62 @@
+id: "company_360_research_report_1112_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Comprehensive Company Research Report - Reliance"
+description: "Generate a comprehensive report on Reliance with an overview, financials, fundamentals, technical context, and narrative evidence."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "deep institutional review for latest EOD: /research RELIANCE"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  introduction: "Prepare a detailed report on Reliance using the latest available data."
+  steps:
+    - "Gather the latest market cap, price, and technical scores from scores.stage_snapshots."
+    - "Extract recent quarterly and annual financials from scores.quarterly_results and scores.annual_results."
+    - "Review balance sheet and cash flow from scores.balance_sheet and scores.cash_flow."
+    - "Analyze trends and insights from scores.results_analysis."
+    - "Gather latest EOD data from market.equity_eod for market context."
+sql_templates:
+  - "SELECT * FROM scores.stage_snapshots WHERE symbol = 'RELIANCE' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 1;"
+  - "SELECT * FROM scores.quarterly_results WHERE symbol = 'RELIANCE' AND period_end = (SELECT MAX(period_end) FROM scores.quarterly_results WHERE symbol = 'RELIANCE' AND period_type = 'quarter') LIMIT 1;"
+  - "SELECT * FROM scores.annual_results WHERE symbol = 'RELIANCE' AND period_end = (SELECT MAX(period_end) FROM scores.annual_results WHERE symbol = 'RELIANCE' AND period_type = 'annual') LIMIT 1;"
+  - "SELECT * FROM scores.balance_sheet WHERE symbol = 'RELIANCE' AND period_end = (SELECT MAX(period_end) FROM scores.balance_sheet WHERE symbol = 'RELIANCE') LIMIT 1;"
+  - "SELECT * FROM scores.cash_flow WHERE symbol = 'RELIANCE' AND period_end = (SELECT MAX(period_end) FROM scores.cash_flow WHERE symbol = 'RELIANCE') LIMIT 1;"
+  - "SELECT * FROM scores.results_analysis WHERE symbol = 'RELIANCE' AND period_end = (SELECT MAX(period_end) FROM scores.results_analysis WHERE symbol = 'RELIANCE') LIMIT 1;"
+  - "SELECT * FROM market.equity_eod WHERE symbol = 'RELIANCE' AND trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) LIMIT 1;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all required data fields are present and correctly aligned."
+  - "Only use approved tables and columns."
+synthesis_guidance: "['Merge quantitative data with qualitative analysis.', 'Emphasize key insights and trends.', 'Maintain a clear narrative structure.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,77 @@
+id: "portfolio_lab_paper_trading_review_0698_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Weekly Paper Trading Portfolio Strategy Review"
+description: "Perform a weekly review of paper trading strategies within the context of position sizing, without including actual holdings. Analyze entries, exits, stop losses, and targets."
+input_patterns:
+  - "paper trading portfolio weekly review"
+  - "strategy weekly analysis separate from actual holdings"
+  - "review paper trading strategies for position sizing"
+  - "weekly paper trading analysis as debug trace"
+tags:
+  - "portfolio"
+  - "weekly_review"
+  - "paper_trading"
+  - "position_sizing"
+  - "strategy_analysis"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "get_latest_trading_signals"
+    template: "SELECT symbol, date_issued, signal, entry_low, entry_high, stop_loss, target_1 FROM signals.signal_log WHERE date_issued = (SELECT MAX(date_issued) FROM signals.signal_log) ORDER BY symbol"
+  -
+    name: "get_portfolio_holdings_snapshot"
+    template: "SELECT ph.symbol, ph.qty, ph.avg_cost, ph.buy_date, ss.stage, ss.technical_score FROM portfolio.holdings AS ph JOIN scores.stage_snapshots AS ss ON ph.symbol = ss.symbol WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ph.symbol = ANY($1)"
+python_tools:
+  -
+    id: "generate_exposure_report"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      context:
+        symbols:
+          - "TATASTEEL"
+          - "INFY"
+          - "RELIANCE"
+        date: "2023-10-02"
+    outputs:
+      report: "exposure_report.json"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Logic to evaluate and generate exposure report\n    return {'report': 'Exposure evaluation completed successfully.'}"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure SQL templates are strictly read-only."
+  - "Use approved join conditions only."
+  - "Filter for latest data using approved global rules."
+  - "Confirm Python code is read-only and follows blocked capabilities policy."
+synthesis_guidance: "Focus on paper trading analysis without mixing with real portfolio holdings. Provide debugging information tracing the review process, emphasizing entries, exits, and position sizing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:35:46"
+generation_model: "gpt-4o"
+validation_errors:
+  - "generate_exposure_report: inputs must be a list"
+  - "generate_exposure_report: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "generate_exposure_report: inputs must be a list"
+    - "generate_exposure_report: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

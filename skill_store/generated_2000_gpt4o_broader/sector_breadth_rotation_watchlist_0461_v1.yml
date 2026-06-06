@@ -1,0 +1,49 @@
+id: "sector_breadth_rotation_watchlist_0461_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0461"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for post results: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as portfolio-aware output"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze sector breadth and stage dynamics post results using approved evidence tables; report sectors showing promising improvement and viable TradingView symbol candidates."
+sql_templates:
+  sector_ranks: "SELECT snapshot_date, sector, SUM(pct_above_50dma) AS total_pct_above_50dma, AVG(change_5d) AS avg_change_5d FROM breadth.sector_daily GROUP BY snapshot_date, sector ORDER BY total_pct_above_50dma DESC"
+  stage2_sectors: "WITH Stage2 AS (SELECT sector, AVG(stage2_pct) AS avg_stage2_pct FROM breadth.ma_pct_above GROUP BY sector) SELECT sector FROM Stage2 WHERE avg_stage2_pct > 0.5"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure that sector ranks are based on pct_above_50dma."
+  - "Stage 2 sectors must have avg_stage2_pct greater than 0.5."
+synthesis_guidance: "When synthesizing the watchlist, focus on improvements in breadth and stage 2 participation. Select stocks with strong relative strength and price momentum."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:35"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.sector_daily.avg_change_5d is not approved"
+  - "breadth.sector_daily.total_pct_above_50dma is not approved"

@@ -1,0 +1,66 @@
+id: "portfolio_lab_paper_trading_review_0054_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0054"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: watchlist creation; timeframe: quarter to date; response style: concise table."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "watchlist creation for quarter to date: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as concise table"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+    -
+      id: "run"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "date_range"
+        - "strategy_filter"
+      outputs:
+        - "filtered_signals"
+      approved_tables:
+        - "signals.signal_log"
+      code: "# This function will filter signals based on the provided date range and strategy.\ndef run(context):\n    date_range = context['inputs']['date_range']\n    strategy_filter = context['inputs']['strategy_filter']\n    filtered_signals = []\n    # Loop through signals\n    for signal in context['tables']['signals.signal_log']:\n        # Check if signal is within date range and matches the strategy filter\n        if signal['date_issued'] in date_range and signal['setup_class'] == strategy_filter:\n            filtered_signals.append(signal)\n    return {'filtered_signals': filtered_signals}"
+sql_templates:
+  -
+    description: "Select active trades and their relevant strategy details."
+    sql: "SELECT s.symbol, s.signal, s.entry_low, s.entry_high, s.stop_loss, s.target_1, s.target_2, p.avg_cost, p.qty FROM signals.signal_log s INNER JOIN portfolio.holdings p ON s.symbol = p.symbol WHERE s.date_resolved IS NULL AND s.action_bucket = 'active'"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all inputs are correctly matched with the specified patterns."
+  - "Verify that all output fields adhere to the templates provided."
+synthesis_guidance: "['Summarize the strategy review in a concise table format.', 'Focus on active trades and their status per the quarter to date.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

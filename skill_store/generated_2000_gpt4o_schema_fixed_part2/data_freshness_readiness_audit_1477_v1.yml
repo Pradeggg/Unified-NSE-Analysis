@@ -1,0 +1,82 @@
+id: "data_freshness_readiness_audit_1477_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1477"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: sector-relative comparison; timeframe: pre market; response style: portfolio-aware output."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "sector-relative comparison for pre market: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as portfolio-aware output"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    task: "Check the latest trade date for equities and indices."
+    evidence_tables:
+      - "market.equity_eod"
+      - "market.index_eod"
+  -
+    task: "Review stage snapshots for the latest date."
+    evidence_tables:
+      - "scores.stage_snapshots"
+  -
+    task: "Analyze market daily breadth and moving average participation."
+    evidence_tables:
+      - "breadth.market_daily"
+      - "breadth.ma_pct_above"
+  -
+    task: "Validate report runs for the latest market composite and sentiment."
+    evidence_tables:
+      - "report.enhanced_runs"
+sql_templates:
+  -
+    name: "latest_trade_date_equities"
+    template: "SELECT MAX(trade_date) FROM market.equity_eod;"
+  -
+    name: "latest_trade_date_indices"
+    template: "SELECT MAX(trade_date) FROM market.index_eod;"
+  -
+    name: "latest_stage_snapshot"
+    template: "SELECT MAX(snapshot_date) FROM scores.stage_snapshots;"
+  -
+    name: "latest_market_daily"
+    template: "SELECT MAX(trade_date) FROM breadth.market_daily;"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all latest_date_columns are reviewed."
+  - "Check if freshness_matrix covers all sectors."
+synthesis_guidance: "['Evaluate sector-relative freshness against the portfolio.', 'Highlight areas lacking recent data.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:38"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

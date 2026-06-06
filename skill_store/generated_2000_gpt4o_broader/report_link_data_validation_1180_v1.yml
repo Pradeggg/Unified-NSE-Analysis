@@ -1,0 +1,56 @@
+id: "report_link_data_validation_1180_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Agent Adda Skill Card: Data Validation"
+description: "This skill card aids in the validation of enhanced report data, specifically focusing on TradingView exports for the pre market timeframe. It provides a narrative response enriched with evidence from approved tables."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for pre market: review report links not working"
+  - "validate generated report links and missing data as narrative plus evidence"
+tags:
+  - "data_validation"
+  - "report_qa"
+  - "TradingView_export"
+  - "pre_market"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  description: "Plan to systematically check for broken links, analyze missing data, and provide narrative synthesis."
+  steps:
+    - "Retrieve all enhanced report runs."
+    - "Filter and analyze stock data for missing or incomplete reports."
+    - "Synthesize narrative based on evidence found."
+    - "Generate findings on broken links and missing data."
+sql_templates:
+  -
+    name: "fetch_report_runs"
+    query: "SELECT run_id, run_ts, analysis_date, universe_size, stocks_analyzed FROM report.enhanced_runs WHERE run_ts::date = current_date"
+  -
+    name: "fetch_filtered_stock_data"
+    query: "SELECT symbol, score, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = ?"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure that all links in the report are functioning properly."
+  - "Confirm that all necessary data is present and correctly populated in the report."
+synthesis_guidance: "Utilize a narrative style that integrates findings with evidence from given tables to convey a comprehensive overview."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:05:07"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

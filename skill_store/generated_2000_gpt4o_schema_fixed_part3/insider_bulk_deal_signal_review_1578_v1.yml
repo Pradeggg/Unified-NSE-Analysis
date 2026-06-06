@@ -1,0 +1,68 @@
+id: "insider_bulk_deal_signal_review_1578_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1578"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for pre market: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as research-only summary"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  deal_summary: "Aggregate bulk and block deal insights."
+  insider_context: "Summarize context from insider alerts."
+  technical_confirmation: "Confirm technical indicators from stage snapshots."
+  ranked_symbols: "Rank symbols based on bulk deals, insider activity, and technical scores."
+  risk_notes: "Highlight potential risks based on recent deal types or alerts."
+sql_templates:
+  aggregate_deals:
+    sql: "SELECT b.symbol, MAX(b.deal_date) AS latest_deal_date, SUM(b.qty) AS total_quantity, AVG(b.price) AS average_price FROM signals.bulk_block_deals b WHERE b.deal_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY b.symbol ORDER BY latest_deal_date DESC LIMIT 10;"
+    description: "Summarizes recent bulk/block deals for top symbols."
+  insider_activity:
+    sql: "SELECT i.symbol, MAX(i.alert_date) AS latest_alert_date, SUM(i.qty) AS total_quantity FROM signals.insider_alerts i WHERE i.alert_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY i.symbol ORDER BY latest_alert_date DESC LIMIT 10;"
+    description: "Tracks recent insider alerts and aggregate quantities."
+  technical_scores:
+    sql: "SELECT s.symbol, s.trading_signal, s.technical_score FROM scores.stage_snapshots s WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY s.technical_score DESC LIMIT 10;"
+    description: "Fetches top technical scores for potential buy signals."
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+synthesis_guidance: "{'deal_summary': 'Compile insights from top bulk deals with volume considerations.', 'insider_context': 'Each insider alert should add context to recent activity.', 'technical_confirmation': 'Emphasize alignment with favorable technical signals.', 'ranked_symbols': 'Prioritize symbols with consistent signals across sections.', 'risk_notes': 'Attach notes on potential risks or volatility from recent data.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.bulk_block_deals.average_price is not approved"
+  - "signals.bulk_block_deals.b is not approved"
+  - "signals.bulk_block_deals.latest_deal_date is not approved"
+  - "signals.bulk_block_deals.total_quantity is not approved"
+  - "signals.insider_alerts.i is not approved"
+  - "signals.insider_alerts.latest_alert_date is not approved"
+  - "signals.insider_alerts.total_quantity is not approved"

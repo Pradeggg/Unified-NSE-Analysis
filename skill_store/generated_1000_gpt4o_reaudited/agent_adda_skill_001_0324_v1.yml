@@ -1,0 +1,53 @@
+created_at: "2026-06-06T12:44:26"
+created_by: "llm_generated"
+description: "Validates report link functionality and stock data for the last 5 sessions, focusing on exceptions and gaps."
+domain: "report_qa"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+generation_model: "gpt-4o"
+id: "agent_adda_skill_001_0324_v1"
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "watchlist creation for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+python_tools:
+
+sql_templates:
+  - "WITH recent_runs AS (SELECT run_id FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 5), broken_links AS (SELECT run_id, symbol FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM recent_runs) AND (symbol IS NULL OR symbol = '')) SELECT * FROM broken_links;"
+status: "validated"
+synthesis_guidance: "Focus on identifying exceptions and data gaps first."
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+title: "Watchlist and Report Validation"
+tool_plan_template:
+  steps:
+    - "Validate report links using run metadata and stock data tables."
+    - "Identify any missing data or broken links."
+    - "Flag exceptions and evidence gaps within the report."
+validation_rules:
+  - "Status must be generated."
+  - "Use only approved schema tables."
+  - "SQL should be read-only select."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

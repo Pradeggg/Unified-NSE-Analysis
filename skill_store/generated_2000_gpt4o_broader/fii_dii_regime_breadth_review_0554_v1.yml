@@ -1,0 +1,61 @@
+id: "fii_dii_regime_breadth_review_0554_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0554"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: quarter to date; response style: research-only summary."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for quarter to date: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as research-only summary"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Analyze market context by synthesizing data from FII/DII flow trends, market regime history, market breadth indicators, and index EOD signals. Generate a summary report indicating the current market risk state."
+sql_templates:
+  -
+    statement: "SELECT trade_date, flow_signal, fii_trend, dii_trend FROM signals.fii_dii_flows WHERE trade_date >= CURRENT_DATE - INTERVAL '90 days';"
+    description: "Extract FII/DII flow signals and trends for the last quarter."
+  -
+    statement: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date >= CURRENT_DATE - INTERVAL '90 days';"
+    description: "Retrieve market regime history and confidence levels for the last quarter."
+  -
+    statement: "SELECT trade_date, net_ad, ad_oscillator, market_sentiment FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '90 days';"
+    description: "Gather market breadth indicators such as net advance/decline and market sentiment over the past quarter."
+  -
+    statement: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '90 days' AND index_symbol = 'NIFTY50';"
+    description: "Obtain NIFTY50 index EOD values and trend signals for the previous quarter."
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "must_have_columns"
+  - "no_missing_data"
+synthesis_guidance: "Integrate data from each evidence table to provide insights into whether the market is in a risk-on or risk-off state. Highlight any significant divergences between institutional flows and market sentiment."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:48:23"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

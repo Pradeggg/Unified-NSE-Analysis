@@ -1,0 +1,53 @@
+id: "sector_breadth_rotation_watchlist_0643_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0643"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for last 3 months: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as debug trace"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Generate a sector-relative list rank based on sector breadth and stage participation using latest data points."
+sql_templates:
+  sector_ranks:
+    query: "WITH latest_stage AS (SELECT sector, COUNT(symbol) AS stage2_count FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' GROUP BY sector), breadth_rank AS (SELECT sector, AVG(change_5d::NUMERIC) AS avg_change_5d FROM breadth.sector_daily WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY sector) SELECT lr.sector, lr.stage2_count, br.avg_change_5d FROM latest_stage lr JOIN breadth_rank br ON lr.sector = br.sector ORDER BY lr.stage2_count DESC, br.avg_change_5d DESC LIMIT 10"
+    parameters:
+
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all SQL is read-only; Only use approved tables and columns; Align with provided join rules and global SQL standards."
+synthesis_guidance: "['Transform sector and stock data into actionable TradingView watchlists focusing on improving sectors and stage migration.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:27:11"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

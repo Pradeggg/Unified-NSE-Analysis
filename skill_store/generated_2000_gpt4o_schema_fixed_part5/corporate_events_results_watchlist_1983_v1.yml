@@ -1,0 +1,55 @@
+id: "corporate_events_results_watchlist_1983_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1983"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: comparison matrix."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for intraday context: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as comparison matrix"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Query tables for corporate events and related analyses."
+    steps:
+      - "Select upcoming events from signals.corporate_events for the next intraday context."
+      - "Retrieve latest results analysis for each company in scores.results_analysis."
+      - "Fetch current stage and technical context from scores.stage_snapshots."
+sql_templates:
+  -
+    query: "WITH upcoming_events AS (SELECT symbol, event_type, event_date, detail FROM signals.corporate_events WHERE event_date >= CURRENT_DATE), latest_results AS (SELECT DISTINCT ON (symbol) symbol, period_end, company_name, verdict FROM scores.results_analysis ORDER BY symbol, period_end DESC, updated_at DESC), stage_context AS (SELECT symbol, stage, trading_signal, price FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT ue.symbol, ue.event_type, ue.event_date, ue.detail, lr.company_name, lr.verdict, sc.stage, sc.trading_signal, sc.price FROM upcoming_events ue JOIN latest_results lr ON ue.symbol = lr.symbol JOIN stage_context sc ON ue.symbol = sc.symbol ORDER BY ue.event_date LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "{'row_limit': 10, 'date_validity': 'Ensure event_date and period_end are within expected ranges.'}"
+synthesis_guidance: "{'style': 'Create a comparison matrix for event-driven stock actions.', 'focus': 'Highlight significant verdicts and trading signals using source-trail evidence.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:16:15"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

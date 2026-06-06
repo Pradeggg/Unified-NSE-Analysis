@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:48:34"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: source-trail validation; timeframe: weekly review; response style: portfolio-aware output."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0499_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "source-trail validation for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as portfolio-aware output"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  current_holdings: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings;"
+  stage_scores: "SELECT snapshot_date, symbol, stage, stage_score FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE;"
+status: "validated"
+synthesis_guidance: "{'integration': 'Combine evidence across tables to advise on add/trim actions.', 'contextual_response': 'Ensure outputs respect the Indian market context and weekly review timeframe.'}"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "portfolio-aware_output"
+title: "Portfolio Incremental Add Trim Review Variant 0499"
+tool_plan_template:
+  add_candidates: "Determine stocks with potential for incremental add."
+  portfolio_state: "Analyze current holdings and exposure levels."
+  risk_flags: "Highlight any noteworthy risk flags."
+  sector_exposure: "Evaluate sector exposure based on stage snapshots."
+  trim_candidates: "Identify stocks that may require trimming."
+validation_rules:
+  - "check_complete_holdings"
+  - "consistent_data_check"
+version: 1

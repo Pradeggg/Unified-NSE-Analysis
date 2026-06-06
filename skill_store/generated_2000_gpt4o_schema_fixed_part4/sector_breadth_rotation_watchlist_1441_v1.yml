@@ -1,0 +1,85 @@
+id: "sector_breadth_rotation_watchlist_1441_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1441"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: last 3 months; response style: portfolio-aware output."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for last 3 months: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as portfolio-aware output"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "last_3_months"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    steps:
+      - "Identify sectors showing Stage 2 participation and positive breadth signals in the last 3 months."
+      - "Filter stocks within these sectors with a 'BUY' or 'STRONG_BUY' trading signal."
+sql_templates:
+  -
+    name: "sector_ranks"
+    query: "SELECT b.sector, b.breadth_signal, m.stage2_pct FROM breadth.sector_daily b JOIN breadth.ma_pct_above m ON b.snapshot_date = m.snapshot_date WHERE b.snapshot_date > CURRENT_DATE - INTERVAL '3 months' AND b.breadth_signal = 'POSITIVE' ORDER BY m.stage2_pct DESC;"
+  -
+    name: "stage2_sectors"
+    query: "SELECT s.symbol, s.company_name FROM scores.stage_snapshots s JOIN breadth.sector_daily b ON s.sector = b.sector WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.stage = 'STAGE_2' AND s.trading_signal IN ('BUY', 'STRONG_BUY') AND b.breadth_signal = 'POSITIVE' ORDER BY s.stage_score DESC LIMIT 10;"
+python_tools:
+  -
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    required_fields:
+      - "id"
+      - "language"
+      - "mode"
+      - "inputs"
+      - "outputs"
+      - "approved_tables"
+      - "code"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure all SQL queries use the latest snapshot dates."
+  - "Validate that sectors have a positive breadth signal over the last 3 months."
+synthesis_guidance: "['Generate a summary report of the most improved sectors along with potential candidate stocks.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:42"
+generation_model: "gpt-4o"
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: code is required"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,67 @@
+id: "signal_outcome_feedback_review_1397_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Weekly Signal Outcome Analysis"
+description: "Analyze outcomes of previous trading signals and identify patterns for successful and failed recommendations within the Indian market. Focus is on sector-relative comparisons."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for weekly review: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as exceptions and gaps first"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "weekly_review"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze signals to identify patterns of success and failure across different sectors, comparing weekly performance and noting any gaps."
+sql_templates:
+  -
+    name: "sector_relative_performance"
+    sql: "SELECT sector, symbol, AVG(return_pct) as avg_return_pct, SUM(hit_target) as targets_hit, SUM(hit_stop) as stops_hit FROM signals.signal_log WHERE date_resolved BETWEEN (CURRENT_DATE - INTERVAL '7 days') AND CURRENT_DATE GROUP BY sector, symbol;"
+  -
+    name: "weekly_stage_snapshots"
+    sql: "SELECT snapshot_date, sector, symbol, stage_score, technical_score, investment_score FROM scores.stage_snapshots WHERE snapshot_date BETWEEN (CURRENT_DATE - INTERVAL '7 days') AND CURRENT_DATE;"
+python_tools:
+  -
+    id: "sector_analysis_tool_001"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_relative_performance"
+      - "weekly_stage_snapshots"
+    outputs:
+      - "detailed_sector_analysis"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Perform a detailed analysis of sector performance\n    # Context should include results from the SQL templates provided above\n    pass"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Status must be generated."
+  - "Use only SELECT or WITH statements."
+  - "Avoid creating or modifying data in the SQL templates."
+  - "Ensure comparative analysis across sectors and timeframes."
+synthesis_guidance: "['Focus on exceptions and gaps first.', 'Provide actionable insights for portfolio improvements.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:52"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.avg_return_pct is not approved"
+  - "signals.signal_log.stops_hit is not approved"
+  - "signals.signal_log.targets_hit is not approved"

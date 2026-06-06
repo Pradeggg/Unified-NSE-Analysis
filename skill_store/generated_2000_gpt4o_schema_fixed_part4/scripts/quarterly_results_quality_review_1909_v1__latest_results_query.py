@@ -1,0 +1,1 @@
+# Execute the SQL query to get the latest results data for analysis.

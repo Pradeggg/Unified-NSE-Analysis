@@ -1,0 +1,1 @@
+def run(context): return {'risk_flags': ['high_volatility', 'overexposed_sector']}

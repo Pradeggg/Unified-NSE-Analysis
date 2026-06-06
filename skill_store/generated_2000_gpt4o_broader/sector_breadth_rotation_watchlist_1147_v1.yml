@@ -1,0 +1,55 @@
+id: "sector_breadth_rotation_watchlist_1147_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1147"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for last 3 months: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as narrative plus evidence"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze sector rotation using the provided evidence tables, focusing on sector breadth and stage migration over the last 3 months, and create a narrative response."
+sql_templates:
+  - "SELECT sector, AVG(pct_above_50dma) AS avg_pct_above_50dma FROM breadth.sector_daily WHERE snapshot_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) GROUP BY sector ORDER BY avg_pct_above_50dma DESC"
+  - "SELECT sector, AVG(stage2_pct) AS avg_stage2_pct FROM breadth.ma_pct_above WHERE snapshot_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH) GROUP BY sector ORDER BY avg_stage2_pct DESC"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Evaluate sectors by breadth and stage participation, summarizing findings in a narrative format and identifying symbols for potential inclusion on a watchlist."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:48"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.ma_pct_above.avg_stage2_pct is not approved"
+  - "breadth.ma_pct_above.date_sub is not approved"
+  - "breadth.ma_pct_above.month is not approved"
+  - "breadth.ma_pct_above.sector is not approved"
+  - "breadth.sector_daily.avg_pct_above_50dma is not approved"
+  - "breadth.sector_daily.date_sub is not approved"
+  - "breadth.sector_daily.month is not approved"

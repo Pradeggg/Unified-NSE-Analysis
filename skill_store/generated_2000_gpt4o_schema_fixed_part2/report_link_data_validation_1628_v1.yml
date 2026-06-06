@@ -1,0 +1,55 @@
+id: "report_link_data_validation_1628_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1628"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: last 5 sessions; response style: debug trace."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for last 5 sessions: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "last_5_sessions"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  sql_templates:
+    -
+      template: "SELECT run_id, run_ts, analysis_date, stocks_filtered FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '5 days' AND run_id IN (SELECT run_id FROM report.enhanced_filtered_stocks);"
+      description: "Fetch recent enhanced report runs and verify presence in filtered stocks."
+  python_tools:
+
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure the SQL does not perform any modifications."
+  - "SQL should only use approved columns and tables."
+  - "Ensure that timeframe filters are applied for the last 5 sessions."
+synthesis_guidance: "['Provide a detailed debug trace for broken report links and missing data cases.', 'Identify any gaps in joining stock data with report metadata.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:46:19"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,63 @@
+id: "sector_breadth_rotation_watchlist_0321_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0321"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: quick scan; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "quick scan for last 5 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as exceptions and gaps first"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "quick_scan"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Generate sector ranks using breadth and stage 2 participation."
+  - "Identify improving sectors based on 5-session data."
+  - "Filter candidate symbols based on Stage 2 and buy signals."
+  - "Provide trading symbols formatted for TradingView."
+sql_templates:
+  -
+    name: "sector_ranks"
+    sql: "WITH latest_snapshots AS (SELECT MAX(snapshot_date) AS max_date FROM breadth.sector_daily), latest_breadth AS (SELECT * FROM breadth.sector_daily WHERE snapshot_date = (SELECT max_date FROM latest_snapshots)) SELECT sector, COUNT(*) AS sector_count, AVG(pct_above_50dma) AS avg_pct_above_50dma FROM latest_breadth GROUP BY sector ORDER BY avg_pct_above_50dma DESC;"
+  -
+    name: "improving_sectors"
+    sql: "SELECT sector, change_5d FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) AND change_5d > 0 ORDER BY change_5d DESC LIMIT 5;"
+  -
+    name: "candidate_symbols"
+    sql: "SELECT symbol, sector FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY') LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Check all SQL templates for syntax errors and ensure they follow the approved schema."
+  - "Ensure all results align with the defined output contract and input patterns."
+synthesis_guidance: "['Focus on quick sector ranking and exceptions possibly missed by conventional scans.', 'Highlight sectors with Stage 2 stocks showing buy signals and improving momentum.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:03"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

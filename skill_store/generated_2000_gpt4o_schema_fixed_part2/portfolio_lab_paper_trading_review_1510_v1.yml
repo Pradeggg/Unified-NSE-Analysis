@@ -1,0 +1,59 @@
+id: "portfolio_lab_paper_trading_review_1510_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1510"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: TradingView export; timeframe: today; response style: research-only summary."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "TradingView export for today: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as research-only summary"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "TradingView_export"
+  - "today"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  steps:
+    - "Gather the latest snapshots of trading signals and portfolio holdings."
+    - "Analyze strategies with entries, exits, stop loss, and targets."
+    - "Review exposure and exceptions."
+sql_templates:
+  -
+    description: "Fetch latest paper trading signals for analysis."
+    query: "SELECT s.symbol, s.signal, s.entry_low, s.entry_high, s.stop_loss, s.target_1 FROM signals.signal_log s WHERE s.date_issued = (SELECT MAX(date_issued) FROM signals.signal_log) LIMIT 100;"
+  -
+    description: "Retrieve portfolio holdings for the paper trading analysis."
+    query: "SELECT h.symbol, h.qty, h.avg_cost FROM portfolio.holdings h INNER JOIN market.equity_eod e ON h.symbol = e.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "constraints"
+synthesis_guidance: "{'compose_summary': 'Focus on summarizing strategy effectiveness and potential areas of refinement.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:55"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

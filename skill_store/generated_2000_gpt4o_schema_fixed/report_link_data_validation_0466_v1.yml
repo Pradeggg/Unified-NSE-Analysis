@@ -1,0 +1,51 @@
+id: "report_link_data_validation_0466_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0466"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: freshness audit; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for post results: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "To conduct a freshness audit, initiate with the analysis of the latest report generation timestamp, then cross-examine the filtered stocks for missing data."
+sql_templates:
+  -
+    template_name: "Validate Report Metadata Freshness"
+    template: "WITH latest_runs AS (SELECT run_id, run_ts FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '3 months') SELECT er.run_id, er.run_ts, es.symbol FROM latest_runs er LEFT JOIN report.enhanced_filtered_stocks es ON er.run_id = es.run_id WHERE es.symbol IS NULL;"
+    description: "Identify recent reports with missing filtered stock data."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure timestamps are within the last three months."
+  - "Verify that each report run has corresponding filtered stock data."
+synthesis_guidance: "Focus on evaluating the freshness of the data and identifying gaps or inconsistencies in recently generated reports."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:24:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,55 @@
+id: "report_link_data_validation_1572_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Agent Adda Skill Card for Enhanced Report Data Validation"
+description: "Validate enhanced report run metadata, filtered stock rows, and source trails. Focus on deep institutional review for pre-market analysis with a research-only summary."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for pre market: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  steps:
+    - "Collect required data from report.enhanced_runs and report.enhanced_filtered_stocks."
+    - "Validate the integrity and completeness of report links and associated data."
+  goal: "Ensure that reports and their links are valid and contain complete data."
+sql_templates:
+  -
+    name: "Verify Report Links and Data Completeness"
+    template: "SELECT r.run_id, r.analysis_date, r.universe_size, COUNT(fs.symbol) AS filtered_stocks_count FROM report.enhanced_runs r LEFT JOIN report.enhanced_filtered_stocks fs ON r.run_id = fs.run_id WHERE r.run_ts > CURRENT_DATE - INTERVAL '3 months' GROUP BY r.run_id, r.analysis_date, r.universe_size ORDER BY r.run_ts DESC LIMIT 10;"
+    description: "Check recent report runs and ensure completeness of data by counting filtered stocks."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all report links are functional and data rows are complete."
+  - "Check timestamps to match the latest reporting periods."
+synthesis_guidance: "['Synthesize findings into a research-only summary with a focus on potential data issues and missing elements.', 'Highlight deep institutional review aspects relevant to pre-market analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:36"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

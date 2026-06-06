@@ -1,0 +1,47 @@
+id: "portfolio_lab_paper_trading_review_0250_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0250"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "TradingView export for last 3 months: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as ranked candidates"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "TradingView_export"
+  - "last_3_months"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Review paper trading strategies from TradingView export for the last 3 months."
+sql_templates:
+  -
+    template: "SELECT s.symbol, s.signal, s.date_issued, s.price_at_issue, s.target_1, s.target_2, s.stop_loss FROM signals.signal_log s WHERE s.date_issued >= CURRENT_DATE - INTERVAL '3 months' AND s.signal IN ('BUY', 'SELL') ORDER BY s.date_issued DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'rules': ['Use the latest data when assessing strategies.', 'Rank strategies based on recent performance indicators.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:41"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.s is not approved"

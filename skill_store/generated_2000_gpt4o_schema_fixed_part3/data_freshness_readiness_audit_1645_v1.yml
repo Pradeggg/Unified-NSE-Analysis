@@ -1,0 +1,59 @@
+id: "data_freshness_readiness_audit_1645_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1645"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: risk-first review; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "risk-first review for last 3 months: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as debug trace"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "risk-first_review"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Conduct a risk-first review focusing on data freshness over the last 3 months. Provide a debug trace of the findings across all required evidence tables."
+sql_templates:
+  -
+    query: "SELECT MAX(trade_date) AS latest_date FROM market.index_eod;"
+    description: "Retrieve the latest EOD date for market index data."
+  -
+    query: "SELECT MAX(trade_date) AS latest_date FROM market.equity_eod;"
+    description: "Retrieve the latest EOD date for equity data."
+  -
+    query: "SELECT MAX(snapshot_date) AS latest_date FROM scores.stage_snapshots;"
+    description: "Retrieve the latest snapshot date for stage snapshots."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all returned dates are within the last 3 months based on CURRENT_DATE."
+  - "Check for any missing or null dates that may indicate data gaps."
+synthesis_guidance: "Compile a comprehensive report detailing the current state of data freshness across all evidence tables. Highlight any immediate risks or action items."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:21"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.latest_date is not approved"
+  - "market.index_eod.latest_date is not approved"
+  - "scores.stage_snapshots.latest_date is not approved"

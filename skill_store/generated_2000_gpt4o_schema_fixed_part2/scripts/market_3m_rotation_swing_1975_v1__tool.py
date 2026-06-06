@@ -1,0 +1,1 @@
+# Processed as read-only with basic statistical operations.

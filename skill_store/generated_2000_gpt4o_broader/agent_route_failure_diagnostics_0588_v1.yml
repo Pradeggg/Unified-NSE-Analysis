@@ -1,0 +1,74 @@
+id: "agent_route_failure_diagnostics_0588_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0588"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: intraday context; response style: research-only summary."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for intraday context: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as research-only summary"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Inspect data for anomalies in stock filtering and stage snapshots to identify route failures and tool misconfigurations."
+sql_templates:
+  -
+    template_id: "enhanced_runs_analysis"
+    description: "Analyze enhanced runs for discrepancies."
+    sql: "SELECT run_id, run_ts, notes FROM report.enhanced_runs WHERE universe_size != stocks_analyzed;"
+  -
+    template_id: "filtered_stocks_analysis"
+    description: "Identify stocks without expected signals."
+    sql: "SELECT symbol, recommendation, current_price, daily_signal FROM report.enhanced_filtered_stocks WHERE daily_signal IS NULL OR daily_signal = '';"
+  -
+    template_id: "stage_snapshots_analysis"
+    description: "Check for stage score anomalies."
+    sql: "SELECT symbol, stage_score, trend_signal FROM scores.stage_snapshots WHERE stage_score < 0;"
+python_tools:
+  -
+    id: "symbol_resolution_checker"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+      - "run_id"
+    outputs:
+      - "resolution_issue"
+      - "fix_suggestion"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    symbol = context.inputs['symbol']\n    if context.get('stage_score', 0) < 0:\n        return {'resolution_issue': 'Negative stage score detected', 'fix_suggestion': 'Reevaluate technical indicators.'}\n    return {'resolution_issue': None, 'fix_suggestion': None}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure SQL only uses SELECT/WITH; no modifications."
+  - "Compare results from different evidence to identify discrepancies."
+synthesis_guidance: "Focus on comprehensive analysis of evidence data, ensuring coverage across all relevant aspects."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:58:45"
+generation_model: "gpt-4o"
+validation_errors:
+  - "symbol_resolution_checker: execution failed: AttributeError: 'dict' object has no attribute 'inputs'"
+review:
+  status: "needs_heal"
+  findings:
+    - "symbol_resolution_checker: execution failed: AttributeError: 'dict' object has no attribute 'inputs'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

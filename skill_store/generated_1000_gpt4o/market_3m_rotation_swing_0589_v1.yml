@@ -1,0 +1,56 @@
+id: "market_3m_rotation_swing_0589_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0589"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: intraday context; response style: research-only summary."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as research-only summary"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  task: "Analyze market rotation swing"
+  plan: "Acquire 3-month EOD data from indices and equities, analyze sector rotation and swing candidates, validate source trails."
+sql_templates:
+  -
+    template_id: "indices_performance"
+    description: "Aggregate index performance over the last 3 months."
+    sql: "SELECT index_symbol, SUM(change_pct) as total_change FROM market.index_eod WHERE trade_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND CURDATE() GROUP BY index_symbol;"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure the sources are from the last 3 months."
+  - "Verify sector leadership changes."
+  - "Identify valid swing candidates."
+synthesis_guidance: "Focus on providing a research-only summary highlighting major trends and swing opportunities over the past 3 months."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:49:57"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.curdate is not approved"
+  - "market.index_eod.date_sub is not approved"
+  - "market.index_eod.month is not approved"
+  - "market.index_eod.total_change is not approved"

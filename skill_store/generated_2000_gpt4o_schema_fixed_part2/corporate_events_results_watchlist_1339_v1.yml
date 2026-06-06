@@ -1,0 +1,61 @@
+id: "corporate_events_results_watchlist_1339_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1339"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for last 20 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as exceptions and gaps first"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Identify relevant corporate events and recent results for watchlist generation. Emphasize source validation. Highlight gaps or exceptions in the data."
+sql_templates:
+  -
+    title: "Upcoming Corporate Events"
+    description: "Fetch upcoming corporate events within the next 20 sessions."
+    template: "SELECT * FROM signals.corporate_events WHERE event_date > CURRENT_DATE AND event_date <= CURRENT_DATE + INTERVAL '20 days';"
+  -
+    title: "Recent Results"
+    description: "Fetch recent results announced within the last 20 sessions."
+    template: "WITH latest_results AS (SELECT DISTINCT ON (symbol) * FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC) SELECT * FROM latest_results WHERE filing_date > CURRENT_DATE - INTERVAL '20 days';"
+  -
+    title: "Watchlist Actions"
+    description: "Join events and results to form a watchlist based on recent data."
+    template: "SELECT ce.symbol, ce.event_type, ce.event_date, ra.verdict, ra.source_trail FROM signals.corporate_events ce JOIN scores.results_analysis ra ON ce.symbol = ra.symbol WHERE ce.event_date > CURRENT_DATE AND ra.filing_date > CURRENT_DATE - INTERVAL '20 days';"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event dates are future dates for upcoming events."
+  - "Verify the presence of filing_date in recent results."
+  - "Cross-check event symbols against results symbols for consistency."
+synthesis_guidance: "Focus on exceptions and gaps in events and results data. Highlight source-trail inconsistencies."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:21"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

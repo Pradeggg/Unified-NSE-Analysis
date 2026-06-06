@@ -1,0 +1,60 @@
+id: "report_link_data_validation_0858_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Validate Report Links and Data for Position-Sizing Context"
+description: "This skill card provides validation for enhanced report links and data, focusing on position-sizing context for the quarter to date."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for quarter to date: review report links not working"
+  - "validate generated report links and missing data as action watchlist"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Validate report data using enhanced report tables with a focus on broken links and missing data for position-sizing context."
+sql_templates:
+  - "WITH latest_runs AS ( SELECT * FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) AND stocks_filtered > 0 ) SELECT efr.run_id, efr.symbol, efr.current_price, efr.recommendation FROM latest_runs er JOIN report.enhanced_filtered_stocks efr ON er.run_id = efr.run_id WHERE efr.recommendation IS NOT NULL;"
+python_tools:
+  -
+    id: "verify_data_consistency"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "data_from_sql"
+    outputs:
+      - "consistency_report"
+    approved_tables:
+      - "report.enhanced_filtered_stocks"
+    code: "# Placeholder for a Python script to check data consistency\ndef run(context):\n    # Code to verify data consistency will be added here\n    pass"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure run timestamp aligns with latest data."
+  - "Verify stocks have valid recommendations."
+synthesis_guidance: "Focus on recent runs and ensure the data is consistent with the expectations for position-sizing. Highlight gaps and missing data, if any."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:41"
+generation_model: "gpt-4o"
+validation_errors:
+  - "verify_data_consistency: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "verify_data_consistency: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

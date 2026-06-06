@@ -1,0 +1,52 @@
+id: "signal_outcome_feedback_review_1551_v1"
+version: 1
+status: "review_pending"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review - Quarter to Date"
+description: "Quickly scan prior signals, assessing target hits, stops, and most effective patterns in the last quarter. Provide a research-only summary to improve future strategies."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "quick scan for quarter to date: review prior signals hit target or stop"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "quarter_to_date"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Use evidence from signal logs and market snapshots to analyze quarter-to-date outcomes. Generate a summary of successful patterns versus failures."
+sql_templates:
+  -
+    description: "Fetch resolved signal outcomes quarter to date"
+    sql: "SELECT symbol, signal, date_issued, date_resolved, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_resolved >= CURRENT_DATE - INTERVAL '3 months' AND (hit_target = TRUE OR hit_stop = TRUE)"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Verify the quarter-to-date timeframe is respected."
+  - "Ensure only resolved signals are included in the analysis."
+synthesis_guidance: "Summarize findings in terms of signal effectiveness, identify successful strategies, and outline areas for improvement."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

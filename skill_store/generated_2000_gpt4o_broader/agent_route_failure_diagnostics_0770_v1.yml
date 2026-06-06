@@ -1,0 +1,75 @@
+id: "agent_route_failure_diagnostics_0770_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0770"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: post results; response style: QA checklist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for post results: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as QA checklist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "post_results"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  steps:
+    - "Gather and analyze data from the enhanced runs to understand route failures."
+    - "Validate presence of required tools and identify any gaps."
+    - "Examine symbol resolution logic and note any discrepancies."
+    - "Compile findings to facilitate TradingView export for further analysis and reporting."
+sql_templates:
+  -
+    description: "Select run details where analysis resulted in higher market sentiment."
+    template: "SELECT run_id, run_ts, analysis_date, market_composite_score, market_sentiment FROM report.enhanced_runs WHERE market_sentiment > 0.5;"
+  -
+    description: "Find top-ranked filtered stocks based on tech_score."
+    template: "WITH top_stocks AS (SELECT run_id, symbol, tech_score FROM report.enhanced_filtered_stocks WHERE rank <= 5) SELECT * FROM top_stocks;"
+python_tools:
+  -
+    id: "resolve_symbol_mismatches"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      symbols:
+        - "list of symbols to verify"
+    outputs:
+      resolved_symbols:
+        - "list of resolved symbols and their status"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    resolved = []\n    for symbol in context['symbols']:\n        # Perform mock resolution check\n        if symbol in context['scores.stage_snapshots']['symbol'].tolist():\n            resolved.append({'symbol': symbol, 'status': 'resolved'})\n        else:\n            resolved.append({'symbol': symbol, 'status': 'unresolved'})\n    return {'resolved_symbols': resolved}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Check all numeric scores are positive."
+  - "Ensure all symbols are resolved correctly and match existing records."
+synthesis_guidance: "['Use evidence from enhanced runs to synthesize diagnostics.', 'Focus on clarity and readability for QA checklists.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:36"
+generation_model: "gpt-4o"
+validation_errors:
+  - "resolve_symbol_mismatches: inputs must be a list"
+  - "resolve_symbol_mismatches: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "resolve_symbol_mismatches: inputs must be a list"
+    - "resolve_symbol_mismatches: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

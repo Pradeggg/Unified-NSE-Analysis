@@ -1,0 +1,1 @@
+def run(context): missing_data_report = [run for run in context['run_data'] if not run['current_price']]; return missing_data_report;

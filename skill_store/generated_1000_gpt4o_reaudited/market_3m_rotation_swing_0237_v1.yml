@@ -1,0 +1,56 @@
+created_at: "2026-06-06T12:43:35"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: ranked candidates."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0237_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for last 20 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as ranked candidates"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Retrieve index return data for the past 20 sessions."
+    query: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '20 days';"
+  -
+    description: "Identify sector leaders based on relative strength and stage from snapshots."
+    query: "SELECT symbol, sector, relative_strength, stage FROM scores.stage_snapshots WHERE stage = '2' AND snapshot_date >= CURRENT_DATE - INTERVAL '3 months';"
+status: "validated"
+synthesis_guidance: "Emphasize recent swing opportunities and sector-relative changes. Highlight strong sector moves and candidates for further assessment."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "ranked_candidates"
+title: "3M Market Rotation Swing Assessment Variant 0237"
+tool_plan_template: "Conduct sector rotation analysis over the last 3 months and identify stage 2 leadership and potential swing candidates using approved evidence."
+validation_rules:
+  - "Ensure all output fields are non-null."
+  - "Verify that leading sectors have valid stage 2 candidates."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

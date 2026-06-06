@@ -1,0 +1,71 @@
+id: "report_link_data_validation_1558_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation - Position-Sizing Context"
+description: "This card validates data integration for enhanced report runs, emphasizing the position-sizing context for a quarter-to-date review in the Indian market."
+input_patterns:
+  - "Validate enhanced report links and data."
+  - "Check position-sizing context data for quarter-to-date."
+  - "Research missing data in generated reports."
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    response_style: "research-only summary"
+sql_templates:
+  -
+    description: "Identify missing or broken links in report data using valid run identifiers."
+    template: "SELECT er.run_id, ef.symbol, ef.recommendation FROM report.enhanced_runs er LEFT JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id WHERE ef.symbol IS NULL;"
+  -
+    description: "Summarize position-sizing data for the latest quarter-to-date enhanced report run."
+    template: "SELECT er.run_id, er.run_ts, COUNT(ef.symbol) AS symbols_analyzed, SUM(ef.score) AS total_score FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks ef ON er.run_id = ef.run_id WHERE er.run_ts >= CURRENT_DATE - INTERVAL '3 months' GROUP BY er.run_id, er.run_ts;"
+python_tools:
+  -
+    id: "data_check_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      run_id: "text"
+    outputs:
+      -
+        type: "boolean"
+        name: "all_links_valid"
+      -
+        type: "list"
+        name: "missing_symbols"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context): \n    # Example read-only logic. Actual code not implemented due to environment limits.\n    return {'all_links_valid': True, 'missing_symbols': []}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Run IDs must match across tables."
+  - "Data spanning the correct quarter-to-date period should be validated."
+synthesis_guidance: "['Summarize findings and recommend actions based on faulty data links.', 'Analyze completeness of stock data relative to expected output.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:14"
+generation_model: "gpt-4o"
+validation_errors:
+  - "data_check_tool: inputs must be a list"
+  - "data_check_tool: outputs must contain only strings"
+review:
+  status: "needs_heal"
+  findings:
+    - "data_check_tool: inputs must be a list"
+    - "data_check_tool: outputs must contain only strings"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

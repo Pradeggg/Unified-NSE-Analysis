@@ -1,0 +1,72 @@
+created_at: "2026-06-06T12:46:09"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: intraday context; response style: exceptions and gaps first."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0381_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for intraday context: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as exceptions and gaps first"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.index_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Sample code to validate accuracy of SQL results\n    accuracy_report = {\n        'market_regime_accuracy': 'Pending Verification',\n        'sector_leadership_accuracy': 'Pending Verification'\n    }\n    return accuracy_report"
+    id: "accuracy_checker"
+    inputs:
+      - "market_regime_analysis"
+      - "sector_leadership"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "accuracy_report"
+sql_templates:
+  -
+    name: "market_regime_analysis"
+    query: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  -
+    name: "sector_leadership"
+    query: "SELECT sector, AVG(stage_score) as avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_stage_score DESC;"
+  -
+    name: "swing_candidates"
+    query: "SELECT symbol, stage, rsi FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= CURRENT_DATE - INTERVAL '3 months';"
+status: "test_failed"
+synthesis_guidance: "Focus on gaps and exceptions in market regime and sector leadership."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "intraday_context"
+  - "exceptions_and_gaps_first"
+title: "3M Market Rotation Swing Assessment Variant 0381"
+tool_plan_template:
+  kind: "evidence_first"
+  toolset:
+    - "sql"
+    - "python"
+validation_rules:
+  - "Ensure as_of_date is within the last 3 months."
+  - "Output must include at least one leading sector."
+  - "Primary candidates should have stage 2 in the last 3 months."
+version: 1
+validation_errors:
+  - "scores.stage_snapshots.avg_stage_score is not approved"

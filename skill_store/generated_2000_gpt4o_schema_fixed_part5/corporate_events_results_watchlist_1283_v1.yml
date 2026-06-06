@@ -1,0 +1,55 @@
+id: "corporate_events_results_watchlist_1283_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1283"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for intraday context: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as ranked candidates"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    python_tools:
+
+sql_templates:
+  -
+    template_name: "find_event_driven_stocks"
+    template: "WITH latest_stage_snapshot AS (SELECT symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT ce.symbol, ce.event_type, ce.event_date, ss.stage, ss.trading_signal FROM signals.corporate_events ce JOIN latest_stage_snapshot ss ON ce.symbol = ss.symbol WHERE ce.event_date > CURRENT_DATE AND ss.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY ce.event_date ASC LIMIT 20;"
+    description: "Retrieve event-driven stocks with BUY signals and upcoming corporate events."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure outputs are bounded by current date and sorted by event_date."
+  - "Limit output to top 20 candidates."
+synthesis_guidance: "[{'guidance': 'Integrate corporate event data with trading signals for an informed watchlist.', 'priority': 'high'}]"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:14"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

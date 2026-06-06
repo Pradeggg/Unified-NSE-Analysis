@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:52:12"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 3 months; response style: action watchlist."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0846_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Get stocks creating new highs with strong fundamentals in the last 3 months."
+    query: "SELECT e.symbol, e.high, s.company_name, s.sector, s.enhanced_fund_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.high >= e.week52_high AND s.enhanced_fund_score > 8 AND e.trade_date > (CURRENT_DATE - INTERVAL '3 MONTH')"
+  -
+    description: "Fetch VCP candidates with breakout potential and strong fundamentals within the last 3 months."
+    query: "WITH vcp_candidates AS (SELECT v.symbol, v.company_name, v.price, v.vcp_score, v.enhanced_fund_score FROM scores.stage2_vcp_picks v WHERE v.vcp_score > 70 AND v.enhanced_fund_score > 8) SELECT * FROM vcp_candidates WHERE vcp_candidates.symbol IN (SELECT symbol FROM market.equity_eod WHERE trade_date > (CURRENT_DATE - INTERVAL '3 MONTH'))"
+status: "validated"
+synthesis_guidance: "Aggregate high-performing stocks over the last 3 months into an actionable watchlist focusing on breakout potential and fundamental strength."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_3_months"
+  - "action_watchlist"
+title: "VCP Breakouts With Fundamentals Variant 0846"
+tool_plan_template: "Plan to identify VCP and breakout stocks with robust fundamentals and verify their performance over the last 3 months using the specified evidence tables."
+validation_rules:
+  - "Ensure all symbols are cross-referenced with market.equity_eod for recent data validation."
+  - "Verify enhanced_fund_score is above a specified threshold for all selected candidates."
+version: 1

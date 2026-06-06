@@ -1,0 +1,65 @@
+id: "portfolio_lab_paper_trading_review_0152_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0152"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: quarter to date; response style: narrative plus evidence."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for quarter to date: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "quarter_to_date"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Use the evidence tables to deeply review paper trading strategies for the current quarter, focusing on entries, exits, stops, targets, and exposure. Frame the results in narrative plus evidence style, considering market context."
+sql_templates:
+  -
+    name: "strategy_analysis"
+    description: "Fetch paper trading signals and outcomes for analysis."
+    sql: "SELECT symbol, date_issued, signal, entry_low, entry_high, stop_loss, target_1, target_2, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE action_bucket = 'paper_trading' AND date_issued >= DATE_TRUNC('quarter', CURRENT_DATE);"
+  -
+    name: "portfolio_snapshot"
+    description: "Retrieve current portfolio holdings for paper trading."
+    sql: "SELECT symbol, qty, avg_cost, buy_date FROM portfolio.holdings WHERE symbol IN (SELECT DISTINCT symbol FROM signals.signal_log WHERE action_bucket = 'paper_trading');"
+python_tools:
+  -
+    id: "strategy_analysis_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "strategy_data"
+    outputs:
+      - "analysis_summary"
+      - "findings"
+    approved_tables:
+      - "signals.signal_log"
+    code: "def run(context):\n    # Analyze strategy data to produce summary\n    summary = {} # Use context to analyze\n    return summary"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "ensure_key_concepts"
+  - "maintain_context"
+synthesis_guidance: "['Integrate market trends and technical indicators for comprehensive analysis', 'Focus on narrative style incorporating Indian market data']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:00"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.date_trunc is not approved"

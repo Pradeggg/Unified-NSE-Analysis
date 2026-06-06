@@ -1,0 +1,52 @@
+id: "vcp_breakouts_with_fundamentals_0884_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0884"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template: "Identify strong breakout candidates with VCP characteristics and good fundamentals."
+sql_templates:
+  -
+    description: "Select VCP breakout stocks with strong fundamentals."
+    query: "SELECT s.symbol, s.company_name, s.price, s.live_price, v.vcp_score, v.vcp_breakout_pct, v.enhanced_fund_score FROM scores.stage2_vcp_picks v JOIN scores.stage_snapshots s ON v.symbol = s.symbol WHERE v.vcp_breakout_pct > 5 AND v.enhanced_fund_score > 7;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Validate that each candidate has a VCP score and enhanced fund score."
+  - "Ensure symbols are mapped accurately to TradingView format."
+synthesis_guidance: "Focus on identifying high potential short-term breakout stocks."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:02:01"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

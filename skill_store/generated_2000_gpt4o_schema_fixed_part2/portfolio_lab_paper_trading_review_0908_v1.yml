@@ -1,0 +1,72 @@
+id: "portfolio_lab_paper_trading_review_0908_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0908"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: position-sizing context; timeframe: today; response style: comparison matrix."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "position-sizing context for today: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as comparison matrix"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "position-sizing_context"
+  - "today"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Given paper trading strategy positions and signals, review and contrast their performance and positioning relative to real holdings using approved data tables."
+sql_templates:
+  -
+    description: "Retrieve latest paper trading positions with price and score context."
+    template: "SELECT ph.symbol, ph.qty, ph.avg_cost, ph.buy_date, s.stage, s.technical_score, e.close AS latest_close FROM portfolio.holdings ph JOIN scores.stage_snapshots s ON ph.symbol = s.symbol JOIN market.equity_eod e ON ph.symbol = e.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    description: "Collect signal logs for comparison with performance data."
+    template: "SELECT sl.symbol, sl.signal, sl.date_issued, sl.entry_low, sl.entry_high, sl.stop_loss, sl.target_1, sl.target_2, e.close AS current_close FROM signals.signal_log sl JOIN market.equity_eod e ON sl.symbol = e.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND DATE(sl.date_issued) <= CURRENT_DATE;"
+python_tools:
+  -
+    id: "calculate_performance_summary"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbols"
+      - "entry_prices"
+      - "current_prices"
+    outputs:
+      - "performance_summary"
+    approved_tables:
+      - "portfolio.holdings"
+      - "market.equity_eod"
+    code: "def run(context): pass # Placeholder for real implementation"
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure strategy state includes entry/exit criteria."
+  - "Verify open trades are correctly reported with position-sizing context."
+  - "Check entry/exit rules against current market conditions."
+synthesis_guidance: "Present a comparison matrix focusing on strategy effectiveness, risk exposure, and adherence to stated strategies in paper trading."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:14"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_performance_summary: run(context) must return a dict"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_performance_summary: run(context) must return a dict"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

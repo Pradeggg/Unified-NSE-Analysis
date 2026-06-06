@@ -1,0 +1,120 @@
+id: "sector_breadth_rotation_watchlist_1427_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1427"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for last 5 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as portfolio-aware output"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    -
+      name: "breadth.sector_daily"
+      columns:
+        - "snapshot_date"
+        - "sector"
+        - "index_name"
+        - "pct_above_50dma"
+        - "change_5d"
+        - "breadth_signal"
+        - "divergence_alert"
+    -
+      name: "breadth.ma_pct_above"
+      columns:
+        - "snapshot_date"
+        - "pct_above_20dma"
+        - "pct_above_50dma"
+        - "pct_above_100dma"
+        - "pct_above_200dma"
+        - "stage2_pct"
+        - "updated_at"
+    -
+      name: "scores.stage_snapshots"
+      columns:
+        - "snapshot_date"
+        - "symbol"
+        - "company_name"
+        - "sector"
+        - "market_cap_cat"
+        - "price"
+        - "live_price"
+        - "price_date"
+        - "change_1d_pct"
+        - "change_1w_pct"
+        - "change_1m_pct"
+        - "stage"
+        - "stage_score"
+        - "technical_score"
+        - "rsi"
+        - "trend_signal"
+        - "trading_signal"
+        - "relative_strength"
+        - "supertrend_state"
+        - "supertrend_value"
+        - "can_slim_score"
+        - "minervini_score"
+    -
+      name: "market.equity_eod"
+      columns:
+        - "trade_date"
+        - "symbol"
+        - "series"
+        - "open"
+        - "high"
+        - "low"
+        - "close"
+        - "last_price"
+        - "prev_close"
+        - "change_abs"
+        - "change_pct"
+        - "volume"
+        - "turnover_cr"
+        - "total_trades"
+        - "delivery_qty"
+        - "delivery_pct"
+        - "week52_high"
+        - "week52_low"
+        - "market_cap_cr"
+tool_plan_template:
+
+sql_templates:
+  -
+    name: "Rank Sectors by Breadth"
+    sql: "SELECT sector, AVG(pct_above_50dma) as avg_pct_above_50dma FROM breadth.sector_daily WHERE snapshot_date > CURRENT_DATE - INTERVAL '5 days' GROUP BY sector ORDER BY avg_pct_above_50dma DESC;"
+  -
+    name: "Improving Sectors and Stocks"
+    sql: "WITH improving_sectors AS ( SELECT sector FROM breadth.sector_daily WHERE change_5d > 0 GROUP BY sector ) SELECT symbol, company_name FROM scores.stage_snapshots WHERE sector IN (SELECT sector FROM improving_sectors) AND stage = 2 ORDER BY relative_strength DESC;"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure SQL templates adhere to read-only policy."
+  - "Check approved schema usage only."
+synthesis_guidance: "Combine breadth and stage data for sector ranking and stock selection."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:09"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.sector_daily.avg_pct_above_50dma is not approved"
+  - "unknown table {'name': 'breadth.ma_pct_above', 'columns': ['snapshot_date', 'pct_above_20dma', 'pct_above_50dma', 'pct_above_100dma', 'pct_above_200dma', 'stage2_pct', 'updated_at']}"
+  - "unknown table {'name': 'breadth.sector_daily', 'columns': ['snapshot_date', 'sector', 'index_name', 'pct_above_50dma', 'change_5d', 'breadth_signal', 'divergence_alert']}"
+  - "unknown table {'name': 'market.equity_eod', 'columns': ['trade_date', 'symbol', 'series', 'open', 'high', 'low', 'close', 'last_price', 'prev_close', 'change_abs', 'change_pct', 'volume', 'turnover_cr', 'total_trades', 'delivery_qty', 'delivery_pct', 'week52_high', 'week52_low', 'market_cap_cr']}"
+  - "unknown table {'name': 'scores.stage_snapshots', 'columns': ['snapshot_date', 'symbol', 'company_name', 'sector', 'market_cap_cat', 'price', 'live_price', 'price_date', 'change_1d_pct', 'change_1w_pct', 'change_1m_pct', 'stage', 'stage_score', 'technical_score', 'rsi', 'trend_signal', 'trading_signal', 'relative_strength', 'supertrend_state', 'supertrend_value', 'can_slim_score', 'minervini_score']}"

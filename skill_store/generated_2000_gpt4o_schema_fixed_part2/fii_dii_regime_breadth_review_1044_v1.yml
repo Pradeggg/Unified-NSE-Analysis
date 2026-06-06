@@ -1,0 +1,64 @@
+id: "fii_dii_regime_breadth_review_1044_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1044"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: watchlist creation; timeframe: last 3 months; response style: concise table."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "watchlist creation for last 3 months: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as concise table"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "watchlist_creation"
+  - "last_3_months"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  tasks:
+    - "analyze market regime trends"
+    - "assess FII/DII flow impact"
+    - "evaluate market breadth"
+    - "confirm with index performance"
+  method:
+    - "use SQL for data extraction"
+    - "summarize with Python"
+  rules:
+    - "all SQL templates must be read-only SELECT/WITH"
+    - "use approved table columns only"
+sql_templates:
+  -
+    template_name: "fetch_fii_dii_flow_breadth"
+    sql: "SELECT f.trade_date, f.flow_signal, r.regime, r.confidence, b.ad_signal, b.market_sentiment FROM signals.fii_dii_flows f JOIN signals.regime_history r ON f.trade_date = r.trade_date JOIN breadth.market_daily b ON f.trade_date = b.trade_date WHERE f.trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY f.trade_date DESC LIMIT 100;"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  -
+    context: "ensure all outputs align with latest approved schema"
+    spec: "cross-verify data consistency with approved tables"
+synthesis_guidance: "['summarize findings in a concise table', 'highlight key trends in FII/DII flows and market regime']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:39:29"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

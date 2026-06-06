@@ -1,0 +1,55 @@
+id: "agent_route_failure_diagnostics_1190_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1190"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: TradingView export; timeframe: intraday context; response style: narrative plus evidence."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "TradingView export for intraday context: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as narrative plus evidence"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "TradingView_export"
+  - "intraday_context"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  plan: "Evaluate route failures by examining report data, filtered stock information, and stage snapshots for inconsistencies, tool gaps, or symbol resolution errors."
+  narrative_insertion_points:
+    - "Summarize core issues related to symbol resolution and report consistency."
+    - "Identify potential tool gaps and suggest remediation steps."
+sql_templates:
+  check_latest_enhanced_run: "SELECT run_id, run_ts, notes FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+  identify_filtered_stock_issues: "SELECT symbol, recommendation FROM report.enhanced_filtered_stocks WHERE run_id = $1 AND recommendation = 'ERROR';"
+  stage_snapshot_analysis: "SELECT symbol, stage, narrative FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol IN (SELECT symbol FROM report.enhanced_filtered_stocks WHERE run_id = $1) AND narrative LIKE '%fallback%';"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure SQL templates are read-only and use approved tables and columns."
+  - "Verify narrative synthesis includes identified issues and recommended actions."
+synthesis_guidance: "Synthesize diagnostic results into a cohesive narrative that highlights key failure modes, potential gaps in tools, and specific symbols or routes that need correction. Provide actionable insights for regression testing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:56:25"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,54 @@
+created_at: "2026-06-06T12:41:20"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: concise table."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0037_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for last 20 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as concise table"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Fetch index performance over the last 20 sessions."
+    template: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date > date('now', '-20 days');"
+  -
+    description: "Identify leading sectors based on stage scores."
+    template: "SELECT sector, AVG(stage_score) as avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date > date('now', '-3 months') GROUP BY sector ORDER BY avg_stage_score DESC;"
+status: "test_failed"
+synthesis_guidance: "Combine index performance with sector changes to identify trends and swing candidates for the Indian market."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "concise_table"
+title: "3M Market Rotation Swing Assessment Variant 0037"
+tool_plan_template: "Assess market rotation by analyzing index performance, sector leadership changes, and stage 2 picks."
+validation_rules:
+  - "Ensure recent 20 sessions data is available."
+  - "Sector leadership metrics should be updated."
+version: 1
+validation_errors:
+  - "market.index_eod.date is not approved"
+  - "scores.stage_snapshots.avg_stage_score is not approved"
+  - "scores.stage_snapshots.date is not approved"

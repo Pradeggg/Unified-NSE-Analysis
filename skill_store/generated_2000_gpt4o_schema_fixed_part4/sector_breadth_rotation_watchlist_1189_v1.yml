@@ -1,0 +1,66 @@
+id: "sector_breadth_rotation_watchlist_1189_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1189"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: source-trail validation; timeframe: intraday context; response style: narrative plus evidence."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "source-trail validation for intraday context: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as narrative plus evidence"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "source-trail_validation"
+  - "intraday_context"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    tool_sequence:
+      -
+        tool_type: "sql"
+        inputs:
+          query: "SELECT sector, AVG(pct_above_50dma) AS avg_50dma FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) GROUP BY sector ORDER BY avg_50dma DESC LIMIT 5"
+        outputs:
+          table_name: "sector_ranks"
+sql_templates:
+  -
+    name: "sector_ranks"
+    template: "SELECT sector, AVG(pct_above_50dma) AS avg_50dma FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) GROUP BY sector ORDER BY avg_50dma DESC LIMIT 5"
+  -
+    name: "improving_sectors"
+    template: "SELECT sector, pct_above_50dma, change_5d FROM breadth.sector_daily WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) AND change_5d > 0"
+  -
+    name: "candidate_symbols"
+    template: "SELECT symbol FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY')"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "{'severity': 'error', 'rule_types': [{'description': 'Check for SQL syntax errors', 'type': 'sql_syntax'}, {'description': 'Ensure all output tables are filled', 'type': 'output_content'}]}"
+synthesis_guidance: "{'description': 'Blend narrative with SQL to provide a sector breadth and rotation context suitable for TradingView watchlists.', 'evidence_support': 'Include evidence from sector ranks and improving sectors SQL templates.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:06:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

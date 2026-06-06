@@ -1,0 +1,72 @@
+id: "sector_breadth_rotation_watchlist_1875_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 1875"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: risk-first review; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "risk-first review for pre market: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as action watchlist"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "risk-first_review"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Create a watchlist by evaluating sectors with improved breadth and stage participation, ensuring pre-market readiness and risk-awareness."
+sql_templates:
+  -
+    template_name: "sector_ranking"
+    description: "Rank sectors based on breadth metrics and stage 2 participation."
+    sql: "SELECT sd.sector, sd.breadth_signal, ma.stage2_pct FROM breadth.sector_daily AS sd JOIN breadth.ma_pct_above AS ma ON sd.snapshot_date = ma.snapshot_date WHERE sd.snapshot_date = (SELECT MAX(snapshot_date) FROM breadth.sector_daily) ORDER BY ma.stage2_pct DESC, sd.breadth_signal;"
+  -
+    template_name: "improving_stocks"
+    description: "List stocks showing improvements in stage and signal."
+    sql: "SELECT ss.symbol, ss.company_name, ss.stage, ss.trading_signal FROM scores.stage_snapshots AS ss WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND ss.stage = 'STAGE_2' AND ss.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY ss.relative_strength DESC LIMIT 10;"
+python_tools:
+  -
+    id: "calculate_momentum"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "sector_data"
+    outputs:
+      - "momentum_scores"
+    approved_tables:
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    # Calculate momentum scores from provided data\n    scores = [{symbol: item['symbol'], momentum: item['change_1w_pct'] + item['change_1m_pct'] for item in context['sector_data']}]\n    return scores"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Ensure sector breadth data is up-to-date."
+  - "Verify output lists are bounded with LIMIT."
+synthesis_guidance: "['Interpret SQL outputs into actionable watchlist recommendations.', 'Highlight sector trends and potential strong performers.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:16"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_momentum: python syntax error: invalid syntax"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_momentum: python syntax error: invalid syntax"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

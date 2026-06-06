@@ -1,0 +1,1 @@
+def run(context): return (context['inputs']['growth_yoy_revenue_pct'] + context['inputs']['growth_yoy_pat_pct']) / 2

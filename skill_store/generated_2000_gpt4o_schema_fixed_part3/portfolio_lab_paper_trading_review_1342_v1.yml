@@ -1,0 +1,66 @@
+id: "portfolio_lab_paper_trading_review_1342_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1342"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: deep institutional review; timeframe: last 3 months; response style: exceptions and gaps first."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "deep institutional review for last 3 months: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  tasks:
+    -
+      description: "Fetch latest paper trading strategy details."
+      sql_templates:
+        -
+          notes: "Get latest signals issued in the last 3 months."
+          sql: "SELECT symbol, date_issued, signal, entry_low, entry_high, stop_loss, target_1, target_2 FROM signals.signal_log WHERE date_issued >= (CURRENT_DATE - INTERVAL '3 months');"
+    -
+      description: "Fetch market context for these symbols."
+      sql_templates:
+        -
+          notes: "Join market equity data with latest signals."
+          sql: "SELECT e.symbol, e.close, s.price, s.technical_score, s.stage FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod) AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+sql_templates:
+  -
+    notes: "Select entries and exits from paper trading signals."
+    sql: "SELECT symbol, setup_class, entry_low, entry_high, stop_loss, target_1, target_2, date_issued, date_resolved, return_pct FROM signals.signal_log WHERE date_issued >= (CURRENT_DATE - INTERVAL '3 months') AND setup_class = 'PAPER_TRADE';"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all output fields are returned as described."
+  - "Verify dates are within the last 3 months."
+synthesis_guidance: "{'description': 'Summarize findings focusing on exceptions and gaps.', 'tasks': ['Present strategy state summaries.', 'List open trades with entry/exit metrics.', 'Identify and highlight any gaps or exceptions in strategies.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:37"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

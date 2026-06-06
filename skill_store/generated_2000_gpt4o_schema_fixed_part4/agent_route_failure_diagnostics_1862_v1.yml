@@ -1,0 +1,58 @@
+id: "agent_route_failure_diagnostics_1862_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1862"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for post results: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as action watchlist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    description: "Conduct a comprehensive review of recent Agent Adda report runs to identify any route failures, missing tools, or unusual symbol resolutions. Focus on elements that could lead to fallback loops or diagnostic needs."
+sql_templates:
+  -
+    template_id: "latest_failed_runs"
+    purpose: "Identify recent Agent Adda runs with potential failures or anomalies."
+    template: "SELECT r.run_id, r.run_ts, r.notes FROM report.enhanced_runs r WHERE r.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) AND r.notes IS NOT NULL;"
+  -
+    template_id: "missing_tools_check"
+    purpose: "Check for missing tools in latest runs."
+    template: "SELECT run_id, symbol, recommendation FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)) AND recommendation IS NULL;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure SQL templates return bounded results with identified issues."
+  - "Check for potential missing tools or unclear symbol resolutions."
+synthesis_guidance: "Compile findings into a structured diagnostic report. Prioritize action items by impact on market analysis accuracy and tool availability."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:15:10"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

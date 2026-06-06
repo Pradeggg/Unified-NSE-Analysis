@@ -1,0 +1,156 @@
+card:
+  created_at: "2026-06-06T12:51:12"
+  created_by: "llm_generated"
+  description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: last 3 months; response style: QA checklist."
+  domain: "market_analysis"
+  evidence_required:
+    tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "market_3m_rotation_swing_0745_v1"
+  input_patterns:
+    - "last 3 months market analysis"
+    - "find swing candidates from recent sector rotation"
+    - "market regime and stage 2 leadership over 3 months"
+    - "risk-first review for last 3 months: last 3 months market analysis"
+    - "market regime and stage 2 leadership over 3 months as QA checklist"
+  output_contract:
+    - "as_of_date"
+    - "stage_distribution_change"
+    - "leading_sectors"
+    - "primary_candidates"
+    - "risks"
+  python_tools:
+    -
+      approved_tables:
+        - "market.index_eod"
+        - "scores.stage_snapshots"
+      code: "def run(context):\n    indices_data = context.get('index_returns', [])\n    risks = []\n    for return_data in indices_data:\n        if return_data.get('return_pct', 0) < -5:\n            risks.append({'index': return_data['index_symbol'], 'risk': 'High volatility'})\n    return risks"
+      id: "risk_evaluation_tool"
+      inputs:
+        - "index_returns"
+        - "stage_distribution_change"
+        - "leading_sectors"
+      language: "python"
+      mode: "read_only"
+      outputs:
+        - "risks"
+  sql_templates:
+    -
+      description: "Calculate index returns over the last 3 months."
+      template: "WITH period_returns AS (SELECT trade_date, index_symbol, close, LAG(close) OVER (PARTITION BY index_symbol ORDER BY trade_date) AS prev_close FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '90' DAY) SELECT index_symbol, ROUND((close - prev_close) / prev_close * 100, 2) AS return_pct FROM period_returns WHERE trade_date = (SELECT MAX(trade_date) FROM period_returns);"
+    -
+      description: "Identify leading sectors based on stage scores over the last 3 months."
+      template: "SELECT sector, AVG(stage_score) AS avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '90' DAY GROUP BY sector ORDER BY avg_stage_score DESC;"
+  status: "generated"
+  synthesis_guidance:
+    - "Summarize key findings from index and sector analysis."
+    - "Highlight top swing trading candidates and associated risks."
+  tags:
+    - "market_regime"
+    - "sector_rotation"
+    - "stage_analysis"
+    - "swing_trading"
+    - "risk-first_review"
+    - "last_3_months"
+    - "QA_checklist"
+  title: "3M Market Rotation Swing Assessment Variant 0745"
+  tool_plan_template: "Utilize SQL templates to analyze major indices and sectors, then identify stage 2 equities candidates. Assess risks with Python tools if SQL is too complex."
+  validation_rules:
+    - "Ensure all SQL templates are read-only."
+    - "Cross-check index returns and sector leadership analysis to identify consistency in market regime shifts."
+  version: 1
+created_at: "2026-06-06T12:51:12"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: risk-first review; timeframe: last 3 months; response style: QA checklist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0745_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "risk-first review for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.index_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    risks = []\n    for return_data in context['index_returns']:\n        if return_data['return_pct'] < -5:\n            risks.append({'index': return_data['index_symbol'], 'risk': 'High volatility'})\n    return risks"
+    id: "risk_evaluation_tool"
+    inputs:
+      - "index_returns"
+      - "stage_distribution_change"
+      - "leading_sectors"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "risks"
+review:
+  status: "needs_heal"
+  findings:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    description: "Calculate index returns over the last 3 months."
+    template: "WITH period_returns AS (SELECT trade_date, index_symbol, close, LAG(close) OVER (PARTITION BY index_symbol ORDER BY trade_date) AS prev_close FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '90' DAY) SELECT index_symbol, (close - prev_close) / prev_close * 100 AS return_pct FROM period_returns WHERE trade_date = (SELECT MAX(trade_date) FROM period_returns);"
+  -
+    description: "Identify leading sectors based on stage scores over the last 3 months."
+    template: "SELECT sector, AVG(stage_score) AS avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '90' DAY GROUP BY sector ORDER BY avg_stage_score DESC;"
+status: "test_failed"
+synthesis_guidance: "['Summarize key findings from index and sector analysis.', 'Highlight top swing trading candidates and associated risks.']"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "risk-first_review"
+  - "last_3_months"
+  - "QA_checklist"
+title: "3M Market Rotation Swing Assessment Variant 0745"
+tool_plan_template: "Utilize SQL templates to analyze major indices and sectors, then identify stage 2 equities candidates. Assess risks with Python tools if SQL is too complex."
+validation_errors:
+  - "description is required"
+  - "domain is required"
+  - "evidence_required is required"
+  - "id is required"
+  - "input_patterns is required"
+  - "output_contract is required"
+  - "tags is required"
+  - "title is required"
+  - "validation_rules is required"
+  - "version is required"
+  - "version must be a positive integer"
+validation_rules:
+  - "Ensure all SQL templates are read-only."
+  - "Cross-check index returns and sector leadership analysis to identify consistency in market regime shifts."
+version: 1

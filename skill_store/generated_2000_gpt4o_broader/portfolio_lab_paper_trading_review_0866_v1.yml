@@ -1,0 +1,56 @@
+id: "portfolio_lab_paper_trading_review_0866_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 0866"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for post results: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as action watchlist"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Process the paper trading portfolios to analyze strategy effectiveness separately from real holdings. Conduct a freshness audit to evaluate entries, exits, and performance of strategies."
+sql_templates:
+  -
+    description: "Fetch latest signals and their outcomes for paper trading."
+    template: "SELECT symbol, date_issued, signal, price_at_issue, date_resolved, price_at_resolution, return_pct FROM signals.signal_log WHERE date_resolved IS NOT NULL AND date_issued > CURRENT_DATE - INTERVAL '30 days';"
+  -
+    description: "Get recent market data for symbols in the paper trading strategy."
+    template: "SELECT symbol, close, trade_date FROM market.equity_eod WHERE trade_date = CURRENT_DATE - 1;"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure all SQL queries are read-only and align with the provided schema."
+  - "Check that each strategy's freshness is evaluated based on the specified timeframe."
+synthesis_guidance: "Compile the results into an action-oriented watchlist to provide a review and strategy insights for the paper trading portfolios."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:01:55"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

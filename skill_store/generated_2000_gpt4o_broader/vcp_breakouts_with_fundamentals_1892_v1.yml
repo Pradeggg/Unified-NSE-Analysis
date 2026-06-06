@@ -1,0 +1,62 @@
+id: "vcp_breakouts_with_fundamentals_1892_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1892"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as action watchlist"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    language: "SQL"
+    type: "read_only"
+    templates:
+      -
+        description: "Identify stocks creating new highs or VCP with strong fundamentals."
+        template: "WITH recent_snapshots AS (SELECT symbol, company_name, sector, max(price_date) AS latest_date FROM scores.stage_snapshots GROUP BY symbol, company_name, sector) SELECT s.symbol, s.company_name, e.close AS latest_close, s.fundamental_score, s.enhanced_fund_score FROM scores.stage_snapshots s JOIN market.equity_eod e ON s.symbol = e.symbol WHERE e.trade_date = recent_snapshots.latest_date AND (e.close >= e.week52_high OR s.enhanced_fund_score >= 8) ORDER BY s.enhanced_fund_score DESC"
+      -
+        description: "Filter VCP picks with high investment scores."
+        template: "SELECT symbol, company_name, price, vcp_score, investment_score FROM scores.stage2_vcp_picks WHERE investment_score >= 8 ORDER BY vcp_score DESC"
+sql_templates:
+  -
+    description: "Identify breakout stocks based on VCP patterns."
+    template: "SELECT symbol, company_name, price, vcp_breakout_pct, vcp_contraction_pct FROM scores.stage2_vcp_picks WHERE vcp_breakout_pct > 5 ORDER BY vcp_contraction_pct"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure stocks have strong fundamentals."
+  - "Filter based on recent highs or VCP breakouts."
+synthesis_guidance: "['Focus on relevance to Indian market conditions.', 'Emphasize liquidity and institutional interest.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:11"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

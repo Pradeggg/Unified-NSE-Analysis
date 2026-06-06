@@ -1,0 +1,84 @@
+created_at: "2026-06-06T12:51:26"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: post results; response style: QA checklist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0769_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage2_vcp_picks"
+      - "market.equity_eod"
+    code: "def run(context):\n    # Extracting top swing candidates based on VCP score and recent performance.\n    candidates = context['scores.stage2_vcp_picks'].nlargest(10, 'vcp_score')\n    return candidates[candidates['snapshot_date'] >= context['date_limit']]"
+    id: "process_swing_candidates"
+    inputs:
+      - "scores.stage2_vcp_picks"
+      - "market.equity_eod"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "top_swing_candidates"
+review:
+  status: "needs_heal"
+  findings:
+    - "process_swing_candidates: execution failed: KeyError: 'scores.stage2_vcp_picks'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    description: "Retrieve index performance over the last 3 months."
+    query: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY trade_date DESC;"
+  -
+    description: "Identify stage 2 VCP candidates from the last 3 months."
+    query: "SELECT symbol, company_name, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY vcp_score DESC;"
+status: "test_failed"
+synthesis_guidance:
+  - "Integrate index and sector performance to determine current market regime."
+  - "Use technical and VCP scores to shortlist promising swing trading candidates."
+  - "Provide a QA checklist for source-trail validation and risk assessment."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "post_results"
+  - "QA_checklist"
+title: "3M Market Rotation Swing Assessment Variant 0769"
+tool_plan_template:
+  evidence_sources:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+  procedures:
+    - "Evaluate market regime changes over the last 3 months using trend and momentum from market.index_eod."
+    - "Identify sector leadership transitions by assessing the relative strength and momentum fields from market.index_eod."
+    - "Review stage changes and technical scores using data from scores.stage_snapshots."
+    - "Select potential swing candidates using scores.stage2_vcp_picks with the focus on stage 2 stocks."
+validation_errors:
+  - "process_swing_candidates: execution failed: KeyError: 'scores.stage2_vcp_picks'"
+validation_rules:
+  - "Ensure data completeness for the entire 3-month period."
+  - "Verify that stage transitions align with known market events."
+  - "Cross-check candidate selections against historical performance patterns."
+version: 1

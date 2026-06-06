@@ -1,0 +1,74 @@
+created_at: "2026-06-06T12:52:10"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: last 3 months; response style: action watchlist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0849_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  status: "needs_heal"
+  findings:
+    - "market.index_eod.total_return is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  -
+    description: "Calculate index returns over the last 3 months."
+    template: "SELECT index_symbol, SUM(change_pct) AS total_return FROM market.index_eod WHERE trade_date > (CURRENT_DATE - INTERVAL '3 months') GROUP BY index_symbol;"
+    template_type: "index_performance"
+  -
+    description: "Identify leading sectors and their stage changes."
+    template: "SELECT sector, COUNT(*) FROM scores.stage_snapshots WHERE stage = 2 AND price_date > (CURRENT_DATE - INTERVAL '3 months') GROUP BY sector ORDER BY COUNT(*) DESC;"
+    template_type: "sector_leading_change"
+  -
+    description: "Fetch swing trading candidates in Stage 2."
+    template: "SELECT symbol, company_name, sector FROM scores.stage2_vcp_picks WHERE snapshot_date > (CURRENT_DATE - INTERVAL '3 months') AND trading_signal = 'BUY';"
+    template_type: "stage_2_candidates"
+status: "test_failed"
+synthesis_guidance:
+  - "Highlight the most promising sectors."
+  - "Detail top swing candidates with a high Stage 2 presence."
+  - "Include risk considerations based on index volatility."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "action_watchlist"
+title: "3M Market Rotation Swing Assessment Variant 0849"
+tool_plan_template:
+  steps:
+    - "Assess the broad market regime using index data."
+    - "Identify leading sectors and stage changes."
+    - "Filter for liquid swing trading candidates in Stage 2."
+    - "Compile findings into an actionable watchlist."
+  type: "analysis"
+validation_errors:
+  - "market.index_eod.total_return is not approved"
+validation_rules:
+  - "Ensure all data pulled is within the last 3 months."
+  - "Verify sector trends align with Stage 2 transitions."
+  - "Confirm candidates have favorable trading signals."
+version: 1

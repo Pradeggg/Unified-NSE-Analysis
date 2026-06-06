@@ -1,0 +1,59 @@
+id: "insider_bulk_deal_signal_review_1900_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1900"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for weekly review: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as action watchlist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  inputs:
+    - "insider buying data"
+    - "bulk deal data"
+    - "technical indicators"
+  outputs:
+    - "filtered and ranked stock symbols"
+    - "generation of action watchlist"
+sql_templates:
+  -
+    description: "Get bulk and insider deals with technical confirmations."
+    template: "WITH RecentDeals AS ( SELECT b.symbol, b.deal_date, b.qty, b.price FROM signals.bulk_block_deals b WHERE b.deal_date >= CURRENT_DATE - INTERVAL '7 days' ), InsiderAlerts AS ( SELECT i.symbol, i.alert_date, i.qty, i.insider_score FROM signals.insider_alerts i WHERE i.alert_date >= CURRENT_DATE - INTERVAL '7 days' ), TechnicalSignals AS ( SELECT s.symbol, s.trend_signal, s.supertrend_state, s.trading_signal FROM scores.stage_snapshots s WHERE s.trend_signal = 'positive' ) SELECT rd.symbol, SUM(rd.qty) AS total_qty, COUNT(ia.symbol) AS insider_count, MAX(ts.trend_signal) AS trend_signal FROM RecentDeals rd LEFT JOIN InsiderAlerts ia ON rd.symbol = ia.symbol LEFT JOIN TechnicalSignals ts ON rd.symbol = ts.symbol GROUP BY rd.symbol HAVING insider_count > 0 AND trend_signal IS NOT NULL;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure that output symbols are unique and accurately reflect accumulated quantities"
+  - "Confirm technical confirmation matches predefined positive indicators"
+synthesis_guidance: "['Rank symbols based on combined quantity from deals and insider scores', 'Highlight symbols with strong technical backing for potential accumulation']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:08"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

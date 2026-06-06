@@ -1,0 +1,61 @@
+id: "data_freshness_readiness_audit_1883_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1883"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for intraday context: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as action watchlist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Verify data source freshness across tables for action insights."
+sql_templates:
+  -
+    template: "SELECT trade_date, index_symbol, close FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '1 day';"
+    description: "Check recent index EOD data for freshness."
+  -
+    template: "SELECT trade_date, symbol, close FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '1 day';"
+    description: "Review latest equity EOD data to ensure up-to-date records."
+  -
+    template: "SELECT trade_date, adv_volume, dec_volume FROM breadth.market_daily WHERE trade_date >= CURRENT_DATE - INTERVAL '1 day';"
+    description: "Assess market breadth data for the most recent update."
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Verify all data fetched is from the last 24-hour period."
+  - "Identify any incomplete data or missing date entries."
+synthesis_guidance: "Provide an action plan to address any data freshness deficiencies identified."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,65 @@
+id: "market_3m_rotation_swing_0861_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0861"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: post results; response style: action watchlist."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as action watchlist"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "post_results"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  python_tools:
+
+  sql_templates:
+    index_analysis:
+      template: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= DATE('now', '-3 months')"
+      description: "Calculate index returns over the last 3 months."
+    stage_distribution_change:
+      template: "SELECT snapshot_date, sector, stage, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date >= DATE('now', '-3 months') GROUP BY snapshot_date, sector, stage"
+      description: "Analyze changes in stage distribution over the last 3 months."
+    leading_sectors:
+      template: "SELECT sector, AVG(relative_strength) as avg_strength FROM scores.stage_snapshots WHERE snapshot_date >= DATE('now', '-3 months') GROUP BY sector ORDER BY avg_strength DESC LIMIT 5"
+      description: "Identify leading sectors based on average relative strength."
+    primary_candidates:
+      template: "SELECT symbol, company_name, sector, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATE('now', '-3 months') AND vcp_score > 70"
+      description: "Find primary candidates with high VCP scores."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "validate_output"
+synthesis_guidance: "{'interpret_market_regime': 'Translate index and sector data into market regime insights.', 'action_watchlist': 'Use leading sectors and candidates data to construct a watchlist.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:52:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,53 @@
+id: "vcp_breakouts_with_fundamentals_1360_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1360"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: quarter to date; response style: exceptions and gaps first."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for quarter to date: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "quarter_to_date"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  type: "string"
+  content: "Focus on selecting stocks that are either creating new highs, showing VCP patterns, or breaking out with solid fundamentals. Exports should be tailored for TradingView."
+sql_templates:
+  -
+    description: "Select potential breakout stocks with strong fundamentals."
+    template: "SELECT e.symbol, e.close, e.high, e.low, e.change_pct, s.fundamental_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.change_pct > 0 AND s.fundamental_score > 70;"
+  -
+    description: "Identify VCP stocks with breakout potential."
+    template: "SELECT v.symbol, v.vcp_breakout_pct, v.vcp_score, v.enhanced_fund_score FROM scores.stage2_vcp_picks v WHERE v.vcp_breakout_pct > 5 AND v.enhanced_fund_score > 60;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure output aligns with Indian market context."
+  - "Validate TradingView compatibility for symbols."
+synthesis_guidance: "Highlight liquidity and market cap considerations."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:28"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage2_vcp_picks.v is not approved"

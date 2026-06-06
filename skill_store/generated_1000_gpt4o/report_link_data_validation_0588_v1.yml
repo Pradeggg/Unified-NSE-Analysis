@@ -1,0 +1,58 @@
+id: "report_link_data_validation_0588_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0588"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: intraday context; response style: research-only summary."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for intraday context: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  findings: "Analyze data validation results to identify missing or broken report links and ensure data availability."
+  broken_links: "Check for non-responsive or incorrect report links generated during the report run."
+  missing_data: "Investigate stock data and ensure all necessary data points are populated and accurate for intraday analysis."
+  remediation: "Outline steps to correct identified issues in report links and stock data."
+  verification: "Detail procedures for verifying the success of implemented solutions and maintaining data integrity."
+sql_templates:
+  -
+    template: "SELECT run_id, run_ts, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE analysis_date = CURRENT_DATE"
+    description: "Fetch today's runs for intraday context."
+  -
+    template: "SELECT run_id, symbol, recommendation, tech_score FROM report.enhanced_filtered_stocks WHERE above_50dma = TRUE AND above_200dma = TRUE"
+    description: "Select stocks with strong technical indicators during current run."
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all SQL queries are read-only and aligned with the approved schema."
+  - "Maintain research-only focus for output."
+synthesis_guidance: "Synthesize findings into actionable insights for report QA in the context of Indian market analysis."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:49:59"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

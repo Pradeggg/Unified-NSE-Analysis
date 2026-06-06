@@ -1,0 +1,53 @@
+id: "signal_outcome_feedback_review_0893_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0893"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "daily refresh follow-up for weekly review: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as action watchlist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "daily_refresh_follow-up"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Retrieve latest signals with outcomes"
+    template: "SELECT s.symbol, s.signal, s.return_pct, s.hit_target, s.hit_stop FROM signals.signal_log s WHERE s.date_resolved = (SELECT MAX(date_resolved) FROM signals.signal_log) LIMIT 100"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure all evidence tables are included in exploration."
+  - "Adhere strictly to approved schema and global SQL rules."
+synthesis_guidance: "['Use signal outcomes to evaluate and fine-tune investment strategies.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

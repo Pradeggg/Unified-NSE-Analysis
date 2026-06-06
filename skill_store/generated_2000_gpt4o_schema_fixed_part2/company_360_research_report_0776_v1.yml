@@ -1,0 +1,58 @@
+id: "company_360_research_report_0776_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Comprehensive Company Research Report"
+description: "Generates a detailed research report for a specified company, focusing on the latest market trends and financial data. Includes an overview, fundamental analysis, technical evaluation, and key narratives."
+input_patterns:
+  - "/research TCS comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Fetch the latest stock data and stage scores for the company."
+    sql_template: "SELECT * FROM scores.stage_snapshots WHERE symbol = '{{symbol}}' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  -
+    description: "Retrieve the latest quarterly financial results for the company."
+    sql_template: "SELECT * FROM scores.quarterly_results WHERE symbol = '{{symbol}}' AND period_type = 'quarter' ORDER BY period_end DESC LIMIT 1;"
+  -
+    description: "Gather the latest annual financial results for comprehensive analysis."
+    sql_template: "SELECT * FROM scores.annual_results WHERE symbol = '{{symbol}}' AND period_type = 'annual' ORDER BY period_end DESC LIMIT 1;"
+  -
+    description: "Get the recent EOD market data to analyze the stock's trading performance."
+    sql_template: "SELECT * FROM market.equity_eod WHERE symbol = '{{symbol}}' AND trade_date = (SELECT MAX(trade_date) FROM market.equity_eod);"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all selected data is for the specified company."
+  - "Validate snapshot and financial dates align with latest data availability."
+synthesis_guidance: "['Combine financial results and market data to provide an overarching view.', 'Incorporate narratives based on stage scores and technical indicators.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:27"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

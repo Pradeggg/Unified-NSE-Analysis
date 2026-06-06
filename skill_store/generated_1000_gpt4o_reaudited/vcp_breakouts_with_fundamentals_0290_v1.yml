@@ -1,0 +1,78 @@
+created_at: "2026-06-06T12:44:15"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: TradingView export; timeframe: intraday context; response style: ranked candidates."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0290_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "TradingView export for intraday context: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+    code: "# Placeholder for Python tool to rank candidates\n\ndef run(context):\n    new_highs = context['find_new_highs']\n    vcp_breakouts = context['find_vcp_breakouts']\n    quality_fundamentals = context['find_quality_fundamentals']\n    # Implementation logic to merge and rank\n    return ranked_candidates"
+    id: "rank_candidates_tool"
+    inputs:
+      - "find_new_highs"
+      - "find_vcp_breakouts"
+      - "find_quality_fundamentals"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "ranked_candidates"
+sql_templates:
+  -
+    query_name: "find_new_highs"
+    sql: "SELECT symbol, high FROM market.equity_eod WHERE high >= week52_high;"
+  -
+    query_name: "find_vcp_breakouts"
+    sql: "SELECT symbol, rank, vcp_score FROM scores.stage2_vcp_picks WHERE vcp_score > 70 ORDER BY rank ASC;"
+  -
+    query_name: "find_quality_fundamentals"
+    sql: "SELECT symbol, enhanced_fund_score FROM scores.stage_snapshots WHERE enhanced_fund_score > 80;"
+status: "test_failed"
+synthesis_guidance: "Combine new-highs with VCP breakouts and filter by strong fundamentals to generate ranked candidates. Format for TradingView export."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "TradingView_export"
+  - "intraday_context"
+  - "ranked_candidates"
+title: "VCP Breakouts With Fundamentals Variant 0290"
+tool_plan_template:
+  plan_steps:
+    - "Identify stocks creating new highs in 'market.equity_eod'."
+    - "Filter for VCP breakout stocks in 'scores.stage2_vcp_picks'."
+    - "Select stocks with high enhanced fundamental scores and other fundamental criteria from 'scores.stage_snapshots'."
+validation_rules:
+  - "Ensure all candidates have enhanced fundamental scores greater than 80."
+  - "Verify VCP score is prioritized in the final list."
+version: 1
+validation_errors:
+  - "rank_candidates_tool: execution failed: KeyError: 'find_new_highs'"
+review:
+  status: "needs_heal"
+  findings:
+    - "rank_candidates_tool: execution failed: KeyError: 'find_new_highs'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

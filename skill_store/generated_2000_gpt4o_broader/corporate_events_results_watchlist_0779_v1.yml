@@ -1,0 +1,51 @@
+id: "corporate_events_results_watchlist_0779_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0779"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: pre market; response style: QA checklist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for pre market: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as QA checklist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "pre_market"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze corporate events and quarterly results to determine actionable watchlist items with validation. Use evidence tables to support findings."
+sql_templates:
+  upcoming_events: "SELECT symbol, event_type, event_date FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY event_date"
+  recent_results: "SELECT symbol, company_name, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, verdict FROM scores.results_analysis WHERE filing_date >= CURRENT_DATE - INTERVAL '7 days' ORDER BY filing_date DESC"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all event dates are future dates."
+  - "Check that results data is from the past week only."
+  - "Validate source-trail information for transparency."
+synthesis_guidance: "Merge evidence from corporate events and results analysis to form a coherent watchlist. Focus on recent data and source validations."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:00:35"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

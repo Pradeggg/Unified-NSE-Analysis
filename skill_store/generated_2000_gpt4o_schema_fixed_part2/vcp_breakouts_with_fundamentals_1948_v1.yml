@@ -1,0 +1,73 @@
+id: "vcp_breakouts_with_fundamentals_1948_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1948"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: last 3 months; response style: comparison matrix."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for last 3 months: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as comparison matrix"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "last_3_months"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+  freshness:
+    max_eod_age_days: 3
+tool_plan_template:
+  filters:
+    - "Use snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) for latest VCP picks."
+    - "trading_signal IN ('BUY', 'STRONG_BUY')"
+  candidates:
+    - "symbol"
+    - "company_name"
+    - "price"
+    - "change_1d_pct"
+    - "vcp_score"
+    - "enhanced_fund_score"
+  tradingview_symbols:
+    inputs:
+      - "company_name"
+      - "price"
+  evidence:
+    - "change_1d_pct"
+    - "change_1w_pct"
+    - "enhanced_fund_score"
+    - "turnover_cr"
+  risks:
+    - "Ensure liquidity and recent breakout strength."
+sql_templates:
+  latest_vcp_candidates: "WITH latest_vcp AS (SELECT * FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)), latest_stage AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT v.symbol, v.company_name, v.price, v.change_1d_pct, v.vcp_score, s.enhanced_fund_score FROM latest_vcp v JOIN latest_stage s ON v.symbol = s.symbol WHERE v.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY v.vcp_score DESC, v.rank ASC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all fields are captured as required by domain context."
+  - "Cross-verify results with entity definitions and field semantics."
+synthesis_guidance: "['Highlight VCP characteristics and fundamentals alignment.', 'Explain filter criteria explicitly in the output description.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:53"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

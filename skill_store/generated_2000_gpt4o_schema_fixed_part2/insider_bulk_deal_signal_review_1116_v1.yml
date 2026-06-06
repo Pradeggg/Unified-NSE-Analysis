@@ -1,0 +1,85 @@
+id: "insider_bulk_deal_signal_review_1116_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1116"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: freshness audit; timeframe: latest EOD; response style: narrative plus evidence."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "freshness audit for latest EOD: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as narrative plus evidence"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "freshness_audit"
+  - "latest_EOD"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Use available SQL templates, join rules, and global SQL rules to gather evidence for a narrative response."
+sql_templates:
+  -
+    template_id: "latest_insider_signals"
+    select:
+      - "symbol"
+      - "entity"
+      - "qty"
+      - "value_cr"
+      - "category"
+      - "insider_score"
+    from: "signals.insider_alerts"
+    where:
+      - "alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts)"
+  -
+    template_id: "bulk_deals_latest"
+    select:
+      - "symbol"
+      - "entity"
+      - "qty"
+      - "price"
+      - "deal_type"
+      - "remarks"
+    from: "signals.bulk_block_deals"
+    where:
+      - "deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals)"
+  -
+    template_id: "latest_stage_snapshot"
+    select:
+      - "symbol"
+      - "company_name"
+      - "stage"
+      - "stage_score"
+      - "trading_signal"
+      - "rsi"
+    from: "scores.stage_snapshots"
+    where:
+      - "snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "latest_date_sync"
+  - "symbol_consistency"
+synthesis_guidance: "{'evidence_priority': 'Prioritize evidence based on insider scores and stage signals', 'narrative_composition': 'Craft narrative to detail accumulation signs supported by technical data'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:22"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

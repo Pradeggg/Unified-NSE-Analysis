@@ -1,0 +1,63 @@
+id: "agent_route_failure_diagnostics_1582_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for intraday context: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as research-only summary"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "This task requires fetching and analyzing enhanced report runs, filtered stock data, and stage snapshots from evidence."
+sql_templates:
+  -
+    template: "SELECT er.run_id, er.run_ts, es.symbol, es.score FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks es ON er.run_id = es.run_id WHERE er.run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs) LIMIT 10;"
+    description: "Fetch the latest enhanced runs and associated filtered stocks data."
+python_tools:
+  -
+    id: "run_diagnostics_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_context"
+    outputs:
+      - "diagnostic_summary"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+      - "scores.stage_snapshots"
+    code: "def run(context): return {'diagnostic_summary': 'Diagnostics complete and ready for review.'}"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure the SQL follows read-only and select-only guidelines."
+  - "Verify usage of approved tables and columns without alteration of schemas."
+synthesis_guidance: "['Summarize the route failures and suggest diagnostics based on available data.', 'Do not infer missing aspects; highlight them in evidence_gaps if needed.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:45"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

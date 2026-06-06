@@ -1,0 +1,138 @@
+card:
+  created_at: "2026-06-06T12:48:14"
+  created_by: "llm_generated"
+  description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: post results; response style: portfolio-aware output."
+  domain: "market_analysis"
+  evidence_required:
+    tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+      - "scores.stage2_vcp_picks"
+  generation_model: "gpt-4o"
+  id: "market_3m_rotation_swing_0461_v1"
+  input_patterns:
+    - "last 3 months market analysis"
+    - "find swing candidates from recent sector rotation"
+    - "market regime and stage 2 leadership over 3 months"
+    - "quick scan for post results: last 3 months market analysis"
+    - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+  output_contract:
+    - "as_of_date"
+    - "index_returns"
+    - "stage_distribution_change"
+    - "leading_sectors"
+    - "primary_candidates"
+    - "risks"
+  python_tools:
+
+  sql_templates:
+    index_returns: "SELECT index_symbol, AVG(change_pct) as avg_return FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY index_symbol;"
+    leading_sectors: "SELECT sector, AVG(relative_strength) as avg_relative_strength FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_relative_strength DESC;"
+    primary_candidates: "SELECT symbol, company_name, price FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY vcp_score DESC LIMIT 10;"
+    stage_distribution_change: "SELECT sector, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' AND stage = 2 GROUP BY sector ORDER BY count DESC;"
+  status: "generated"
+  synthesis_guidance:
+    risk_assessment: "Summarize potential market risks based on regime and sector movements."
+  tags:
+    - "market_regime"
+    - "sector_rotation"
+    - "stage_analysis"
+    - "swing_trading"
+    - "quick_scan"
+    - "post_results"
+    - "portfolio-aware_output"
+  title: "3M Market Rotation Swing Assessment Variant 0461"
+  tool_plan_template:
+    requirements:
+      - "Assess index returns over the last 3 months."
+      - "Identify leading sectors and changes in stage distribution."
+      - "List primary swing candidates."
+  validation_errors:
+
+  validation_rules:
+    - "index_returns"
+    - "stage_distribution_change"
+    - "primary_candidates"
+  version: 1
+created_at: "2026-06-06T12:48:14"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: post results; response style: portfolio-aware output."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0461_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 3
+  findings:
+    - "description is required"
+    - "domain is required"
+    - "evidence_required is required"
+    - "id is required"
+    - "input_patterns is required"
+    - "output_contract is required"
+    - "tags is required"
+    - "title is required"
+    - "validation_rules is required"
+    - "version is required"
+    - "version must be a positive integer"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  index_returns: "SELECT index_symbol, AVG(change_pct) as avg_return FROM market.index_eod WHERE trade_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY index_symbol;"
+  leading_sectors: "SELECT sector, AVG(relative_strength) as avg_relative_strength FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY sector ORDER BY avg_relative_strength DESC;"
+  primary_candidates: "SELECT symbol, company_name, price FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) ORDER BY vcp_score DESC LIMIT 10;"
+  stage_distribution_change: "SELECT sector, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) AND stage = 2 GROUP BY sector ORDER BY count DESC;"
+status: "test_failed"
+synthesis_guidance: "{'risk_assessment': 'Summarize potential market risks based on regime and sector movements.'}"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "post_results"
+  - "portfolio-aware_output"
+title: "3M Market Rotation Swing Assessment Variant 0461"
+tool_plan_template:
+  requirements:
+    - "Assess index returns over the last 3 months."
+    - "Identify leading sectors and changes in stage distribution."
+    - "List primary swing candidates."
+validation_errors:
+  - "description is required"
+  - "domain is required"
+  - "evidence_required is required"
+  - "id is required"
+  - "input_patterns is required"
+  - "output_contract is required"
+  - "tags is required"
+  - "title is required"
+  - "validation_rules is required"
+  - "version is required"
+  - "version must be a positive integer"
+validation_rules:
+  - "index_returns"
+  - "stage_distribution_change"
+  - "primary_candidates"
+version: 1

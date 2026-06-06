@@ -1,0 +1,75 @@
+id: "portfolio_incremental_add_trim_0327_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0327"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for last 5 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as exceptions and gaps first"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  sql_templates:
+    -
+      description: "Fetch recent price changes and signals for holdings over the last 5 sessions."
+      template: "SELECT h.symbol, h.qty, s.price, s.change_1d_pct, s.change_1w_pct, s.stage, s.trend_signal, s.trading_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date >= CURRENT_DATE - INTERVAL '5 days'"
+sql_templates:
+
+python_tools:
+  -
+    id: "sector_exposure_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      tables:
+        - "scores.stage_snapshots"
+        - "portfolio.holdings"
+    outputs:
+      sector_comparisons:
+
+      add_candidates:
+
+      trim_candidates:
+
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    # Analyze sector exposure and identify add/trim candidates.\n    pass"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "status must be set as generated."
+  - "SQL must be read-only SELECT/WITH templates."
+  - "No new tables, aliases, or columns should be invented."
+synthesis_guidance: "['Focus on exceptions and gaps first.', 'Utilize sector-relative comparisons for analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:45:39"
+generation_model: "gpt-4o"
+validation_errors:
+  - "sector_exposure_analysis: inputs must be a list"
+  - "sector_exposure_analysis: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "sector_exposure_analysis: inputs must be a list"
+    - "sector_exposure_analysis: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

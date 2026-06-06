@@ -1,0 +1,68 @@
+created_at: "2026-06-06T12:43:22"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: today; response style: ranked candidates."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0203_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for today: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    stage_scores = context['scores.stage_snapshots']\n    holding_data = context['portfolio.holdings']\n    top_add = [c for c in stage_scores if c['stage_score'] >= 80]\n    top_trim = [h for h in holding_data if any(s['symbol'] == h['symbol'] and s['stage_score'] < 50 for s in stage_scores)]\n    return {'ranked_add': top_add, 'ranked_trim': top_trim}"
+    id: "filter_candidates"
+    inputs:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "ranked_add"
+      - "ranked_trim"
+review:
+  attempts: 3
+  findings:
+    - "filter_candidates: execution failed: KeyError: 'scores.stage_snapshots'"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"
+sql_templates:
+  -
+    description: "Select top 10 symbols by stage score for today's snapshot."
+    template: "SELECT symbol, company_name, stage_score, technical_score, price FROM scores.stage_snapshots WHERE snapshot_date = CURRENT_DATE ORDER BY stage_score DESC LIMIT 10;"
+  -
+    description: "Select current holdings with low stage scores for trimming consideration."
+    template: "SELECT h.symbol, h.qty, s.stage_score FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = CURRENT_DATE AND s.stage_score < 50;"
+status: "test_failed"
+synthesis_guidance: "Use stage scores and technical indicators to prioritize add/trim actions."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "ranked_candidates"
+title: "Portfolio Incremental Add Trim Review Variant 0203"
+tool_plan_template: "Select the top candidates for incremental add/trim based on current stage scores and portfolio positioning."
+validation_errors:
+  - "filter_candidates: execution failed: KeyError: 'scores.stage_snapshots'"
+validation_rules:
+  - "Ensure calculations respect current market data"
+  - "Ranked candidates should reflect latest scores"
+version: 1

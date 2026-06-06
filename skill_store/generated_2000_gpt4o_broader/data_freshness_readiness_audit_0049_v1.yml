@@ -1,0 +1,58 @@
+id: "data_freshness_readiness_audit_0049_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 0049"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: source-trail validation; timeframe: last 3 months; response style: concise table."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "source-trail validation for last 3 months: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as concise table"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "source-trail_validation"
+  - "last_3_months"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Assessment of data freshness involves reviewing the trade_date and snapshot_date against current date for the approved tables."
+sql_templates:
+  validate_freshness:
+    title: "Validate Data Freshness"
+    template: "SELECT table_name, MAX(trade_date) AS last_update FROM (SELECT 'market.index_eod' AS table_name, trade_date FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 MONTHS' UNION ALL SELECT 'market.equity_eod', trade_date FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 MONTHS') AS updates GROUP BY table_name;"
+    description: "Check maximum trade_date in the last 3 months for selected tables."
+    mode: "read_only"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all approved columns and tables are used as per schema."
+  - "Status must be generated."
+  - "SQL templates must be read-only SELECT/WITH statements."
+synthesis_guidance: "Combine the SQL results with input patterns to create clear and concise outputs for data freshness validation."
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

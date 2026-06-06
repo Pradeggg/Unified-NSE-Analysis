@@ -1,0 +1,78 @@
+id: "company_360_research_report_1616_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1616"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: freshness audit; timeframe: latest EOD; response style: debug trace."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "freshness audit for latest EOD: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as debug trace"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "freshness_audit"
+  - "latest_EOD"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  - "Fetch latest EOD data for the specified symbol."
+  - "Analyze stage snapshots for technical and fundamental scores."
+  - "Evaluate quarterly and annual results for financial trends."
+  - "Assess balance sheet and cash flow for financial health."
+sql_templates:
+  - "SELECT * FROM scores.stage_snapshots WHERE symbol = '{{symbol}}';"
+  - "SELECT * FROM scores.quarterly_results WHERE symbol = '{{symbol}}' ORDER BY period_end DESC LIMIT 1;"
+  - "SELECT * FROM scores.annual_results WHERE symbol = '{{symbol}}' ORDER BY period_end DESC LIMIT 1;"
+  - "SELECT * FROM scores.balance_sheet WHERE symbol = '{{symbol}}' ORDER BY period_end DESC LIMIT 1;"
+  - "SELECT * FROM scores.cash_flow WHERE symbol = '{{symbol}}' ORDER BY period_end DESC LIMIT 1;"
+  - "SELECT * FROM scores.results_analysis WHERE symbol = '{{symbol}}' ORDER BY period_end DESC LIMIT 1;"
+  - "SELECT * FROM market.equity_eod WHERE symbol = '{{symbol}}' ORDER BY trade_date DESC LIMIT 1;"
+python_tools:
+  -
+    id: "latest_eod_research_3710"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "symbol"
+    outputs:
+      - "latest_eod_data"
+    approved_tables:
+      - "market.equity_eod"
+    code: "def run(context):\n    # Extract symbol from context\n    symbol = context['symbol']\n    # Sample code to fetch and simulate processing EOD data\n    # Placeholder: Replace with actual data-fetching logic\n    latest_eod_data = {\n        'symbol': symbol,\n        'status': 'generated'\n    }\n    return latest_eod_data"
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all evidence tables mentioned are used."
+  - "Validate SQL queries to be read-only."
+  - "Verify the latest EOD data freshness."
+synthesis_guidance: "['Aggregate data from all evidence tables to create a comprehensive report.', 'Highlight key financial trends and insights.', 'Include technical analysis based on stage snapshots.', 'Summarize with a clear thesis and potential risks.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:25"
+generation_model: "gpt-4o"
+validation_errors:
+  - "latest_eod_research_3710: execution failed: KeyError: 'symbol'"
+review:
+  status: "needs_heal"
+  findings:
+    - "latest_eod_research_3710: execution failed: KeyError: 'symbol'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

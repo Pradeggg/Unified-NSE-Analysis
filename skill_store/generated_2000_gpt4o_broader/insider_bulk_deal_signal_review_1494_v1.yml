@@ -1,0 +1,51 @@
+id: "insider_bulk_deal_signal_review_1494_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1494"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: watchlist creation; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "watchlist creation for weekly review: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as portfolio-aware output"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "watchlist_creation"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Generate insights on insider buying and bulk deals. Validate potential accumulation with technical analysis for creating a watchlist. Weekly review is preferred to track possible market movements."
+sql_templates:
+  - "WITH recent_insider_alerts AS (SELECT symbol, SUM(qty) AS total_qty FROM signals.insider_alerts WHERE alert_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) AND alert_type = 'buy' GROUP BY symbol), bulk_deals AS (SELECT symbol, SUM(qty) AS bulk_qty FROM signals.bulk_block_deals WHERE deal_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) AND side = 'buy' GROUP BY symbol), combined_data AS (SELECT r.symbol, r.total_qty, b.bulk_qty FROM recent_insider_alerts r JOIN bulk_deals b ON r.symbol = b.symbol) SELECT c.symbol, c.total_qty, c.bulk_qty, s.trend_signal FROM combined_data c JOIN scores.stage_snapshots s ON c.symbol = s.symbol WHERE s.trend_signal = 'positive' AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) ORDER BY c.bulk_qty DESC;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "unique_symbols"
+  - "recent_date_check"
+  - "combined_qty_presence"
+synthesis_guidance: "Focus on both fundamental and technical signals. Aim to create a well-rounded watchlist by confirming insider actions with technical trends. Provide context and risk notes for investor consideration."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:09:17"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

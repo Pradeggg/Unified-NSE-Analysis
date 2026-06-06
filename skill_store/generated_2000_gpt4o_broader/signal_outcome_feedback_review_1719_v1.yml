@@ -1,0 +1,54 @@
+id: "signal_outcome_feedback_review_1719_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1719"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: source-trail validation; timeframe: latest EOD; response style: QA checklist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "source-trail validation for latest EOD: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as QA checklist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "source-trail_validation"
+  - "latest_EOD"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+
+sql_templates:
+  -
+    description: "Retrieve resolved signals to assess hit target, stop loss, and return percentage."
+    template: "SELECT date_issued, symbol, signal, price_at_issue, price_at_resolution, return_pct, hit_target, hit_stop FROM signals.signal_log WHERE date_resolved IS NOT NULL AND date_issued >= CURRENT_DATE - INTERVAL '30 days'"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure correct mapping of signal outcomes to pattern recognition."
+  - "Verify completeness and temporal relevance of input data."
+  - "QA checklist must track logical consistency and insights comprehensiveness."
+synthesis_guidance: "['Evaluate signal performance and derive strategic insights.', 'Identify both high-performing and underperforming paths for skill adjustment.', 'Integrate findings into broader decision-making frameworks.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:22"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

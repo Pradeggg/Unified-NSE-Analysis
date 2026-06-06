@@ -1,0 +1,52 @@
+created_at: "2026-06-06T12:44:20"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: watchlist creation; timeframe: latest EOD; response style: exceptions and gaps first."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0314_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "watchlist creation for latest EOD: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as exceptions and gaps first"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 1
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    name: "find_breakouts_with_fundamentals"
+    template: "WITH latest_eod AS (SELECT symbol, high, low, close, volume FROM market.equity_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)), snapshot_fundamentals AS (SELECT symbol, technical_score, fundamental_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), vcp_picks AS (SELECT symbol, vcp_score FROM scores.stage2_vcp_picks WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)) SELECT e.symbol FROM latest_eod e JOIN snapshot_fundamentals s ON e.symbol = s.symbol JOIN vcp_picks v ON e.symbol = v.symbol WHERE s.fundamental_score > 50 AND v.vcp_score > 75 AND e.close > e.high * 0.9"
+status: "validated"
+synthesis_guidance: "Ensure output focuses on finding stocks meeting all criteria and highlight any missing information in evidence_gaps."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "watchlist_creation"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+title: "VCP Breakouts With Fundamentals Variant 0314"
+tool_plan_template: "{tool_function: \"run\", inputs: {context}, approved_tables: ['market.equity_eod', 'scores.stage_snapshots', 'scores.stage2_vcp_picks']}"
+validation_rules:
+  - "status"
+  - "schemas_to_validate"
+version: 1

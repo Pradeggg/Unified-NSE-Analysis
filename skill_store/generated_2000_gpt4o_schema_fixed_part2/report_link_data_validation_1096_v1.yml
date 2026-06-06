@@ -1,0 +1,54 @@
+id: "report_link_data_validation_1096_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Skill"
+description: "This skill validates enhanced report metadata, ensures stock data integrity, and conducts freshness audits for weekly reviews. Provides concise tabular summaries of findings."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for weekly review: review report links not working"
+  - "validate generated report links and missing data as concise table"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "weekly_review"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Validate that enhanced report metadata is consistent, check for missing stock data, and perform a freshness audit using SELECT templates."
+sql_templates:
+  -
+    description: "Fetch latest enhanced report data with key metrics for freshness audit."
+    query: "SELECT run_id, run_ts, universe_size, stocks_analyzed, stocks_filtered FROM report.enhanced_runs WHERE run_ts >= CURRENT_DATE - INTERVAL '1 week';"
+  -
+    description: "Identify broken links or missing data by checking for missing stock rows."
+    query: "SELECT ers.run_id, COUNT(efs.symbol) AS missing_stocks_count FROM report.enhanced_runs ers LEFT JOIN report.enhanced_filtered_stocks efs ON ers.run_id = efs.run_id WHERE ers.run_ts >= CURRENT_DATE - INTERVAL '1 week' AND efs.symbol IS NULL GROUP BY ers.run_id;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure no SQL writes or schema modifications."
+  - "Confirm use of appropriate date range filters for the weekly freshness audit."
+  - "Validate join conditions strictly use approved join rules."
+synthesis_guidance: "Compile results into a concise table highlighting findings and areas needing attention. Offer targeted recommendations for remediation."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:40:12"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

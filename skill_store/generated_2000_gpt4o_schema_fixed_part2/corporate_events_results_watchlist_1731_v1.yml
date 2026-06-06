@@ -1,0 +1,55 @@
+id: "corporate_events_results_watchlist_1731_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1731"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for last 20 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as QA checklist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  template: "Analyze corporate events and results over the last 20 sessions."
+  param_names:
+
+sql_templates:
+  -
+    name: "EventResultsWatchlist"
+    query: "WITH latest_stage AS (SELECT snapshot_date, symbol, stage, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)), latest_results AS (SELECT DISTINCT ON (symbol) symbol, period_end, verdict, growth_yoy_revenue_pct FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC) SELECT ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, lr.verdict, lr.growth_yoy_revenue_pct, ls.stage, ls.trading_signal FROM signals.corporate_events ce JOIN latest_stage ls ON ce.symbol = ls.symbol JOIN latest_results lr ON ce.symbol = lr.symbol WHERE ce.event_date > CURRENT_DATE - INTERVAL '20 days' ORDER BY ce.event_date DESC LIMIT 50;"
+python_tools:
+  - "tools"
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'guidance': 'Combine event data with latest results analysis and stage snapshot for a comprehensive watchlist.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:47:24"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

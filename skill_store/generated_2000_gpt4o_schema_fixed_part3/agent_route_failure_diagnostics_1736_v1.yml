@@ -1,0 +1,61 @@
+id: "agent_route_failure_diagnostics_1736_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1736"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: freshness audit; timeframe: last 20 sessions; response style: QA checklist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "freshness audit for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as QA checklist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "freshness_audit"
+  - "last_20_sessions"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  step_1: "Extract last 20 sessions from enhanced runs."
+  step_2: "Identify missing tools and resolution issues."
+  step_3: "Draft QA checklist."
+sql_templates:
+  -
+    template_name: "Fetch_Last_20_Sessions"
+    sql: "SELECT run_id, run_ts, universe_size FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 20;"
+python_tools:
+  - "required_function"
+  - "language"
+  - "mode"
+  - "approved_tables"
+  - "blocked_capabilities"
+  - "required_fields"
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure run_id is not null."
+  - "Validate timestamps for sequential order."
+synthesis_guidance: "['Focus on freshness and sequence verification.', 'Ensure accurate mapping of tools to diagnostics.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:13:33"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

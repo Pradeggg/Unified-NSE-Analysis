@@ -1,0 +1,58 @@
+id: "fii_dii_regime_breadth_review_0890_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0890"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: TradingView export; timeframe: intraday context; response style: action watchlist."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "TradingView export for intraday context: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as action watchlist"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "TradingView_export"
+  - "intraday_context"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  sql_templates:
+    -
+      description: "Fetch latest FII/DII flows, market regime and breadth."
+      template: "SELECT fii_dii.trade_date, fii_dii.flow_signal, regime.regime, regime.confidence, breadth.ad_signal FROM signals.fii_dii_flows AS fii_dii JOIN signals.regime_history AS regime ON fii_dii.trade_date = regime.trade_date JOIN breadth.market_daily AS breadth ON fii_dii.trade_date = breadth.trade_date WHERE fii_dii.trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+    -
+      description: "Fetch latest index data for confirmation."
+      template: "SELECT index_data.index_symbol, index_data.close, index_data.trend_signal FROM market.index_eod AS index_data WHERE index_data.trade_date = (SELECT MAX(trade_date) FROM market.index_eod) AND index_data.index_symbol = 'Nifty 50';"
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

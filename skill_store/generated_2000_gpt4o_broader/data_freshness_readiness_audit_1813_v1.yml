@@ -1,0 +1,56 @@
+id: "data_freshness_readiness_audit_1813_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1813"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: daily refresh follow-up; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "daily refresh follow-up for latest EOD: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as action watchlist"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "daily_refresh_follow-up"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Run data freshness checks on specified tables and ensure EOD data has been refreshed timely according to thresholds."
+sql_templates:
+  latest_date_check:
+    query: "SELECT MAX(trade_date) AS latest_date FROM {{table}}"
+    explanation: "Find the latest date of data availability for real-time verification"
+python_tools:
+
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all tables have the latest date within the configured threshold."
+  - "Identify any missing data sources impacting analysis."
+  - "List actions for loader updates to address freshness issues."
+synthesis_guidance: "Summarize findings into actionable insights for the operations team."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:11"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

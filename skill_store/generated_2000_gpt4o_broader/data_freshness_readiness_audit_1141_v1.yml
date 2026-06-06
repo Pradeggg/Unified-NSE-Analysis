@@ -1,0 +1,77 @@
+id: "data_freshness_readiness_audit_1141_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1141"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: last 3 months; response style: narrative plus evidence."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for last 3 months: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as narrative plus evidence"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "last_3_months"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template: "Analyze the provided tables to assess data freshness over the last 3 months."
+sql_templates:
+  -
+    template: "SELECT MAX(trade_date) AS last_trade_date, COUNT(DISTINCT trade_date) AS trading_days FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+    description: "Retrieve the most recent trade date and count of unique trading days in the last 3 months for index EOD data."
+  -
+    template: "SELECT MAX(trade_date) AS last_trade_date, COUNT(DISTINCT trade_date) AS trading_days FROM market.equity_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+    description: "Retrieve the most recent trade date and count of unique trading days in the last 3 months for equity EOD data."
+  -
+    template: "SELECT MAX(snapshot_date) AS last_snapshot_date FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months';"
+    description: "Get the most recent snapshot date for scores in the last 3 months."
+python_tools:
+  -
+    id: "data_freshness_checker"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "last_trade_date"
+      - "last_snapshot_date"
+      - "trading_days"
+    outputs:
+      - "freshness_matrix"
+      - "alert_thresholds"
+    approved_tables:
+      - "market.index_eod"
+      - "market.equity_eod"
+      - "scores.stage_snapshots"
+    code: "def run(context):\n    results = {}\n    thresholds = context['alert_thresholds']\n    for table, details in context['approved_tables'].items():\n        if details['last_trade_date'] < thresholds['acceptable_date']:\n            results[table] = 'Stale'\n        else:\n            results[table] = 'Fresh'\n    return results"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure recent data is within acceptable freshness thresholds."
+  - "Identify any missing sources or blocking gaps in the data pipeline."
+  - "Recommend loader actions based on findings."
+synthesis_guidance: "Summarize data freshness, highlight issues in narrative form, and provide evidence from the data."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:04:49"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.equity_eod.last_trade_date is not approved"
+  - "market.equity_eod.trading_days is not approved"
+  - "market.index_eod.last_trade_date is not approved"
+  - "market.index_eod.trading_days is not approved"
+  - "scores.stage_snapshots.last_snapshot_date is not approved"

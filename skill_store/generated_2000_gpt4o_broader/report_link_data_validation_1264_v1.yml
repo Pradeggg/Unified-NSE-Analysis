@@ -1,0 +1,58 @@
+id: "report_link_data_validation_1264_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation: Skill Card"
+description: "Utilize SQL templates to validate report data, ensuring accuracy in generated links and stock information for post-results."
+input_patterns:
+  - "check report link functionality"
+  - "validate stock data presence"
+  - "create watchlists for post-results"
+  - "rank candidates based on report validation"
+tags:
+  - "report_qa"
+  - "data_validation"
+  - "links"
+  - "stock_data"
+  - "watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Validate report data using SQL templates and provide ranked candidates for report link functionality issues."
+sql_templates:
+  -
+    description: "Select all runs with a universe size indicating filtered activity."
+    template: "SELECT run_id, analysis_date, universe_size, stocks_filtered FROM report.enhanced_runs WHERE universe_size > 0;"
+  -
+    description: "Fetch stocks with significant daily change and a recommendation."
+    template: "SELECT symbol, day_change_pct, recommendation FROM report.enhanced_filtered_stocks WHERE abs(day_change_pct) > 5 AND recommendation IS NOT NULL;"
+python_tools:
+  -
+    id: "stock_analysis_tool_001"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "run_id"
+      - "symbols_list"
+    outputs:
+      - "analysis_summary"
+      - "missing_data_symbols"
+    approved_tables:
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    run_id = context['run_id']\n    symbols_list = context['symbols_list']\n    # Placeholder for read-only Python logic\n    analysis_summary = {}\n    missing_data_symbols = []\n    # Logic would be inserted here\n    return {'analysis_summary': analysis_summary, 'missing_data_symbols': missing_data_symbols}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure report links are directing to valid stock data."
+  - "Validate all referenced stocks have populated metadata."
+synthesis_guidance: "Combine SQL findings to rank report issues, focusing on post-results watchlist reliability."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:06:24"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_filtered_stocks.abs is not approved"

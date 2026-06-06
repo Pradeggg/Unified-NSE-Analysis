@@ -1,0 +1,51 @@
+id: "quarterly_results_quality_review_0803_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 0803"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: daily refresh follow-up; timeframe: today; response style: action watchlist."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "daily refresh follow-up for today: latest quarterly results analysis"
+  - "which companies had strong quarterly results as action watchlist"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "daily_refresh_follow-up"
+  - "today"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Assess recent quarterly outcomes and ensuing market stages for actionable insights."
+sql_templates:
+  -
+    template_id: "latest_quarterly_results"
+    template: "WITH latest_results AS (SELECT DISTINCT ON (symbol) symbol, period_end, revenue, pat, opm_pct FROM scores.quarterly_results WHERE period_type = 'quarter' AND period_end = (SELECT MAX(period_end) FROM scores.quarterly_results WHERE period_type = 'quarter') ORDER BY symbol, period_end DESC, fetched_at DESC), latest_analysis AS (SELECT DISTINCT ON (symbol) symbol, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct, opm_delta_pp, verdict FROM scores.results_analysis WHERE period_end = (SELECT MAX(period_end) FROM scores.results_analysis) ORDER BY symbol, period_end DESC, updated_at DESC), latest_stage AS (SELECT symbol, stage FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT lr.symbol, lr.revenue, lr.pat, lr.opm_pct, la.growth_yoy_revenue_pct, la.growth_qoq_revenue_pct, la.growth_yoy_pat_pct, la.growth_qoq_pat_pct, la.opm_delta_pp, la.verdict, ls.stage FROM latest_results lr JOIN latest_analysis la ON lr.symbol = la.symbol JOIN latest_stage ls ON lr.symbol = ls.symbol WHERE la.verdict IN ('beat', 'inline') AND ls.stage = 'STAGE_2' ORDER BY la.growth_yoy_revenue_pct DESC LIMIT 5;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure all symbols have a non-null stage."
+  - "Confirm that results align within the latest period_end."
+synthesis_guidance: "{'steps': ['Extract and rank companies based on revenue and PAT growth.', 'Identify significant margin movements.', 'List top-performing companies with potential risk factors.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:37:04"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

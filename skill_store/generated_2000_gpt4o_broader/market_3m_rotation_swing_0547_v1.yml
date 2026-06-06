@@ -1,0 +1,75 @@
+id: "market_3m_rotation_swing_0547_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 0547"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: last 3 months; response style: research-only summary."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for last 3 months"
+  - "last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as research-only summary"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "last_3_months"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  steps:
+    - "Collect index and sector performance data for the last 3 months."
+    - "Analyze stage distribution changes in equities over the same period."
+    - "Identify sectors demonstrating leadership based on relative strength and other metrics."
+    - "Select primary swing trading candidates showing strong technical and fundamental scores."
+sql_templates:
+  -
+    description: "Fetch index returns over the last 3 months."
+    sql: "SELECT index_symbol, AVG(change_pct) as avg_return FROM market.index_eod WHERE trade_date >= DATEADD(month, -3, GETDATE()) GROUP BY index_symbol"
+  -
+    description: "Analyze stage distribution changes for major sectors."
+    sql: "SELECT sector, stage, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date >= DATEADD(month, -3, GETDATE()) GROUP BY sector, stage"
+  -
+    description: "Identify leading sectors based on relative strength."
+    sql: "SELECT sector, AVG(relative_strength) as avg_strength FROM scores.stage_snapshots WHERE snapshot_date >= DATEADD(month, -3, GETDATE()) GROUP BY sector ORDER BY avg_strength DESC"
+  -
+    description: "Retrieve primary swing trading candidates."
+    sql: "SELECT symbol, company_name, investment_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= DATEADD(month, -3, GETDATE()) AND investment_score > 80"
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "Ensure all outputs adhere to research-only and non-actionable format."
+  - "Cross-verify index and sector returns with independent sources."
+  - "Confirm stage distribution changes are aligned with recent market movements."
+synthesis_guidance: "['Focus on research insights and comparative assessments.', 'Emphasize data interpretation within the Indian market context.', 'Avoid recommendations and predictions; frame output as historical analysis.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:48:25"
+generation_model: "gpt-4o"
+validation_errors:
+  - "market.index_eod.avg_return is not approved"
+  - "market.index_eod.dateadd is not approved"
+  - "market.index_eod.getdate is not approved"
+  - "market.index_eod.month is not approved"
+  - "scores.stage2_vcp_picks.dateadd is not approved"
+  - "scores.stage2_vcp_picks.getdate is not approved"
+  - "scores.stage2_vcp_picks.month is not approved"
+  - "scores.stage_snapshots.avg_strength is not approved"
+  - "scores.stage_snapshots.dateadd is not approved"
+  - "scores.stage_snapshots.getdate is not approved"
+  - "scores.stage_snapshots.month is not approved"

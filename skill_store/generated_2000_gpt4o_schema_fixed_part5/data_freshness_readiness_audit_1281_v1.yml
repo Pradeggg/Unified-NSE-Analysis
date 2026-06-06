@@ -1,0 +1,78 @@
+id: "data_freshness_readiness_audit_1281_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Data Freshness Readiness Audit Variant 1281"
+description: "Check whether Agent Adda evidence sources are fresh enough for live, EOD, report, and research workflows. Variant focus: quick scan; timeframe: intraday context; response style: ranked candidates."
+input_patterns:
+  - "data freshness readiness thresholds"
+  - "why is market technical narrative unavailable"
+  - "check DB loader freshness and missing approved history"
+  - "quick scan for intraday context: data freshness readiness thresholds"
+  - "check DB loader freshness and missing approved history as ranked candidates"
+tags:
+  - "data_quality"
+  - "freshness"
+  - "readiness"
+  - "loader"
+  - "breadth"
+  - "quick_scan"
+  - "intraday_context"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "breadth.market_daily"
+    - "breadth.ma_pct_above"
+    - "report.enhanced_runs"
+tool_plan_template:
+  -
+    description: "Assess data freshness across approved evidence sources using intraday context. Confirm coverage and identify stale or missing data components, prioritizing research contexts. Report findings as ranked action candidates."
+sql_templates:
+  -
+    description: "Latest EOD data freshness check."
+    template: "SELECT MAX(trade_date) AS last_equity_date FROM market.equity_eod;"
+  -
+    description: "Latest index data freshness check."
+    template: "SELECT MAX(trade_date) AS last_index_date FROM market.index_eod;"
+python_tools:
+  -
+    id: "check_data_freshness"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "last_equity_date"
+      - "last_index_date"
+    outputs:
+      - "staleness_summary"
+    approved_tables:
+      - "market.equity_eod"
+      - "market.index_eod"
+    code: "def run(context):\n    current_date = datetime.datetime.now().date()\n    staleness_summary = {}\n    for k, v in context.items():\n        delta = current_date - v\n        staleness_summary[k] = delta.days\n    return staleness_summary"
+output_contract:
+  - "freshness_matrix"
+  - "missing_sources"
+  - "blocking_gaps"
+  - "loader_actions"
+  - "verification_queries"
+validation_rules:
+  - "Ensure all tables use the most recent dates available according to _global_rules."
+  - "Preference for SELECT WHERE trade_date = (SELECT MAX()) patterns to confirm data availability."
+synthesis_guidance: "Rank freshness status reports for all tables: less than 1 day old, 1-2 days old, more than 2 days missing. Identify which tables prevent complete context synthesis."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "check_data_freshness: execution failed: process exited 1"
+  - "market.equity_eod.last_equity_date is not approved"
+  - "market.index_eod.last_index_date is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "check_data_freshness: execution failed: process exited 1"
+    - "market.equity_eod.last_equity_date is not approved"
+    - "market.index_eod.last_index_date is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,54 @@
+id: "agent_route_failure_diagnostics_1568_v1"
+version: 1
+status: "validated"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1568"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: position-sizing context; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "position-sizing context for post results: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as research-only summary"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "position-sizing_context"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Review diagnostics steps for tool validation and process gaps using metadata and snapshots."
+sql_templates:
+  -
+    description: "Analyze recent enhanced run metadata and stock filtration to find diagnostics patterns."
+    template: "SELECT run_id, run_ts, universe_size, stocks_analyzed, stocks_filtered, market_composite_score, market_sentiment FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 5;"
+  -
+    description: "Gather latest filtered stocks data to identify discrepancies in scores and recommendations."
+    template: "SELECT run_id, symbol, score, recommendation, current_price FROM report.enhanced_filtered_stocks ORDER BY run_id DESC LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure SQL templates only perform read-only operations."
+  - "Validate compliance with approved schema."
+synthesis_guidance: "Synthesize findings into a research summary focusing on diagnostics failures and improvement areas."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:02"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

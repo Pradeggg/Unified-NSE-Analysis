@@ -1,0 +1,57 @@
+id: "corporate_events_results_watchlist_0233_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 0233"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: daily refresh follow-up; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "daily refresh follow-up for last 20 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as ranked candidates"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  python_tools:
+
+  sql_templates:
+    -
+      template: "SELECT symbol, event_type, event_date FROM signals.corporate_events WHERE event_date > CURRENT_DATE - INTERVAL '20 days';"
+      description: "Fetch corporate events in the last 20 days."
+    -
+      template: "SELECT symbol, company_name, period_end, growth_yoy_revenue_pct, growth_qoq_revenue_pct FROM scores.results_analysis WHERE period_end > CURRENT_DATE - INTERVAL '20 days';"
+      description: "Fetch company results analysis from last 20 days."
+sql_templates:
+
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "status"
+synthesis_guidance: "['Combine corporate_event results with analysis scores.', 'Rank symbols by recent event impact and analysis scores.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:44:55"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

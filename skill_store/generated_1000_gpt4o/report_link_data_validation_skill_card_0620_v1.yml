@@ -1,0 +1,51 @@
+id: "report_link_data_validation_skill_card_0620_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 0620"
+description: "Validate enhanced report metadata, stock rows, and source trails with a TradingView export focus for latest EOD. Response style: debug trace."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "TradingView export for latest EOD: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "TradingView_export"
+  - "latest_EOD"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+  columns:
+
+tool_plan_template: "Validate report data using SQL queries to ensure the integrity of links and data presence."
+sql_templates:
+  - "SELECT run_id, run_ts, analysis_date FROM report.enhanced_runs WHERE analysis_date = current_date;"
+  - "SELECT run_id, symbol, recommendation, current_price FROM report.enhanced_filtered_stocks WHERE run_id = ?;"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "data_presence_check"
+  - "link_verification"
+synthesis_guidance: "Cross-reference report data tables to synthesize missing data points and validate link functionality."
+created_by: "llm_generated"
+created_at: "2026-06-06T12:50:13"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

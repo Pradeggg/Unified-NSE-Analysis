@@ -1,0 +1,52 @@
+id: "agent_route_failure_diagnostics_0924_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 0924"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: last 5 sessions; response style: comparison matrix."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for last 5 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as comparison matrix"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template: "Inspect evidence for discrepancies in run_id alignment and missing tool invocations. Verify symbol resolution paths."
+sql_templates:
+  -
+    sql: "SELECT e.run_id, e.run_ts, e.stocks_analyzed, e.notes FROM report.enhanced_runs e WHERE e.run_ts >= (CURRENT_DATE - INTERVAL '5 days') ORDER BY e.run_ts DESC LIMIT 5;"
+    description: "Fetch recent enhanced runs for diagnostics."
+    meaning: "Check for recent runs where failures might have occurred."
+  -
+    sql: "WITH stock_analysis AS (SELECT r.run_id, s.symbol, s.score FROM report.enhanced_runs r JOIN report.enhanced_filtered_stocks s ON r.run_id = s.run_id WHERE r.run_ts >= (CURRENT_DATE - INTERVAL '5 days')) SELECT * FROM stock_analysis WHERE score IS NULL;"
+    description: "Identify stocks with missing scores."
+    meaning: "Detect potential missing symbol resolutions leading to missing scores."
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure SQL templates return non-empty results for recent failures."
+  - "Cross-check symbols against known universe to validate resolution."
+synthesis_guidance: "Compare route patterns and resolution failures across recent sessions."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:38:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.e is not approved"

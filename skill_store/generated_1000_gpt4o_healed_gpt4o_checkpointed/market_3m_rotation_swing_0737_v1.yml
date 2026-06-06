@@ -1,0 +1,85 @@
+created_at: "2026-06-06T12:51:11"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: QA checklist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0737_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "sector-relative comparison for last 20 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    function: "def run(context): return [{'index_symbol': row['index_symbol'], 'change_pct': row['change_pct']} for row in context['data']]"
+    name: "compute_index_metrics"
+sql_templates:
+  -
+    name: "IndexReturns"
+    template: "SELECT trade_date, index_symbol, change_pct FROM market.index_eod WHERE trade_date > CURRENT_DATE - INTERVAL '3 months' ORDER BY trade_date DESC"
+  -
+    name: "LeadingSectors"
+    template: "SELECT sector, AVG(change_1m_pct) as avg_change FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_change DESC"
+  -
+    name: "StageDistributionChange"
+    template: "SELECT stage, COUNT(*) as count FROM scores.stage_snapshots WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months' GROUP BY stage ORDER BY count DESC"
+  -
+    name: "PrimaryCandidates"
+    template: "SELECT symbol, company_name, sector FROM scores.stage2_vcp_picks WHERE snapshot_date > CURRENT_DATE - INTERVAL '3 months' AND vcp_score > 80 ORDER BY vcp_score DESC"
+status: "test_failed"
+synthesis_guidance:
+  - "Interpret market regime and sector leadership with consideration for Indian market trends."
+  - "Relate sector and stage findings to practical swing trading strategies."
+  - "Highlight potential risks observed in index or sector trends."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "QA_checklist"
+title: "3M Market Rotation Swing Assessment Variant 0737"
+tool_plan_template:
+  - "Assess market regime using market.index_eod for index trends."
+  - "Identify sector leadership from scores.stage_snapshots."
+  - "Analyze stage distribution changes."
+  - "Select swing candidates from scores.stage2_vcp_picks."
+validation_errors:
+  - "<missing-id>: approved_tables must be a list"
+  - "<missing-id>: code is required"
+  - "<missing-id>: inputs must be a list"
+  - "<missing-id>: language must be python"
+  - "<missing-id>: mode must be read_only"
+  - "<missing-id>: outputs must be a non-empty list"
+  - "scores.stage_snapshots.avg_change is not approved"
+validation_rules:
+  - "Ensure outputs are based on data from the approved tables."
+  - "Check date ranges are correctly applied to temporal SQL queries."
+version: 1
+review:
+  attempts: 3
+  findings:
+    - "<missing-id>: approved_tables must be a list"
+    - "<missing-id>: code is required"
+    - "<missing-id>: inputs must be a list"
+    - "<missing-id>: language must be python"
+    - "<missing-id>: mode must be read_only"
+    - "<missing-id>: outputs must be a non-empty list"
+    - "scores.stage_snapshots.avg_change is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "needs_heal"

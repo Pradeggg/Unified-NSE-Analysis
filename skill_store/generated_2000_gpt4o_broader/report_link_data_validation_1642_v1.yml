@@ -1,0 +1,60 @@
+id: "report_link_data_validation_1642_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Skill"
+description: "An agent skill for validating enhanced report run metadata and filtered stock data with a focus on the last 3 months."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "deep institutional review for last 3 months: review report links not working"
+  - "validate generated report links and missing data as debug trace"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "deep_institutional_review"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "debug trace-focused validation of report links, metadata, and stock data for the last 3 months."
+sql_templates:
+  -
+    template: "WITH recent_runs AS (SELECT * FROM report.enhanced_runs WHERE run_ts > CURRENT_DATE - INTERVAL '3 months') SELECT run_id, run_ts, universe_size, stocks_analyzed FROM recent_runs;"
+    description: "Fetches recent report runs from the last 3 months."
+  -
+    template: "SELECT run_id, symbol, score FROM report.enhanced_filtered_stocks WHERE run_id IN (SELECT run_id FROM recent_runs) AND score IS NULL;"
+    description: "Identifies stocks with missing scores in recent report runs."
+python_tools:
+  -
+    id: "tool_001"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "context"
+    outputs:
+      - "debug_trace"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    validation_logging(context)\n    inspect_links(context)\n    return generate_debug_trace(context)"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Check if all report links are functioning."
+  - "Validate that all required data fields are present in the HTML files."
+synthesis_guidance: "Integrate insights from recent runs to enhance report link validation."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:47"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_filtered_stocks.recent_runs is not approved"

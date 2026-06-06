@@ -1,0 +1,47 @@
+id: "corporate_events_results_watchlist_1339_v1"
+version: 1
+status: "test_failed"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1339"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: last 20 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for last 20 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as exceptions and gaps first"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "SELECT * FROM {{ evidence_required.tables }} WHERE {{ condition }}"
+sql_templates:
+  -
+    query: "SELECT symbol, event_type, event_date, detail FROM signals.corporate_events WHERE event_date > NOW() - INTERVAL '20 DAYS'"
+    description: "Fetch symbols and event details for events in the last 20 sessions."
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure all fetched events are within the last 20 sessions."
+  - "Verify the completeness of the source trail information."
+synthesis_guidance: "['Emphasize exceptions and unexplained gaps in data.', 'Focus on high-impact event-driven stocks.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:07:15"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.corporate_events.now is not approved"

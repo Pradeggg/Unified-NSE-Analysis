@@ -1,0 +1,73 @@
+id: "quarterly_results_quality_review_1237_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1237"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: sector-relative comparison; timeframe: last 20 sessions; response style: ranked candidates."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "sector-relative comparison for last 20 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as ranked candidates"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "sector-relative_comparison"
+  - "last_20_sessions"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  steps:
+    -
+      step_type: "sql_query"
+      description: "Fetch the latest quarterly results with sector-relative performance."
+      table: "scores.quarterly_results"
+      sql_template: "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.revenue, qr.pat, ra.verdict FROM scores.quarterly_results qr LEFT JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end WHERE qr.period_type = 'quarter' AND ra.period_end >= NOW() - INTERVAL '3 months' ORDER BY qr.symbol, qr.period_end DESC, qr.fetched_at DESC LIMIT 20"
+    -
+      step_type: "data_processing"
+      description: "Rank symbols based on PAT growth and verdict."
+      python_tool:
+        id: "rank_companies"
+        language: "python"
+        mode: "read_only"
+        inputs:
+          - "pat"
+          - "verdict"
+        outputs:
+          - "ranked_companies"
+        approved_tables:
+          - "scores.quarterly_results"
+          - "scores.results_analysis"
+        code: "def run(context): ranked = sorted(context, key=lambda x: (x['pat'], x['verdict']), reverse=True)[:10] return {'ranked_companies': ranked}"
+sql_templates:
+  -
+    name: "Latest Quarterly Results Fetch"
+    template: "SELECT DISTINCT ON (qr.symbol) qr.symbol, qr.revenue, qr.pat, ra.verdict FROM scores.quarterly_results qr LEFT JOIN scores.results_analysis ra ON qr.symbol = ra.symbol AND qr.period_end = ra.period_end WHERE qr.period_type = 'quarter' AND ra.period_end >= NOW() - INTERVAL '3 months' ORDER BY qr.symbol, qr.period_end DESC, qr.fetched_at DESC LIMIT 20"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure only the latest data within the last 20 sessions is used."
+  - "Rank outputs accurately based on the verdict and PAT growth."
+synthesis_guidance: "['Synthesize results to provide a ranked list of companies with the strongest quarterly results.', 'Highlight sector-relative performance insights.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:13"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

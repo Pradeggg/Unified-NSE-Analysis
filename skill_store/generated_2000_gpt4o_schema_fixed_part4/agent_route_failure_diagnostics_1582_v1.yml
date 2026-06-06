@@ -1,0 +1,63 @@
+id: "agent_route_failure_diagnostics_1582_v1"
+version: 1
+status: "review_pending"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1582"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: deep institutional review; timeframe: intraday context; response style: research-only summary."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "deep institutional review for intraday context: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as research-only summary"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "deep_institutional_review"
+  - "intraday_context"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  -
+    evidence_collected:
+      - "route_diagnostics"
+      - "tool_validation"
+      - "symbol_resolution"
+    actions:
+      -
+        evidence_type: "route_diagnostics"
+        action: "Analyze symbol resolution paths and identify failures."
+      -
+        evidence_type: "tool_validation"
+        action: "Validate presence and functionality of required tools."
+    sql_templates:
+      - "SELECT run_id, run_ts, market_sentiment FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs);"
+      - "SELECT run_id, symbol, score FROM report.enhanced_filtered_stocks WHERE score > 90;"
+sql_templates:
+  - "WITH latest_runs AS (SELECT run_id, run_ts, market_sentiment FROM report.enhanced_runs WHERE run_ts = (SELECT MAX(run_ts) FROM report.enhanced_runs)) SELECT latest_runs.run_id, latest_runs.market_sentiment, filtered.symbol, filtered.score FROM latest_runs JOIN report.enhanced_filtered_stocks AS filtered ON latest_runs.run_id = filtered.run_id WHERE filtered.score > 90;"
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "{'general': ['Ensure the diagnosis covers all input patterns.', 'Results should adhere to data quality standards and address the input issues.'], 'sql_structure': ['Only use approved tables and columns.', 'Ensure SQL follows the approved schema.'], 'response_style': ['Research-only summaries; no production changes.']}"
+synthesis_guidance: "{'themes': ['Focus on research and diagnosis.', 'Deep institutional review focus.'], 'context': 'Intraday analysis with a focus on route diagnostics.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:58"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

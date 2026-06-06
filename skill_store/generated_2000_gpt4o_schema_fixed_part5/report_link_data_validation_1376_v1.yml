@@ -1,0 +1,71 @@
+id: "report_link_data_validation_1376_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Skill Card"
+description: "Validate pre-market report data, focusing on freshness and data completeness."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "freshness audit for pre market: review report links not working"
+  - "validate generated report links and missing data as exceptions and gaps first"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "freshness_audit"
+  - "pre_market"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  -
+    description: "Validate pre-market report linkage and data freshness using SQL templates and Python tools."
+sql_templates:
+  -
+    select_freshness_audit:
+      description: "Check reports for errors and data gaps based on run timestamps."
+      template: "SELECT er.run_id, er.run_ts, er.analysis_date, efs.symbol FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks efs ON er.run_id = efs.run_id WHERE er.run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+      relevant_tables:
+        - "report.enhanced_runs"
+        - "report.enhanced_filtered_stocks"
+python_tools:
+  -
+    id: "report_link_verification_tool"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      run_id: "text"
+    outputs:
+      status: "text"
+      findings: "list"
+    approved_tables:
+      - "report.enhanced_runs"
+      - "report.enhanced_filtered_stocks"
+    code: "def run(context):\n    # Dummy function for validation of report links\n    findings = []\n    # Perform operations\n    return {'status': 'completed', 'findings': findings}"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "{'primary_key': 'run_id', 'timestamp_range': \"CURRENT_DATE - INTERVAL '3 months'\", 'link_check': True, 'html_data_check': True}"
+synthesis_guidance: "{'focus': 'Highlight missing data and broken links first, along with freshness checks.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:17"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report_link_verification_tool: inputs must be a list"
+  - "report_link_verification_tool: outputs must be a non-empty list"
+review:
+  status: "needs_heal"
+  findings:
+    - "report_link_verification_tool: inputs must be a list"
+    - "report_link_verification_tool: outputs must be a non-empty list"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

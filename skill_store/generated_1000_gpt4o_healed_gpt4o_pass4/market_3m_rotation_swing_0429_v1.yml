@@ -1,0 +1,80 @@
+created_at: "2026-06-06T12:46:27"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: source-trail validation; timeframe: last 5 sessions; response style: portfolio-aware output."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0429_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "source-trail validation for last 5 sessions: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as portfolio-aware output"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "market.equity_eod"
+    code: "def run(context):\n    # Placeholder for relative strength calculation.\n    return {'relative_strength': None}"
+    id: "calculate_relative_strength"
+    inputs:
+      - "historical_prices"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "relative_strength"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 3
+sql_templates:
+  market_regime:
+    description: "Extract market index regime and momentum data for last 3 months."
+    query: "SELECT trade_date, index_symbol, change_pct, momentum_50d FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+  sector_leadership:
+    description: "Analyze sector leadership changes."
+    query: "SELECT snapshot_date, sector FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector HAVING AVG(relative_strength) IS NOT NULL;"
+  stage2_leadership:
+    description: "Identify Stage 2 leadership candidates."
+    query: "SELECT symbol, company_name, sector, stage, stage_score FROM scores.stage_snapshots WHERE stage = 2 AND snapshot_date >= CURRENT_DATE - INTERVAL '3 months';"
+status: "validated"
+synthesis_guidance:
+  risk_assessment: "Include flag sectors with high volatility or weak technical signals."
+  summary_style: "Focus on actionable insights for portfolio-aware adjustments."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "source-trail_validation"
+  - "last_5_sessions"
+  - "portfolio-aware_output"
+title: "3M Market Rotation Swing Assessment Variant 0429"
+tool_plan_template:
+  component_steps:
+    - "Determine the current market regime using index trend and momentum indicators."
+    - "Identify sector leadership changes over the past 3 months."
+    - "Assess Stage 2 leadership and select potential swing candidates."
+    - "Validate findings with source-trail approach for last 5 sessions."
+  type: "research_framework"
+validation_errors:
+
+validation_rules:
+  - "Ensure index data includes all key indices with valid trend signals."
+  - "Sector leadership data must reflect significant relative strength changes."
+  - "Stage 2 leadership must match composite analysis of VCP and enhanced fund scores."
+version: 1

@@ -1,0 +1,71 @@
+created_at: "2026-06-06T12:43:36"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: last 20 sessions; response style: ranked candidates."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0238_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for last 20 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as ranked candidates"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Fetches symbols with strong fundamentals and VCP characteristics over the last 20 sessions."
+    template: "SELECT symbol, company_name, sector, price, vcp_score, enhanced_fund_score FROM scores.stage2_vcp_picks WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '20 days') AND (enhanced_fund_score > 80 OR vcp_score > 2) ORDER BY enhanced_fund_score DESC;"
+status: "validated"
+synthesis_guidance: "Provide a ranked list of stocks based on fundamentals and VCP patterns. Utilize SQL results in response."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "last_20_sessions"
+  - "ranked_candidates"
+title: "VCP Breakouts With Fundamentals Variant 0238"
+tool_plan_template:
+  blocked_capabilities:
+    - "network"
+    - "subprocess"
+    - "filesystem_write"
+    - "db_write"
+    - "broker_api"
+  language: "python"
+  mode: "read_only"
+  required_fields:
+    - "id"
+    - "language"
+    - "mode"
+    - "inputs"
+    - "outputs"
+    - "approved_tables"
+    - "code"
+  required_function: "run(context)"
+validation_errors:
+
+validation_rules:
+  - "Ensure selected stocks have valid symbols and data for TradingView."
+  - "Rank candidates based on enhanced fund score."
+version: 1

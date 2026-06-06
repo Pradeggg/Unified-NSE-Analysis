@@ -1,0 +1,61 @@
+id: "vcp_breakouts_with_fundamentals_0492_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0492"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: weekly review; response style: portfolio-aware output."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "weekly_review"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  strategy: "Combine fundamental and VCP indicators to identify investment candidates. This strategy involves selecting stocks hitting new highs or showing breakout patterns, with strong fundamental backing for high investment significance and possibility of institutional interest."
+sql_templates:
+  -
+    template_name: "vcp_breakouts_query"
+    query: "SELECT e.symbol, e.high, e.volume, s.company_name, s.sector, s.market_cap_cat, s.fundamental_score, s.enhanced_fund_score, s.institutional_backing, s.investment_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol WHERE e.high > e.prev_close AND s.vcp_score > 0.7 AND s.fundamental_score > 80 AND s.institutional_backing > 70 ORDER BY s.investment_score DESC"
+python_tools:
+  -
+    id: "analysis_tool_1"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "market_cap"
+      - "trading_volume"
+    outputs:
+      - "liquidity_score"
+    approved_tables:
+      - "market.equity_eod"
+    code: "def run(context):\n    capital_weight = context['market_cap'] / 1000\n    volume_weight = context['trading_volume'] / 10000\n    liquidity_score = capital_weight * volume_weight\n    return {'liquidity_score': liquidity_score}"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "rule1"
+  - "rule2"
+  - "rule3"
+synthesis_guidance: "{'guidance1': 'Focus on institutional review and portfolio awareness.', 'guidance2': 'Consider market trends impacting VCP and breakout stocks.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:51"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.vcp_score is not approved"

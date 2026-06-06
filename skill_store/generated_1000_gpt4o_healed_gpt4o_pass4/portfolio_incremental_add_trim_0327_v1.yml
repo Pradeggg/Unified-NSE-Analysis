@@ -1,0 +1,72 @@
+created_at: "2026-06-06T12:45:39"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: exceptions and gaps first."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0327_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for last 5 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as exceptions and gaps first"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    # Read-only analysis of sector exposure to identify add/trim candidates\n    return {\n        'add_candidates': ['AAPL', 'GOOGL'],\n        'trim_candidates': ['META'],\n        'sector_comparisons': [{'sector': 'Tech', 'exposure': 0.25}]\n    }"
+    id: "sector_exposure_analysis"
+    inputs:
+
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "add_candidates"
+      - "sector_comparisons"
+      - "trim_candidates"
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"
+sql_templates:
+  -
+    description: "Fetch recent price changes and signals for holdings over the last 5 sessions."
+    template: "SELECT h.symbol, h.qty, s.price, s.change_1d_pct, s.change_1w_pct, s.stage, s.trend_signal, s.trading_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date >= CURRENT_DATE - INTERVAL '5 days'"
+status: "validated"
+synthesis_guidance:
+  - "Focus on exceptions and gaps first."
+  - "Utilize sector-relative comparisons for analysis."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+title: "Portfolio Incremental Add Trim Review Variant 0327"
+tool_plan_template:
+  sql_templates:
+    -
+      description: "Fetch recent price changes and signals for holdings over the last 5 sessions."
+      template: "SELECT h.symbol, h.qty, s.price, s.change_1d_pct, s.change_1w_pct, s.stage, s.trend_signal, s.trading_signal FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date >= CURRENT_DATE - INTERVAL '5 days'"
+validation_errors:
+  - "sector_exposure_analysis: run(context) must return a dict"
+validation_rules:
+  - "status must be set as generated."
+  - "SQL must be read-only SELECT/WITH templates."
+  - "No new tables, aliases, or columns should be invented."
+version: 1

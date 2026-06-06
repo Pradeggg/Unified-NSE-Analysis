@@ -1,0 +1,1 @@
+def run(context): ... # Analyze financial data

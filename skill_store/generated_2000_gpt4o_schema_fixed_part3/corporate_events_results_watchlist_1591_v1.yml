@@ -1,0 +1,62 @@
+id: "corporate_events_results_watchlist_1591_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1591"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: quick scan; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "quick scan for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as research-only summary"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "quick_scan"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  templates:
+    - "SELECT"
+    - "WITH"
+sql_templates:
+  event_calendar:
+    template: "SELECT id, symbol, event_type, event_date, purpose_raw, detail, source FROM signals.corporate_events WHERE event_date >= CURRENT_DATE - INTERVAL '1 week' ORDER BY event_date LIMIT 10;"
+    type: "selection"
+  symbol_watchlist:
+    template: "SELECT DISTINCT ON (ce.symbol) ce.symbol, sa.stage, sa.trading_signal FROM signals.corporate_events ce JOIN scores.stage_snapshots sa ON ce.symbol = sa.symbol WHERE ce.event_date >= CURRENT_DATE - INTERVAL '1 week' ORDER BY ce.symbol, sa.snapshot_date DESC LIMIT 10;"
+    type: "selection"
+  result_context:
+    template: "SELECT ra.symbol, ra.verdict, ra.score FROM scores.results_analysis ra JOIN signals.corporate_events ce ON ra.symbol = ce.symbol WHERE ce.event_date >= CURRENT_DATE - INTERVAL '1 week' ORDER BY ra.filing_date DESC LIMIT 10;"
+    type: "selection"
+  action_bucket:
+    template: "SELECT symbol, event_type, event_date FROM signals.corporate_events WHERE event_date BETWEEN CURRENT_DATE - INTERVAL '1 week' AND CURRENT_DATE ORDER BY event_date;"
+    type: "selection"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "rules"
+synthesis_guidance: "{'guidance': ['Summarize the event and results context without providing specific investment advice.', 'Extract high-level insights suitable for a weekly review.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:52"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

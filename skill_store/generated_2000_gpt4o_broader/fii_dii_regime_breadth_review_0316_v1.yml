@@ -1,0 +1,94 @@
+id: "fii_dii_regime_breadth_review_0316_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 0316"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: latest EOD; response style: exceptions and gaps first."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for latest EOD: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as exceptions and gaps first"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "latest_EOD"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  tools: "evidence synthesis and verification"
+  methods:
+    - "SQL read-only queries"
+    - "evidence gap identification"
+  steps:
+    - "Identify any missing evidence in existing schemas."
+    - "Apply read-only queries on relevant tables to extract evidence."
+    - "Synthesize evidence based on market regime, FII/DII flows, and breadth."
+    - "Conduct freshness audit to ensure data is the latest EOD."
+    - "Prioritize exceptions and gaps in the final analysis."
+sql_templates:
+  -
+    template_id: "fetch_latest_fii_dii_flows"
+    description: "Retrieve the latest FII/DII flows and trends."
+    template: "SELECT trade_date, fii_net_today, dii_net_today, fii_trend, dii_trend FROM signals.fii_dii_flows WHERE trade_date = (SELECT MAX(trade_date) FROM signals.fii_dii_flows);"
+  -
+    template_id: "fetch_latest_regime"
+    description: "Retrieve the latest market regime status."
+    template: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date = (SELECT MAX(trade_date) FROM signals.regime_history);"
+  -
+    template_id: "fetch_latest_breadth"
+    description: "Retrieve the latest market breadth data."
+    template: "SELECT trade_date, advances, declines, net_ad, ad_signal FROM breadth.market_daily WHERE trade_date = (SELECT MAX(trade_date) FROM breadth.market_daily);"
+  -
+    template_id: "fetch_latest_index_data"
+    description: "Retrieve the latest index data for market confirmation."
+    template: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+python_tools:
+  -
+    id: "run_freshness_audit"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "timestamp_latest_fii"
+      - "timestamp_latest_regime"
+      - "timestamp_latest_breadth"
+      - "timestamp_latest_index"
+    outputs:
+      - "data_freshness"
+    approved_tables:
+      - "signals.fii_dii_flows"
+      - "signals.regime_history"
+      - "breadth.market_daily"
+      - "market.index_eod"
+    code: "def run(context):\n    timestamps = [context['timestamp_latest_fii'], context['timestamp_latest_regime'], context['timestamp_latest_breadth'], context['timestamp_latest_index']]\n    if all(t == max(timestamps) for t in timestamps):\n        return {'data_freshness': 'All data is up-to-date for the latest EOD'}\n    else:\n        return {'data_freshness': 'Data discrepancy found, not all EOD data is fresh'}"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure that latest EOD data is used."
+  - "Identify and report any evidence gaps."
+  - "Ensure synthesis includes regime, flow, breadth, and index confirmation."
+synthesis_guidance: "['Start with regime analysis to set the market context.', 'Explain FII/DII flows and how they support or counter the regime.', 'Analyze market breadth indicators to assess overall market strength.', 'Use index data for confirmation of the regime and flow context.', 'Highlight any discrepancies or anomalies as risk flags.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:45:59"
+generation_model: "gpt-4o"
+validation_errors:
+  - "run_freshness_audit: execution failed: KeyError: 'timestamp_latest_fii'"
+review:
+  status: "needs_heal"
+  findings:
+    - "run_freshness_audit: execution failed: KeyError: 'timestamp_latest_fii'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

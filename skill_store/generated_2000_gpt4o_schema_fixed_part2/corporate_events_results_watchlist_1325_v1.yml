@@ -1,0 +1,62 @@
+id: "corporate_events_results_watchlist_1325_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1325"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: risk-first review; timeframe: last 5 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "risk-first review for last 5 sessions: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as exceptions and gaps first"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "risk-first_review"
+  - "last_5_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+  inputs:
+    last_sessions: "5"
+  output_contract:
+    - "event_calendar"
+    - "symbol_watchlist"
+    - "result_context"
+    - "action_bucket"
+    - "source_trail"
+sql_templates:
+  -
+    name: "upcoming_corporate_events"
+    query: "SELECT DISTINCT ON (c.symbol) c.symbol, c.event_date, c.event_type, c.purpose_raw, s.stage, s.trading_signal FROM signals.corporate_events c JOIN scores.stage_snapshots s ON c.symbol = s.symbol WHERE c.event_date >= CURRENT_DATE - INTERVAL '5 days' ORDER BY c.symbol, c.event_date DESC, c.created_at DESC LIMIT 100"
+  -
+    name: "recent_results_analysis"
+    query: "SELECT DISTINCT ON (r.symbol) r.symbol, r.company_name, r.verdict, r.growth_yoy_revenue_pct, r.growth_qoq_revenue_pct, r.filing_date FROM scores.results_analysis r WHERE r.period_end = (SELECT MAX(period_end) FROM scores.results_analysis) AND r.verdict IN ('miss', 'mixed', 'unknown') ORDER BY r.symbol, r.filing_date DESC, r.updated_at DESC LIMIT 100"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure event_date filters apply the latest within the last 5 sessions."
+  - "Verify verdict contains exceptions first, focusing on 'miss', 'mixed', or 'unknown'."
+synthesis_guidance: "['Combine corporate events data with results analysis to identify symbols with high risk potential.', 'Prioritize events with negative verdicts in recent results for a risk-first approach.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:43:13"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,67 @@
+id: "vcp_breakouts_with_fundamentals_1402_v1"
+version: 1
+status: "review_pending"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 1402"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: deep institutional review; timeframe: today; response style: portfolio-aware output."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "deep institutional review for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "deep_institutional_review"
+  - "today"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  -
+    python_tools:
+      -
+        id: "tool_vcp_analysis"
+        language: "python"
+        mode: "read_only"
+        inputs:
+          - "context"
+        outputs:
+          - "analysis"
+        approved_tables:
+          - "market.equity_eod"
+          - "scores.stage_snapshots"
+          - "scores.stage2_vcp_picks"
+        code: "def run(context):\n    # This function will analyze VCP breakouts\n    # and provide insights based on given context\n    return analysis"
+sql_templates:
+  -
+    description: "Extract new high, VCP, and breakout candidates with strong fundamentals"
+    sql: "WITH latest_eod AS (\n    SELECT * FROM market.equity_eod\n    WHERE trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)\n    AND series = 'EQ'\n),\nlatest_snapshots AS (\n    SELECT * FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n    AND stage = 'STAGE_2'\n),\nlatest_vcp AS (\n    SELECT * FROM scores.stage2_vcp_picks\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)\n    ORDER BY vcp_score DESC, rank ASC\n    LIMIT 50\n)\nSELECT le.symbol, le.close, ss.enhanced_fund_score, sv.vcp_score\nFROM latest_eod le\nJOIN latest_snapshots ss ON le.symbol = ss.symbol\nJOIN latest_vcp sv ON le.symbol = sv.symbol\nWHERE ss.trading_signal IN ('BUY', 'STRONG_BUY');"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Ensure all SQL templates are read-only."
+  - "Validate syntax and column usage against the approved schema."
+synthesis_guidance: "['Combine candidates, market trends, and risks into a coherent narrative for portfolio-aware decisions.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:09:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

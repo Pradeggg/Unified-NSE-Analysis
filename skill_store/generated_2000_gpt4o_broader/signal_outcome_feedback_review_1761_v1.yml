@@ -1,0 +1,52 @@
+id: "signal_outcome_feedback_review_1761_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1761"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: quick scan; timeframe: post results; response style: QA checklist."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for post results: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as QA checklist"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "post_results"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Use data from signals.signal_log to identify successful and failed signals by analyzing 'hit_target' and 'hit_stop' outcomes. Cross-reference with scores.stage_snapshots for a deeper understanding of technical and fundamental factors. Use market.equity_eod for contextual market analysis."
+sql_templates:
+  -
+    template: "SELECT id, symbol, date_issued, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_issued >= :start_date AND date_resolved <= :end_date;"
+    description: "Retrieve signal outcomes within the given timeframe."
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "Ensure that only read-only data retrieval techniques are employed."
+  - "Verify correlation between strategy success and underlying factors using both signals and stage snapshots."
+synthesis_guidance: "Focus on extracting clear and actionable insights from signal performance to enhance future trading decisions. Ensure that each insight aligns with the QA checklist format for consistency and ease of absorption."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:21:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

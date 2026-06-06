@@ -1,0 +1,58 @@
+id: "sector_breadth_rotation_watchlist_0923_v1"
+version: 1
+status: "validated"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0923"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: comparison matrix."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "daily refresh follow-up for last 5 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as comparison matrix"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "daily_refresh_follow-up"
+  - "last_5_sessions"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    tool: "SQLRunner"
+    description: "Fetch latest sector data focusing on breadth indicators and Stage 2 participation."
+    evidence_run_name: "latest_sector_data"
+sql_templates:
+  -
+    name: "latest_sector_data"
+    description: "Retrieve sector breadth data for last 5 sessions and identify sectors with improving Stage 2 participation."
+    sql: "WITH latest_dates AS (SELECT snapshot_date FROM breadth.sector_daily ORDER BY snapshot_date DESC LIMIT 5),\nlatest_breadth AS (SELECT sd.sector, sd.snapshot_date, sd.pct_above_50dma, sd.change_5d, ma.stage2_pct\nFROM breadth.sector_daily sd\nJOIN breadth.ma_pct_above ma ON sd.snapshot_date = ma.snapshot_date\nWHERE sd.snapshot_date IN (SELECT snapshot_date FROM latest_dates)),\nstage_two_improving AS (SELECT DISTINCT sector\nFROM scores.stage_snapshots\nWHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\nAND stage = 'STAGE_2'),\nfinal_selection AS (SELECT lb.sector, lb.snapshot_date, lb.pct_above_50dma, lb.change_5d, lb.stage2_pct\nFROM latest_breadth lb\nJOIN stage_two_improving si ON lb.sector = si.sector\nORDER BY lb.snapshot_date DESC)\nSELECT * FROM final_selection LIMIT 50"
+python_tools:
+
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Verify latest data is used by checking alignment with MAX(snapshot_date)"
+  - "Ensure Stage 2 filter accurately identifies sectors using 'STAGE_2' label"
+synthesis_guidance: "['Focus on broad sector improvement and stock candidates for TradingView.', 'Highlight sectors with the greatest Stage 2 participation increases.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:44"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

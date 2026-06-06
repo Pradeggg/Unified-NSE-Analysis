@@ -1,0 +1,82 @@
+id: "company_360_research_report_1168_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Company 360 Research Report Variant 1168"
+description: "Build a comprehensive company research card with overview, financials, fundamentals, technical context, and narrative evidence. Variant focus: position-sizing context; timeframe: post results; response style: narrative plus evidence."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "position-sizing context for post results: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as narrative plus evidence"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "position-sizing_context"
+  - "post_results"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+    -
+      id: "data_fetch"
+      language: "python"
+      mode: "read_only"
+      approved_tables:
+        - "scores.stage_snapshots"
+        - "scores.quarterly_results"
+        - "scores.annual_results"
+        - "scores.balance_sheet"
+        - "scores.cash_flow"
+        - "scores.results_analysis"
+        - "market.equity_eod"
+      inputs:
+        symbol: "RELIANCE"
+      outputs:
+        company_snapshot: "json"
+        financial_trends: "json"
+        technical_setup: "json"
+        valuation_gaps: "json"
+        thesis: "json"
+        risks: "json"
+      code: "def run(context):\n    pass"
+sql_templates:
+  -
+    name: "latest_stage_snapshot"
+    template: "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol = :symbol"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Ensure all evidence_required.tables are queried with matching logic."
+  - "Verify SQL uses latest-date filters from _global_rules."
+  - "Include Python snippets only if SQL becomes complex."
+  - "Ensure joins follow approved_schema._join_rules."
+synthesis_guidance: "['Frame the report narrative in context of position-sizing.', 'Highlight recent financial trends and implications post results.', 'Present technical setup emphasizing current trading signals.', 'Identify potential valuation gaps backed by evidence.', 'Synthesize thesis and risks with a focus on recent quarter performance.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:56:00"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,66 @@
+id: "portfolio_lab_paper_trading_review_1566_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Lab Paper Trading Review Variant 1566"
+description: "Review paper trading strategies separately from real holdings, including entries, exits, stops, targets, and exposure. Variant focus: freshness audit; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "paper trading portfolio report separate tab"
+  - "portfolio lab strategy entries exits stop loss targets"
+  - "review strategy lab without mixing my portfolio"
+  - "freshness audit for post results: paper trading portfolio report separate tab"
+  - "review strategy lab without mixing my portfolio as research-only summary"
+tags:
+  - "portfolio"
+  - "paper_trading"
+  - "strategy_lab"
+  - "entry_exit"
+  - "stop_loss"
+  - "freshness_audit"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "portfolio.holdings"
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  inputs:
+    -
+      name: "trade_date"
+      type: "date"
+      description: "Date for evaluating freshness of paper trading results"
+  steps:
+    - "Retrieve latest stage snapshot data using scores.stage_snapshots where snapshot_date is the latest."
+    - "Analyze trade signals from signals.signal_log for entry, exit, stop loss, and target accuracy."
+  tools:
+    -
+      name: "Check Strategy Validity"
+      evidence_type: "SQL"
+      evidence_query: "SELECT s.symbol, s.signal, s.date_issued, s.return_pct, m.close FROM signals.signal_log s JOIN market.equity_eod m ON s.symbol = m.symbol WHERE s.date_issued = m.trade_date AND s.return_pct > 0 AND m.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+sql_templates:
+  -
+    description: "Get latest EOD market data for portfolio symbols"
+    sql: "SELECT h.symbol, e.close, e.volume FROM portfolio.holdings h JOIN market.equity_eod e ON h.symbol = e.symbol WHERE e.trade_date = (SELECT MAX(trade_date) FROM market.equity_eod)"
+python_tools:
+
+output_contract:
+  - "strategy_state"
+  - "open_trades"
+  - "entry_exit_rules"
+  - "exposure"
+  - "exceptions"
+validation_rules:
+  - "Ensure only paper trading strategies are evaluated"
+  - "Verify presence of entry, exit, stop loss, and target in analysis"
+synthesis_guidance: "['Focus on separating paper trading analysis from real holding impact', 'Highlight statistical results in research-focused summary']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

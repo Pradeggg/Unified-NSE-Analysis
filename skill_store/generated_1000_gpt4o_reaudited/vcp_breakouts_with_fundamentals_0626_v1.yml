@@ -1,0 +1,58 @@
+created_at: "2026-06-06T12:50:15"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: last 5 sessions; response style: debug trace."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0626_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for last 5 sessions: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as debug trace"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Fetch top VCP picks with strong fundamentals and positive weekly performance"
+    query: "SELECT sp.symbol, sp.company_name, sp.sector, sp.price, sp.live_price, sp.vcp_score, sp.enhanced_fund_score, eod.high, eod.close, eod.change_pct FROM scores.stage2_vcp_picks AS sp JOIN market.equity_eod AS eod ON sp.symbol = eod.symbol WHERE sp.enhanced_fund_score > 80 AND eod.trade_date BETWEEN NOW() - INTERVAL '5 DAYS' AND NOW() AND eod.change_pct > 0 ORDER BY sp.vcp_score DESC;"
+status: "validated"
+synthesis_guidance: "Ensure comprehensive debug trace of steps and decision points in selecting candidates."
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "last_5_sessions"
+  - "debug_trace"
+title: "VCP Breakouts With Fundamentals Variant 0626"
+tool_plan_template:
+  candidates: "Identify candidates from stage2_vcp_picks with enhanced_fund_score > 80 and change_1w_pct increasing."
+  evidence: "Compile data from approved tables for validation."
+  filters: "Ensure stocks have high VCP scores, strong fundamentals, and recent performance indicating new highs or breakouts."
+  risks: "Evaluate risks based on market volatility and sector trends."
+  tradingview_symbols: "Convert symbols to TradingView compatible format."
+validation_rules:
+  - "Ensure all SQL queries are read-only SELECT."
+  - "Ensure symbols are correctly mapped to TradingView format."
+  - "Validate performance metrics are up-to-date, covering the last 5 sessions."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

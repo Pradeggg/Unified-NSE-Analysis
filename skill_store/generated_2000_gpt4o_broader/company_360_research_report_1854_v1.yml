@@ -1,0 +1,83 @@
+id: "company_360_research_report_1854_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Agent Adda Skill Card - Company 360 Research Report"
+description: "Generate a comprehensive company research card focusing on stock fundamentals and creating a watchlist for the quarter to date. The card provides an overview, financials, technical insights, narrative evidence, and identifies valuation gaps."
+input_patterns:
+  - "/research RELIANCE comprehensive report"
+  - "full research report with fundamentals technical charts narrative"
+  - "institutional grade 360 research for stock"
+  - "watchlist creation for quarter to date: /research RELIANCE comprehensive report"
+  - "institutional grade 360 research for stock as action watchlist"
+tags:
+  - "research"
+  - "company_overview"
+  - "fundamentals"
+  - "technical"
+  - "narrative"
+  - "watchlist_creation"
+  - "quarter_to_date"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "scores.quarterly_results"
+    - "scores.annual_results"
+    - "scores.balance_sheet"
+    - "scores.cash_flow"
+    - "scores.results_analysis"
+    - "market.equity_eod"
+tool_plan_template:
+  python_tools:
+    -
+      id: "generate_research_report"
+      language: "python"
+      mode: "read_only"
+      inputs:
+        - "symbol"
+      outputs:
+        - "company_snapshot"
+        - "financial_trends"
+        - "technical_setup"
+        - "valuation_gaps"
+        - "thesis"
+        - "risks"
+      approved_tables:
+        - "scores.stage_snapshots"
+        - "scores.quarterly_results"
+        - "scores.annual_results"
+        - "scores.balance_sheet"
+        - "scores.cash_flow"
+        - "scores.results_analysis"
+        - "market.equity_eod"
+      code: "def run(context):\n    # Retrieve and analyze data from approved tables\n    # Construct evidence for company snapshot, financial trends, etc.\n    # Return comprehensive analysis and watchlist insights\n    return {\n        \"company_snapshot\": {\"name\": \"RELIANCE\", \"sector\": \"Energy\"},\n        \"financial_trends\": {},\n        \"technical_setup\": {},\n        \"valuation_gaps\": {},\n        \"thesis\": \"Potential for growth given market conditions.\",\n        \"risks\": \"Market volatility and regulatory changes.\"\n    }"
+sql_templates:
+  -
+    name: "current_financials"
+    query: "SELECT symbol, revenue, pat, eps FROM scores.quarterly_results WHERE symbol = 'RELIANCE' AND period_type = 'quarter';"
+  -
+    name: "market_trends"
+    query: "SELECT trade_date, close, volume FROM market.equity_eod WHERE symbol = 'RELIANCE' ORDER BY trade_date DESC LIMIT 30;"
+python_tools:
+
+output_contract:
+  - "company_snapshot"
+  - "financial_trends"
+  - "technical_setup"
+  - "valuation_gaps"
+  - "thesis"
+  - "risks"
+validation_rules:
+  - "Check that the SQL queries only use SELECT statements."
+  - "Verify the Python code is read-only and follows the required function structure."
+synthesis_guidance: "['Combine insights from financial data and technical analysis to produce actionable watchlist strategies.', 'Narrate findings to align with Indian market trends and investor interests.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:22:47"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

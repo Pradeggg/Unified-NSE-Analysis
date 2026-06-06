@@ -1,0 +1,51 @@
+id: "corporate_events_results_watchlist_1899_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1899"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: source-trail validation; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "source-trail validation for weekly review: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as action watchlist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "source-trail_validation"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Use approved_schema._join_rules for joins; do not invent join conditions."
+sql_templates:
+  -
+    description: "Retrieve the latest corporate events and associated results analysis for a weekly review."
+    sql: "WITH latest_events AS (SELECT * FROM signals.corporate_events WHERE event_date >= CURRENT_DATE AND event_date <= (CURRENT_DATE + INTERVAL '7 days')), latest_results AS (SELECT DISTINCT ON (symbol) * FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC) SELECT ce.symbol, ce.event_type, ce.event_date, ce.purpose_raw, ce.detail, ra.verdict, ra.growth_yoy_revenue_pct, ra.growth_qoq_revenue_pct FROM latest_events ce JOIN latest_results ra ON ce.symbol = ra.symbol ORDER BY ce.event_date LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure that each symbol is captured with both event and result context."
+  - "Limit results to a fixed number for usability."
+synthesis_guidance: "['Highlight symbols in the watchlist with upcoming events and recent results.', 'Use the source-trail evidence for validation purposes.', 'Frame the results as an actionable watchlist for investor decision-making.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

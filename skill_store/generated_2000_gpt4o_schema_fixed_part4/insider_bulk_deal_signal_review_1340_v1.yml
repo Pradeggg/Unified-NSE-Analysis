@@ -1,0 +1,54 @@
+id: "insider_bulk_deal_signal_review_1340_v1"
+version: 1
+status: "review_pending"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1340"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: last 20 sessions; response style: exceptions and gaps first."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for last 20 sessions: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as exceptions and gaps first"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "last_20_sessions"
+  - "exceptions_and_gaps_first"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    description: "Perform a structured review of insider alerts and bulk/block deals, confirming technical setups."
+sql_templates:
+  -
+    description: "Retrieve latest insider alerts and bulk/block deals with confirmed technical setups."
+    template: "SELECT \n    i.symbol, i.alert_date, i.alert_type, i.insider_score, \n    b.deal_date, b.price, b.qty, \n    s.stage, s.technical_score, s.trading_signal \nFROM \n    signals.insider_alerts i \nJOIN \n    signals.bulk_block_deals b ON i.symbol = b.symbol \nJOIN \n    scores.stage_snapshots s ON i.symbol = s.symbol \nWHERE \n    i.alert_date >= CURRENT_DATE - INTERVAL '20 days' \n    AND s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) \n    AND s.trading_signal IN ('BUY', 'STRONG_BUY') \nORDER BY \n    i.alert_date DESC \nLIMIT 25;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure selected symbols appear in bulk deal and insider tables."
+  - "Verify the intersection has technically confirmed BUY or STRONG BUY signals."
+synthesis_guidance: "['Emphasize detecting exceptions and gaps in accumulation patterns.', 'Rank symbols based on insider score and technical confirmation.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:08:30"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

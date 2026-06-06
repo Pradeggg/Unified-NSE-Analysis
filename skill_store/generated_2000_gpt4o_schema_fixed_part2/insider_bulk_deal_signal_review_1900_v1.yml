@@ -1,0 +1,57 @@
+id: "insider_bulk_deal_signal_review_1900_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 1900"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: weekly review; response style: action watchlist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for weekly review: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as action watchlist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "weekly_review"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  purpose: "Analyze insider alerts and bulk deals with a focus on technical confirmation for accumulation signals."
+  method: "Extract data from relevant tables, apply filters, and identify candidates for review."
+  output: "Generate a ranked list of symbols with context and technical confirmation."
+sql_templates:
+  -
+    template_id: "bulk_deals_with_technical_confirmation"
+    description: "Retrieve bulk deals and attach latest technical scores."
+    template: "WITH latest_stage AS (SELECT symbol, stage, trading_signal, stage_score, technical_score FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND stage = 'STAGE_2' AND trading_signal IN ('BUY', 'STRONG_BUY')) SELECT bd.symbol, bd.deal_date, bd.entity, bd.qty, bd.price, ts.stage, ts.trading_signal, ts.stage_score, ts.technical_score FROM signals.bulk_block_deals bd JOIN latest_stage ts ON bd.symbol = ts.symbol WHERE bd.deal_date >= CURRENT_DATE - INTERVAL '3 months' ORDER BY ts.technical_score DESC LIMIT 50;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure symbols have positive technical scores in the latest snapshot."
+  - "Limit to stocks with bulk deals in the last 3 months."
+  - "Validate presence of buying or aggressive trading signals."
+synthesis_guidance: "['Highlight stocks with significant insider buying aligned with technical confirmations.', 'Prioritize stocks with high stage scores and positive trading signals.', 'Provide risk notes based on recent price volatility and technical trends.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

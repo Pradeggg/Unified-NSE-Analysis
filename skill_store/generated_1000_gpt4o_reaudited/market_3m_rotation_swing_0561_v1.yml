@@ -1,0 +1,64 @@
+created_at: "2026-06-06T12:49:12"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: post results; response style: research-only summary."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0561_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for post results: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as research-only summary"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Fetch index returns over the last three months."
+    mode: "readonly"
+    sql: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months';"
+    template_id: "market_index_scan"
+  -
+    description: "Fetch top performing sectors based on stage snapshots in the last three months."
+    mode: "readonly"
+    sql: "SELECT sector, AVG(stage_score) as avg_stage_score FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' GROUP BY sector ORDER BY avg_stage_score DESC LIMIT 5;"
+    template_id: "sector_leadership_identification"
+status: "test_failed"
+synthesis_guidance: "Compile a concise research report summarizing the above findings into insights that illuminate current market trends, sector leadership shifts, and prospective swing trading opportunities based on data analysis."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "post_results"
+  - "research-only_summary"
+title: "3M Market Rotation Swing Assessment Variant 0561"
+tool_plan_template:
+  goal: "Create a research-only summary of the past three months' market regime, sector rotation, and potential swing trade candidates."
+  plan:
+    - "Acquire latest market index EOD data for three months."
+    - "Analyze sector performance and identify leaders."
+    - "Review stage snapshots to determine stage 2 entries."
+    - "Identify swing candidates from VCP picks."
+validation_rules:
+  - "Output must include date of analysis and time range."
+  - "Index returns should generally compare opening and closing averages."
+  - "Leading sectors identification should be based on top stage scores."
+  - "Primary candidates must derive from stage 2 or VCP findings."
+version: 1
+validation_errors:
+  - "scores.stage_snapshots.avg_stage_score is not approved"

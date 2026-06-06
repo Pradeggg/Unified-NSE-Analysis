@@ -1,0 +1,60 @@
+id: "market_3m_rotation_swing_1611_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment Variant 1611"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: latest EOD; response style: debug trace."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for latest EOD: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as debug trace"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "latest_EOD"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  tools:
+    - "latest_eod_sql"
+    - "top_candidates_sql"
+    - "sector_performance_sql"
+sql_templates:
+  latest_eod_sql:
+    template: "SELECT trade_date, index_symbol, close FROM market.index_eod WHERE trade_date = (SELECT MAX(trade_date) FROM market.index_eod);"
+    description: "Fetch latest EOD index data."
+  top_candidates_sql:
+    template: "SELECT s.symbol, s.company_name, s.sector, s.price, s.trading_signal FROM scores.stage2_vcp_picks s JOIN scores.stage_snapshots ss ON s.symbol = ss.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks) AND ss.stage = 'STAGE_2' AND s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY s.vcp_score DESC LIMIT 10;"
+    description: "Get top Stage 2 VCP swing candidates."
+  sector_performance_sql:
+    template: "SELECT sector, AVG(change_1m_pct) AS avg_1m_change FROM scores.stage_snapshots WHERE snapshot_date >= (CURRENT_DATE - INTERVAL '3 months') GROUP BY sector ORDER BY avg_1m_change DESC;"
+    description: "Analyze sector performance over the last 3 months."
+python_tools:
+
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Summarize only validated evidence, surface missing evidence, and keep research-only framing."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:12:03"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.stage_snapshots.avg_1m_change is not approved"

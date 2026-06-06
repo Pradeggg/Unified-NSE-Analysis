@@ -1,0 +1,51 @@
+id: "insider_bulk_deal_signal_review_0878_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0878"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: position-sizing context; timeframe: pre market; response style: action watchlist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "position-sizing context for pre market: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as action watchlist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "position-sizing_context"
+  - "pre_market"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Aggregate insider and bulk/block deal signals with latest technical stage and scores for a watchlist setup."
+sql_templates:
+  -
+    template: "WITH latest_stages AS (\n    SELECT symbol, stage, snapshot_date\n    FROM scores.stage_snapshots\n    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n),\nlatest_insider_alerts AS (\n    SELECT symbol, alert_date, insider_score\n    FROM signals.insider_alerts\n),\nlatest_bulk_deals AS (\n    SELECT symbol, deal_date, price, qty\n    FROM signals.bulk_block_deals\n)\nSELECT \n    latest_stages.symbol,\n    latest_stages.stage,\n    MAX(latest_insider_alerts.insider_score) AS max_insider_score,\n    SUM(latest_bulk_deals.qty) AS total_qty\nFROM latest_stages\nJOIN latest_insider_alerts ON latest_stages.symbol = latest_insider_alerts.symbol\nJOIN latest_bulk_deals ON latest_stages.symbol = latest_bulk_deals.symbol\nGROUP BY latest_stages.symbol, latest_stages.stage\nORDER BY max_insider_score DESC\nLIMIT 10;"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "Ensure all symbols appear in the latest scores.stage_snapshots and signals tables."
+  - "Aggregate quantity for deals to verify the accumulation trend."
+synthesis_guidance: "Focus on symbols with positive insider scores and bulk deals that align with a Stage 2 technical setup. Highlight any discrepancies in accumulation patterns."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:49:18"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

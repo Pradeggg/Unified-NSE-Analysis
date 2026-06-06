@@ -1,0 +1,55 @@
+created_at: "2026-06-06T12:43:27"
+created_by: "llm_generated"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: last 5 sessions; response style: ranked candidates."
+domain: "portfolio_review"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+generation_model: "gpt-4o"
+id: "portfolio_incremental_add_trim_0223_v1"
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for last 5 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+python_tools:
+
+sql_templates:
+  -
+    description: "Retrieve price changes and scores for analysis."
+    query: "SELECT symbol, stage, stage_score, change_1d_pct, change_1w_pct, trend_signal FROM scores.stage_snapshots WHERE snapshot_date > (CURRENT_DATE - INTERVAL '5 days');"
+  -
+    description: "Fetch current holdings to determine portfolio state."
+    query: "SELECT symbol, qty, avg_cost FROM portfolio.holdings;"
+status: "validated"
+synthesis_guidance: "Utilize scores and trend signals to guide decisions on adding or trimming portfolio positions, focusing on short-term performance and risk management."
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh-follow-up"
+  - "last_5_sessions"
+  - "ranked_candidates"
+title: "Portfolio Incremental Add Trim Review Variant 0223"
+tool_plan_template: "Analyze portfolio holdings based on scores and signals, focusing on add/trim actions."
+validation_rules:
+  - "Ensure that 'portfolio_state' reflects the current status of holdings."
+  - "Verify 'sector_exposure' is correctly derived from the snapshot data."
+  - "Rank 'add_candidates' and 'trim_candidates' based on score and trend signals."
+  - "Identify 'risk_flags' for any high volatility or risk sectors."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

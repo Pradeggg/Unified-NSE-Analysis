@@ -1,0 +1,48 @@
+id: "quarterly_results_quality_review_1433_v1"
+version: 1
+status: "test_failed"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1433"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: daily refresh follow-up; timeframe: last 20 sessions; response style: portfolio-aware output."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "daily refresh follow-up for last 20 sessions: latest quarterly results analysis"
+  - "which companies had strong quarterly results as portfolio-aware output"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "daily_refresh_follow-up"
+  - "last_20_sessions"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Analyze latest quarterly results including revenue, PAT, and margin trends; identify beats/misses; assess filing freshness and narrative quality. Generate portfolio-aware output for the last 20 sessions."
+sql_templates:
+  revenue_growth: "SELECT symbol, period_end, growth_qoq_revenue_pct FROM scores.results_analysis WHERE period_end > CURRENT_DATE - INTERVAL '20' DAY AND growth_qoq_revenue_pct IS NOT NULL;"
+  pat_growth: "SELECT symbol, period_end, growth_qoq_pat_pct FROM scores.results_analysis WHERE period_end > CURRENT_DATE - INTERVAL '20' DAY AND growth_qoq_pat_pct IS NOT NULL;"
+  margin_movement: "SELECT symbol, opm_delta_pp FROM scores.results_analysis WHERE period_end > CURRENT_DATE - INTERVAL '20' DAY AND opm_delta_pp IS NOT NULL;"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "Ensure symbols and growth percentages are extracted correctly and cover the last 20 sessions."
+  - "Filing window must accurately reflect the most recent filings and their dates."
+  - "Summarized data should be consistent with the evidence collected from the SQL queries."
+synthesis_guidance: "['Integrate findings from all SQL templates to form a coherent narrative about market performance.', 'Highlight companies with standout performance based on revenue and PAT growth.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:08:07"
+generation_model: "gpt-4o"
+validation_errors:
+  - "scores.results_analysis.day is not approved"

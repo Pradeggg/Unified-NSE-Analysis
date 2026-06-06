@@ -1,0 +1,50 @@
+id: "report_link_data_validation_1558_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Enhanced Report Data Validation Variant 1558"
+description: "Validate enhanced report run metadata, filtered stock rows, populated data, and source trails. Variant focus: position-sizing context; timeframe: quarter to date; response style: research-only summary."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for quarter to date: review report links not working"
+  - "validate generated report links and missing data as research-only summary"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "quarter_to_date"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Generate a research-only summary focusing on data validation for report links and enhanced report run data."
+sql_templates:
+  -
+    description: "Select the latest report run and associated stocks."
+    template: "SELECT er.run_id, er.run_ts, ers.symbol, ers.current_price, ers.score FROM report.enhanced_runs er JOIN report.enhanced_filtered_stocks ers ON er.run_id = ers.run_id WHERE er.run_ts >= CURRENT_DATE - INTERVAL '3 months';"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure run_ts is within the last three months."
+  - "Verify that every run_id in enhanced_filtered_stocks has a corresponding entry in enhanced_runs."
+synthesis_guidance: "Provide a summarized view of recent enhanced report validations, highlighting gaps or errors in the data."
+created_by: "llm_generated"
+created_at: "2026-06-06T16:11:25"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

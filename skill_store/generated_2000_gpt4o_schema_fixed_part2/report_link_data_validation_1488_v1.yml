@@ -1,0 +1,59 @@
+id: "report_link_data_validation_1488_v1"
+version: 1
+status: "test_failed"
+domain: "report_qa"
+title: "Enhanced Report Data Validation"
+description: "Skill to validate enhanced report links, check for missing data, and confirm position-sizing in an intraday context."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+  - "position-sizing context for intraday context: review report links not working"
+  - "validate generated report links and missing data as portfolio-aware output"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "position-sizing_context"
+  - "intraday_context"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template:
+  steps:
+    - "Step 1: Fetch the latest run metadata and analyze report links."
+    - "Step 2: Validate presence of stock data in filtered records."
+    - "Step 3: Synthesize findings with context-specific insights and check for intraday position-sizing."
+sql_templates:
+  -
+    name: "FetchLatestRuns"
+    sql: "SELECT * FROM report.enhanced_runs ORDER BY run_ts DESC LIMIT 10;"
+  -
+    name: "FetchFilteredStocks"
+    sql: "SELECT * FROM report.enhanced_filtered_stocks WHERE run_id = :run_id;"
+python_tools:
+  - "required_function"
+  - "language"
+  - "mode"
+  - "blocked_capabilities"
+  - "required_fields"
+output_contract:
+  - "required"
+validation_rules:
+  - "Ensure report links are working and data is present."
+  - "Make sure position-sizing context aligns with intraday metrics."
+synthesis_guidance: "['Summarize findings in a way that highlights portfolio awareness.', 'Provide actionable insights and remediation steps for broken links or missing data.', 'Connect metadata evaluations to stock performance implications.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:44:44"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

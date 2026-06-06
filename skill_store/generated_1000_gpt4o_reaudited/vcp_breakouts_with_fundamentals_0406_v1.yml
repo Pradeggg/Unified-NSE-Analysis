@@ -1,0 +1,57 @@
+created_at: "2026-06-06T12:46:19"
+created_by: "llm_generated"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: freshness audit; timeframe: today; response style: portfolio-aware output."
+domain: "screening"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "vcp_breakouts_with_fundamentals_0406_v1"
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "freshness audit for today: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as portfolio-aware output"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+python_tools:
+
+sql_templates:
+  -
+    description: "Select stocks creating new highs or VCP or breakouts with strong fundamentals"
+    sql: "SELECT e.symbol, e.close, s.fundamental_score, v.vcp_score FROM market.equity_eod e JOIN scores.stage_snapshots s ON e.symbol = s.symbol JOIN scores.stage2_vcp_picks v ON e.symbol = v.symbol WHERE e.close = e.week52_high OR v.vcp_score IS NOT NULL AND (s.fundamental_score > X OR v.vcp_score > Y) AND e.trade_date = CURRENT_DATE;"
+status: "validated"
+synthesis_guidance: "{'portfolio': 'Consider the sector-wise distribution and market cap to ensure balanced portfolio recommendations.', 'timing': 'Focus on on-market conditions and recent trends for actionable insights.'}"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "freshness_audit"
+  - "today"
+  - "portfolio-aware_output"
+title: "VCP Breakouts With Fundamentals Variant 0406"
+tool_plan_template:
+  steps:
+    - "Analyze market trends and identify potential breakout patterns."
+    - "Evaluate stocks' fundamental scores and liquidity."
+    - "Filter stocks that are making new highs or have a valid VCP pattern with strong fundamentals."
+validation_rules:
+  - "Ensure stocks are public and valid for trading."
+  - "Confirm symbol integrity with market data."
+  - "Check that performance indicators meet the threshold."
+version: 1
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

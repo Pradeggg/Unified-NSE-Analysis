@@ -1,0 +1,69 @@
+id: "portfolio_incremental_add_trim_0711_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0711"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: quick scan; timeframe: latest EOD; response style: QA checklist."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "quick scan for latest EOD: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as QA checklist"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "quick_scan"
+  - "latest_EOD"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+
+sql_templates:
+  portfolio_state:
+    query: "SELECT h.symbol, h.qty, h.avg_cost, h.buy_date, s.stage, s.stage_score FROM portfolio.holdings h LEFT JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+    description: "Fetch current holdings with their stage and stage score."
+  sector_exposure:
+    query: "WITH sector_totals AS (SELECT s.sector, SUM(h.qty * s.live_price) AS sector_value FROM portfolio.holdings h LEFT JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) GROUP BY s.sector) SELECT sector, sector_value, sector_value / (SELECT SUM(sector_value) FROM sector_totals) AS exposure_pct FROM sector_totals;"
+    description: "Determine sector exposure percentage."
+  add_candidates:
+    query: "SELECT symbol, company_name, stage, stage_score FROM scores.stage_snapshots WHERE stage = 'Stage 2' AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND symbol NOT IN (SELECT symbol FROM portfolio.holdings);"
+    description: "Identify potential add candidates in Stage 2 not already in holdings."
+  trim_candidates:
+    query: "SELECT h.symbol, h.qty, s.stage, s.stage_score FROM portfolio.holdings h LEFT JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.stage != 'Stage 2';"
+    description: "Identify holdings that might need trimming since they are not in Stage 2."
+  risk_flags:
+    query: "SELECT symbol, trend_signal, trading_signal, rsi FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND (trend_signal = 'Downtrend' OR trading_signal = 'Weak');"
+    description: "Fetch symbols with downtrend or weak trading signals."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "{'style': 'QA checklist', 'timeframe': 'latest EOD'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:50:58"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table h.avg_cost"
+  - "unknown table h.buy_date"
+  - "unknown table h.qty"
+  - "unknown table h.symbol"
+  - "unknown table s.live_price"
+  - "unknown table s.sector"
+  - "unknown table s.snapshot_date"
+  - "unknown table s.stage"
+  - "unknown table s.stage_score"
+  - "unknown table s.symbol"

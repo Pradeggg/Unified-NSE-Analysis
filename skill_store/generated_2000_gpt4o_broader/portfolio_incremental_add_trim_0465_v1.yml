@@ -1,0 +1,57 @@
+id: "portfolio_incremental_add_trim_0465_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0465"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for post results: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as portfolio-aware output"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  task: "portfolio_incremental_add_trim_decision"
+  steps:
+    - "Retrieve current holdings and their details."
+    - "Analyze technical, fundamental, and stage scores for each holding."
+    - "Identify high-risk stocks with poor scores for potential trimming."
+    - "Highlight strong candidates for incremental additions."
+  risk_assessment: "Assess risk exposure by sector and identify sectors with unfavorable signals."
+  signal_analysis: "Evaluate trend and trading signals to guide decisions."
+sql_templates:
+  fetch_holdings: "SELECT h.symbol, h.qty, h.avg_cost, h.buy_date, s.sector FROM portfolio.holdings h JOIN scores.stage_snapshots s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+  evaluate_risks_and_opportunities: "SELECT symbol, sector, stage_score, technical_score, fundamental_score, rsi, trend_signal, trading_signal FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "holdings_must_exist"
+  - "signals_check"
+synthesis_guidance: "{'balance_risk_reward': 'Consider high returns with manageable risks before incrementally adding.', 'precautionary_trim': 'Initiate trims on holdings demonstrating consistent negative trends.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:47:32"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

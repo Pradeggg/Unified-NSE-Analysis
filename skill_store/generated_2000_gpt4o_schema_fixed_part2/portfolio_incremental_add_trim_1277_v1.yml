@@ -1,0 +1,56 @@
+id: "portfolio_incremental_add_trim_1277_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1277"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: sector-relative comparison; timeframe: pre market; response style: ranked candidates."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "sector-relative comparison for pre market: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as ranked candidates"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "sector-relative_comparison"
+  - "pre_market"
+  - "ranked_candidates"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  python_tools:
+
+sql_templates:
+  -
+    description: "Fetch potential add/trim candidates from current holdings."
+    template: "SELECT h.symbol, s.company_name, s.sector, h.qty, s.stage, s.trading_signal, s.stage_score FROM portfolio.holdings AS h JOIN scores.stage_snapshots AS s ON h.symbol = s.symbol WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) AND s.trading_signal IN ('BUY', 'STRONG_BUY') ORDER BY s.stage_score DESC LIMIT 10;"
+    requires:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure SQL handles only read operations."
+  - "Use latest snapshot date for analysis."
+  - "Verify sector relative scores are included in output."
+synthesis_guidance: "{'strategy': 'Rank potential add/trim candidates based on sector-relative scores and trading signals.', 'considerations': ['Focus on holdings with strong BUY signals.', 'Compare stage scores for relative insights.', 'Limit results to a finite set for manageability.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:42:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

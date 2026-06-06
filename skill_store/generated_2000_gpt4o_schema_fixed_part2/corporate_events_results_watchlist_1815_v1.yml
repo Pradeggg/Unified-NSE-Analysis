@@ -1,0 +1,55 @@
+id: "corporate_events_results_watchlist_1815_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Corporate Events Results Watchlist Variant 1815"
+description: "Find upcoming or recent corporate events and results-related watchlist actions with source-trail evidence. Variant focus: risk-first review; timeframe: latest EOD; response style: action watchlist."
+input_patterns:
+  - "upcoming results and corporate events watchlist"
+  - "stocks with dividends splits bonus or AGM events"
+  - "event driven stocks to watch after results"
+  - "risk-first review for latest EOD: upcoming results and corporate events watchlist"
+  - "event driven stocks to watch after results as action watchlist"
+tags:
+  - "corporate_events"
+  - "quarterly_results"
+  - "event_analysis"
+  - "watchlist"
+  - "risk-first_review"
+  - "latest_EOD"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "signals.corporate_events"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template: "Select corporate events and related results with a focus on risk-first review for the latest EOD."
+sql_templates:
+  -
+    description: "Fetch symbols with upcoming events from the corporate events table."
+    query: "SELECT symbol, event_type, event_date, purpose_raw FROM signals.corporate_events WHERE event_date >= CURRENT_DATE ORDER BY event_date LIMIT 10;"
+  -
+    description: "Join corporate events with the latest stage snapshots for contextual analysis."
+    query: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT e.symbol, e.event_type, e.event_date, s.stage, s.trading_signal FROM signals.corporate_events e JOIN latest_snapshots s ON e.symbol = s.symbol WHERE e.event_date >= CURRENT_DATE ORDER BY e.event_date LIMIT 10;"
+python_tools:
+
+output_contract:
+  - "event_calendar"
+  - "symbol_watchlist"
+  - "result_context"
+  - "action_bucket"
+  - "source_trail"
+validation_rules:
+  - "Ensure that results are from the latest EOD snapshot."
+  - "Verify that symbols with upcoming events are included in the watchlist."
+  - "Check that only authorized tables and columns are accessed."
+synthesis_guidance: "Focus on providing a risk-first review with the latest corporate events and results leading to actionable insights."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:09"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

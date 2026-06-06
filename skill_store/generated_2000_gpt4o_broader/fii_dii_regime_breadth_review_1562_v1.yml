@@ -1,0 +1,66 @@
+id: "fii_dii_regime_breadth_review_1562_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1562"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: deep institutional review; timeframe: post results; response style: research-only summary."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "deep institutional review for post results: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as research-only summary"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "deep_institutional_review"
+  - "post_results"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template: "Provide a summary using SELECT statements to extract and analyze FII/DII flows, market regime, breadth, and index data for a risk assessment summary."
+sql_templates:
+  fii_dii_flows: "SELECT trade_date, fii_net_today, dii_net_today, fii_net_5d, dii_net_5d, flow_signal FROM signals.fii_dii_flows WHERE trade_date = CURRENT_DATE;"
+  regime_history: "SELECT trade_date, regime, confidence FROM signals.regime_history WHERE trade_date = CURRENT_DATE;"
+  market_breadth: "SELECT trade_date, advances, declines, ad_summation, market_sentiment FROM breadth.market_daily WHERE trade_date = CURRENT_DATE;"
+  index_eod: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date = CURRENT_DATE AND index_symbol = 'NIFTY50';"
+python_tools:
+  -
+    id: "fii_dii_flow_analysis_001"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "SELECT trade_date, fii_trend, dii_trend FROM signals.fii_dii_flows WHERE trade_date = CURRENT_DATE;"
+    outputs:
+      - "flow_trend_summary"
+    approved_tables:
+      - "signals.fii_dii_flows"
+    code: "def run(context):\n    # Analyze trend data\n    trends = context.inputs[0]\n    if trends['fii_trend'] == 'up' and trends['dii_trend'] == 'up':\n        return 'Strong institutional buying trend detected.'\n    elif trends['fii_trend'] == 'down' and trends['dii_trend'] == 'down':\n        return 'Strong institutional selling trend detected.'\n    else:\n        return 'Mixed trend; further analysis required.'"
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all SELECT statements are read-only."
+  - "Cross-verify regime, flow, breadth, and index contexts from fetched data."
+  - "Synthesize insights as a research-only summary; avoid predictions."
+synthesis_guidance: "['Analyze the trends in FII/DII flows to determine if there is a bullish or bearish sentiment.', 'Assess current market regime based on the regime history and confidence levels.', 'Evaluate market breadth indicators such as advances, declines, and market sentiment.', 'Confirm index performance related to NIFTY50 for analysis.', 'Identify risk-on or risk-off flags based on synthesized data insights.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:03"
+generation_model: "gpt-4o"
+validation_errors:
+  - "fii_dii_flow_analysis_001: execution failed: AttributeError: 'dict' object has no attribute 'inputs'"
+review:
+  status: "needs_heal"
+  findings:
+    - "fii_dii_flow_analysis_001: execution failed: AttributeError: 'dict' object has no attribute 'inputs'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

@@ -1,0 +1,1 @@
+def run(context): return generate_watchlist(context['inputs']['signal_data'])

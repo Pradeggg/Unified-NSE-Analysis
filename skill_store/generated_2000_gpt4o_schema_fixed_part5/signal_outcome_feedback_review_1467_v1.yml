@@ -1,0 +1,71 @@
+id: "signal_outcome_feedback_review_1467_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 1467"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: sector-relative comparison; timeframe: post results; response style: portfolio-aware output."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "sector-relative comparison for post results: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as portfolio-aware output"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "sector-relative_comparison"
+  - "post_results"
+  - "portfolio-aware_output"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  -
+    type: "research_question"
+    sql:
+      -
+        id: "1"
+        description: "Get resolved signals and outcomes for analysis."
+        statement: "SELECT * FROM signals.signal_log WHERE date_resolved IS NOT NULL;"
+      -
+        id: "2"
+        description: "Join signal outcomes with latest stage snapshots for context."
+        statement: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)) SELECT s.*, st.stage, st.technical_score FROM signals.signal_log s JOIN latest_snapshots st ON s.symbol = st.symbol WHERE s.date_resolved IS NOT NULL;"
+sql_templates:
+  -
+    id: "1"
+    description: "Template to assess signal outcomes."
+    query: "SELECT symbol, sector, signal, hit_target, hit_stop, return_pct FROM signals.signal_log WHERE date_resolved IS NOT NULL AND hit_target = TRUE;"
+  -
+    id: "2"
+    description: "Template for sector-relative comparison."
+    query: "SELECT s.sector, COUNT(s.symbol) as num_winners FROM signals.signal_log s WHERE s.hit_target = TRUE GROUP BY s.sector ORDER BY num_winners DESC;"
+python_tools:
+
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "{'type': 'domain_analysis', 'rules': [{'id': '1', 'description': 'Ensure use of snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots).'}, {'id': '2', 'description': 'Verify the presence of outcome-related fields in output.'}]}"
+synthesis_guidance: "{'considerations': ['Focus on extracting lessons from past trade signals for improvement in future strategies.', 'Highlight trends by sector and identify common patterns of successful and failed trades.', 'Provide actionable insights that can be integrated into the portfolio strategy.']}"
+created_by: "llm_generated"
+created_at: "2026-06-06T16:10:20"
+generation_model: "gpt-4o"
+validation_errors:
+  - "signals.signal_log.num_winners is not approved"
+  - "signals.signal_log.s is not approved"
+review:
+  status: "needs_heal"
+  findings:
+    - "signals.signal_log.num_winners is not approved"
+    - "signals.signal_log.s is not approved"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

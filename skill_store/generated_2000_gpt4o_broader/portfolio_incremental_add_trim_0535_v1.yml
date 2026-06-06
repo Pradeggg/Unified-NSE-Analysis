@@ -1,0 +1,64 @@
+id: "portfolio_incremental_add_trim_0535_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 0535"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: risk-first review; timeframe: last 20 sessions; response style: research-only summary."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "risk-first review for last 20 sessions: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as research-only summary"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "risk-first_review"
+  - "last_20_sessions"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template: "Use evidence from 'scores.stage_snapshots' and 'portfolio.holdings' to assess current portfolio state, sector exposure, and identify candidates for adding or trimming based on risk assessment over the last 20 sessions. Generate a research-only summary."
+sql_templates:
+  -
+    description: "Fetch holdings and their stage snapshots for the last 20 sessions."
+    template: "WITH latest_snapshots AS (SELECT * FROM scores.stage_snapshots WHERE snapshot_date >= (SELECT MAX(snapshot_date) - INTERVAL '20 days' FROM scores.stage_snapshots)) SELECT h.symbol, h.qty, h.avg_cost, s.stage, s.stage_score, s.rsi, s.trend_signal FROM portfolio.holdings h JOIN latest_snapshots s ON h.symbol = s.symbol WHERE h.symbol IS NOT NULL;"
+python_tools:
+  -
+    id: "calculate_risk_adjustment"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "portfolio_state"
+      - "sector_exposure"
+    outputs:
+      - "risk_adjustment_recommendations"
+    approved_tables:
+      - "scores.stage_snapshots"
+      - "portfolio.holdings"
+    code: "def run(context):\n    # Placeholder implementation\n    portfolio_state = context['portfolio_state']\n    sector_exposure = context['sector_exposure']\n    # Analyze risk adjustment\n    recommendations = []\n    # Calculate recommendations logic\n    return recommendations"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all SQL queries are read-only."
+  - "Python tools must comply with specified policy restrictions."
+synthesis_guidance: "['Summarize data, focusing on risk factors and portfolio adjustments.', 'Highlight any sector exposure imbalances.', 'Identify strong candidates for adding or trimming.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:48:16"
+generation_model: "gpt-4o"
+validation_errors:
+  - "calculate_risk_adjustment: execution failed: KeyError: 'portfolio_state'"
+review:
+  status: "needs_heal"
+  findings:
+    - "calculate_risk_adjustment: execution failed: KeyError: 'portfolio_state'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

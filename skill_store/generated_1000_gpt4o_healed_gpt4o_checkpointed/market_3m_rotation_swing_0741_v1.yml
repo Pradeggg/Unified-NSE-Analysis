@@ -1,0 +1,72 @@
+created_at: "2026-06-06T12:51:11"
+created_by: "llm_generated"
+description: "Analyze broad market regime, sector leadership, stages, and liquid swing candidates. Variant focus: quick scan; timeframe: last 3 months; response style: QA checklist."
+domain: "market_analysis"
+evidence_required:
+  tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+generation_model: "gpt-4o"
+id: "market_3m_rotation_swing_0741_v1"
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+  - "quick scan for last 3 months: last 3 months market analysis"
+  - "market regime and stage 2 leadership over 3 months as QA checklist"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+python_tools:
+  -
+    approved_tables:
+      - "scores.stage2_vcp_picks"
+    code: "def run(context):\n    # Placeholder for VCP data analysis\n    return {'vcp_analysis_summary': 'Analysis not implemented'}"
+    id: "vcp_analysis_tool"
+    inputs:
+      - "snapshot_date"
+      - "sector"
+      - "price"
+      - "vcp_score"
+    language: "python"
+    mode: "read_only"
+    outputs:
+      - "vcp_analysis_summary"
+sql_templates:
+  leading_sector_identification: "SELECT DISTINCT sector FROM scores.stage_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' AND stage_score > 80 ORDER BY change_1m_pct DESC LIMIT 5"
+  market_index_analysis: "SELECT trade_date, index_symbol, close, change_pct FROM market.index_eod WHERE trade_date >= CURRENT_DATE - INTERVAL '3 months'"
+  swing_candidate_selection: "SELECT symbol, company_name, sector, price FROM scores.stage2_vcp_picks WHERE snapshot_date >= CURRENT_DATE - INTERVAL '3 months' AND trading_signal = 'Buy' ORDER BY vcp_score DESC LIMIT 10"
+status: "validated"
+synthesis_guidance:
+  - "Summarize key market movements in the last 3 months."
+  - "Identify top sectors with upward trends."
+  - "List potential swing trading candidates."
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "quick_scan"
+  - "last_3_months"
+  - "QA_checklist"
+title: "3M Market Rotation Swing Assessment Variant 0741"
+tool_plan_template: "Quickly assess the last 3 months of market activity focusing on sector rotation, stage analysis, and identify potential swing trading candidates."
+validation_errors:
+  - "Ensure all data is within the last 3 months."
+  - "Check if selected sectors have leading momentum."
+validation_rules:
+  - "Ensure all data is within the last 3 months."
+  - "Check if selected sectors have leading momentum."
+version: 1
+review:
+  attempts: 2
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  status: "pass"

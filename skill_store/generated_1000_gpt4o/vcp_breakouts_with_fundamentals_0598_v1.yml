@@ -1,0 +1,84 @@
+id: "vcp_breakouts_with_fundamentals_0598_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals Variant 0598"
+description: "Find new-high, VCP, and breakout stocks with strong fundamentals and liquidity. Variant focus: position-sizing context; timeframe: weekly review; response style: research-only summary."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "position-sizing context for weekly review: stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "quality breakouts with strong fundamentals as research-only summary"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "position-sizing_context"
+  - "weekly_review"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+tool_plan_template:
+  python_tool_policy:
+    required_function: "run(context)"
+    language: "python"
+    mode: "read_only"
+    blocked_capabilities:
+      - "network"
+      - "subprocess"
+      - "filesystem_write"
+      - "db_write"
+      - "broker_api"
+    required_fields:
+      - "id"
+      - "language"
+      - "mode"
+      - "inputs"
+      - "outputs"
+      - "approved_tables"
+      - "code"
+sql_templates:
+  -
+    name: "find_vcp_breakouts"
+    description: "Identify stocks with VCP patterns and breakouts with strong fundamentals."
+    query:
+      - "WITH latest_vcp AS ("
+      - "    SELECT DISTINCT ON (symbol) snapshot_date, symbol, company_name, price, live_price, sector, enhanced_fund_score, vcp_breakout_pct"
+      - "    FROM scores.stage2_vcp_picks"
+      - "    WHERE vcp_breakout_pct > 5"
+      - "    ORDER BY symbol, snapshot_date DESC"
+      - ")"
+      - "SELECT v.symbol, v.company_name, v.price, v.live_price, v.sector, v.enhanced_fund_score, e.week52_high"
+      - "FROM latest_vcp v"
+      - "JOIN market.equity_eod e ON v.symbol = e.symbol"
+      - "WHERE e.high > e.week52_high * 0.95"
+      - "ORDER BY v.enhanced_fund_score DESC"
+python_tools:
+
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "Status must be generated."
+  - "SQL templates are read-only SELECT/WITH queries."
+synthesis_guidance: "{'integration': 'Use output_contract fields to structure analysis and provide a summarized research-oriented view.', 'focus': 'Highlight high-potential breakout candidates with strong fundamentals.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T12:49:59"
+generation_model: "gpt-4o"
+validation_errors:
+  - "unknown table e.week52_high"
+  - "unknown table v.company_name"
+  - "unknown table v.enhanced_fund_score"
+  - "unknown table v.live_price"
+  - "unknown table v.price"
+  - "unknown table v.sector"
+  - "unknown table v.symbol"

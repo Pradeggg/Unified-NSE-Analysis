@@ -1,0 +1,68 @@
+id: "signal_outcome_feedback_review_0641_v1"
+version: 1
+status: "test_failed"
+domain: "portfolio_review"
+title: "Signal Outcome Feedback Review Variant 0641"
+description: "Evaluate prior signals, targets, stops, outcomes, and lessons for improving routes and skill selection. Variant focus: quick scan; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "review prior signals hit target or stop"
+  - "which recommendations worked and failed"
+  - "learn from signal outcomes and add to skill store"
+  - "quick scan for last 3 months: review prior signals hit target or stop"
+  - "learn from signal outcomes and add to skill store as debug trace"
+tags:
+  - "signal_log"
+  - "learning"
+  - "outcome_tracking"
+  - "targets"
+  - "stop_loss"
+  - "quick_scan"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.signal_log"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "<plan to be defined>"
+sql_templates:
+  -
+    name: "last_3_months_signal_outcomes"
+    query: "SELECT id, date_issued, symbol, signal, hit_target, hit_stop, price_at_issue, price_at_resolution, return_pct FROM signals.signal_log WHERE date_issued >= CURRENT_DATE - INTERVAL '3 MONTHS';"
+    description: "Fetch all trading signals issued in the last 3 months with their outcomes."
+python_tools:
+  -
+    id: "debug_trace_analysis"
+    language: "python"
+    mode: "read_only"
+    inputs:
+      - "last_3_months_signal_outcomes"
+    outputs:
+      - "outcome_summary"
+      - "winner_patterns"
+      - "failure_patterns"
+    approved_tables:
+      - "signals.signal_log"
+      - "scores.stage_snapshots"
+      - "market.equity_eod"
+    code: "def run(context):\n    outcome_summary = {}\n    winner_patterns = []\n    failure_patterns = []\n    results = context['last_3_months_signal_outcomes']\n    # Analyze results for patterns\n    for result in results:\n        if result['hit_target']:\n            winner_patterns.append(result)\n        elif result['hit_stop']:\n            failure_patterns.append(result)\n    outcome_summary['total_signals'] = len(results)\n    outcome_summary['successful_signals'] = len(winner_patterns)\n    outcome_summary['failed_signals'] = len(failure_patterns)\n    return outcome_summary, winner_patterns, failure_patterns"
+output_contract:
+  - "outcome_summary"
+  - "winner_patterns"
+  - "failure_patterns"
+  - "route_improvements"
+  - "next_checks"
+validation_rules:
+  - "status"
+synthesis_guidance: "<guidance to be defined>"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:59:10"
+generation_model: "gpt-4o"
+validation_errors:
+  - "debug_trace_analysis: execution failed: KeyError: 'last_3_months_signal_outcomes'"
+review:
+  status: "needs_heal"
+  findings:
+    - "debug_trace_analysis: execution failed: KeyError: 'last_3_months_signal_outcomes'"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

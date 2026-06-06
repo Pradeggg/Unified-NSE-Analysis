@@ -1,0 +1,55 @@
+id: "portfolio_incremental_add_trim_1193_v1"
+version: 1
+status: "validated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review Variant 1193"
+description: "Review current holdings, exposure, stages, signals, and incremental add/trim actions. Variant focus: daily refresh follow-up; timeframe: weekly review; response style: narrative plus evidence."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+  - "daily refresh follow-up for weekly review: should we add incrementally or reduce exposure"
+  - "review holdings for add trim decisions as narrative plus evidence"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "daily_refresh-follow-up"
+  - "weekly_review"
+  - "narrative_plus_evidence"
+evidence_required:
+  tables:
+    - "scores.stage_snapshots"
+    - "portfolio.holdings"
+tool_plan_template:
+  approach: "Determine sector and stocks for add/trim through latest stage and score analysis."
+  evidence_use: "Use scores from snapshots and compare against holdings for decision making."
+sql_templates:
+  -
+    name: "latest_snapshot_data"
+    description: "Retrieve latest stage snapshot for active holdings."
+    sql: "SELECT sh.symbol, sh.stage, sh.trading_signal, sh.technical_score, sh.relative_strength, h.qty, h.avg_cost FROM portfolio.holdings AS h JOIN scores.stage_snapshots AS sh ON h.symbol = sh.symbol WHERE sh.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) LIMIT 100;"
+    notes: "This query fetches snapshot data for current portfolio holdings with potential add/trim signals."
+python_tools:
+
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "Ensure SQL template outputs align with the portfolio_state and sector_exposure requirements."
+  - "Add_candidates should correspond to BUY or STRONG_BUY trading signals."
+  - "Trim_candidates should match SELL signals or declining technical conditions."
+synthesis_guidance: "{'narrative_style': 'Provide a concise analysis of potential positions for adding or trimming in the portfolio.', 'evidence_reporting': 'List signals and trends supporting each recommendation.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:41:42"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

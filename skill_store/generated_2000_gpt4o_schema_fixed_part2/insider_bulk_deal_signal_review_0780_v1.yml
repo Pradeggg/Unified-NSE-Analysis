@@ -1,0 +1,66 @@
+id: "insider_bulk_deal_signal_review_0780_v1"
+version: 1
+status: "validated"
+domain: "event_analysis"
+title: "Insider Bulk Deal Signal Review Variant 0780"
+description: "Review insider alerts, bulk or block deals, and technical confirmation for accumulation or distribution clues. Variant focus: TradingView export; timeframe: pre market; response style: QA checklist."
+input_patterns:
+  - "insider buying and bulk deals with technical confirmation"
+  - "stocks with bulk deals and positive setup"
+  - "institutional or insider accumulation watchlist"
+  - "TradingView export for pre market: insider buying and bulk deals with technical confirmation"
+  - "institutional or insider accumulation watchlist as QA checklist"
+tags:
+  - "insider_alerts"
+  - "bulk_deals"
+  - "event_analysis"
+  - "technical_confirmation"
+  - "TradingView_export"
+  - "pre_market"
+  - "QA_checklist"
+evidence_required:
+  tables:
+    - "signals.insider_alerts"
+    - "signals.bulk_block_deals"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template:
+  status: "generated"
+  instructions: "Use evidence and research to evaluate insider and bulk deal activity in the Indian market. Create a QA checklist for pre-market TradingView export."
+  steps:
+    - "Collect insider alerts and bulk/block deals for the latest available dates."
+    - "Join these with the latest stage snapshots for technical confirmation."
+    - "Rank symbols based on insider score, deal type, and technical score."
+    - "Prepare a QA checklist for the review."
+sql_templates:
+  -
+    title: "Get Latest Insider Alerts"
+    template: "SELECT * FROM signals.insider_alerts WHERE alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts);"
+  -
+    title: "Get Latest Bulk Deals"
+    template: "SELECT * FROM signals.bulk_block_deals WHERE deal_date = (SELECT MAX(deal_date) FROM signals.bulk_block_deals);"
+  -
+    title: "Join Insider Alerts with Latest Stage Snapshots"
+    template: "SELECT ia.*, ss.stage, ss.technical_score FROM signals.insider_alerts ia JOIN scores.stage_snapshots ss ON ia.symbol = ss.symbol WHERE ia.alert_date = (SELECT MAX(alert_date) FROM signals.insider_alerts) AND ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots);"
+python_tools:
+
+output_contract:
+  - "deal_summary"
+  - "insider_context"
+  - "technical_confirmation"
+  - "ranked_symbols"
+  - "risk_notes"
+validation_rules:
+  - "check_alerts"
+  - "check_deals"
+  - "join_validation"
+synthesis_guidance: "{'status': 'generated', 'guidance': 'Combine insider alerts and bulk deal evidence with technical scores to create a comprehensive view of accumulation/distribution trends before market open. Ensure clarity and thoroughness in the QA checklist.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:36:40"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

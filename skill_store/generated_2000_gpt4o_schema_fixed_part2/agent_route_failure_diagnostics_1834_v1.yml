@@ -1,0 +1,51 @@
+id: "agent_route_failure_diagnostics_1834_v1"
+version: 1
+status: "test_failed"
+domain: "data_quality"
+title: "Agent Route Failure Diagnostics Variant 1834"
+description: "Diagnose Agent Adda route failures, missing tools, wrong symbol resolution, and fallback loops from available evidence. Variant focus: watchlist creation; timeframe: last 20 sessions; response style: action watchlist."
+input_patterns:
+  - "agent adda going off rails between steps"
+  - "required tool validation failed missing tool"
+  - "symbol resolution loop and route diagnostics"
+  - "watchlist creation for last 20 sessions: agent adda going off rails between steps"
+  - "symbol resolution loop and route diagnostics as action watchlist"
+tags:
+  - "route_diagnostics"
+  - "tool_validation"
+  - "symbol_resolution"
+  - "data_quality"
+  - "watchlist_creation"
+  - "last_20_sessions"
+  - "action_watchlist"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  latest_sessions_query:
+    query: "SELECT er.run_id, er.run_ts FROM report.enhanced_runs er WHERE er.run_ts >= CURRENT_DATE - INTERVAL '30 days'"
+    description: "Retrieve the latest sessions from the last 30 days."
+  failed_routes_query:
+    query: "SELECT ef.rank, ef.symbol, ef.recommendation FROM report.enhanced_filtered_stocks ef JOIN report.enhanced_runs er ON er.run_id = ef.run_id WHERE er.run_ts >= CURRENT_DATE - INTERVAL '30 days' AND ef.recommendation = 'FAIL'"
+    description: "Find failed routes based on a FAIL recommendation in recent sessions."
+python_tools:
+
+output_contract:
+  - "failure_mode"
+  - "source_trail"
+  - "route_fix"
+  - "tool_gap"
+  - "regression_tests"
+validation_rules:
+  - "Ensure all evidence tables are referenced."
+  - "Validate JOIN conditions against approved schema."
+synthesis_guidance: "['Focus on recent session-related diagnostics.', 'Structure output as an action watchlist.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:48:34"
+generation_model: "gpt-4o"
+validation_errors:
+  - "report.enhanced_runs.er is not approved"

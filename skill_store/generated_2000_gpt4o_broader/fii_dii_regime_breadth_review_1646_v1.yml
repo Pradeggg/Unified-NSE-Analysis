@@ -1,0 +1,70 @@
+id: "fii_dii_regime_breadth_review_1646_v1"
+version: 1
+status: "test_failed"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1646"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: freshness audit; timeframe: last 3 months; response style: debug trace."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "freshness audit for last 3 months: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as debug trace"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "freshness_audit"
+  - "last_3_months"
+  - "debug_trace"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  status: "generated"
+sql_templates:
+  -
+    name: "fii_dii_flows_analysis"
+    template: "SELECT trade_date, fii_net_today, dii_net_today, fii_trend, dii_trend FROM signals.fii_dii_flows WHERE trade_date >= DATEADD(MONTH, -3, CURRENT_DATE) ORDER BY trade_date DESC;"
+    description: "Fetch FII and DII net flows and trends for the last 3 months."
+  -
+    name: "regime_history_analysis"
+    template: "SELECT trade_date, regime, confidence, days_in_regime FROM signals.regime_history WHERE trade_date >= DATEADD(MONTH, -3, CURRENT_DATE) ORDER BY trade_date DESC;"
+    description: "Fetch market regime history for the last 3 months."
+  -
+    name: "market_breadth_analysis"
+    template: "SELECT trade_date, advances, declines, adv_volume, dec_volume, ad_signal, trin, market_sentiment FROM breadth.market_daily WHERE trade_date >= DATEADD(MONTH, -3, CURRENT_DATE) ORDER BY trade_date DESC;"
+    description: "Fetch market breadth indicators for the last 3 months."
+  -
+    name: "index_confirmation_analysis"
+    template: "SELECT trade_date, index_symbol, close, change_pct, trend_signal FROM market.index_eod WHERE trade_date >= DATEADD(MONTH, -3, CURRENT_DATE) ORDER BY trade_date DESC;"
+    description: "Fetch EOD index data providing close prices and trend signals for the last 3 months."
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure data freshness by confirming data is within the last 3 months."
+  - "Correlate FII/DII flows with market breadth signals to determine risk-on/off state."
+  - "Cross-verify regime alignment with index trends for confirmation."
+synthesis_guidance: "['Integrate flow, regime, and breadth data to evaluate current market sentiment.', 'Highlight any discrepancies between institutional flows and market regime signals.', 'Provide clear risk assessment based on synthesized data contexts.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:20:43"
+generation_model: "gpt-4o"
+validation_errors:
+  - "breadth.market_daily.dateadd is not approved"
+  - "breadth.market_daily.month is not approved"
+  - "market.index_eod.dateadd is not approved"
+  - "market.index_eod.month is not approved"
+  - "signals.fii_dii_flows.dateadd is not approved"
+  - "signals.fii_dii_flows.month is not approved"
+  - "signals.regime_history.dateadd is not approved"
+  - "signals.regime_history.month is not approved"

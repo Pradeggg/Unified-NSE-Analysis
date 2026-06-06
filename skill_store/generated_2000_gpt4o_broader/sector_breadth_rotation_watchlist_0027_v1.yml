@@ -1,0 +1,61 @@
+id: "sector_breadth_rotation_watchlist_0027_v1"
+version: 1
+status: "test_failed"
+domain: "screening"
+title: "Sector Breadth Rotation Watchlist Variant 0027"
+description: "Create a sector-relative watchlist using sector breadth, stage migration, RS, and price momentum. Variant focus: sector-relative comparison; timeframe: last 5 sessions; response style: concise table."
+input_patterns:
+  - "sector rotation watchlist with breadth"
+  - "which sectors are improving and stocks to add to TradingView"
+  - "rank sectors by breadth and stage 2 participation"
+  - "sector-relative comparison for last 5 sessions: sector rotation watchlist with breadth"
+  - "rank sectors by breadth and stage 2 participation as concise table"
+tags:
+  - "sector_rotation"
+  - "breadth"
+  - "stage_analysis"
+  - "tradingview"
+  - "watchlist"
+  - "sector-relative_comparison"
+  - "last_5_sessions"
+  - "concise_table"
+evidence_required:
+  tables:
+    - "breadth.sector_daily"
+    - "breadth.ma_pct_above"
+    - "scores.stage_snapshots"
+    - "market.equity_eod"
+tool_plan_template: "Analyze sector rotation based on breadth, stage analysis, and momentum."
+sql_templates:
+  -
+    description: "Retrieve latest sector breadth data for the last 5 sessions."
+    template: "SELECT snapshot_date, sector, index_name, pct_above_50dma, change_5d, breadth_signal FROM breadth.sector_daily ORDER BY snapshot_date DESC LIMIT 5;"
+  -
+    description: "Fetch stage participation percentages."
+    template: "SELECT snapshot_date, stage2_pct FROM breadth.ma_pct_above ORDER BY snapshot_date DESC LIMIT 5;"
+  -
+    description: "Fetch improving sector stocks with stage scores."
+    template: "SELECT symbol, company_name, sector, stage, relative_strength FROM scores.stage_snapshots WHERE stage = 2 ORDER BY relative_strength DESC LIMIT 10;"
+python_tools:
+  - "run(context)"
+output_contract:
+  - "sector_ranks"
+  - "improving_sectors"
+  - "candidate_symbols"
+  - "tradingview_symbols"
+  - "evidence"
+validation_rules:
+  - "Use only SELECT queries to ensure read-only access."
+  - "Restrict SQL query results to last 5 sessions."
+synthesis_guidance: "['Combine breadth and stage data to rank sectors.', 'Focus on identifying sectors with improving Stage 2 participation.', 'Provide a concise table output for easy addition to TradingView.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T14:42:19"
+generation_model: "gpt-4o"
+validation_errors:
+  - "python tool must be an object"
+review:
+  status: "needs_heal"
+  findings:
+    - "python tool must be an object"
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

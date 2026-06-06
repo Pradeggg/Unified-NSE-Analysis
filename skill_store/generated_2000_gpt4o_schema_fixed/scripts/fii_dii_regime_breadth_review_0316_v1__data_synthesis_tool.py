@@ -1,0 +1,1 @@
+def run(context): return {'combined_analysis': context['regime_data']}

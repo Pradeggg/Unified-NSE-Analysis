@@ -1,0 +1,52 @@
+id: "quarterly_results_quality_review_1573_v1"
+version: 1
+status: "validated"
+domain: "fundamental_analysis"
+title: "Quarterly Results Quality Review Variant 1573"
+description: "Assess latest quarterly results, revenue and PAT growth, margin movement, filing freshness, and narrative quality. Variant focus: daily refresh follow-up; timeframe: pre market; response style: research-only summary."
+input_patterns:
+  - "latest quarterly results analysis"
+  - "analyze result beat miss and margin trend"
+  - "which companies had strong quarterly results"
+  - "daily refresh follow-up for pre market: latest quarterly results analysis"
+  - "which companies had strong quarterly results as research-only summary"
+tags:
+  - "quarterly_results"
+  - "earnings"
+  - "fundamentals"
+  - "results_analysis"
+  - "daily_refresh_follow-up"
+  - "pre_market"
+  - "research-only_summary"
+evidence_required:
+  tables:
+    - "scores.quarterly_results"
+    - "scores.results_analysis"
+    - "scores.stage_snapshots"
+tool_plan_template:
+
+sql_templates:
+  -
+    template: "WITH latest_quarterly_results AS (SELECT DISTINCT ON (symbol) symbol, period_end, revenue, expenses, operating_profit, opm_pct, pat FROM scores.quarterly_results WHERE period_type = 'quarter' ORDER BY symbol, period_end DESC NULLS LAST), latest_results_analysis AS (SELECT DISTINCT ON (symbol) symbol, period_end, verdict, growth_yoy_revenue_pct, growth_qoq_revenue_pct, growth_yoy_pat_pct, growth_qoq_pat_pct FROM scores.results_analysis ORDER BY symbol, period_end DESC NULLS LAST) SELECT q.symbol, q.revenue, q.operating_profit, r.verdict FROM latest_quarterly_results q JOIN latest_results_analysis r ON q.symbol = r.symbol AND q.period_end = r.period_end LIMIT 10"
+python_tools:
+
+output_contract:
+  - "filing_window"
+  - "beat_miss_summary"
+  - "margin_drivers"
+  - "ranked_companies"
+  - "risks"
+validation_rules:
+  - "required_tables_exist"
+  - "sql_is_read_only"
+  - "output_contract_present"
+synthesis_guidance: "Generate a summary of top 10 companies with the strongest quarterly results based on revenue and profit metrics. Use join rules to ensure relevance between structured and narrative data."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:45:34"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

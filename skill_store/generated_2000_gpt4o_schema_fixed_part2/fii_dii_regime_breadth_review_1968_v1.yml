@@ -1,0 +1,54 @@
+id: "fii_dii_regime_breadth_review_1968_v1"
+version: 1
+status: "validated"
+domain: "market_analysis"
+title: "FII DII Regime Breadth Review Variant 1968"
+description: "Combine FII/DII flow trend, market regime, breadth, and index evidence to explain market risk-on or risk-off context. Variant focus: position-sizing context; timeframe: post results; response style: comparison matrix."
+input_patterns:
+  - "market regime with FII DII and breadth"
+  - "is the market risk on based on flows and breadth"
+  - "explain current market breadth and institutional flows"
+  - "position-sizing context for post results: market regime with FII DII and breadth"
+  - "explain current market breadth and institutional flows as comparison matrix"
+tags:
+  - "fii_dii"
+  - "regime"
+  - "breadth"
+  - "market_regime"
+  - "position-sizing_context"
+  - "post_results"
+  - "comparison_matrix"
+evidence_required:
+  tables:
+    - "signals.fii_dii_flows"
+    - "signals.regime_history"
+    - "breadth.market_daily"
+    - "market.index_eod"
+tool_plan_template:
+  context: "{market_context}"
+  clarification: "{clarification_question}"
+sql_templates:
+  -
+    description: "Select the latest FII/DII, Regime, Breadth, and Index data to evaluate the market context."
+    sql: "WITH latest_data AS (SELECT MAX(trade_date) AS latest_date FROM signals.fii_dii_flows) SELECT f.trade_date, f.fii_net_today, f.dii_net_today, r.regime, r.confidence, b.advances, b.declines, b.ad_signal, i.close, i.rsi FROM signals.fii_dii_flows AS f JOIN signals.regime_history AS r ON f.trade_date = r.trade_date JOIN breadth.market_daily AS b ON f.trade_date = b.trade_date JOIN market.index_eod AS i ON f.trade_date = i.trade_date WHERE f.trade_date = (SELECT latest_date FROM latest_data) AND i.index_symbol = 'Nifty 50';"
+python_tools:
+
+output_contract:
+  - "regime"
+  - "flow_context"
+  - "breadth_context"
+  - "index_confirmation"
+  - "risk_flags"
+validation_rules:
+  - "Ensure all evidence has similar trade dates."
+  - "Ensure index symbol is filtered correctly to 'Nifty 50'."
+synthesis_guidance: "{'rule': 'Analyze the combined evidence to infer if the market is in risk-on or risk-off context, and provide position-sizing context.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T15:50:20"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1

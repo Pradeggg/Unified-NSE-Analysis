@@ -1,0 +1,53 @@
+id: "report_link_data_validation_1964_v1"
+version: 1
+status: "validated"
+domain: "report_qa"
+title: "Post-Results Report Link Validator"
+description: "Validate report links and data integrity for post-results watchlist creation."
+input_patterns:
+  - "review report links not working"
+  - "validate generated report links and missing data"
+  - "watchlist creation for post results: review report links not working"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "watchlist_creation"
+  - "post_results"
+evidence_required:
+  tables:
+    - "report.enhanced_runs"
+    - "report.enhanced_filtered_stocks"
+tool_plan_template: "Validate post-results report links and data using specified SQL templates. If SQL becomes too complex, use approved Python tools to quarantine evidence processing."
+sql_templates:
+  -
+    template: "SELECT run_id, analysis_date FROM report.enhanced_runs WHERE market_composite_score IS NULL OR market_sentiment IS NULL;"
+    description: "Find report runs with missing scores or sentiment."
+    name: "missing_scores_or_sentiment"
+  -
+    template: "SELECT symbol, score FROM report.enhanced_filtered_stocks WHERE score IS NULL OR recommendation IS NULL;"
+    description: "Identify stocks with missing scores or recommendations."
+    name: "missing_scores_or_recommendations"
+python_tools:
+
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "Ensure all required report metrics are present in the enhanced runs table."
+  - "Check for completeness of stock data in filtered stocks table."
+  - "Validate links using report run metadata."
+synthesis_guidance: "After data validation via SQL, collate findings into a matrix to address broken links and missing data efficiently."
+created_by: "llm_generated"
+created_at: "2026-06-06T15:23:41"
+generation_model: "gpt-4o"
+review:
+  status: "pass"
+  findings:
+
+  rationale: "Static audit and test findings drive deterministic review."
+  attempts: 1
