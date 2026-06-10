@@ -127,6 +127,9 @@ from terminal.renderer import (
     pre_render_plan, apply_render_plan, get_bold_symbols,
 )
 from terminal.market_calendar import format_session_clock, market_session_status
+from terminal.learning.interaction_log import build_command_action_event, capture_interaction_event
+from terminal.ui.links import linkify_markdown as _linkify_markdown
+from terminal.ui.links import text_with_links as _text_with_links
 
 colorama.init(autoreset=True)
 
@@ -252,6 +255,46 @@ def _open_last_generated_report() -> str:
         return "No report has been generated in this session yet."
     result = open_report(str(report))
     return result.get("message") or f"Opening report: {report}"
+
+
+def _record_learning_action(
+    raw_query: str,
+    *,
+    action: str,
+    report: str | None = None,
+    recipient_list_key: str | None = None,
+    payload: dict | None = None,
+) -> int | None:
+    try:
+        return capture_interaction_event(
+            build_command_action_event(
+                raw_query,
+                action=action,
+                report=report,
+                recipient_list_key=recipient_list_key,
+                payload=payload,
+            )
+        )
+    except Exception:
+        logger.debug("learning command-action capture failed", exc_info=True)
+        return None
+
+
+def _learning_action_for_query(query: str) -> str:
+    q = " ".join((query or "").strip().lower().split())
+    if q.startswith("/email") or "| /email" in q:
+        return "report_email"
+    if q.startswith("/open") or "open report" in q or "open the report" in q:
+        return "report_open"
+    if q.startswith("/verify") or "validate report" in q or "report validation" in q:
+        return "report_validation"
+    if "daily refresh" in q or q.startswith("/eod") or q.startswith("/auto"):
+        return "daily_refresh"
+    if "fix" in q and "report" in q:
+        return "code_report_fix"
+    if q.startswith("/report"):
+        return "report_generate"
+    return "terminal_command"
 
 
 def _canonical_search_symbol(raw_symbol: str) -> str:
@@ -836,6 +879,7 @@ _REPORT_PRESET_TYPES_FOR_TEST = {
     "strategy-lab",
     "recommendation",
     "swing-playbook",
+    "diagnosis",
 }
 
 _SLASH_COMMANDS: list[tuple[str, str]] = [
@@ -885,6 +929,22 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/screen base",      "Stage 1 basing/coiling stocks"),
     ("/screen tight",     "Tight weekly range VCP-like consolidations"),
     ("/screen dip",       "Oversold bounce — RSI < 40 dip in Stage 2"),
+    ("/screen quality-breakouts", "Composite new-high/VCP/breakout scanner with fundamentals"),
+    ("/screen quality-breakouts --explain --tv", "Show filter trail plus TradingView-ready watchlist"),
+    ("/screen qb",        "Alias: quality breakout candidates"),
+    ("/brainstorm",       "Structure a design discussion before implementation"),
+    ("/brainstorm portfolio strategy lab", "Brainstorm approaches and approval gate"),
+    ("/plan",             "Create an implementation-ready plan without executing it"),
+    ("/plan task --write", "Write a deterministic plan under docs/superpowers/plans/"),
+    ("/debug",            "Create a systematic investigation plan without modifying files"),
+    ("/debug results_analysis links not working", "Plan report/link debugging steps"),
+    ("/review",           "Review an artifact or workflow with findings first"),
+    ("/review reports/latest/results_analysis.html", "Review a local report artifact"),
+    ("/status",           "Show active copilot task memory and next actions"),
+    ("/status clear",     "Clear local copilot task memory"),
+    ("/verify",           "Run deterministic verification checks for a target"),
+    ("/verify reports",   "Verify latest report artifacts"),
+    ("/verify screen quality-breakouts", "Show quality-breakout verification checks"),
     ("/monitor",          "Show active background alert monitors"),
     ("/monitor list",     "List all available monitor strategies"),
     ("/monitor status",   "Show status of all running monitors"),
@@ -1056,6 +1116,12 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/narrative",                        "P2-4 Portfolio narratives — bull/bear thesis per stock"),
     ("/narrative TCS INFY",               "Investment narratives for specific stocks"),
     ("/concall TCS",                      "D4 Concall NLP — sentiment, themes, risk flags"),
+    ("/diagnose DMART eps",               "Explain financial metric drivers: EPS, ROCE, margins, debt, cash flow"),
+    ("/diagnose POLYCAB roce",            "ROCE bridge: EBIT vs capital employed"),
+    ("/skills",                           "Inspect Skill Store status counts and runtime-eligible cards"),
+    ("/skills search VCP fundamentals",   "Search validated/production Skill Store cards"),
+    ("/skills show market_3m_rotation_swing_v1", "Show a Skill Store card contract and validation rules"),
+    ("/skills recent",                    "Show recent Skill Store retrieval/execution logs"),
     # ── Multi-Timeframe (MTF) confluence ───────────────────────────────────
     ("/mtf",                              "📐 Multi-timeframe confluence — verdict + score across M/W/D/60m/15m"),
     ("/mtf RELIANCE",                     "MTF panel for a single symbol (M/W/D/60m/15m verdict + score)"),
@@ -1073,6 +1139,7 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/report portfolio-monitor",         "💼 ⚡ EOD portfolio analysis — signals, heat maps, fundamentals (instant from DB)"),
     ("/report strategy-lab",              "📈 Portfolio strategy lab — paper strategy leaderboard + risk diagnostics"),
     ("/report swing-playbook",            "Swing trading playbook — ranked candidates, entry/stop/exit plans, portfolio actions"),
+    ("/report diagnosis DMART eps",       "Fundamental driver diagnosis report — EPS, ROCE, margins, debt, cash flow"),
     ("/report stage2 md",                 "⚡ Stage 2 tracker as Markdown"),
     ("/report recommendation",            "Grounded EOD recommendation report — indices, sectors, stocks, portfolio/watchlist"),
     ("/swing-playbook",                   "Generate the swing trading playbook report"),
@@ -1210,6 +1277,8 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/compare":  ("Market Knowledge",    "📚"),
     "/company-index": ("Company Intelligence", "🏢"),
     "/company-xray": ("Company Intelligence", "🏢"),
+    "/diagnose": ("Company Intelligence", "🏢"),
+    "/skills":   ("Skill Store",         "🧠"),
     "/analyze":  ("Document Analysis",   "📄"),
     "/canslim":  ("CANSLIM Analysis",    "📐"),
     "/strength": ("CANSLIM Analysis",    "📐"),
@@ -1244,6 +1313,12 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/style":    ("Settings & Data",     "⚙️"),
     "/verbosity": ("Settings & Data",    "⚙️"),
     "/steps":    ("Settings & Data",     "⚙️"),
+    "/brainstorm": ("Copilot Workflows",  "🧠"),
+    "/plan":     ("Copilot Workflows",   "🧠"),
+    "/debug":    ("Copilot Workflows",   "🧠"),
+    "/review":   ("Copilot Workflows",   "🧠"),
+    "/status":   ("Copilot Workflows",   "🧠"),
+    "/verify":   ("Copilot Workflows",   "🧠"),
     "/context":  ("Session",             "💾"),
     "/new":      ("Session",             "💾"),
     "/reset":    ("Session",             "💾"),
@@ -4633,264 +4708,6 @@ def _print_interaction_command_result(result: dict) -> None:
 # Display helpers  (all print to stdout; terminal scrolls naturally)
 # ─────────────────────────────────────────────────────────────────────────────
 
-_URL_RE = re.compile(r'(https?://[^\s\)\]>,"\']+)')
-_HTML_LINK_RE = re.compile(
-    r'<a\s+[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>',
-    re.IGNORECASE | re.DOTALL,
-)
-_MD_LINK_RE = re.compile(r'\[([^\]]+)\]\(((?:https?|file)://[^\s\)]+)\)')
-# Used by _text_with_links: HTTP only (the local-paths-as-file-links pathway
-# would produce noisy "[label](file://...)" labels in plain-text views).
-_MD_HTTP_LINK_RE = re.compile(r'\[([^\]]+)\]\((https?://[^\s\)]+)\)')
-
-
-def _strip_html_tags(text: str) -> str:
-    return re.sub(r"<[^>]+>", "", text)
-
-
-def _html_links_to_visible_urls(text: str) -> str:
-    """Convert HTML anchors <a href="url">label</a> → Markdown link syntax.
-
-    Rich's Markdown renderer emits OSC 8 hyperlink escape sequences for
-    `[label](url)`, so the rendered terminal text is clickable in iTerm2,
-    kitty, WezTerm, VS Code, and macOS Terminal.app (Sequoia+).
-    """
-    def _replace(match: re.Match) -> str:
-        url   = html.unescape(match.group(1).strip())
-        label = html.unescape(_strip_html_tags(match.group(2))).strip() or url
-        if label == url:
-            return f"<{url}>"
-        return f"[{label}]({url})"
-
-    return _HTML_LINK_RE.sub(_replace, text)
-
-
-_BARE_URL_LINKIFY_RE = re.compile(
-    # Match http(s) URL with balanced parens allowed in the path/query.
-    # Path/query token: any non-whitespace/non-delimiter char, plus balanced
-    # parenthetical groups (single level — covers Wikipedia-style links like
-    # `Python_(programming_language)`).
-    r"""(?<![\(<\[\"'`/=])
-        (https?://
-            (?:
-                [^\s<>\)\]\"'`(]+    # bulk of URL: no whitespace/closers/openers
-                |   \([^\s<>\)\]\"'`]*\)   # balanced (...) group inside path
-            )+
-        )
-        (?<![,.;:!?])                # don't keep trailing punctuation
-    """,
-    flags=re.IGNORECASE | re.VERBOSE,
-)
-
-
-def _wrap_bare_urls(segment: str) -> str:
-    """Wrap bare http(s) URLs in <...> so Rich's Markdown emits OSC 8 hyperlinks."""
-    def _replace(match: re.Match) -> str:
-        url = match.group(1)
-        # Strip trailing punctuation that's almost never part of a URL.
-        while url and url[-1] in ".,;:!?":
-            url = url[:-1]
-        if not url:
-            return match.group(0)
-        return f"<{url}>" + match.group(0)[match.end(1) - match.start():]
-    # Use simpler post-processing approach for trailing punctuation.
-    return _BARE_URL_LINKIFY_RE.sub(lambda m: f"<{m.group(1)}>", segment)
-
-
-_BACKTICK_PATH_RE = re.compile(
-    r"`(/[^`\n]+|[A-Za-z]:\\[^`\n]+|~[^`\n]*|\./[^`\n]+|\.\./[^`\n]+|[A-Za-z0-9_.\-]+/[^`\n]+)`"
-)
-_BARE_LOCAL_PATH_RE = re.compile(
-    r"(?<![\w/.])(/[A-Za-z0-9_.\-][A-Za-z0-9_./\-]*\.(?:md|html|htm|pdf|json|csv|txt|log|yaml|yml|toml|ini|sh|py))(?![\w/])"
-)
-
-
-def _path_to_file_uri(path: str) -> str:
-    """Build a file:// URI from a possibly-relative path. Best-effort: returns
-    the original path unchanged if it can't be safely resolved."""
-    try:
-        import os
-        from urllib.parse import quote
-        raw = path
-        if raw.startswith("~"):
-            raw = os.path.expanduser(raw)
-        if not os.path.isabs(raw):
-            raw = os.path.abspath(raw)
-        # Quote everything except '/'; leading '/' is preserved.
-        return "file://" + quote(raw, safe="/")
-    except Exception:
-        return path
-
-
-def _wrap_backticked_paths_outside_code(text: str) -> str:
-    """Wrap `inline-code` local paths in Markdown links, but only outside
-    fenced code blocks and existing Markdown links (avoids double-wrap)."""
-    fence_re = re.compile(r"```.*?```", flags=re.DOTALL)
-
-    def _wrap_in_segment(seg: str) -> str:
-        # Skip inside existing [label](url) links.
-        out: list[str] = []
-        last = 0
-        for lm in _MD_LINK_RE.finditer(seg):
-            out.append(_BACKTICK_PATH_RE.sub(_backtick_path_wrap, seg[last:lm.start()]))
-            out.append(lm.group(0))
-            last = lm.end()
-        out.append(_BACKTICK_PATH_RE.sub(_backtick_path_wrap, seg[last:]))
-        return "".join(out)
-
-    out: list[str] = []
-    cursor = 0
-    for m in fence_re.finditer(text):
-        out.append(_wrap_in_segment(text[cursor:m.start()]))
-        out.append(m.group(0))
-        cursor = m.end()
-    out.append(_wrap_in_segment(text[cursor:]))
-    return "".join(out)
-
-
-def _backtick_path_wrap(m: re.Match) -> str:
-    path = m.group(1)
-    uri = _path_to_file_uri(path)
-    if uri == path:
-        return m.group(0)
-    return f"[`{path}`]({uri})"
-
-
-def _wrap_local_paths(segment: str) -> str:
-    """Wrap inline-code paths and bare local file paths in Markdown links
-    pointing to ``file://`` URIs so Rich emits OSC 8 hyperlinks.
-
-    Our local ``Markdown`` subclass overrides markdown-it's URL validator to
-    permit ``file:`` schemes; without that this wrapping would render as
-    literal text.
-    """
-    def _wrap_tick(m: re.Match) -> str:
-        return _backtick_path_wrap(m)
-
-    def _wrap_bare(m: re.Match) -> str:
-        path = m.group(1)
-        uri = _path_to_file_uri(path)
-        if uri == path:
-            return m.group(0)
-        return f"[{path}]({uri})"
-
-    segment = _BACKTICK_PATH_RE.sub(_wrap_tick, segment)
-    segment = _BARE_LOCAL_PATH_RE.sub(_wrap_bare, segment)
-    return segment
-
-
-def _linkify_markdown(text: str) -> str:
-    """Make every URL clickable when the text is rendered as Markdown.
-
-    Strategy:
-      1. Convert HTML anchors (<a href=...>label</a>) → Markdown link syntax.
-      2. Keep existing [label](url) Markdown links untouched (Rich emits OSC 8).
-      3. Wrap bare http(s) URLs in <...> so Rich autolinks them.
-      4. Preserve inline code spans, fenced code blocks, and 4-space-indented
-         code blocks verbatim.
-
-    Rich's Markdown renderer only emits OSC 8 hyperlinks for http(s) schemes,
-    so local file paths are left as plain text — modern terminals (iTerm2,
-    Terminal.app, kitty, WezTerm) detect them for Cmd+click without escape
-    sequences.
-    """
-    if not text:
-        return text
-    text = _html_links_to_visible_urls(text)
-    # Wrap backticked local paths BEFORE inline-code extraction so they don't
-    # get hidden inside the "skip inline code" branch. The output still
-    # contains the backticks (now inside a [`path`](file://...) label), so
-    # Rich's Markdown still applies inline-code styling on render.
-    text = _wrap_backticked_paths_outside_code(text)
-    # First, slice out fenced code blocks and inline code spans (never touch).
-    code_re = re.compile(r"```.*?```|`[^`\n]+`", flags=re.DOTALL)
-    parts: list[str] = []
-    cursor = 0
-    for m in code_re.finditer(text):
-        parts.append(_linkify_non_code_segment(text[cursor:m.start()]))
-        parts.append(m.group(0))
-        cursor = m.end()
-    parts.append(_linkify_non_code_segment(text[cursor:]))
-    return "".join(parts)
-
-
-def _linkify_non_code_segment(segment: str) -> str:
-    """Linkify a segment that contains no inline/fenced code.
-
-    Still skips 4-space (or tab) indented code blocks, which Markdown renders
-    as code without explicit fences.
-    """
-    if not segment:
-        return segment
-    out_lines: list[str] = []
-    for line in segment.splitlines(keepends=True):
-        stripped = line.lstrip("\n\r")
-        leading = line[: len(line) - len(stripped)]
-        body = stripped
-        # Markdown indented code block: 4+ leading spaces or a tab.
-        if re.match(r"(?: {4,}|\t)", body):
-            out_lines.append(line)
-            continue
-        out_lines.append(leading + _protect_existing_md_links(body))
-    return "".join(out_lines)
-
-
-def _protect_existing_md_links(segment: str) -> str:
-    """Wrap bare URLs / local paths in a segment, leaving existing markdown links intact."""
-    # Split on existing [label](url) so we only linkify in between.
-    out: list[str] = []
-    last = 0
-    for m in _MD_LINK_RE.finditer(segment):
-        between = segment[last:m.start()]
-        between = _wrap_local_paths(_wrap_bare_urls(between))
-        out.append(between)
-        out.append(m.group(0))
-        last = m.end()
-    tail = _wrap_local_paths(_wrap_bare_urls(segment[last:]))
-    out.append(tail)
-    return "".join(out)
-
-
-def _append_bare_url_links(target: Text, text: str) -> None:
-    """Append text; bare URLs rendered as cyan OSC-8 links AND visible text (dual compat)."""
-    pos = 0
-    for match in _URL_RE.finditer(text):
-        if match.start() > pos:
-            target.append(text[pos:match.start()])
-        raw = match.group(1)
-        url = raw.rstrip(".,;)")
-        trailing = raw[len(url):]
-        # Visible cyan URL — Cmd+click in Terminal.app; OSC-8 in iTerm2/WezTerm
-        target.append(url, style=RichStyle(link=url, color="cyan"))
-        if trailing:
-            target.append(trailing)
-        pos = match.end()
-    if pos < len(text):
-        target.append(text[pos:])
-
-
-def _text_with_links(text: str) -> Text:
-    """Create Rich Text; HTML/Markdown links → visible label + raw URL; bare URLs → cyan."""
-    # Pre-process: convert markdown [label](url) → HTML anchors so the
-    # single HTML-anchor loop handles both formats uniformly.
-    text = _MD_HTTP_LINK_RE.sub(r'<a href="\2">\1</a>', text)
-
-    out = Text()
-    pos = 0
-    for match in _HTML_LINK_RE.finditer(text):
-        if match.start() > pos:
-            _append_bare_url_links(out, text[pos:match.start()])
-        url   = html.unescape(match.group(1).strip())
-        label = html.unescape(_strip_html_tags(match.group(2))).strip() or url
-        out.append(label, style=RichStyle(link=url, color="cyan", underline=True))
-        # Show raw URL on same line so Terminal.app can Cmd+click it
-        if label != url:
-            out.append(f" {url}", style=RichStyle(color="cyan", dim=True))
-        pos = match.end()
-    if pos < len(text):
-        _append_bare_url_links(out, text[pos:])
-    return out
-
 
 def _render_news_item(r: dict, cap: int = 140) -> None:
     """Render one news/research item — title + raw URL + snippet.
@@ -5398,6 +5215,23 @@ def _normalise_plain_agent_brief(text: str) -> str:
     return text
 
 
+def _emphasize_symbols_outside_code(text: str, symbols: list[str]) -> str:
+    """Apply Markdown emphasis to symbols, preserving fenced code blocks."""
+    if not text or not symbols:
+        return text
+    parts = _re_mod.split(r"(```[\s\S]*?```)", text)
+    for i, part in enumerate(parts):
+        if part.startswith("```"):
+            continue
+        for sym in symbols:
+            parts[i] = _re_mod.sub(
+                rf"(?<!\[)\b{_re_mod.escape(sym)}\b(?!\])",
+                f"**{sym}**",
+                parts[i],
+            )
+    return "".join(parts)
+
+
 def _print_response(result: dict) -> None:
     global _followups
     answer  = result.get("answer", "(no answer)")
@@ -5411,11 +5245,11 @@ def _print_response(result: dict) -> None:
     plan  = pre_render_plan(clean, trace)
 
     # ── Agent header — colour driven by plan sentiment / alert level ──────
-    header_style = plan.get("_header_style", "green dim")  # overridden by apply below
+    header_style = plan.get("_header_style", "green dim")
     console.print()
     console.rule(
         f"[bold green] 🤖  Agent Adda [/bold green][dim] {_ts()}  ·  {backend} [/dim]",
-        style="green dim",
+        style=header_style,
     )
     console.print()
 
@@ -5429,32 +5263,44 @@ def _print_response(result: dict) -> None:
         _render_comparison_table(comp)
 
     # ── Structured financial tables — order respects render_mode ──────────
-    if render_mode != "narrative_only":
+    if render_mode == "narrative_first":
+        # Print narrative body first, then tables
+        if render_mode != "tables_only":
+            display = clean
+            has_markup = backend != "Keyword (no LLM)" and any(
+                c in display for c in ["**", "##", "- ", "* ", "```", "|"]
+            )
+            if _is_plain_agent_brief(display):
+                console.print(_text_with_links(_normalise_plain_agent_brief(display)), style="white")
+            elif has_markup:
+                bold_syms = get_bold_symbols(plan)
+                if bold_syms:
+                    display = _emphasize_symbols_outside_code(display, bold_syms)
+                _print_md_with_rich_tables(display)
+            else:
+                console.print(_text_with_links(display), style="white")
         render_trace_tables(trace, plan=plan)
+    else:
+        if render_mode != "narrative_only":
+            render_trace_tables(trace, plan=plan)
 
-    # ── Body — Rich Markdown with colour-coded tables ─────────────────────
-    if render_mode != "tables_only":
-        # Emphasise bold_symbols from plan in the narrative text
-        bold_syms = get_bold_symbols(plan)
-        display = clean
-        if bold_syms:
-            for sym in bold_syms:
-                display = _re_mod.sub(
-                    rf"(?<!\[)\b{_re_mod.escape(sym)}\b(?!\])",
-                    f"**{sym}**",
-                    display,
-                )
-
-        has_markup = backend != "Keyword (no LLM)" and any(
-            c in display for c in ["**", "##", "- ", "* ", "```", "|"]
-        )
-        if _is_plain_agent_brief(display):
-            console.print(_text_with_links(_normalise_plain_agent_brief(display)), style="white")
-        elif has_markup:
-            # Use table-intercepting renderer — colours % / signals / stages
-            _print_md_with_rich_tables(display)
-        else:
-            console.print(_text_with_links(display), style="white")
+        # ── Body — Rich Markdown with colour-coded tables ─────────────────────
+        if render_mode != "tables_only":
+            display = clean
+            has_markup = backend != "Keyword (no LLM)" and any(
+                c in display for c in ["**", "##", "- ", "* ", "```", "|"]
+            )
+            if _is_plain_agent_brief(display):
+                console.print(_text_with_links(_normalise_plain_agent_brief(display)), style="white")
+            elif has_markup:
+                # Emphasise bold_symbols only when Markdown renderer will process them
+                bold_syms = get_bold_symbols(plan)
+                if bold_syms:
+                    display = _emphasize_symbols_outside_code(display, bold_syms)
+                # Use table-intercepting renderer — colours % / signals / stages
+                _print_md_with_rich_tables(display)
+            else:
+                console.print(_text_with_links(display), style="white")
 
     # ── Direct catalysts / news render (bypasses LLM formatting) ─────────
     cats = result.get("catalysts")
@@ -6656,6 +6502,111 @@ def _print_intraday_scan_result(status: str, result: dict) -> None:
     console.print()
 
 
+_QUALITY_BREAKOUT_ALIASES = {
+    "quality-breakouts",
+    "quality_breakouts",
+    "quality",
+    "qb",
+    "leaders",
+    "vcp-breakouts",
+    "vcp_breakouts",
+}
+
+
+def _parse_quality_breakouts_command(text: str) -> dict:
+    parts = text.strip().split()
+    if len(parts) < 2 or parts[0].lower() != "/screen":
+        return {"matched": False}
+    if parts[1].lower() not in _QUALITY_BREAKOUT_ALIASES:
+        return {"matched": False}
+
+    mode = "balanced"
+    top_n = 15
+    explain = False
+    tv = False
+    i = 2
+    while i < len(parts):
+        token = parts[i].lower()
+        if token in {"--strict", "strict"}:
+            mode = "strict"
+        elif token in {"--balanced", "balanced"}:
+            mode = "balanced"
+        elif token in {"--broad", "broad"}:
+            mode = "broad"
+        elif token == "--explain":
+            explain = True
+        elif token == "--tv":
+            tv = True
+        elif token == "--top" and i + 1 < len(parts):
+            try:
+                top_n = max(1, min(100, int(parts[i + 1])))
+            except ValueError:
+                top_n = 15
+            i += 1
+        i += 1
+    return {"matched": True, "mode": mode, "top_n": top_n, "explain": explain, "tv": tv}
+
+
+def _render_quality_breakouts_result(result: dict, *, explain: bool = False, tv: bool = False) -> str:
+    lines: list[str] = []
+    lines.append("QUALITY BREAKOUTS")
+    lines.append(f"Snapshot: {result.get('snapshot_date') or 'unknown'}")
+    lines.append(f"Mode: {result.get('mode', 'balanced')}")
+    lines.append("")
+
+    if explain:
+        counts = result.get("source_counts") or {}
+        lines.append("Execution Trail")
+        for key in ("new_highs", "momentum_52w", "tight_range", "breakouts"):
+            lines.append(f"- {key}: {counts.get(key, 0)}")
+        lines.append(f"- merged unique: {result.get('merged_count', 0)}")
+        lines.append(f"- quality passed: {result.get('passed_count', 0)}")
+        lines.append("")
+
+    rows = result.get("results") or []
+    if rows:
+        lines.append("| Symbol | Setups | Stage | Signal | RS | RSI | Fund | Invest | Score | Sector |")
+        lines.append("|---|---|---:|---|---:|---:|---:|---:|---:|---|")
+        details: list[str] = []
+        for row in rows:
+            setups = ",".join(row.get("setup_tags") or [])
+            lines.append(
+                "| {symbol} | {setups} | {stage} | {signal} | {rs:.1f} | {rsi:.1f} | {fund:.0f} | {invest:.0f} | {score:.1f} | {sector} |".format(
+                    symbol=row.get("symbol", ""),
+                    setups=setups,
+                    stage=row.get("stage", ""),
+                    signal=row.get("trading_signal", ""),
+                    rs=float(row.get("rs") or row.get("relative_strength") or 0),
+                    rsi=float(row.get("rsi") or 0),
+                    fund=float(row.get("enhanced_fund_score") or 0),
+                    invest=float(row.get("investment_score") or 0),
+                    score=float(row.get("composite_score") or 0),
+                    sector=row.get("sector", ""),
+                )
+            )
+            if explain:
+                reason = ", ".join(row.get("reason_tags") or [])
+                risks = ", ".join(row.get("risk_flags") or []) or "none"
+                details.append(f"- {row.get('symbol')}: {reason}; risk: {risks}")
+        if explain and details:
+            lines.append("")
+            lines.append("Reasons")
+            lines.extend(details)
+    else:
+        lines.append("No qualifying candidates.")
+
+    if tv:
+        lines.append("")
+        lines.append("TradingView")
+        lines.append("```text")
+        lines.extend(result.get("tradingview_symbols") or [])
+        lines.append("```")
+
+    lines.append("")
+    lines.append("Research-only scan. Not investment advice.")
+    return "\n".join(lines)
+
+
 def _print_help() -> None:
     print()
     console.print(Panel(
@@ -6859,11 +6810,13 @@ def _run_with_spinner(
 
     frames = itertools.cycle("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")
     while not done.wait(0.08):
-        f = next(frames)
-        sys.stdout.write(f"\r  \x1b[36m{f}\x1b[0m  \x1b[37mAgent Adda is thinking…\x1b[0m  ")
+        if sys.stdout.isatty():
+            f = next(frames)
+            sys.stdout.write(f"\r  \x1b[36m{f}\x1b[0m  \x1b[37mAgent Adda is thinking…\x1b[0m  ")
+            sys.stdout.flush()
+    if sys.stdout.isatty():
+        sys.stdout.write("\r" + " " * 60 + "\r")
         sys.stdout.flush()
-    sys.stdout.write("\r" + " " * 60 + "\r")
-    sys.stdout.flush()
 
     if exc:
         raise exc[0]
@@ -7271,6 +7224,72 @@ def _build_command_registry():
         description="Relative-strength watchlist validator",
     ))
 
+    # /diagnose
+    def _h_diagnose(query, agent, show_trace):
+        from terminal.skills.commands import handle_diagnose_command
+
+        _print_user(query)
+        output = handle_diagnose_command(query)
+        console.print(Markdown(_linkify_markdown(output)))
+        return True
+    registry.register(CommandHandler(
+        name="diagnose",
+        match_fn=lambda q: re.match(r"^/diagnose(?:\s|$)", q) is not None,
+        handler_fn=_h_diagnose,
+        description="Financial metric driver diagnosis",
+    ))
+
+    # /skills
+    def _h_skills(query, agent, show_trace):
+        from terminal.skills.commands_store import handle_skills_command
+
+        _print_user(query)
+        output = handle_skills_command(query)
+        console.print(Markdown(_linkify_markdown(output)))
+        return True
+    registry.register(CommandHandler(
+        name="skills",
+        match_fn=lambda q: q == "/skills" or q.startswith("/skills "),
+        handler_fn=_h_skills,
+        description="Inspect Skill Store cards, status counts, and recent activity",
+    ))
+
+    # /report diagnosis SYMBOL METRIC [format]
+    def _h_report_diagnosis(query, agent, show_trace):
+        from terminal.reports import generate_preset_report
+
+        _print_user(query)
+        parts = query.strip().split()
+        remaining = parts[2:] if len(parts) >= 2 else []
+        rpt_fmt = "html"
+        rpt_args: list[str] = []
+        for item in remaining:
+            lowered = item.lower()
+            if lowered in ("html", "pdf", "md"):
+                rpt_fmt = lowered
+            else:
+                rpt_args.append(item)
+        result = generate_preset_report("diagnosis", rpt_fmt, args=rpt_args)
+        if result.get("success"):
+            console.print(
+                f"  [bold green]✅  Report saved![/bold green]  "
+                f"[cyan]{result['path']}[/cyan]"
+            )
+            if result.get("latest_path"):
+                console.print(f"  [dim]Latest: {result.get('latest_path')}[/dim]")
+            if result.get("note"):
+                console.print(f"  [dim]{result.get('note')}[/dim]")
+            _open_report_path(result["path"], console)
+        else:
+            console.print(f"  [bold red]❌  {result.get('note','Diagnosis report failed')}[/bold red]")
+        return True
+    registry.register(CommandHandler(
+        name="report-diagnosis",
+        match_fn=lambda q: re.match(r"^/report\s+diagnosis(?:\s|$)", q) is not None,
+        handler_fn=_h_report_diagnosis,
+        description="Fundamental driver diagnosis report",
+    ))
+
     # /email
     def _h_email(query, agent, show_trace):
         _print_user(query)
@@ -7339,6 +7358,61 @@ def _build_command_registry():
         match_fn=lambda q: re.match(r"^/(?:style|verbosity|steps)(?:\s|$)", q) is not None,
         handler_fn=_h_interaction,
         description="/style · /verbosity · /steps — interaction profile (AA-COP-1)",
+    ))
+
+    # /brainstorm, /plan, /debug, /review, /verify — AA-COP-4 copilot workflows
+    def _h_copilot(query: str, agent, show_trace: bool) -> bool:
+        from terminal.copilot_workflows import (
+            handle_brainstorm_command,
+            handle_debug_command,
+            handle_plan_command,
+            handle_review_command,
+            handle_status_command,
+            handle_verify_command,
+        )
+
+        _print_user(query)
+        root = query.strip().split(maxsplit=1)[0].lower()
+        handlers = {
+            "/brainstorm": handle_brainstorm_command,
+            "/plan": handle_plan_command,
+            "/debug": handle_debug_command,
+            "/review": handle_review_command,
+            "/status": handle_status_command,
+            "/verify": handle_verify_command,
+        }
+        output = handlers[root](query)
+        console.print(Markdown(_linkify_markdown(output)))
+        return True
+    registry.register(CommandHandler(
+        name="copilot-workflows",
+        match_fn=lambda q: re.match(r"^/(?:brainstorm|plan|debug|review|status|verify)(?:\s|$)", q) is not None,
+        handler_fn=_h_copilot,
+        description="/brainstorm · /plan · /debug · /review · /verify — copilot workflows",
+    ))
+
+    # /screen quality-breakouts
+    def _h_quality_breakouts(query: str, agent, show_trace: bool) -> bool:
+        _print_user(query)
+        parsed = _parse_quality_breakouts_command(query)
+        from terminal.composite_screeners import run_quality_breakout_screener
+
+        result = run_quality_breakout_screener(top_n=parsed["top_n"], mode=parsed["mode"])
+        try:
+            from terminal.task_memory import TaskMemoryStore
+
+            store = TaskMemoryStore()
+            store.record_command(query)
+            store.record_quality_breakouts(result.get("tradingview_symbols") or [], source="/screen quality-breakouts")
+        except Exception:
+            pass
+        console.print(Markdown(_render_quality_breakouts_result(result, explain=parsed["explain"], tv=parsed["tv"])))
+        return True
+    registry.register(CommandHandler(
+        name="quality-breakouts",
+        match_fn=lambda q: bool(_parse_quality_breakouts_command(q).get("matched")),
+        handler_fn=_h_quality_breakouts,
+        description="Composite new-high/VCP/breakout screener with fundamental quality overlay",
     ))
 
     # /my-portfolio — live intraday dashboard + EOD analysis
@@ -7418,6 +7492,36 @@ def _get_shared_registry():
     return _shared_command_registry
 
 
+def _handle_natural_skill_query(text: str) -> bool:
+    """Route high-confidence natural-language skill prompts before the LLM path."""
+    if not text or text.lstrip().startswith("/"):
+        return False
+    try:
+        from terminal.skills.commands import handle_diagnose_command
+        from terminal.skills.selector import select_skills
+
+        selections = select_skills(text)
+        if not selections:
+            return False
+        selected = selections[0]
+        if (
+            selected.skill_id != "fundamental_driver_diagnosis"
+            or not selected.symbol
+            or not selected.metric
+            or selected.confidence < 0.8
+        ):
+            return False
+        command = f"/diagnose {selected.symbol} {selected.metric}"
+        _print_user(text)
+        console.print(f"[dim]  ⤳ Skill route → [bold]{command}[/bold][/dim]")
+        output = handle_diagnose_command(command)
+        console.print(Markdown(_linkify_markdown(output)))
+        return True
+    except Exception:
+        logger.debug("Natural skill routing failed", exc_info=True)
+        return False
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Single-query mode  (no TUI, just print result and exit)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -7437,6 +7541,11 @@ def _single_query(agent, query: str, show_trace: bool) -> None:
 
     registry = _get_shared_registry()
     if registry.dispatch(query, agent, show_trace, mode="single_query"):
+        _record_learning_action(query, action=_learning_action_for_query(query))
+        return
+
+    if _handle_natural_skill_query(query):
+        _record_learning_action(query, action="natural_skill_route")
         return
 
     # Out-of-domain guard (NL only, pre-LLM)
@@ -7447,6 +7556,7 @@ def _single_query(agent, query: str, show_trace: bool) -> None:
             if _ood:
                 console.print()
                 console.print(f"[dim]  🌐  Out of domain[/dim]  [yellow]{_ood}[/yellow]")
+                _record_learning_action(query, action="out_of_domain")
                 return
         except Exception:
             pass
@@ -7744,7 +7854,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
             _mode = "intraday"
             console.print("[bold red]  ● Mode → LIVE  (real-time NSE API)[/bold red]")
             continue
-        if text.lower() in ("/eod", "/historical", "/h"):
+        if text.lower() in ("/eod", "/historical"):
             _mode = "historical"
             console.print("[bold blue]  ● Mode → EOD  (historical CSV + DB snapshot)[/bold blue]")
             continue
@@ -7801,6 +7911,10 @@ def _chat_loop(agent, show_trace: bool) -> None:
             if _shared_reg.dispatch(text, agent, show_trace, mode="interactive"):
                 _separator()
                 continue
+
+        if _handle_natural_skill_query(text):
+            _separator()
+            continue
 
         if text.lower().startswith("/mtf"):
             _print_user(text)
@@ -8581,6 +8695,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     "[dim]          stage2            → Stage 2 universe tracker (top 30 + new entrants)[/dim]\n"
                     "[dim]          strategy-lab      → Portfolio paper strategy leaderboard + diagnostics[/dim]\n"
                     "[dim]          swing-playbook    → Swing setups with entry, stop, target, and portfolio actions[/dim]\n"
+                    "[dim]          diagnosis         → Fundamental metric driver diagnosis for a symbol[/dim]\n"
                     "[dim]          recommendation    → Grounded EOD recommendations across market, sectors, stocks[/dim]\n"
                     "[dim]  ─── Format ──────────────────────────────────────────────────────[/dim]\n"
                     "[dim]  Format: html (default) | pdf | md[/dim]\n"
@@ -8591,6 +8706,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     "[dim]    /report stage2 md                 → Markdown[/dim]\n"
                     "[dim]    /report strategy-lab              → HTML portfolio strategy diagnostics[/dim]\n"
                     "[dim]    /report swing-playbook            → HTML swing trading playbook[/dim]\n"
+                    "[dim]    /report diagnosis DMART eps       → HTML EPS driver diagnosis[/dim]\n"
                     "[dim]    /report recommendation             → HTML grounded recommendations[/dim]\n"
                     "[dim]    /report recommendation --watchlist RELIANCE,TCS --format md[/dim]\n"
                     "[dim]    /report technical RELIANCE        → LLM analysis → HTML[/dim]\n"
@@ -8607,13 +8723,19 @@ def _chat_loop(agent, show_trace: bool) -> None:
             rpt_type = "research"
             rpt_sym  = ""
             rpt_fmt  = "html"
+            rpt_preset_args: list[str] = []
 
             if parts[1].lower() in _report_types:
                 rpt_type = parts[1].lower()
                 remaining = parts[2:]
                 # For preset types, remaining is just [format]; for others [symbol] [format]
                 if rpt_type in _preset_types:
-                    if remaining and remaining[0].lower() in ("html", "pdf", "md"):
+                    if rpt_type == "diagnosis":
+                        rpt_preset_args = [item for item in remaining if item.lower() not in ("html", "pdf", "md")]
+                        for item in remaining:
+                            if item.lower() in ("html", "pdf", "md"):
+                                rpt_fmt = item.lower()
+                    elif remaining and remaining[0].lower() in ("html", "pdf", "md"):
                         rpt_fmt = remaining[0].lower()
                 else:
                     if remaining:
@@ -8643,7 +8765,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                         continue
 
                     from terminal.reports import generate_preset_report as _gen_preset
-                    _r = _gen_preset(rpt_type, rpt_fmt)
+                    _r = _gen_preset(rpt_type, rpt_fmt, args=rpt_preset_args)
                     if _r.get("success"):
                         console.print(
                             f"  [bold green]✅  Report saved![/bold green]  "
@@ -9693,6 +9815,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 cycle = get_economic_cycle_assessment()
                 if cycle.get("error"):
                     console.print(f"[red]  ❌  {cycle['error']}[/red]")
+                    continue
                 else:
                     phase   = cycle["cycle_phase"]
                     conf    = cycle["confidence"]
@@ -9744,7 +9867,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     )
             except Exception as _e:
                 console.print(f"[bold red]  ❌  Cycle assessment error: {_e}[/bold red]")
-                text = f"Cycle assessment error: {_e}"
+                continue
 
         # ── /scenario <symbol> [prices...] — scenario engine (direct) ─
         elif text.lower().startswith("/scenario"):
@@ -9752,6 +9875,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
             sym   = parts[1].upper() if len(parts) > 1 else ""
             if not sym:
                 console.print("[bold red]  Usage: /scenario SYMBOL [price1 price2 ...][/bold red]")
+                continue
             else:
                 prices_raw = []
                 for p in parts[2:]:
@@ -9769,6 +9893,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     scen = run_scenario_analysis(**args)
                     if scen.get("error"):
                         console.print(f"[red]  ❌  {scen['error']}[/red]")
+                        continue
                     else:
                         kl = scen["key_levels"]
                         console.print()
@@ -9804,12 +9929,12 @@ def _chat_loop(agent, show_trace: bool) -> None:
                         )
                 except Exception as _e:
                     console.print(f"[bold red]  ❌  Scenario error: {_e}[/bold red]")
-                    text = f"Scenario analysis error for {sym}: {_e}"
+                    continue
 
         # ── /narrative [symbol ...] — portfolio narratives (direct) ───
         elif text.lower().startswith("/narrative"):
             parts = text.split()
-            syms  = [p.upper() for p in parts[1:] if p.isalpha() and len(p) >= 2]
+            syms  = [p.upper() for p in parts[1:] if re.match(r'^[A-Z0-9&]{2,}$', p.upper())]
             lbl   = ", ".join(syms) if syms else "portfolio holdings"
             console.print(f"[dim]  → Portfolio Narratives: {lbl}[/dim]")
             try:
@@ -9819,6 +9944,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 narr = generate_portfolio_narratives(**args)
                 if narr.get("error"):
                     console.print(f"[red]  ❌  {narr['error']}[/red]")
+                    continue
                 else:
                     for n in narr.get("narratives", []):
                         sym_n = n["symbol"]
@@ -10334,7 +10460,7 @@ def main() -> None:
 
     print_banner()
 
-    sys.stdout.write("\x1b[36m  Loading Agent Adda…\x1b[0m\r")
+    sys.stdout.write("\x1b[36m  Loading Agent Adda…\x1b[0m\r" if sys.stdout.isatty() else "")
     sys.stdout.flush()
 
     try:

@@ -60,6 +60,163 @@ def _first_nonempty_row(table: dict, labels: tuple) -> tuple | None:
     return None
 
 
+def _num(value) -> float | None:
+    text = str(value or "").strip()
+    if not text or text in {"—", "-", "N/A", "NA", "None"}:
+        return None
+    text = text.replace(",", "").replace("%", "").replace("₹", "").strip()
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
+def _pct_change(current, previous) -> float | None:
+    curr = _num(current)
+    prev = _num(previous)
+    if curr is None or prev in (None, 0):
+        return None
+    return round((curr - prev) / abs(prev) * 100, 1)
+
+
+def _fmt_pct(value: float | None) -> str:
+    if value is None:
+        return "—"
+    sign = "+" if value > 0 else ""
+    return f"{sign}{value:.1f}%"
+
+
+def _growth_metric_line(label: str, values: list, *, qoq: bool = False) -> str | None:
+    clean = [v for v in values if str(v or "").strip()]
+    if qoq:
+        if len(clean) < 2:
+            return None
+        change = _pct_change(clean[-1], clean[-2])
+    else:
+        # Quarterly YoY uses same quarter last year when six rolling quarters
+        # are available: latest index -1 vs latest -5. Annual YoY uses -1 vs -2.
+        lag = 4 if len(clean) >= 5 else 1
+        if len(clean) <= lag:
+            return None
+        change = _pct_change(clean[-1], clean[-1 - lag])
+    if change is None:
+        return None
+    return f"  {label}: {_fmt_pct(change)}"
+
+
+def _sales_eps_growth_lines(q_rows: dict, a_rows: dict) -> list[str]:
+    sales_q = _first_nonempty_row(q_rows, ("Sales", "Revenue", "Operating Revenue"))
+    eps_q = _first_nonempty_row(q_rows, ("EPS in Rs", "EPS"))
+    sales_a = _first_nonempty_row(a_rows, ("Sales", "Revenue"))
+    eps_a = _first_nonempty_row(a_rows, ("EPS in Rs", "EPS"))
+
+    lines: list[str] = []
+    for item in (
+        _growth_metric_line("Quarterly Sales YoY", sales_q[1]) if sales_q else None,
+        _growth_metric_line("Quarterly EPS YoY", eps_q[1]) if eps_q else None,
+        _growth_metric_line("Quarterly Sales QoQ", sales_q[1], qoq=True) if sales_q else None,
+        _growth_metric_line("Quarterly EPS QoQ", eps_q[1], qoq=True) if eps_q else None,
+        _growth_metric_line("Annual Sales YoY", sales_a[1], qoq=True) if sales_a else None,
+        _growth_metric_line("Annual EPS YoY", eps_a[1], qoq=True) if eps_a else None,
+    ):
+        if item:
+            lines.append(item)
+    if not lines:
+        return []
+    return ["\n▶ SALES & EPS GROWTH", *lines]
+
+
+def _market_breadth_verdict(live: dict | None, brd: dict | None) -> list[str]:
+    if not brd or brd.get("error"):
+        return []
+    advances = brd.get("advances")
+    declines = brd.get("declines")
+    if not isinstance(advances, (int, float)) or not isinstance(declines, (int, float)):
+        return []
+    total = advances + declines
+    advancing_pct = round(advances / total * 100) if total else None
+    try:
+        ratio = float(brd.get("ad_ratio"))
+    except Exception:
+        ratio = advances / declines if declines else 0.0
+    sd = brd.get("stage_distribution") or {}
+    total_stocks = brd.get("total_stocks") or sum(int(value or 0) for value in sd.values())
+
+    def _stage_pct(key: str) -> int | None:
+        if not total_stocks:
+            return None
+        value = sd.get(key, sd.get(key.lower()))
+        if value is None:
+            return None
+        return round(float(value or 0) / float(total_stocks) * 100)
+
+    stage2_pct = _stage_pct("STAGE_2")
+    stage4_pct = _stage_pct("STAGE_4")
+    if ratio >= 1.25 and (stage2_pct is None or stage2_pct >= 25):
+        bias = "healthy/positive"
+    elif ratio >= 1.0:
+        bias = "mixed but improving"
+    elif ratio >= 0.8:
+        bias = "weak/negative"
+    else:
+        bias = "broadly weak"
+
+    scope_name = brd.get("index") or brd.get("requested_index") or "Market"
+    scope_label = f"{scope_name} breadth" if scope_name != "Market" else "Market breadth"
+    pieces = [
+        f"{scope_label} is {bias}.",
+        f"Advances are {int(advances)} advances vs {int(declines)} declines",
+        f"so about {advancing_pct}% of stocks are advancing" if advancing_pct is not None else "",
+        f"and the A/D ratio is {ratio:.2f}.",
+    ]
+    stage_bits = []
+    if stage2_pct is not None:
+        stage_bits.append(f"Stage 2 uptrends are {stage2_pct}%")
+    if stage4_pct is not None:
+        stage_bits.append(f"Stage 4 downtrends are {stage4_pct}%")
+    if stage_bits:
+        pieces.append("Stage mix is also not strong: " + ", while ".join(stage_bits) + ".")
+    sectors = []
+    if live and not live.get("error"):
+        sectors = [
+            str(row.get("name") or "").strip()
+            for row in (live.get("top_sectors") or [])
+            if row.get("name")
+        ]
+    if sectors:
+        pieces.append("Relative pockets: " + " and ".join(sectors[:3]) + ".")
+    return ["\n▶ BREADTH VERDICT", "  " + " ".join(piece for piece in pieces if piece)]
+
+
+def _market_rs_distribution_lines(brd: dict | None) -> list[str]:
+    if not brd or brd.get("error"):
+        return []
+    percentiles = brd.get("rs_percentiles") or {}
+    distribution = brd.get("rs_distribution") or {}
+    if not percentiles and not distribution:
+        return []
+
+    lines = ["\n▶ RS DISTRIBUTION"]
+    if percentiles:
+        pieces = []
+        for key in ("p10", "p25", "p50", "p75", "p90"):
+            value = percentiles.get(key)
+            if isinstance(value, (int, float)):
+                pieces.append(f"{key} {value:.1f}%")
+        if pieces:
+            lines.append("  Percentiles: " + " | ".join(pieces))
+    for key in ("negative", "neutral_0_25", "positive_25_50", "strong_50_plus"):
+        row = distribution.get(key) if isinstance(distribution, dict) else None
+        if not isinstance(row, dict):
+            continue
+        label = row.get("label") or key
+        count = row.get("count")
+        pct = row.get("pct")
+        pct_txt = f" ({pct:.1f}%)" if isinstance(pct, (int, float)) else ""
+        lines.append(f"  {label}: {count}{pct_txt}")
+    return lines
+
+
 # ─── Main fallback renderer ────────────────────────────────────────────────────
 
 def render(
@@ -85,7 +242,10 @@ def render(
     glob = _get(tool_results, "get_global_market_assessment")
     movers = _get(tool_results, "get_top_gainers_losers")
     comparison = _get(tool_results, "compare_stocks")
+    insider_alerts = _get(tool_results, "get_insider_alerts")
+    portfolio_exposure = _get(tool_results, "get_portfolio_exposure")
     portfolio_narratives = _get(tool_results, "generate_portfolio_narratives")
+    portfolio_forensic = _get(tool_results, "screen_portfolio_forensic_watchlist") or _get(tool_results, "screen_forensic_watchlist")
     event_calendar = _get(tool_results, "get_event_calendar_summary")
     market_recap = _get(tool_results, "get_intraday_market_recap")
     fno_overview = _get(tool_results, "get_fno_overview")
@@ -110,6 +270,7 @@ def render(
     nse_ann = _get(tool_results, "search_nse_announcements")
     bse_filings = _get(tool_results, "search_bse_filings")
     concalls = _get(tool_results, "search_concall_transcripts")
+    cached_financials = _get(tool_results, "get_cached_financials")
     latest_results = _get(tool_results, "get_latest_results")
 
     sym = (snap or {}).get("symbol") or (tech or {}).get("symbol") or ""
@@ -531,6 +692,41 @@ def render(
                 bits.append(f"ROE {row.get('roe')}")
             lines.append("  - " + " | ".join(bits))
 
+    if insider_alerts and not insider_alerts.get("error"):
+        alerts = insider_alerts.get("alerts") or []
+        lines.append(f"━━━ INSIDER & BULK DEAL ALERTS ━━━")
+        lines.append(f"Total alerts: {insider_alerts.get('total', len(alerts))}")
+        for a in alerts[:15]:
+            val = a.get("value_cr", "")
+            val_str = f"₹{val}Cr" if val else ""
+            lines.append(
+                f"  [{a.get('date','')}] {a.get('symbol','')}: {a.get('alert_type','')} "
+                f"| {a.get('entity','')} | {val_str} {a.get('detail','')}"
+            )
+        lines.append("")
+
+    if portfolio_exposure and not portfolio_exposure.get("error"):
+        total = portfolio_exposure.get("total_stocks", 0)
+        lines.append(f"━━━ PORTFOLIO OVERVIEW ━━━")
+        lines.append(f"Holdings: {total} stocks")
+        sector_counts = portfolio_exposure.get("sector_counts") or {}
+        if sector_counts:
+            top_sectors = sorted(sector_counts.items(), key=lambda x: x[1], reverse=True)[:6]
+            lines.append("\n▶ SECTOR BREAKDOWN")
+            for sec, cnt in top_sectors:
+                pct = cnt / total * 100 if total else 0
+                lines.append(f"  - {sec}: {cnt} stocks ({pct:.0f}%)")
+        top_holdings = portfolio_exposure.get("top_holdings") or []
+        if top_holdings:
+            lines.append("\n▶ TOP HOLDINGS (by value)")
+            for h in top_holdings[:10]:
+                sym_h = h.get("symbol", "")
+                val = h.get("value", 0)
+                sec_h = h.get("sector", "")
+                val_str = f"₹{val:,.0f}" if val else "—"
+                lines.append(f"  - {sym_h}: {val_str}  [{sec_h}]")
+        lines.append("")
+
     if portfolio_narratives and not portfolio_narratives.get("error"):
         lines.append("▶ PORTFOLIO REVIEW")
         for row in (portfolio_narratives.get("narratives") or [])[:10]:
@@ -545,6 +741,38 @@ def render(
                 lines.append(f"    thesis: {row.get('thesis')}")
             if row.get("bear_case"):
                 lines.append(f"    risk: {row.get('bear_case')}")
+
+    if portfolio_forensic:
+        lines.append("━━━ PORTFOLIO FORENSIC ACCOUNTING SCREEN ━━━")
+        if portfolio_forensic.get("error"):
+            lines.append(f"\n▶ ERROR\n  {portfolio_forensic.get('error')}")
+        else:
+            screened = portfolio_forensic.get("screened_count") or portfolio_forensic.get("count") or len(portfolio_forensic.get("results") or [])
+            total = portfolio_forensic.get("portfolio_total_stocks")
+            total_txt = f" of {total}" if total else ""
+            lines.append(f"Screened {screened}{total_txt} portfolio holdings for Beneish, Piotroski and Altman red flags.")
+            high = portfolio_forensic.get("high_risk") or []
+            moderate = portfolio_forensic.get("moderate_risk") or []
+            low = portfolio_forensic.get("low_risk") or []
+            lines.append(
+                f"Risk buckets: high {len(high)} | moderate {len(moderate)} | low {len(low)}"
+            )
+            source = portfolio_forensic.get("portfolio_source")
+            if source:
+                lines.append(f"Portfolio source: {source}")
+            rows = portfolio_forensic.get("results") or []
+            if rows:
+                lines.append("\n▶ HOLDING-LEVEL FLAGS")
+                for row in rows[:10]:
+                    if row.get("error"):
+                        lines.append(f"  - {row.get('symbol', '—')}: ERROR {row.get('error')}")
+                        continue
+                    lines.append(
+                        f"  - {row.get('symbol', '—')}: risk {str(row.get('overall_risk', 'unknown')).upper()} | "
+                        f"Beneish {row.get('beneish_score', '—')} | "
+                        f"Piotroski {row.get('piotroski_score', '—')} | "
+                        f"Altman {row.get('altman_score', '—')}"
+                    )
 
     if event_calendar and not event_calendar.get("error"):
         lines.append("▶ EVENT CALENDAR")
@@ -641,7 +869,53 @@ def render(
         if top5:
             lines.append("  Top peers:      " + ", ".join(s["symbol"] for s in top5[:5]))
 
-    # 3b. Screener.in Fundamentals
+    # 3b. Fundamental evidence: PG cache -> Screener -> latest filing evidence
+    if cached_financials and not cached_financials.get("error"):
+        counts = cached_financials.get("section_counts") or {}
+        lines.append("\n▶ FUNDAMENTAL EVIDENCE")
+        lines.append(
+            "  PG financial cache: "
+            + " | ".join(
+                f"{label} {counts.get(label, 0)}"
+                for label in ("quarterly", "annual", "balance_sheet", "cash_flow")
+            )
+        )
+        quarterly_rows = cached_financials.get("quarterly") or []
+        if quarterly_rows:
+            lines.append("  Latest quarterly rows:")
+            for row in quarterly_rows[:2]:
+                if not isinstance(row, dict):
+                    continue
+                period = row.get("period") or row.get("quarter") or row.get("date") or row.get("result_date") or "latest"
+                metrics = []
+                for label, keys in (
+                    ("Revenue", ("revenue", "sales", "net_sales", "income")),
+                    ("PAT", ("pat", "net_profit", "profit_after_tax")),
+                    ("EPS", ("eps", "eps_basic", "basic_eps")),
+                ):
+                    value = next((row.get(key) for key in keys if row.get(key) is not None), None)
+                    if value is not None:
+                        metrics.append(f"{label}: {value}")
+                lines.append(f"    - {period}" + (f" | {' | '.join(metrics)}" if metrics else ""))
+        annual_rows = cached_financials.get("annual") or []
+        if annual_rows:
+            lines.append("  Latest annual rows:")
+            for row in annual_rows[:2]:
+                if not isinstance(row, dict):
+                    continue
+                period = row.get("period") or row.get("year") or row.get("financial_year") or "latest"
+                metrics = []
+                for label, keys in (
+                    ("Sales", ("sales", "revenue", "net_sales")),
+                    ("PAT", ("pat", "net_profit", "profit_after_tax")),
+                    ("ROCE", ("roce", "roce_pct")),
+                ):
+                    value = next((row.get(key) for key in keys if row.get(key) is not None), None)
+                    if value is not None:
+                        metrics.append(f"{label}: {value}")
+                lines.append(f"    - {period}" + (f" | {' | '.join(metrics)}" if metrics else ""))
+
+    # 3c. Screener.in Fundamentals
     if scr_fund and not scr_fund.get("error"):
         ratios = scr_fund.get("ratios") or {}
         if ratios:
@@ -721,6 +995,8 @@ def render(
                 )
                 lines.append(f"  | {metric[:18]:<18} | {cells} |")
 
+        lines.extend(_sales_eps_growth_lines(q_rows, a_rows))
+
         pros = scr_fund.get("pros") or []
         cons = scr_fund.get("cons") or []
         if pros or cons:
@@ -774,7 +1050,37 @@ def render(
         if src:
             lines.append(f"\n  Source: {src}")
 
-    # 3c. Latest NSE / BSE corporate announcements
+    if latest_results and not latest_results.get("error"):
+        lines.append("\n▶ LATEST RESULTS EVIDENCE")
+        lines.append(f"  Status: {latest_results.get('status', 'unknown')}")
+        if latest_results.get("period"):
+            lines.append(f"  Period: {latest_results.get('period')}")
+        selected = latest_results.get("selected_filing") or {}
+        if selected:
+            lines.append(f"  Selected filing: {selected.get('title') or selected.get('url') or 'N/A'}")
+            if selected.get("source"):
+                lines.append(f"  Filing source: {selected.get('source')}")
+        facts = latest_results.get("facts") or {}
+        if facts:
+            for label, key in (("Revenue", "revenue"), ("PAT", "pat"), ("EPS", "eps")):
+                item = facts.get(key)
+                if isinstance(item, dict):
+                    lines.append(
+                        f"  {label}: {item.get('value')} "
+                        f"({item.get('period', 'latest')} · {item.get('source', 'source unavailable')})"
+                    )
+        missing = latest_results.get("missing_facts") or []
+        if missing:
+            lines.append("  Missing facts: " + ", ".join(str(item) for item in missing))
+        summary = latest_results.get("summary")
+        if summary:
+            for line in str(summary).splitlines()[:4]:
+                lines.append(f"  {line}")
+        source_trail = latest_results.get("source_trail") or {}
+        if source_trail:
+            lines.append("  Filing source trail: " + " | ".join(f"{k}: {v}" for k, v in source_trail.items()))
+
+    # 3d. Latest NSE / BSE corporate announcements
     if nse_ann and not nse_ann.get("error"):
         items = nse_ann.get("announcements") or nse_ann.get("results") or []
         if items:
@@ -866,7 +1172,12 @@ def render(
         )
 
     if brd and not brd.get("error"):
-        if live and not live.get("error"):
+        if intent in {"market_overview", "market_situation_assessment", "market_situation"}:
+            lines.extend(_market_breadth_verdict(live, brd))
+        brd_index = brd.get("index") or brd.get("requested_index")
+        if brd_index:
+            lines.append(f"\n▶ {str(brd_index).upper()} BREADTH")
+        elif live and not live.get("error"):
             lines.append("\n▶ DB UNIVERSE CONTEXT")
         else:
             lines.append("\n▶ MARKET BREADTH")
@@ -874,7 +1185,21 @@ def render(
             f"  Advances: {brd.get('advances')}  Declines: {brd.get('declines')}  "
             f"A/D ratio: {brd.get('ad_ratio')}"
         )
-        lines.append(f"  Universe avg RS: {brd.get('avg_rs_pct', 0):+.1f}%")
+        rs_label = "Index avg RS" if brd_index else "Universe avg RS"
+        lines.append(f"  {rs_label}: {brd.get('avg_rs_pct', 0):+.1f}%")
+        if brd_index and brd.get("composition_count"):
+            lines.append(
+                f"  Coverage: {brd.get('matched_count', brd.get('total_stocks'))}/"
+                f"{brd.get('composition_count')} constituents"
+                + (
+                    f" ({brd.get('coverage_pct'):.1f}%)"
+                    if isinstance(brd.get("coverage_pct"), (int, float))
+                    else ""
+                )
+            )
+        for warning in brd.get("warnings") or []:
+            lines.append(f"  Warning: {warning}")
+        lines.extend(_market_rs_distribution_lines(brd))
         sd = brd.get("stage_distribution", {})
         if sd:
             stage_parts = [
@@ -890,6 +1215,11 @@ def render(
                 "  Stage dist: "
                 + " | ".join(f"{label}: {int(value or 0)}" for label, value in stage_parts)
             )
+    elif brd and brd.get("error"):
+        brd_index = brd.get("index") or brd.get("requested_index")
+        label = f"{str(brd_index).upper()} BREADTH" if brd_index else "MARKET BREADTH"
+        lines.append(f"\n▶ {label}")
+        lines.append(f"  ERROR: {brd.get('error')}")
 
     if movers and not movers.get("error"):
         lines.append("\n▶ TOP STOCK MOVERS")
@@ -1479,6 +1809,8 @@ def render(
         lines.append("  Missing evidence: " + ", ".join(dict.fromkeys(missing_tools)))
         for tr in tool_results:
             if tr.get("tool") != "resolve_symbol" or not isinstance(tr.get("result"), dict):
+                continue
+            if tr["result"].get("symbol") and not tr["result"].get("error"):
                 continue
             candidates = tr["result"].get("candidates") or []
             if candidates:

@@ -165,11 +165,6 @@ _MARKET_PHRASES = (
     "institutional activity",
     "macro proxies",
     "macro signals",
-    "global risk",
-    "global market",
-    "global cues",
-    "global impact",
-    "global impact on india",
     # ── Screeners / scans ─────────────────────────────────────────────────────
     "screener",
     "scan nifty",
@@ -211,6 +206,41 @@ _MARKET_PHRASES = (
 _MARKET_BARE_WORDS = frozenset({
     "market", "sectors", "breadth", "fii", "dii",
 })
+_QUALITY_BREAKOUT_SETUP_PHRASES = (
+    "new high",
+    "new highs",
+    "52 week high",
+    "52-week high",
+    "52w high",
+    "vcp",
+    "volatility contraction",
+    "tight range",
+    "breakout",
+    "breakouts",
+)
+_QUALITY_BREAKOUT_QUALITY_PHRASES = (
+    "good fundamental",
+    "good fundamentals",
+    "strong fundamental",
+    "strong fundamentals",
+    "fundamental quality",
+    "fundamentals",
+    "quality",
+    "investment score",
+    "fund score",
+    "fundamental score",
+)
+_QUALITY_BREAKOUT_BROAD_PHRASES = (
+    "stocks",
+    "candidates",
+    "list",
+    "screen",
+    "screener",
+    "scan",
+    "which",
+    "find",
+    "get me",
+)
 _TOP_MOVERS_PHRASES = (
     "top gainers",
     "top losers",
@@ -290,6 +320,15 @@ def _topic_tool_plan(intent_tag: str, symbol: str) -> tuple[ToolCallSpec, ...]:
 
 def _norm(text: str) -> str:
     return (text or "").strip().lower()
+
+
+def _quality_breakout_phrase(text: str) -> str | None:
+    setup = next((p for p in _QUALITY_BREAKOUT_SETUP_PHRASES if p in text), "")
+    quality = next((p for p in _QUALITY_BREAKOUT_QUALITY_PHRASES if p in text), "")
+    broad = next((p for p in _QUALITY_BREAKOUT_BROAD_PHRASES if p in text), "")
+    if setup and quality and broad:
+        return f"{setup} + {quality}"
+    return None
 
 
 def _kw_matches(kw: str, text: str, words: frozenset[str]) -> bool:
@@ -806,8 +845,46 @@ class MarketSituationProvider:
         # "Fundamental analysis of RIC from screener.in ..." are hijacked by
         # this provider before the stock planner can bind the requested symbol.
         phrase_text = re.sub(r"\bscreener\s*\.\s*in\b", "fundamental_source", text)
+        quality_breakout_phrase = _quality_breakout_phrase(phrase_text)
+        if quality_breakout_phrase:
+            tool_plan = (
+                ToolCallSpec(
+                    tool="run_quality_breakout_screener",
+                    args={"top_n": 15, "mode": "balanced"},
+                ),
+            )
+            return [
+                RouteCandidate(
+                    provider=self.name,
+                    intent="quality_breakouts",
+                    route_type="direct_tool_plan",
+                    confidence="high",
+                    score=0.88,
+                    reasons=(
+                        f"Composite quality breakout phrase '{quality_breakout_phrase}' matched",
+                    ),
+                    tool_plan=tool_plan,
+                    evidence_requirements=(
+                        EvidenceRequirement(
+                            name="quality_breakouts",
+                            required_tools=("run_quality_breakout_screener",),
+                        ),
+                    ),
+                    source_policy=SourcePolicy(allow_stale=False),
+                )
+            ]
         # Standard phrase match
         matched = next((p for p in _MARKET_PHRASES if p in phrase_text), None)
+        if matched == "deep analysis" and not any(
+            hint in phrase_text
+            for hint in (
+                "market", "nifty", "index", "indices", "sector", "breadth",
+                "advance", "decline", "top picks", "stocks", "stage distribution",
+            )
+        ):
+            matched = None
+        if matched == "stage 2 stocks" and len(phrase_text.split()) <= 4:
+            matched = None
         # Bare-word match for unambiguous single/two-token market queries
         # (e.g. "market", "sectors", "breadth", "fii")
         if not matched:

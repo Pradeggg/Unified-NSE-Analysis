@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 # Load .env from project root (two levels up from terminal/)
 load_dotenv(Path(__file__).parent.parent / ".env")
 
-from .tools import call_tool, get_symbol_snapshot, openai_tool_schemas, resolve_symbol
+from .tools import TOOL_REGISTRY, call_tool, get_symbol_snapshot, openai_tool_schemas, resolve_symbol
 from .market_calendar import market_context_for_agent, market_session_status
 from .data_readiness import append_readiness_metadata
 from .entity_resolution import TECHNICAL_NON_SYMBOL_TERMS, validate_requested_symbols
@@ -56,6 +56,13 @@ from .conversation_memory import (
     load_memory_fail_open,
 )
 from .router import RouteDecision, UnifiedRouter
+from .skills.config import skill_store_enabled
+from .skills.embedding_provider import get_embedding_provider
+from .skills.execution_plan import build_skill_execution_plan
+from .skills.executor import execute_skill_plan
+from .skills.runtime_assessment import stage_skill_store_assessment
+from .skills.store_repo import SkillStoreRepository, default_skill_store_dsn
+from .semantic_intent import classify_semantic_intent
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -74,6 +81,129 @@ _UNIFIED_ROUTER_ENV = "NSE_UNIFIED_ROUTER"
 
 def _unified_router_enabled() -> bool:
     return os.environ.get(_UNIFIED_ROUTER_ENV, "1").lower() not in {"0", "false", "no"}
+
+
+def _skill_store_runtime_enabled() -> bool:
+    return skill_store_enabled()
+
+
+def _stage_skill_store_assessment(user_input: str, **kwargs):
+    if not _skill_store_runtime_enabled():
+        return None
+    try:
+        return stage_skill_store_assessment(user_input, **kwargs)
+    except Exception:
+        logger.debug("skill store runtime assessment failed", exc_info=True)
+        return None
+
+
+def _record_learning_interaction_result(agent: Any, user_input: str, result: dict) -> int | None:
+    try:
+        from .learning.interaction_log import build_agent_turn_event, capture_interaction_event
+
+        return capture_interaction_event(
+            build_agent_turn_event(user_input, result),
+            repository=getattr(agent, "_learning_repository", None),
+        )
+    except Exception:
+        logger.debug("learning interaction capture failed", exc_info=True)
+        return None
+
+
+def _skill_store_review_decision(assessment: Any) -> dict[str, Any]:
+    payload = assessment.to_dict() if hasattr(assessment, "to_dict") else dict(assessment or {})
+    trace = dict(payload.get("trace") or {})
+    review = dict(trace.get("reviewer_decision") or {})
+    if not review:
+        review = {
+            "decision": payload.get("decision"),
+            "selected_skill_id": payload.get("selected_skill_id"),
+            "selected_version": payload.get("selected_version"),
+            "candidate_ids": [payload.get("selected_skill_id")] if payload.get("selected_skill_id") else [],
+            "confidence": payload.get("confidence", 0.0),
+            "reason": payload.get("decision") or "skill_store",
+        }
+    return review
+
+
+def _skill_store_output_contract(assessment: Any) -> list[str]:
+    payload = assessment.to_dict() if hasattr(assessment, "to_dict") else dict(assessment or {})
+    selected = str(payload.get("selected_skill_id") or "")
+    trace = dict(payload.get("trace") or {})
+    review = dict(trace.get("reviewer_decision") or {})
+    candidate_ids = [str(item) for item in (review.get("candidate_ids") or []) if str(item)]
+    candidates = list(trace.get("retrieved_candidates") or [])
+    if str(payload.get("decision") or "") == "merge":
+        merged: list[str] = []
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
+                continue
+            skill_id = str(candidate.get("skill_id") or "")
+            if candidate_ids and skill_id not in candidate_ids:
+                continue
+            metadata = dict(candidate.get("metadata") or {})
+            contract = metadata.get("output_contract") or candidate.get("output_contract") or []
+            for item in contract:
+                text = str(item).strip()
+                if text and text not in merged:
+                    merged.append(text)
+        return merged
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        if selected and str(candidate.get("skill_id") or "") != selected:
+            continue
+        metadata = dict(candidate.get("metadata") or {})
+        contract = metadata.get("output_contract") or candidate.get("output_contract") or []
+        return [str(item) for item in contract if str(item).strip()]
+    return []
+
+
+def _skill_store_deterministic_signal(intent_plan: dict[str, Any]) -> tuple[str, float]:
+    intent = str((intent_plan or {}).get("intent") or "")
+    plan = list((intent_plan or {}).get("plan") or [])
+    if not intent or intent in {"llm_driven", "llm_driven_fallback", "unknown"}:
+        return intent, 0.0
+    return intent, 0.95 if plan or intent in {"greeting", "placeholder_symbol_request", "document_link_help"} else 0.90
+
+
+def _render_skill_store_execution_answer(assessment: Any, execution_result: Any) -> str:
+    payload = assessment.to_dict() if hasattr(assessment, "to_dict") else dict(assessment or {})
+    result = execution_result.to_dict() if hasattr(execution_result, "to_dict") else dict(execution_result or {})
+    skill_id = str(payload.get("selected_skill_id") or "skill_store")
+    confidence = payload.get("confidence", 0.0) or 0.0
+    evidence = dict(result.get("evidence") or {})
+    validation = dict(result.get("validation") or {})
+    lines = [
+        f"▶ SKILL STORE",
+        f"  Skill Store selected `{skill_id}` with confidence {float(confidence):.2f}.",
+        f"  Execution: {'passed' if result.get('passed') else 'failed'}",
+    ]
+    if result.get("execution_id") is not None:
+        lines.append(f"  Execution id: {result.get('execution_id')}")
+    if evidence:
+        lines.append("")
+        lines.append("▶ EVIDENCE")
+        for name, item in evidence.items():
+            row_count = item.get("row_count") if isinstance(item, dict) else None
+            rows = item.get("rows") if isinstance(item, dict) else None
+            suffix = f" ({row_count} row{'s' if row_count != 1 else ''})" if row_count is not None else ""
+            lines.append(f"  - {name}{suffix}")
+            if isinstance(rows, list) and rows:
+                lines.append(f"    sample: {rows[0]}")
+    errors = [str(item) for item in (result.get("errors") or validation.get("errors") or []) if str(item)]
+    warnings = [str(item) for item in (result.get("warnings") or validation.get("warnings") or []) if str(item)]
+    if errors:
+        lines.append("")
+        lines.append("▶ VALIDATION ERRORS")
+        lines.extend(f"  - {item}" for item in errors)
+    if warnings:
+        lines.append("")
+        lines.append("▶ WARNINGS")
+        lines.extend(f"  - {item}" for item in warnings)
+    lines.append("")
+    lines.append("━━━ Not investment advice. For research and learning only. ━━━")
+    return "\n".join(lines)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Constants
@@ -133,7 +263,7 @@ You have access to these data tools (call them as needed):
                                         tight_range (VCP-like weekly consolidation), oversold_bounce
                                         (RSI < 40 dip in Stage 2 uptrend)
 • get_index_snapshot(index_name)      → Index 10-day trend
-• get_market_breadth()                → Advance/decline, RS distribution, stage breakdown
+• get_market_breadth(index optional)  → Advance/decline, RS distribution, stage breakdown; pass index for NIFTY 500/100/200 etc.
 • get_global_market_assessment()      → Global risk regime, US/Asia/commodity/FX cues,
                                         India sector read-through, correlations vs Nifty
 • compare_stocks(symbols, aspects)    → Side-by-side comparison of multiple stocks on BOTH
@@ -208,6 +338,11 @@ You have access to these data tools (call them as needed):
 • get_fno_data_status()             → Check local F&O DB availability and dates
 
 [Web research tools — use for deep research, always return REAL URLs]
+• get_cached_financials(symbol)       → PostgreSQL financial statement cache: quarterly P&L,
+                                        annual P&L, balance sheet, cash flow, pg_sources.
+                                        Use FIRST for "cached PostgreSQL financial statements",
+                                        "PG-grounded fundamentals", quarterly sales/PAT/EPS,
+                                        annual ROCE, balance sheet, or cash-flow analysis.
 • scrape_screener_in(symbol)          → screener.in: P/E, P/B, ROE, ROCE, pros/cons,
                                         quarterly results, annual P&L, shareholding trend,
                                         BSE filing PDF links, annual-report PDF links, peer table.
@@ -396,7 +531,7 @@ You have access to these data tools (call them as needed):
 • "sector analysis / how is [sector] / sector health" → ALWAYS call get_sector_context(sector_name), then get_index_snapshot for that sector index
 • "technical setup / indicators / signals" → call resolve_symbol first, then get_technical_setup + get_symbol_snapshot with the canonical NSE symbol
 • "market overview / breadth" → call get_live_market_overview + get_market_breadth
-• "analyze NIFTY <name> / how is NIFTY SMALLCAP 100 / NIFTY MIDCAP 100 trend / index analysis / index trend / how is <index> doing / show me <index> performance / a bare index name like 'NIFTY SMALLCAP 100' / 'NIFTY BANK' / 'NIFTY IT' typed on its own" → call get_index_snapshot(index_name="<exact NSE index name>") using the index name the user mentioned (e.g. "NIFTY SMALLCAP 100", "NIFTY BANK", "NIFTY IT"). The user is asking about a SPECIFIC INDEX — DO NOT substitute get_market_breadth (overall adv/decl), get_top_gainers_losers (movers only), or scan the whole market. If they want movers WITHIN the index, follow up with get_top_gainers_losers(index="<exact NSE index name>") after the snapshot. Pair with get_live_market_overview only if the user explicitly wants the live tick on top of the trend.
+• "analyze NIFTY <name> / how is NIFTY SMALLCAP 100 / NIFTY MIDCAP 100 trend / index analysis / index trend / how is <index> doing / show me <index> performance / a bare index name like 'NIFTY SMALLCAP 100' / 'NIFTY 500' / 'NIFTY BANK' / 'NIFTY IT' typed on its own" → call get_index_snapshot(index_name="<exact NSE index name>") and get_market_breadth(index="<exact NSE index name>") using the index name the user mentioned. If they want movers WITHIN the index, follow up with get_top_gainers_losers(index="<exact NSE index name>"). Never summarize full-universe get_market_breadth() as a specific index.
 • "global market / overnight cues / US market / Asian market / crude / DXY / USDINR / global risk" → call get_global_market_assessment
 • "screener / breakouts / stage 2 / buy signals" → call run_screener_query(screen_type="stage2")
 • "new highs / creating new high / companies creating new high / 52 week high" → run_screener_query(screen_type="new_highs")
@@ -415,6 +550,7 @@ You have access to these data tools (call them as needed):
 • "compare / vs / versus / rank / which is better / peer comparison" → call compare_stocks(symbols=[...], aspects=['both'])
 • "technical only comparison" → compare_stocks with aspects=['technical']
 • "fundamental comparison / ratios comparison" → compare_stocks with aspects=['fundamental']
+• "PG-grounded fundamentals / cached PostgreSQL financial statements / quarterly sales PAT EPS / annual ROCE / balance sheet / cash flow" → call get_cached_financials first; add scrape_screener_in only if valuation ratios/pros/cons/filings are also needed
 • "fundamentals / ratios / P/E / ROE / ROCE / valuation / book value" → call scrape_screener_in
 • "peers / peer comparison / sector peers" → call scrape_screener_in (has peer table)
 • "concall / transcript / conference call / management commentary" → call search_concall_transcripts(symbol) AND scrape_screener_in(symbol) for direct PDF links; supplement with multi_source_web_search if no transcripts found
@@ -608,11 +744,18 @@ class _OpenAIBackend:
         self.client = OpenAI(api_key=key, timeout=120.0)
         self.model  = model or os.getenv("OPENAI_MODEL", OPENAI_MODEL)
 
-    def chat(self, messages: list[dict], tools: list[dict] | None = None) -> dict:
+    def chat(
+        self,
+        messages: list[dict],
+        tools: list[dict] | None = None,
+        max_tokens: int | None = None,
+    ) -> dict:
         kwargs: dict[str, Any] = {"model": self.model, "messages": messages}
         if tools:
             kwargs["tools"] = tools
             kwargs["tool_choice"] = "auto"
+        if max_tokens is not None:
+            kwargs["max_tokens"] = max_tokens
         resp = self.client.chat.completions.create(**kwargs)
         msg = resp.choices[0].message
         u = resp.usage or None
@@ -668,10 +811,17 @@ class _OllamaBackend:
         # Check connection
         self.requests.get(f"{self.host}/api/tags", timeout=3)
 
-    def chat(self, messages: list[dict], tools: list[dict] | None = None) -> dict:
+    def chat(
+        self,
+        messages: list[dict],
+        tools: list[dict] | None = None,
+        max_tokens: int | None = None,
+    ) -> dict:
         body: dict[str, Any] = {"model": self.model, "messages": messages, "stream": False}
         if tools:
             body["tools"] = tools
+        if max_tokens is not None:
+            body.setdefault("options", {})["num_predict"] = max_tokens
         resp = self.requests.post(f"{self.host}/api/chat", json=body, timeout=60)
         resp.raise_for_status()
         data = resp.json()
@@ -800,6 +950,49 @@ def _extract_intraday_scan_index(q: str) -> str:
     if "nifty 50" in q or re.search(r"\bnifty\b", q):
         return "NIFTY 50"
     return "NIFTY 500"
+
+
+_INDEX_NAME_PATTERNS: tuple[tuple[str, str], ...] = (
+    ("NIFTY TOTAL MARKET", "NIFTY TOTAL MARKET"),
+    ("NIFTY MIDSMALLCAP 400", "NIFTY MIDSMALLCAP 400"),
+    ("NIFTY LARGEMIDCAP 250", "NIFTY LARGEMIDCAP 250"),
+    ("NIFTY SMALLCAP 250", "NIFTY SMALLCAP 250"),
+    ("NIFTY SMALLCAP 100", "NIFTY SMALLCAP 100"),
+    ("NIFTY SMALLCAP 50", "NIFTY SMALLCAP 50"),
+    ("NIFTY MIDCAP 150", "NIFTY MIDCAP 150"),
+    ("NIFTY MIDCAP 100", "NIFTY MIDCAP 100"),
+    ("NIFTY MIDCAP 50", "NIFTY MIDCAP 50"),
+    ("NIFTY NEXT 50", "NIFTY NEXT 50"),
+    ("NIFTY MICROCAP 250", "NIFTY MICROCAP 250"),
+    ("NIFTY 500", "NIFTY 500"),
+    ("NIFTY500", "NIFTY 500"),
+    ("NIFTY 200", "NIFTY 200"),
+    ("NIFTY200", "NIFTY 200"),
+    ("NIFTY 100", "NIFTY 100"),
+    ("NIFTY100", "NIFTY 100"),
+    ("NIFTY 50", "NIFTY 50"),
+    ("NIFTY50", "NIFTY 50"),
+    ("NIFTY BANK", "NIFTY BANK"),
+    ("BANK NIFTY", "NIFTY BANK"),
+    ("BANKNIFTY", "NIFTY BANK"),
+    ("NIFTY IT", "NIFTY IT"),
+    ("NIFTY AUTO", "NIFTY AUTO"),
+    ("NIFTY FMCG", "NIFTY FMCG"),
+    ("NIFTY PHARMA", "NIFTY PHARMA"),
+    ("NIFTY METAL", "NIFTY METAL"),
+    ("NIFTY REALTY", "NIFTY REALTY"),
+)
+
+
+def _extract_named_index(q: str, default: str = "NIFTY 50") -> str:
+    normalized = re.sub(r"\s+", " ", (q or "").strip().upper())
+    squashed = normalized.replace(" ", "")
+    for needle, index_name in _INDEX_NAME_PATTERNS:
+        if needle in normalized or needle.replace(" ", "") in squashed:
+            return index_name
+    if re.search(r"\bNIFTY\b", normalized):
+        return default
+    return default
 
 
 def _extract_intraday_scan_strategies(q: str) -> list[str] | None:
@@ -992,6 +1185,7 @@ def _leading_company_phrase(raw_query: str) -> str:
         "analyze", "analyse", "analysis",
         "let", "lets", "let's", "want", "wanna", "wish",
         "about", "around", "regarding", "concerning",
+        "for", "of",
         "how", "what", "where", "when", "why",
         "do", "does", "doing", "done",
         "is", "are", "was", "were", "be", "been", "being",
@@ -1001,7 +1195,8 @@ def _leading_company_phrase(raw_query: str) -> str:
         "intraday", "setup", "technical", "technicals", "fundamental", "fundamentals",
         "analysis", "deep", "dive", "research", "forensic", "risk", "levels",
         "support", "resistance", "target", "targets", "today", "now", "live",
-        "scan",
+        "current", "price", "prices", "quote", "quotes",
+        "scan", "f&o", "fno", "fo",
         "superperformance", "minervini", "sepa", "vcp", "canslim",
     }
     words: list[str] = []
@@ -1035,12 +1230,18 @@ def _symbol_phrase_after_preposition(raw_query: str) -> str:
         if re.match(r"\s*\d+\s*(?:m|min|mins?|minutes?|h|hour|hours?)\b", subject, flags=re.IGNORECASE):
             continue
         connective_company = re.match(
-            r"\s*(Mahindra\s+(?:and|&)\s+Mahindra)\b",
+            r"\s*([A-Za-z][A-Za-z0-9&.-]*(?:\s+[A-Za-z][A-Za-z0-9&.-]*){0,2}\s+(?:and|&)\s+[A-Za-z][A-Za-z0-9&.-]*(?:\s+[A-Za-z][A-Za-z0-9&.-]*){0,2})\b",
             subject,
             flags=re.IGNORECASE,
         )
         if connective_company:
-            return connective_company.group(1).strip()
+            phrase = connective_company.group(1).strip()
+            try:
+                resolved = resolve_symbol(phrase)
+                if _is_trusted_symbol_resolution(resolved):
+                    return phrase
+            except Exception:
+                pass
         words: list[str] = []
         for token in re.findall(r"[A-Za-z][A-Za-z0-9&.-]*", subject):
             if token.lower() in stop_words:
@@ -1104,6 +1305,7 @@ _SYMBOL_VALIDATION_SKIP: frozenset[str] = frozenset(
 _GROUNDED_SCAN_INTENTS: frozenset[str] = frozenset({
     "market_overview",
     "market_situation_assessment",
+    "market_swing_candidates",
     "market_dashboard",
     "screener_run",
     "stage2_screener",
@@ -1125,8 +1327,10 @@ _GROUNDED_SCAN_INTENTS: frozenset[str] = frozenset({
 # path at ~line 6854) or on transcription sub-type (youtube) are intentionally
 # absent — those are handled by runtime logic below.
 _INTENT_SOURCE_LABEL_OVERRIDES: dict[str, str] = {
+    "index_status":              "EOD index snapshots + scoped DB index breadth",
     "market_overview":            "NSE live API + DB breadth",
     "market_situation_assessment": "situation planner + NSE live API + DB breadth",
+    "market_swing_candidates":     "EOD index snapshots + DB breadth + quality breakout screener",
     "market_dashboard":           "dashboard planner + NSE live API + DB breadth + FII/DII + global context",
     "intraday_market_recap":      "NSE live API + PG intraday.quote_snapshots + DB breadth",
     "fno_overview":               "NSE options/futures API + F&O EOD fallback",
@@ -1145,7 +1349,9 @@ _INTENT_MODE_LABEL_OVERRIDES: dict[str, str] = {
 
 
 _REQUIRED_TOOLS_BY_INTENT: dict[str, tuple[str, ...]] = {
+    "market_swing_candidates": ("get_index_snapshot", "get_market_breadth", "run_quality_breakout_screener"),
     "screener": ("run_screener_query",),
+    "quality_breakouts": ("run_quality_breakout_screener",),
     "intraday_screener": ("run_intraday_screener",),
     "intraday_index_scan": ("scan_intraday_market",),
     "intraday_symbol_scan": ("scan_symbols_intraday",),
@@ -1155,6 +1361,7 @@ _REQUIRED_TOOLS_BY_INTENT: dict[str, tuple[str, ...]] = {
     "visual_scan": ("run_visual_scan",),
     "stock_comparison": ("compare_stocks",),
     "strength_validation": ("validate_strength_watchlist",),
+    "symbol_quick_analysis": ("resolve_symbol", "get_symbol_quick_analysis"),
     "stock_brief": ("resolve_symbol", "get_symbol_snapshot"),
     "stock_results": (
         "resolve_symbol",
@@ -1188,6 +1395,7 @@ _PLAN_TOOL_TO_SYNTHESIS_INTENT: dict[str, str] = {
     "scan_intraday_market": "intraday_index_scan",
     "run_intraday_screener": "intraday_screener",
     "run_screener_query": "screener",
+    "run_quality_breakout_screener": "quality_breakouts",
     "explain_intraday_setup": "intraday_setup",
     "get_nse_intraday_snapshot": "intraday_setup",
     "get_intraday_levels": "intraday_levels",
@@ -1196,6 +1404,9 @@ _PLAN_TOOL_TO_SYNTHESIS_INTENT: dict[str, str] = {
     "get_latest_results": "stock_results",
     "get_latest_results_feed": "results_feed",
     "get_forthcoming_results": "forthcoming_results",
+    "get_symbol_quick_analysis": "symbol_quick_analysis",
+    "screen_forensic_watchlist": "portfolio_forensic_review",
+    "screen_portfolio_forensic_watchlist": "portfolio_forensic_review",
     "get_symbol_snapshot": "stock_brief",
     # AA-UR-6 Phase 2: MarketSituationProvider market-overview tools
     "get_live_market_overview": "market_situation_assessment",
@@ -1476,6 +1687,7 @@ def _accumulate_usage(acc: dict, new: dict) -> dict:
 # All other tools are assumed pure-read and are safe to dispatch concurrently.
 _SERIAL_TOOLS: frozenset[str] = frozenset({
     "run_screener_query",           # writes screener result cache
+    "run_quality_breakout_screener", # writes screener result cache through source screens
     "scan_symbols_intraday",        # writes intraday scan cache
     "refresh_market_data",          # mutates local data files
     "cache_symbol_snapshot",        # explicit cache writer
@@ -1523,6 +1735,7 @@ def _required_tools_for_query(intent: str, query: str) -> tuple[str, ...]:
         return tuple(dict.fromkeys(required))
 
     q = (query or "").lower()
+    wants_fundamental_chain = _stock_fundamental_chain_requested(q)
     if any(term in q for term in ("news", "catalyst", "catalysts", "recent announcement")):
         required.append("search_latest_catalysts")
     if any(term in q for term in ("broker", "analyst target", "target price", "rating", "brokerage")):
@@ -1541,6 +1754,8 @@ def _required_tools_for_query(intent: str, query: str) -> tuple[str, ...]:
         "fundamental analysis", "quarterly numbers", "quarterly financials",
     )):
         required.append("get_latest_results")
+    if wants_fundamental_chain:
+        required.extend(["get_cached_financials", "scrape_screener_in", "get_latest_results"])
     return tuple(dict.fromkeys(required))
 
 
@@ -1561,6 +1776,7 @@ def _validate_required_tools(query: str, intent: str, tool_results: list[dict]) 
             "search_latest_catalysts",
             "run_forensic_analysis",
             "scrape_screener_in",
+            "get_cached_financials",
             "get_latest_results",
         }
         required = tuple(t for t in required if t not in document_safe_skip)
@@ -1573,6 +1789,8 @@ def _validate_required_tools(query: str, intent: str, tool_results: list[dict]) 
     suggestions: list[str] = []
     for tr in tool_results or []:
         if tr.get("tool") != "resolve_symbol" or not isinstance(tr.get("result"), dict):
+            continue
+        if tr["result"].get("symbol") and not tr["result"].get("error"):
             continue
         candidates = tr["result"].get("candidates") or []
         if candidates:
@@ -1845,6 +2063,13 @@ def _build_market_situation_assessment_plan(query: str, data_mode: str = "histor
         if any(tok in q for tok in _sector_tokens):
             return None
 
+    # A named index with breadth/analysis terms is an index-scoped ask, not a
+    # broad market-situation ask. Let the deterministic index route attach
+    # get_market_breadth(index=...) so NIFTY 500/200/100 do not use global
+    # 963-stock universe breadth.
+    if _extract_named_index(q, default=""):
+        return None
+
     market_terms = ("market", "nifty", "indices", "index", "breadth", "advance", "decline")
     status_terms = ("current", "status", "today", "now", "live", "how is")
     mover_terms = ("top gainer", "top gainers", "gainers", "losers", "movers", "top stocks", "top indices")
@@ -2071,9 +2296,13 @@ def _extract_fno_symbol(query: str) -> str:
     if "nifty" in q:
         return "NIFTY"
 
-    for phrase in (_symbol_phrase_after_preposition(text), _leading_company_phrase(text)):
-        if not phrase:
-            continue
+    phrases = [
+        phrase
+        for phrase in (_symbol_phrase_after_preposition(text), _leading_company_phrase(text))
+        if phrase
+    ]
+    phrases = sorted(dict.fromkeys(phrases), key=lambda item: len(item.split()), reverse=True)
+    for phrase in phrases:
         try:
             resolved = resolve_symbol(phrase)
             symbol = str(resolved.get("symbol") or "").strip().upper() if isinstance(resolved, dict) else ""
@@ -2137,6 +2366,8 @@ def _split_compound_query(text: str) -> list[str]:
         return [raw]
     if "deep_search" in raw:
         return [raw]
+    if re.search(r"\.\s+keep\s+the\s+answer\b", raw, flags=re.IGNORECASE):
+        return [raw]
     # Skip internal/programmatic prompts: multi-line text (the morning
     # briefing prompt, RIC recipes, etc.) and very long inputs are not
     # natural conversational compound questions — they're templates.
@@ -2194,6 +2425,58 @@ def _extract_youtube_transcribe_args(text: str) -> tuple[str, str]:
     return selection, backend
 
 
+def _stock_fundamental_chain_requested(q: str) -> bool:
+    q = (q or "").lower()
+    return any(term in q for term in (
+        "deep analysis", "deep dive", "detailed analysis", "full analysis",
+        "fundamental", "fundamentals", "valuation", "ratios", "p/e", "pe ratio",
+        "p/b", "pb ratio", "roe", "roce", "debt/equity", "debt to equity",
+        "quarterly numbers", "quarterly financials", "financial statements",
+        "balance sheet", "cash flow", "p&l", "profit and loss",
+        "earnings", "latest results", "quarterly results", "annual results",
+    ))
+
+
+def _ensure_fundamental_source_chain(plan: list[tuple[str, dict]], sym: str) -> None:
+    """Ensure PG cache, Screener, then latest-results evidence run in that order."""
+    source_tools = {"get_cached_financials", "scrape_screener_in", "get_latest_results"}
+    first_source_idx = next(
+        (idx for idx, (name, _args) in enumerate(plan) if name in source_tools),
+        len(plan),
+    )
+    plan[:] = [(name, args) for name, args in plan if name not in source_tools]
+    chain = [
+        ("get_cached_financials", {"symbol": sym}),
+        ("scrape_screener_in", {"symbol": sym}),
+        ("get_latest_results", {"symbol": sym}),
+    ]
+    for offset, item in enumerate(chain):
+        plan.insert(first_source_idx + offset, item)
+
+
+def _first_valid_tool_symbol(tool_results: list[dict]) -> str:
+    """Return the first trusted symbol produced by executed evidence tools."""
+    for tr in tool_results or []:
+        result = tr.get("result") if isinstance(tr.get("result"), dict) else {}
+        if tr.get("tool") == "resolve_symbol" and result.get("symbol") and not result.get("error"):
+            return str(result["symbol"]).upper()
+    symbols = sorted(_tool_symbols(tool_results or []))
+    return symbols[0] if symbols else ""
+
+
+def _missing_fundamental_chain_plan(tool_results: list[dict], query: str) -> list[tuple[str, dict]]:
+    """Plan missing PG/Screener/latest-results tools for stock fundamentals."""
+    if not _stock_fundamental_chain_requested(query):
+        return []
+    sym = _first_valid_tool_symbol(tool_results)
+    if not sym:
+        return []
+    full_plan: list[tuple[str, dict]] = []
+    _ensure_fundamental_source_chain(full_plan, sym)
+    executed = {str(tr.get("tool")) for tr in tool_results or []}
+    return [(name, args) for name, args in full_plan if name not in executed]
+
+
 def _with_dynamic_stock_evidence(plan: list[tuple[str, dict]], q: str, symbol: str) -> list[tuple[str, dict]]:
     """Keep stock_brief plans aligned with dynamic evidence validation."""
     sym = (symbol or "").upper()
@@ -2214,6 +2497,9 @@ def _with_dynamic_stock_evidence(plan: list[tuple[str, dict]], q: str, symbol: s
         add_once("search_concall_transcripts", {"symbol": sym})
     if any(term in q for term in ("forensic", "red flag", "red flags", "manipulation", "earnings quality")):
         add_once("run_forensic_analysis", {"symbol": sym})
+    if _stock_fundamental_chain_requested(q):
+        _ensure_fundamental_source_chain(plan, sym)
+        existing = {name for name, _ in plan}
     if any(term in q for term in (
         "latest results", "quarterly results", "quarterly result",
         "q1 results", "q2 results", "q3 results", "q4 results",
@@ -2572,6 +2858,22 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         plan = [("get_fno_overview", {"symbol": symbol, "expiry_index": 0})]
         return {"intent": "fno_overview", "plan": plan}
 
+    company_identity_match = re.search(
+        r"^\s*resolve\s+([A-Z][A-Z0-9&-]{1,12})\s+to\s+its\s+company\s+identity\b",
+        routing_text,
+        flags=re.IGNORECASE,
+    )
+    if company_identity_match:
+        sym_q = company_identity_match.group(1).strip().upper()
+        return {
+            "intent": "company_identity",
+            "plan": [
+                ("resolve_symbol", {"query": sym_q}),
+                ("get_symbol_snapshot", {"symbol": sym_q}),
+                ("get_sector_context", {"sector_or_symbol": sym_q}),
+            ],
+        }
+
     sector_analysis_match = re.search(r"\bsector\s+analysis\s+for\s+([a-z][a-z\s&-]{1,40})(?:[:?.]|$)", q)
     if sector_analysis_match:
         sector_name = sector_analysis_match.group(1).strip()
@@ -2686,6 +2988,44 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
                 ],
             }
 
+    wants_swing_candidates = (
+        any(
+            term in q
+            for term in (
+                "swing candidate", "swing candidates",
+                "swing setup", "swing setups",
+                "swing trade", "swing trades",
+                "swing trading", "swing opportunity", "swing opportunities",
+            )
+        )
+        or (
+            "swing" in q
+            and any(term in q for term in (
+                "candidate", "candidates", "stocks", "setups", "ideas",
+                "trade", "trades", "trading", "opportunity", "opportunities",
+            ))
+        )
+    )
+    wants_market_analysis = (
+        "market analysis" in q
+        or "market view" in q
+        or "market assessment" in q
+        or ("market" in q and any(term in q for term in ("last", "month", "months", "3 month", "three month")))
+    )
+    if wants_swing_candidates and (
+        wants_market_analysis
+        or any(term in q for term in ("opportunity", "opportunities", "trade", "trades", "trading"))
+    ):
+        return {
+            "intent": "market_swing_candidates",
+            "plan": [
+                ("get_index_snapshot", {"index_name": "NIFTY 50"}),
+                ("get_index_snapshot", {"index_name": "NIFTY MIDCAP 100"}),
+                ("get_market_breadth", {}),
+                ("run_quality_breakout_screener", {"top_n": 15, "mode": "balanced"}),
+            ],
+        }
+
     recent_market_words = [
         "what happened", "what changed", "last 15", "last 30", "last 5",
         "last few minutes", "last minutes", "recent move", "just now",
@@ -2725,6 +3065,30 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
             ("get_long_term_growth_candidates", {"index_scope": index_scope, "top_n": 12, "include_research": True}),
             ("get_market_breadth", {}),
         ]}
+
+    # Specific index query must be handled before generic market/breadth words;
+    # otherwise "NIFTY 500 analysis" or "NIFTY 200 breadth" gets rendered with
+    # full-universe breadth.
+    idx = _extract_named_index(q, default="")
+    bare_idx = bool(idx) and q.strip().upper().replace(" ", "") == idx.replace(" ", "")
+    index_status_terms = (
+        "analysis", "analyze", "analyse", "breadth", "trend", "performance",
+        "status", "how is", "how does", "look like", "looks like", "doing",
+    )
+    scan_terms = ("scan", "screener", "intraday", "setup", "setups", "breakout", "vcp")
+    if (
+        idx
+        and not _explicit_requested_symbols(routing_text)
+        and not any(term in q for term in scan_terms)
+        and (bare_idx or any(term in q for term in index_status_terms))
+    ):
+        plan = [
+            ("get_index_snapshot", {"index_name": idx}),
+            ("get_market_breadth", {"index": idx}),
+        ]
+        if any(term in q for term in ("analysis", "analyze", "analyse", "movers", "gainers", "losers", "breadth")):
+            plan.append(("get_top_gainers_losers", {"index": idx, "top_n": 10, "direction": "both"}))
+        return {"intent": "index_status", "plan": plan}
 
     if any(w in q for w in breadth_words) or q.strip() in {"overview", "market"}:
         plan = [
@@ -2812,6 +3176,7 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
               "about","give","setup","stock","stocks","sector","nse","india","market","today","brief","full",
               "overview","intraday","levels","level","support","resistance","screener","scan",
               "deep","dive","analysis","technical","trade","trading","of",
+              "and","or","candidate","candidates","swing","trades","opportunity","opportunities",
               "answer","analyze","analyse","this","spoken","question","your","read","view",
               "after","before","results","result","submitted","submit","concise","evidence","aware","risk","first",
               "research","only","include","context","watch","next","hello","hi","hey",
@@ -2845,6 +3210,18 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         )
     ]
 
+    portfolio_subject_terms = ("i own", "my portfolio", "my porfolio", "portfolio", "porfolio", "holdings", "holding")
+    portfolio_forensic_terms = (
+        "forensic", "beneish", "piotroski", "petroski", "altman",
+        "manipulation", "earnings quality", "financial health",
+        "accounting risk", "red flag", "red flags",
+    )
+    if any(term in q for term in portfolio_subject_terms) and any(term in q for term in portfolio_forensic_terms):
+        return {
+            "intent": "portfolio_forensic_review",
+            "plan": [("screen_portfolio_forensic_watchlist", {})],
+        }
+
     is_single_stock_technical_setup = (
         "technical setup for" in q
         or re.search(r"\b(full|detailed|complete)\s+technical\b.*\bfor\b", q)
@@ -2869,7 +3246,7 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
             "plan": [("compare_stocks", {"symbols": symbol_candidates[:5], "aspects": aspects})],
         }
 
-    if any(term in q for term in ("i own", "my portfolio", "portfolio", "holdings", "holding")) and symbol_candidates:
+    if any(term in q for term in portfolio_subject_terms) and symbol_candidates:
         return {
             "intent": "portfolio_review",
             "plan": [("generate_portfolio_narratives", {"symbols": symbol_candidates[:10], "top_n": min(len(symbol_candidates), 10)})],
@@ -2878,7 +3255,7 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
     # Added: standalone "portfolio review / my portfolio / holdings overview"
     # without explicit tickers — call get_portfolio_exposure to summarize the
     # portfolio CSV. Was misrouting to "REVIEW (REVIEW) — Market Brief".
-    if any(term in q for term in ("portfolio review", "review my portfolio", "my portfolio", "portfolio summary", "holdings summary", "portfolio overview")):
+    if any(term in q for term in ("portfolio review", "review my portfolio", "review my porfolio", "my portfolio", "my porfolio", "portfolio summary", "porfolio summary", "holdings summary", "portfolio overview")):
         return {
             "intent": "portfolio_review",
             "plan": [("get_portfolio_exposure", {})],
@@ -2965,6 +3342,20 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
     # If user is primarily asking for news/catalysts, defer to that branch.
     news_priority_terms = ("news", "catalyst", "catalysts", "announcement", "announcements")
     explicit_stock_subject = bool(symbol_candidates or _symbol_phrase_after_preposition(routing_text))
+    bare_symbol_query = (
+        len(words) == 1
+        and len(candidates) == 1
+        and re.fullmatch(r"[A-Za-z][A-Za-z0-9&.-]{1,19}", routing_text.strip())
+        and candidates[0].upper() not in _SYMBOL_VALIDATION_SKIP
+        and candidates[0].upper() not in TECHNICAL_NON_SYMBOL_TERMS
+        and q not in {"nifty", "nifty50", "banknifty", "sensex"}
+    )
+    if bare_symbol_query:
+        sym_q = candidates[0]
+        return {"intent": "symbol_quick_analysis", "plan": [
+            ("resolve_symbol", {"query": sym_q}),
+            ("get_symbol_quick_analysis", {"symbol": sym_q}),
+        ]}
     result_entity_match = re.search(
         r"\bresults?\b\s+(?:of|for)\s+([A-Za-z][A-Za-z0-9&.\-]*(?:\s+[A-Za-z][A-Za-z0-9&.\-]*){0,4})",
         routing_text,
@@ -2984,10 +3375,12 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
             except Exception:
                 resolved_symbol = ""
             if resolved_symbol:
-                return {"intent": "stock_results", "plan": [
+                plan = [
                     ("resolve_symbol", {"query": raw_entity}),
                     ("get_latest_results", {"symbol": resolved_symbol}),
-                ]}
+                ]
+                _ensure_fundamental_source_chain(plan, resolved_symbol)
+                return {"intent": "stock_results", "plan": plan}
 
     # Market-wide latest results feed — no specific symbol in the query.
     # Catches "latest results", "who reported today", "results this week",
@@ -3033,10 +3426,13 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         and not any(term in q for term in news_priority_terms)
     ):
         sym_q = _primary_symbol_query(candidates, symbol_candidates, routing_text)
-        return {"intent": "stock_results", "plan": [
-            ("resolve_symbol",           {"query": sym_q}),
-            ("get_latest_results",       {"symbol": sym_q.upper()}),
-        ]}
+        sym = sym_q.upper()
+        plan = [
+            ("resolve_symbol",     {"query": sym}),
+            ("get_latest_results", {"symbol": sym}),
+        ]
+        _ensure_fundamental_source_chain(plan, sym)
+        return {"intent": "stock_results", "plan": plan}
 
     if candidates and explicit_stock_subject and any(term in q for term in forensic_stock_terms):
         sym_q = _primary_symbol_query(candidates, symbol_candidates, routing_text)
@@ -3186,13 +3582,29 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         ]
         return {"intent": "stock_brief", "plan": _with_dynamic_stock_evidence(plan, q, sym_q)}
 
-    # Index query
-    index_words = ["nifty", "sensex", "bank nifty", "nifty it", "nifty 50"]
-    if any(w in q for w in index_words):
-        idx = "NIFTY BANK" if "bank" in q else ("NIFTY IT" if " it" in q else "NIFTY 50")
-        return {"intent": "index_status", "plan": [("get_index_snapshot", {"index_name": idx})]}
-
     # Screener queries
+    quality_breakout_terms = (
+        ("new high" in q or "new highs" in q or "52 week" in q or "52w" in q)
+        and ("vcp" in q or "tight" in q or "contraction" in q)
+        and ("breakout" in q or "breakouts" in q)
+        and ("fundamental" in q or "quality" in q)
+    ) or any(
+        term in q
+        for term in (
+            "quality breakout candidates",
+            "quality breakouts",
+            "breakouts with good fundamentals",
+            "new highs with good fundamentals",
+            "vcp stocks with good fundamentals",
+            "breakouts with fundamental quality",
+        )
+    )
+    if quality_breakout_terms:
+        return {
+            "intent": "quality_breakouts",
+            "plan": [("run_quality_breakout_screener", {"top_n": 15, "mode": "balanced"})],
+        }
+
     if any(w in q for w in ["strong buy", "top buy", "buy signals", "best stocks"]):
         return {"intent": "screener", "plan": [("run_screener_query", {"screen_type": "strong_buy"})]}
     if (
@@ -3460,6 +3872,10 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
     return _render(intent, tool_results, assessment_plan)
 
 
+def _indent_answer_block(text: str) -> str:
+    return "\n".join(f"  {line}" if line else "" for line in (text or "").splitlines())
+
+
 def _synthesize_and_narrate(
     intent: str,
     query: str,
@@ -3474,7 +3890,18 @@ def _synthesize_and_narrate(
     and a backend is available.
     """
     from terminal.renderers import render as _render, build_narrative, attach_narrative
+    from terminal.renderers.narrator import build_final_answer
     structured = _render(intent, tool_results, assessment_plan)
+    final_answer = build_final_answer(
+        intent,
+        query,
+        tool_results,
+        structured,
+        backend,
+        assessment_plan,
+    )
+    if final_answer:
+        return f"▶ ANSWER\n{_indent_answer_block(final_answer)}\n\n{structured}"
     narrative = build_narrative(intent, query, tool_results, structured, backend)
     return attach_narrative(structured, narrative)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -3504,6 +3931,23 @@ def _is_morning_briefing_query(q: str) -> bool:
 
 def _is_global_query(q: str) -> bool:
     return any(phrase in q for phrase in _GLOBAL_QUERY_PHRASES)
+
+
+def _is_implicit_results_followup(q: str) -> bool:
+    text = (q or "").lower().strip()
+    if not any(
+        term in text
+        for term in (
+            "latest results",
+            "quarterly results",
+            "quarterly result",
+            "results analysis",
+            "earnings analysis",
+            "financial results",
+        )
+    ):
+        return False
+    return re.search(r"\b(?:for|of)\s+[a-z][a-z0-9&.-]{1,20}\b", text) is None
 
 
 def _has_tool_error(tool_results: list[dict], tool_name: str, needle: str = "") -> bool:
@@ -3623,6 +4067,13 @@ class Agent:
         # its options; the bound_action is executed verbatim without
         # re-running symbol/entity resolution. Cleared after one turn.
         self._pending_clarification: SituationAssessment | None = None
+        self._pending_skill_store_assessment = None
+        self._skill_store_repository = (
+            SkillStoreRepository(dsn=default_skill_store_dsn())
+            if _skill_store_runtime_enabled()
+            else None
+        )
+        self._skill_store_embedding_provider = None
 
     def set_permission_mode(self, mode: str | PermissionMode | None) -> PermissionMode:
         """Update the permission policy at runtime; returns the resolved mode."""
@@ -4320,9 +4771,11 @@ class Agent:
 
         parts = _split_compound_query(user_input)
         if len(parts) <= 1:
-            return self._query_single(
+            result = self._query_single(
                 user_input, show_trace=show_trace, entity_assessment=entity_assessment
             )
+            _record_learning_interaction_result(self, user_input, result)
+            return result
 
         # Multi-part compound query: dispatch each part sequentially.
         # Snapshot pre-compound state so each sub-query sees the same
@@ -4357,13 +4810,15 @@ class Agent:
             )
         answer = "\n\n".join(merged_answers)
         answer += _cost_trail_block(compound_usage, compound_tool_results)
-        return {
+        result = {
             "answer": answer,
             "trace": merged_trace,
             "backend": last_backend,
             "intent": "compound",
             "usage": compound_usage,
         }
+        _record_learning_interaction_result(self, user_input, result)
+        return result
 
     # ── AA-AR-2: Pipeline stage helpers ──────────────────────────────────────
     # _query_single is decomposed into named stages so the dispatch logic reads
@@ -4452,6 +4907,14 @@ class Agent:
         """If a structured clarification is pending, match this reply and execute the bound action."""
         pending_clarification = self._pending_clarification
         if pending_clarification is None:
+            pending_skill = self._pending_skill_store_assessment
+            if pending_skill:
+                original = str((pending_skill or {}).get("original_input") or "").strip()
+                self._pending_skill_store_assessment = None
+                if original and ctx.clean_input.strip():
+                    ctx.clean_input = f"{original} {ctx.clean_input.strip()}".strip()
+                    ctx.trace.append({"step": "skill_store_clarification_binding", "original_input": original})
+                    return self._stage_skill_store(ctx)
             return None
 
         from .situation_assessment import (
@@ -4562,6 +5025,12 @@ class Agent:
     def _stage_unified_router(self, ctx: _PipelineCtx) -> dict | None:
         """Run UnifiedRouter and execute the route when the router owns it."""
         if not (_unified_router_enabled() and not _is_morning_briefing_query(ctx.clean_input)):
+            return None
+        # Agent-generated 360 stock-analysis/report prompts intentionally
+        # contain words like "chart", "technical", and "visual" as section
+        # requirements. Let the keyword planner bind the full stock dossier
+        # instead of letting VisualScanProvider preempt the report.
+        if _stock_360_prompt_symbol(ctx.clean_input):
             return None
         pack = self._build_context_pack()
         if pack is None:
@@ -4791,7 +5260,16 @@ class Agent:
 
     def _stage_situation_assessment(self, ctx: _PipelineCtx) -> dict | None:
         """Handle contextual follow-ups via situation assessment."""
-        if not needs_situation_assessment(ctx.clean_input):
+        if _stock_360_prompt_symbol(ctx.clean_input):
+            return None
+        needs_context = needs_situation_assessment(ctx.clean_input)
+        if (
+            not needs_context
+            and self._last_turn_context is not None
+            and _is_implicit_results_followup(ctx.clean_input)
+        ):
+            needs_context = True
+        if not needs_context:
             return None
         previous_context = self._last_turn_context or self._conversation_fallback_context(
             mode=ctx.mode, source_label=ctx.source_label,
@@ -4868,6 +5346,192 @@ class Agent:
             }
         return None
 
+    def _stage_skill_store(self, ctx: _PipelineCtx) -> dict | None:
+        """Run validated Skill Store workflows after deterministic stages decline."""
+        try:
+            if not _skill_store_runtime_enabled():
+                return None
+            deterministic_plan = _keyword_intent(ctx.clean_input, data_mode=ctx.mode)
+            deterministic_intent, deterministic_confidence = _skill_store_deterministic_signal(deterministic_plan)
+            if self._skill_store_embedding_provider is None:
+                try:
+                    self._skill_store_embedding_provider = get_embedding_provider()
+                except Exception as exc:
+                    ctx.trace.append({"step": "skill_store_embedding_provider", "error": str(exc)})
+                    self._skill_store_embedding_provider = None
+
+            assessment = _stage_skill_store_assessment(
+                ctx.clean_input,
+                repo=self._skill_store_repository,
+                embedding_provider=self._skill_store_embedding_provider,
+                deterministic_intent=deterministic_intent,
+                deterministic_confidence=deterministic_confidence,
+                plan_mode=self._permission_policy.is_plan,
+            )
+            if assessment is None:
+                return None
+            ctx.trace.append({"step": "skill_store_assessment", "result": assessment.to_dict()})
+
+            if assessment.decision == "ask_clarification":
+                answer = (
+                    "▶ SKILL STORE NEEDS INPUT\n"
+                    f"  {assessment.clarification_question}"
+                    f"{ctx.mode_suffix}"
+                )
+                self._pending_skill_store_assessment = {
+                    "assessment": assessment,
+                    "original_input": ctx.clean_input,
+                }
+                self._remember_interaction(ctx.clean_input, answer, [])
+                return {
+                    "answer": answer,
+                    "trace": ctx.trace,
+                    "backend": self.backend_name,
+                    "intent": "skill_store_clarification",
+                }
+            if assessment.decision not in {"select", "merge"}:
+                return None
+            if self._permission_policy.is_plan:
+                answer = (
+                    "▶ SKILL STORE PLAN\n"
+                    + "\n".join(f"  {idx}. {item}" for idx, item in enumerate(assessment.plan_preview or (), start=1))
+                    + ctx.mode_suffix
+                )
+                self._remember_interaction(ctx.clean_input, answer, [])
+                return {
+                    "answer": answer,
+                    "trace": ctx.trace,
+                    "backend": self.backend_name,
+                    "intent": "skill_store_plan",
+                }
+
+            execution_plan = build_skill_execution_plan(
+                _skill_store_review_decision(assessment),
+                repository=self._skill_store_repository,
+                params={},
+                available_tools={name.lower() for name in TOOL_REGISTRY.keys()},
+            )
+            execution = execute_skill_plan(
+                execution_plan,
+                repository=self._skill_store_repository,
+                call_tool_fn=call_tool,
+                available_tools={name.lower() for name in TOOL_REGISTRY.keys()},
+                output_contract=_skill_store_output_contract(assessment),
+                retrieval_id=(assessment.trace or {}).get("retrieval_id"),
+            )
+            execution_trace = {
+                "tool": "skill_store.execute",
+                "args": {"skill_ids": list(execution_plan.skill_ids)},
+                "result": execution.to_dict(),
+            }
+            ctx.trace.append(execution_trace)
+            if not execution.passed:
+                ctx.trace.append({
+                    "step": "skill_store_failed_open",
+                    "reason": "execution_failed",
+                    "errors": list(execution.errors),
+                })
+                return None
+            answer_body = _render_skill_store_execution_answer(assessment, execution)
+            try:
+                from terminal.renderers import build_narrative, attach_narrative
+
+                narrative = build_narrative(
+                    "skill_store",
+                    ctx.clean_input,
+                    [execution_trace],
+                    answer_body,
+                    self.backend,
+                )
+                answer_body = attach_narrative(answer_body, narrative)
+            except Exception:
+                logger.debug("skill store final narration failed — structured answer preserved", exc_info=True)
+            answer = answer_body + ctx.mode_suffix
+            turn_context = build_turn_context(
+                user_input=ctx.clean_input,
+                intent="skill_store",
+                mode=ctx.mode,
+                source_label=ctx.source_label,
+                tool_results=[execution_trace],
+                answer=answer,
+            )
+            self._remember_interaction(ctx.clean_input, answer, [execution_trace], turn_context=turn_context)
+            return {
+                "answer": answer,
+                "trace": ctx.trace,
+                "backend": self.backend_name,
+                "intent": "skill_store",
+            }
+        except Exception as exc:
+            ctx.trace.append({"step": "skill_store_assessment", "error": str(exc)})
+            logger.debug("skill store workflow failed open", exc_info=True)
+            return None
+
+    def _stage_semantic_intent(self, ctx: _PipelineCtx) -> dict | None:
+        """Use the LLM as a constrained intent classifier for open-ended asks."""
+        if any(item.get("step") == "skill_store_failed_open" for item in ctx.trace if isinstance(item, dict)):
+            return None
+        decision = classify_semantic_intent(
+            ctx.clean_input,
+            self.backend,
+            data_mode=ctx.mode,
+        )
+        if decision is None:
+            return None
+        intent_plan = {
+            "intent": decision.intent,
+            "plan": [(tool, args) for tool, args in decision.plan],
+        }
+        ctx.trace.append({"step": "semantic_intent", "result": decision.to_trace()})
+
+        if decision.intent in _INTENT_SOURCE_LABEL_OVERRIDES:
+            ctx.source_label = _INTENT_SOURCE_LABEL_OVERRIDES[decision.intent]
+            ctx.mode_suffix = (
+                f"\n\n_Mode: {ctx.mode.title()} | Sources: {ctx.source_label} | "
+                f"Market: {ctx.market_status.compact_label} | "
+                f"Clock: {ctx.market_status.clock_label}_"
+            )
+
+        if self._permission_policy.is_plan:
+            return self._render_plan_preview(
+                intent_plan["plan"],
+                intent=decision.intent,
+                clean_input=ctx.clean_input,
+                mode_suffix=ctx.mode_suffix,
+                trace=ctx.trace,
+            )
+
+        tool_results = _execute_plan(intent_plan["plan"])
+        ctx.trace.extend(tool_results)
+        answer_body = _synthesize_and_narrate(
+            decision.intent,
+            ctx.clean_input,
+            tool_results,
+            self.backend,
+        )
+        answer_body = _apply_response_guardrails(
+            ctx.clean_input,
+            decision.intent,
+            tool_results,
+            answer_body,
+        )
+        answer = self._with_readiness_metadata(answer_body + ctx.mode_suffix, ctx.mode)
+        turn_context = build_turn_context(
+            user_input=ctx.clean_input,
+            intent=decision.intent,
+            mode=ctx.mode,
+            source_label=ctx.source_label,
+            tool_results=tool_results,
+            answer=answer,
+        )
+        self._remember_interaction(ctx.clean_input, answer, tool_results, turn_context=turn_context)
+        return {
+            "answer": answer,
+            "trace": ctx.trace,
+            "backend": self.backend_name,
+            "intent": decision.intent,
+        }
+
     def _stage_keyword_and_llm(self, ctx: _PipelineCtx) -> dict:
         """Keyword intent dispatch, LLM path with hallucination guard, and keyword fallback."""
         intent_plan = _keyword_intent(ctx.clean_input, data_mode=ctx.mode)
@@ -4900,12 +5564,15 @@ class Agent:
             "greeting", "startup_morning_briefing", "global_market_assessment",
             "market_situation_assessment", "placeholder_symbol_request",
             "document_link_help",
-            "strength_validation", "market_knowledge", "entity_topic_command", "stock_brief",
+            "index_status",
+            "strength_validation", "market_knowledge", "entity_topic_command", "company_identity",
+            "symbol_quick_analysis", "stock_brief",
             "stock_results",
             "results_feed", "forthcoming_results",
-            "stock_comparison", "portfolio_review",
+            "stock_comparison", "portfolio_review", "portfolio_forensic_review",
             "event_calendar",
             "fno_overview", "market_dashboard", "screener",
+            "market_swing_candidates",
             "visual_scan",
             "long_term_growth_research",
             "market_overview", "intraday_index_scan", "intraday_screener",
@@ -4950,7 +5617,15 @@ class Agent:
                 answer=answer,
             )
             self._remember_interaction(ctx.clean_input, answer, tool_results, turn_context=turn_context)
-            return {"answer": answer, "trace": ctx.trace, "backend": self.backend_name, "intent": _intent}
+            # Extract compare_stocks result for the Rich comparison table renderer
+            _comp = next(
+                (t["result"] for t in tool_results
+                 if t["tool"] == "compare_stocks" and isinstance(t.get("result"), dict)
+                 and t["result"].get("stock_details")),
+                None,
+            )
+            return {"answer": answer, "trace": ctx.trace, "backend": self.backend_name,
+                    "intent": _intent, "comparison": _comp}
 
         # ── LLM path ──────────────────────────────────────────────────────
         if self.backend is not None:
@@ -5060,7 +5735,9 @@ class Agent:
           2. _stage_unified_router        — UnifiedRouter owns compound/entity/market routes
           3. _stage_entity_topic          — deterministic entity-topic resolution
           4. _stage_situation_assessment  — contextual follow-up assessment
-          5. _stage_keyword_and_llm       — keyword intent dispatch → LLM path → fallback
+          5. _stage_skill_store           — validated skill retrieval/execution for open-ended asks
+          6. _stage_semantic_intent       — LLM intent classification with fixed grounded plans
+          7. _stage_keyword_and_llm       — keyword intent dispatch → LLM path → fallback
         Each stage returns a result dict or None to fall through to the next stage.
         """
         ctx = self._build_pipeline_ctx(user_input, show_trace)
@@ -5069,6 +5746,8 @@ class Agent:
             or self._stage_unified_router(ctx)
             or self._stage_entity_topic(ctx, entity_assessment)
             or self._stage_situation_assessment(ctx)
+            or self._stage_skill_store(ctx)
+            or self._stage_semantic_intent(ctx)
             or self._stage_keyword_and_llm(ctx)
         )
 
@@ -5136,6 +5815,11 @@ class Agent:
             else:
                 # Final text response
                 answer = resp["content"]
+                supplemental_plan = _missing_fundamental_chain_plan(tool_results, user_input)
+                if supplemental_plan:
+                    supplemental_results = _execute_plan(supplemental_plan)
+                    tool_results.extend(supplemental_results)
+                    answer = _synthesize_and_narrate("stock_brief", user_input, tool_results, self.backend)
                 # Only append disclaimer if LLM didn't include it (check last 400 chars)
                 if "research and learning only" not in answer[-400:]:
                     answer += "\n\n━━━ Not investment advice. For research and learning only. ━━━"

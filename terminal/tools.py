@@ -8,6 +8,7 @@ data, execute shell commands, or access the network beyond approved sources.
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import sqlite3
@@ -18,6 +19,8 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+
+from price_adjustments import adjust_price_history_for_splits
 
 # ── F&O data and options analysis ────────────────────────────────────────────
 from terminal.fno_data import (
@@ -134,6 +137,7 @@ from terminal.company_evidence_tools import (
     search_company_filings as audit_search_company_filings,
     search_company_official_sources,
 )
+from terminal.financials_cache import read_financials
 
 # ── Seasonal / macro modules ──────────────────────────────────────────────────
 import sys as _sys
@@ -251,6 +255,7 @@ def _load_price_history(symbol: str, days: int = 400) -> pd.DataFrame:
         )
         if not df.empty:
             out = _normalise_price_history_frame(symbol, df)
+            out = adjust_price_history_for_splits(out)
             out.attrs["data_source"] = "PostgreSQL market.equity_eod"
             return out
     except Exception:
@@ -267,7 +272,7 @@ def _load_price_history(symbol: str, days: int = 400) -> pd.DataFrame:
     df["TIMESTAMP"] = pd.to_datetime(df["TIMESTAMP"])
     for c in ["OPEN", "HIGH", "LOW", "CLOSE", "TOTTRDQTY"]:
         df[c] = pd.to_numeric(df[c], errors="coerce")
-    out = df.sort_values("TIMESTAMP")
+    out = adjust_price_history_for_splits(df.sort_values("TIMESTAMP"))
     out.attrs["data_source"] = "EOD CSV"
     return out
 
@@ -573,6 +578,8 @@ _COMMON_STOCK_ALIASES: dict[str, str] = {
     "BHARAT FORGE": "BHARATFORG",
     "MARUTI SUZUKI": "MARUTI",
     "SUN PHARMA": "SUNPHARMA",
+    "SBI": "SBIN",
+    "STATE BANK OF INDIA": "SBIN",
     "DR REDDY": "DRREDDY",
     "DR REDDYS": "DRREDDY",
     "DIXON TECH": "DIXON",
@@ -582,6 +589,9 @@ _COMMON_STOCK_ALIASES: dict[str, str] = {
     "PREMIER ENERGIES": "PREMIERENE",
     "HINDUSTAN AERONAUTICS": "HAL",
     "BAJAJ AUTO": "BAJAJ-AUTO",
+    "VISRET": "V2RETAIL",
+    "VISHAL RETAIL": "V2RETAIL",
+    "V2 RETAIL": "V2RETAIL",
     # PG-ALIAS-APOLLO: NSE ticker `APOLLO` is Apollo Micro Systems Ltd
     # (defence electronics). The ref.instruments table currently mislabels
     # it as "Apollo Tyres Limited" (Tyres is actually `APOLLOTYRE`), so the
@@ -595,6 +605,11 @@ _COMMON_STOCK_ALIASES: dict[str, str] = {
     "APOLLO TYRES": "APOLLOTYRE",
     "APOLLO HOSPITALS": "APOLLOHOSP",
     "APOLLO HOSPITALS ENTERPRISE": "APOLLOHOSP",
+    "CHENNPETRO": "CHENNPETRO",
+    "CHENNAI PETROLEUM": "CHENNPETRO",
+    "CHENNAI PETROLEUM CORPORATION": "CHENNPETRO",
+    "CHENNAI PETROLEUM CORPORATION LIMITED": "CHENNPETRO",
+    "CPCL": "CHENNPETRO",
 }
 
 _SYMBOL_CONTEXT_TOKENS: set[str] = {
@@ -1373,6 +1388,200 @@ def get_technical_setup(symbol: str, days: int = 400) -> dict:
         "as_of":         str(pd.to_datetime(latest["TIMESTAMP"]).date()),
         "data_source":   data_source,
         "postgres_persist": pg_persist,
+    }
+
+
+def _quick_analysis_float(value: Any) -> float | None:
+    try:
+        if value is None:
+            return None
+        out = float(value)
+    except (TypeError, ValueError):
+        return None
+    if out != out:
+        return None
+    return round(out, 2)
+
+
+def _quick_analysis_recent_levels(symbol: str, days: int = 260) -> dict[str, Any]:
+    grp = _load_price_history(symbol, days)
+    if grp.empty:
+        return {"data_source": "missing"}
+    grp = _normalise_price_history_frame(symbol, grp)
+    if grp.empty:
+        return {"data_source": "missing"}
+    latest = grp.iloc[-1]
+    recent = grp.tail(20)
+    prior = grp.iloc[:-1].tail(20)
+    close = _quick_analysis_float(latest.get("CLOSE"))
+    recent_low = _quick_analysis_float(recent["LOW"].min()) if not recent.empty else None
+    recent_high = _quick_analysis_float(recent["HIGH"].max()) if not recent.empty else None
+    prior_high = _quick_analysis_float(prior["HIGH"].max()) if not prior.empty else None
+    prior_low = _quick_analysis_float(prior["LOW"].min()) if not prior.empty else None
+    support = prior_low or recent_low
+    resistance = prior_high or recent_high
+    stop_loss = round(float(support) * 0.97, 2) if support else None
+    breakout_pct = (
+        round((float(close) / float(prior_high) - 1) * 100, 2)
+        if close and prior_high
+        else None
+    )
+    return {
+        "support": support,
+        "resistance": resistance,
+        "stop_loss": stop_loss,
+        "recent_20d_high": recent_high,
+        "recent_20d_low": recent_low,
+        "prior_20d_high": prior_high,
+        "prior_20d_low": prior_low,
+        "breakout_pct_vs_prior_20d_high": breakout_pct,
+        "bars": len(grp),
+        "data_source": grp.attrs.get("data_source", "price_history"),
+    }
+
+
+def _quick_analysis_fno(symbol: str) -> dict[str, Any]:
+    try:
+        rows = _pg_fetchall(
+            """
+            SELECT snapshot_date::text, pcr, oi_change_5d, buildup, fno_signal
+            FROM derivatives.fno_signals
+            WHERE symbol = %s
+            ORDER BY snapshot_date DESC
+            LIMIT 1
+            """,
+            (symbol,),
+        )
+    except Exception as exc:
+        return {"available": False, "error": str(exc)}
+    if not rows:
+        return {"available": False}
+    snapshot_date, pcr, oi_change_5d, buildup, fno_signal = rows[0]
+    return {
+        "available": True,
+        "snapshot_date": snapshot_date,
+        "pcr": _quick_analysis_float(pcr),
+        "oi_change_5d": _quick_analysis_float(oi_change_5d),
+        "buildup": buildup,
+        "fno_signal": fno_signal,
+    }
+
+
+def _quick_analysis_verdict(
+    *,
+    stage: str,
+    signal: str,
+    technical_score: float | None,
+    price: float | None,
+    resistance: float | None,
+    volume_ratio: float | None,
+) -> str:
+    stage_u = (stage or "").upper()
+    signal_u = (signal or "").upper()
+    near_breakout = (
+        price is not None
+        and resistance is not None
+        and resistance > 0
+        and price >= resistance * 0.98
+    )
+    has_volume = volume_ratio is not None and volume_ratio >= 1.5
+    if stage_u == "STAGE_2" and ("BUY" in signal_u or (technical_score or 0) >= 65):
+        if near_breakout and has_volume:
+            return "Constructive Stage 2 breakout setup with volume confirmation."
+        if near_breakout:
+            return "Constructive Stage 2 setup near breakout levels; watch volume confirmation."
+        return "Constructive Stage 2 setup, but entry is better judged against nearby support/resistance."
+    if stage_u == "STAGE_1":
+        return "Base-building setup; wait for a clean Stage 2 transition or breakout confirmation."
+    if stage_u == "STAGE_4":
+        return "Weak/downtrend setup; avoid fresh swing longs until trend and stage improve."
+    if "SELL" in signal_u:
+        return "Weak technical setup; swing-long approval needs a fresh reversal and risk reset."
+    return "Mixed setup; use levels and fresh volume confirmation before acting."
+
+
+def get_symbol_quick_analysis(symbol: str) -> dict:
+    """Return a deterministic single-stock quick analysis for bare ticker prompts."""
+    sym = _canonical_symbol(symbol)
+    snap = get_symbol_snapshot(sym)
+    tech = get_technical_setup(sym)
+    levels = _quick_analysis_recent_levels(sym)
+    fno = _quick_analysis_fno(sym)
+
+    price = (
+        _quick_analysis_float(tech.get("price"))
+        or _quick_analysis_float(snap.get("price"))
+        or _quick_analysis_float(snap.get("current_price"))
+    )
+    technical_score = (
+        _quick_analysis_float(snap.get("technical_score"))
+        or _quick_analysis_float(tech.get("technical_score"))
+        or _quick_analysis_float(snap.get("investment_score"))
+    )
+    relative_strength = normalize_relative_strength_pct(snap.get("relative_strength"))
+    volume_ratio = _quick_analysis_float(tech.get("vol_ratio"))
+    stage = str(snap.get("stage") or tech.get("stage") or "")
+    signal = str(snap.get("trading_signal") or snap.get("signal") or "")
+
+    support = _quick_analysis_float(levels.get("support"))
+    resistance = _quick_analysis_float(levels.get("resistance"))
+    verdict = _quick_analysis_verdict(
+        stage=stage,
+        signal=signal,
+        technical_score=technical_score,
+        price=price,
+        resistance=resistance,
+        volume_ratio=volume_ratio,
+    )
+
+    missing = []
+    if snap.get("error"):
+        missing.append("stage_snapshot")
+    if tech.get("error"):
+        missing.append("technical_setup")
+    if levels.get("data_source") == "missing":
+        missing.append("price_history")
+
+    return {
+        "symbol": sym,
+        "company_name": snap.get("company_name") or snap.get("name") or sym,
+        "as_of": tech.get("as_of") or snap.get("snapshot_date"),
+        "price": price,
+        "chg_pct": _quick_analysis_float(tech.get("chg_pct") or snap.get("change_1d_pct")),
+        "stage": stage or None,
+        "trading_signal": signal or None,
+        "technical_score": technical_score,
+        "rsi": _quick_analysis_float(tech.get("rsi") or snap.get("rsi")),
+        "adx": _quick_analysis_float(tech.get("adx") or snap.get("adx")),
+        "relative_strength": relative_strength,
+        "sector": snap.get("sector"),
+        "support": support,
+        "resistance": resistance,
+        "stop_loss": _quick_analysis_float(levels.get("stop_loss")),
+        "breakout_pct_vs_prior_20d_high": levels.get("breakout_pct_vs_prior_20d_high"),
+        "sma20": tech.get("sma20"),
+        "sma50": tech.get("sma50"),
+        "sma200": tech.get("sma200"),
+        "above_sma20": tech.get("above_sma20"),
+        "above_sma50": tech.get("above_sma50"),
+        "above_sma200": tech.get("above_sma200"),
+        "volume_last": tech.get("vol_last"),
+        "volume_avg_20d": tech.get("vol_avg_20d"),
+        "volume_ratio": volume_ratio,
+        "fundamental_score": _quick_analysis_float(
+            snap.get("fundamental_score") or snap.get("enhanced_fund_score")
+        ),
+        "financial_strength": snap.get("financial_strength"),
+        "investment_score": _quick_analysis_float(snap.get("investment_score")),
+        "fno": fno,
+        "verdict": verdict,
+        "missing_evidence": missing,
+        "source_trail": {
+            "resolve_symbol": "ok",
+            "get_symbol_snapshot": "error" if snap.get("error") else "ok",
+            "get_technical_setup": "error" if tech.get("error") else "ok",
+            "derivatives.fno_signals": "ok" if fno.get("available") else "missing",
+        },
     }
 
 
@@ -2284,37 +2493,69 @@ def get_index_snapshot(index_name: str = "NIFTY 50") -> dict:
     }
 
 
-def get_market_breadth() -> dict:
-    """Compute market breadth: A/D ratio, %>200MA, sector overview."""
+def get_market_breadth(index: str | None = None) -> dict:
+    """Compute market breadth: A/D ratio, RS distribution, stage overview.
+
+    By default this aggregates the full scored universe.  When ``index`` is
+    supplied, it is constrained to constituents in ``ref.index_compositions`` so
+    an index ask such as "NIFTY 500 analysis" cannot be mislabeled with
+    full-universe breadth.
+    """
     snap_date = _latest_snapshot_date()
+    index_name = _normalize_index_name(index) if index else ""
 
     try:
-        rows = _pg_fetchall(
-            "SELECT symbol, change_1d_pct, change_1w_pct, relative_strength "
-            "FROM scores.stage_snapshots WHERE snapshot_date=%s",
-            (snap_date,),
-        )
-        stage_dist = dict(_pg_fetchall(
-            "SELECT stage, COUNT(*) FROM scores.stage_snapshots WHERE snapshot_date=%s GROUP BY stage",
-            (snap_date,),
-        ))
-        data_source = "PostgreSQL scores.stage_snapshots"
+        composition_count: int | None = None
+        if index_name:
+            count_rows = _pg_fetchall(
+                """
+                SELECT COUNT(DISTINCT UPPER(symbol))
+                FROM ref.index_compositions
+                WHERE UPPER(index_symbol)=UPPER(%s)
+                """,
+                (index_name,),
+            )
+            composition_count = int((count_rows[0][0] if count_rows else 0) or 0)
+            if composition_count <= 0:
+                return {
+                    "error": f"Index constituents unavailable for {index_name}",
+                    "index": index_name,
+                    "snapshot_date": snap_date,
+                    "missing_evidence": ["ref.index_compositions"],
+                }
+            rows = _pg_fetchall(
+                """
+                SELECT s.symbol, s.change_1d_pct, s.change_1w_pct,
+                       s.relative_strength, s.stage
+                FROM scores.stage_snapshots s
+                JOIN ref.index_compositions ic
+                  ON UPPER(ic.symbol)=UPPER(s.symbol)
+                 AND UPPER(ic.index_symbol)=UPPER(%s)
+                WHERE s.snapshot_date=%s
+                """,
+                (index_name, snap_date),
+            )
+            data_source = "PostgreSQL scores.stage_snapshots + ref.index_compositions"
+        else:
+            rows = _pg_fetchall(
+                "SELECT symbol, change_1d_pct, change_1w_pct, relative_strength, stage "
+                "FROM scores.stage_snapshots WHERE snapshot_date=%s",
+                (snap_date,),
+            )
+            data_source = "PostgreSQL scores.stage_snapshots"
     except Exception:
+        if index_name:
+            return {"error": "PostgreSQL index breadth unavailable", "index": index_name}
         if not _legacy_sqlite_fallbacks_enabled() or not DB_PATH.exists():
             return {"error": "PostgreSQL scores.stage_snapshots unavailable"}
         conn = _db_conn()
         rows = conn.execute(
-            "SELECT symbol, change_1d_pct, change_1w_pct, relative_strength "
+            "SELECT symbol, change_1d_pct, change_1w_pct, relative_strength, stage "
             "FROM stage_snapshots WHERE snapshot_date=?", (snap_date,)
         ).fetchall()
         conn.close()
-        conn2 = _db_conn()
-        stage_dist = dict(conn2.execute(
-            "SELECT stage, COUNT(*) FROM stage_snapshots WHERE snapshot_date=? GROUP BY stage",
-            (snap_date,)
-        ).fetchall())
-        conn2.close()
         data_source = "SQLite stage_snapshots"
+        composition_count = None
 
     advances = sum(1 for r in rows if (r[1] or 0) > 0)
     declines = sum(1 for r in rows if (r[1] or 0) < 0)
@@ -2325,18 +2566,88 @@ def get_market_breadth() -> dict:
         if v is not None
     ]
     avg_rs    = round(sum(rs_values) / len(rs_values), 1) if rs_values else 0
+    rs_percentiles, rs_distribution = _relative_strength_distribution(rs_values)
+    stage_dist: dict[str, int] = {}
+    for row in rows:
+        stage = row[4] if len(row) > 4 else None
+        if stage:
+            stage_dist[str(stage)] = stage_dist.get(str(stage), 0) + 1
 
-    return {
+    warnings: list[str] = []
+    matched_count = len(rows)
+    coverage_pct: float | None = None
+    if index_name and composition_count:
+        coverage_pct = round(matched_count / composition_count * 100.0, 2)
+        if matched_count < composition_count:
+            warnings.append(
+                f"constituent_score_coverage:{matched_count}/{composition_count}"
+            )
+
+    result = {
         "snapshot_date": snap_date,
+        "scope":         "index" if index_name else "universe",
+        "index":         index_name or None,
         "total_stocks":  len(rows),
         "advances":      advances,
         "declines":      declines,
         "unchanged":     unchanged,
         "ad_ratio":      ad_ratio,
         "avg_rs_pct":    avg_rs,
+        "rs_percentiles": rs_percentiles,
+        "rs_distribution": rs_distribution,
         "stage_distribution": stage_dist,
         "data_source":    data_source,
     }
+    if index_name:
+        result.update({
+            "requested_index": index_name,
+            "composition_count": composition_count,
+            "matched_count": matched_count,
+            "coverage_pct": coverage_pct,
+        })
+    if warnings:
+        result["warnings"] = warnings
+        result["missing_evidence"] = ["complete_index_score_coverage"]
+    return result
+
+
+def _relative_strength_distribution(values: list[float]) -> tuple[dict[str, float], dict[str, dict[str, float | int | str]]]:
+    """Return nearest-rank RS percentiles and interpretable RS buckets."""
+    cleaned = sorted(float(v) for v in values if v is not None)
+    if not cleaned:
+        return {}, {}
+
+    def pctile(pct: int) -> float:
+        idx = max(0, min(len(cleaned) - 1, math.ceil(pct / 100 * len(cleaned)) - 1))
+        return round(cleaned[idx], 1)
+
+    buckets = [
+        ("negative", "RS < 0", lambda v: v < 0),
+        ("neutral_0_25", "RS 0-25", lambda v: 0 <= v < 25),
+        ("positive_25_50", "RS 25-50", lambda v: 25 <= v < 50),
+        ("strong_50_plus", "RS >= 50", lambda v: v >= 50),
+    ]
+    total = len(cleaned)
+    distribution: dict[str, dict[str, float | int | str]] = {}
+    for key, label, predicate in buckets:
+        count = sum(1 for value in cleaned if predicate(value))
+        distribution[key] = {
+            "label": label,
+            "count": count,
+            "pct": round(count / total * 100, 1) if total else 0.0,
+        }
+
+    return (
+        {
+            "p10": pctile(10),
+            "p25": pctile(25),
+            "p50": pctile(50),
+            "p75": pctile(75),
+            "p90": pctile(90),
+            "count": total,
+        },
+        distribution,
+    )
 
 
 def get_global_market_assessment() -> dict:
@@ -3545,7 +3856,9 @@ def search_market_knowledge(query: str, sources: list[str] | None = None) -> dic
     }
 
     def _compact_text(text: str, max_chars: int = 900) -> str:
-        text = _html.unescape(re.sub(r"\s+", " ", text or "")).strip()
+        text = _html.unescape(text or "")
+        text = re.sub(r"[\u200b\u200c\u200d\ufeff\u2060]", "", text)
+        text = re.sub(r"\s+", " ", text).strip()
         return text[:max_chars].rstrip()
 
     def _decode_ddg_url(raw: str) -> str:
@@ -3772,9 +4085,12 @@ def _market_knowledge_concept_note(query: str) -> str:
         )
     if "roce" in q:
         return (
-            "ROCE usually compares operating profit with capital employed. "
-            "It helps assess whether the business earns attractive returns on the debt plus equity "
-            "capital used in operations."
+            "ROCE = operating profit, usually EBIT, divided by capital employed. "
+            "Capital employed is commonly approximated as total assets minus current liabilities, "
+            "or equity plus debt used in the business. It helps assess whether the company earns "
+            "attractive returns on the operating capital it controls. Compare ROCE with the firm's "
+            "cost of capital, its own history, and peers; a high ROCE is stronger when it is durable "
+            "and not driven by one-off gains or temporarily depressed capital employed."
         )
     if "roe" in q:
         return (
@@ -4068,6 +4384,7 @@ def get_portfolio_exposure(sector: str = None) -> dict:
 
         result: dict[str, Any] = {
             "total_stocks":  len(df),
+            "symbols":       symbols,
             "sector_counts": sector_counts,
             "top_holdings":  top_holdings,
         }
@@ -4080,6 +4397,50 @@ def get_portfolio_exposure(sector: str = None) -> dict:
         return result
     except Exception as e:
         return {"error": str(e)}
+
+
+def screen_portfolio_forensic_watchlist(max_symbols: int = 8) -> dict:
+    """Run forensic accounting screening on the current portfolio holdings."""
+    port = get_portfolio_exposure()
+    if port.get("error"):
+        return {
+            "error": port["error"],
+            "portfolio_source": str(HOLDINGS_CSV),
+            "symbols": [],
+        }
+
+    try:
+        limit = int(max_symbols)
+    except Exception:
+        limit = 8
+    limit = max(1, min(limit, 8))
+
+    symbols = [str(s).upper().strip() for s in (port.get("symbols") or []) if str(s).strip()]
+    if not symbols:
+        symbols = [
+            str(row.get("symbol", "")).upper().strip()
+            for row in (port.get("top_holdings") or [])
+            if str(row.get("symbol", "")).strip()
+        ]
+    symbols = list(dict.fromkeys(symbols))[:limit]
+
+    if not symbols:
+        return {
+            "error": "No portfolio symbols available for forensic screening.",
+            "portfolio_source": str(HOLDINGS_CSV),
+            "symbols": [],
+            "portfolio_total_stocks": port.get("total_stocks", 0),
+        }
+
+    screened = screen_forensic_watchlist(symbols)
+    result = dict(screened) if isinstance(screened, dict) else {"error": "Forensic screen returned an invalid result."}
+    result.update({
+        "portfolio_source": str(HOLDINGS_CSV),
+        "symbols": symbols,
+        "portfolio_total_stocks": port.get("total_stocks", len(symbols)),
+        "screened_count": len(symbols),
+    })
+    return result
 
 
 def find_portfolio_overlap(screener: str = "stage2") -> dict:
@@ -5441,7 +5802,35 @@ def get_bulk_block_deals(top_n: int = 20) -> dict:
         return {"error": str(e)}
 
 
-def _ratio_pb(ratios: dict) -> str | None:
+def get_insider_alerts(top_n: int = 20, alert_type: str = "") -> dict:
+    """Return recent insider / bulk-deal alerts from data/insider_alerts.csv."""
+    import csv, os
+    csv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "insider_alerts.csv")
+    rows: list[dict] = []
+    try:
+        with open(csv_path, newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if alert_type and alert_type.upper() not in row.get("ALERT_TYPE", "").upper():
+                    continue
+                rows.append({
+                    "date":       row.get("DATE", ""),
+                    "symbol":     row.get("SYMBOL", ""),
+                    "alert_type": row.get("ALERT_TYPE", ""),
+                    "entity":     row.get("ENTITY", ""),
+                    "qty":        row.get("QTY", ""),
+                    "value_cr":   row.get("VALUE_CR", ""),
+                    "category":   row.get("CATEGORY", ""),
+                    "detail":     row.get("DETAIL", ""),
+                })
+    except FileNotFoundError:
+        return {"error": "insider_alerts.csv not found", "alerts": []}
+    except Exception as e:
+        return {"error": str(e), "alerts": []}
+    rows = rows[:top_n]
+    return {"total": len(rows), "alerts": rows, "source": "data/insider_alerts.csv"}
+
+
     """Derive P/B from Current Price and Book Value."""
     price = ratios.get("Current Price", "").replace(",", "")
     bv    = ratios.get("Book Value",    "").replace(",", "")
@@ -6812,6 +7201,69 @@ def compare_stocks(
     }
 
 
+def _jsonable_financial_value(value: Any) -> Any:
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    try:
+        import decimal
+
+        if isinstance(value, decimal.Decimal):
+            return float(value)
+    except Exception:
+        pass
+    if isinstance(value, dict):
+        return {str(k): _jsonable_financial_value(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_jsonable_financial_value(v) for v in value]
+    return str(value)
+
+
+def get_cached_financials(
+    symbol: str,
+    quarterly_limit: int = 6,
+    annual_limit: int = 5,
+    include_balance_sheet: bool = True,
+    include_cash_flow: bool = True,
+) -> dict:
+    """Read structured financial statements from the PostgreSQL cache."""
+    sym = _canonical_symbol(symbol)
+    financials = read_financials(sym)
+    quarterly = (financials.get("quarterly") or [])[: max(0, int(quarterly_limit or 0))]
+    annual = (financials.get("annual") or [])[: max(0, int(annual_limit or 0))]
+    balance_sheet = (financials.get("balance_sheet") or [])[: max(0, int(annual_limit or 0))]
+    cash_flow = (financials.get("cash_flow") or [])[: max(0, int(annual_limit or 0))]
+    if not include_balance_sheet:
+        balance_sheet = []
+    if not include_cash_flow:
+        cash_flow = []
+    payload = {
+        "symbol": sym,
+        "data_source": "PostgreSQL financial statement cache",
+        "pg_sources": [
+            "scores.quarterly_results",
+            "scores.annual_results",
+            "scores.balance_sheet",
+            "scores.cash_flow",
+        ],
+        "quarterly": quarterly,
+        "annual": annual,
+        "balance_sheet": balance_sheet,
+        "cash_flow": cash_flow,
+        "section_counts": {
+            "quarterly": len(quarterly),
+            "annual": len(annual),
+            "balance_sheet": len(balance_sheet),
+            "cash_flow": len(cash_flow),
+        },
+    }
+    if not any(payload["section_counts"].values()):
+        payload["error"] = f"No cached PostgreSQL financial statement rows found for {sym}"
+        payload["missing_evidence"] = ["cached_financials"]
+    return _jsonable_financial_value(payload)
+
+
 
 # ── Intraday screener wrapper ────────────────────────────────────────────────
 
@@ -7261,6 +7713,15 @@ TOOL_REGISTRY: dict[str, Any] = {
         "Get the latest DB snapshot for a symbol: stage, RS, RSI, trading signal, sector, price",
         {"type": "object", "properties": {"symbol": {"type": "string"}}, "required": ["symbol"]},
     ),
+    "get_symbol_quick_analysis": (
+        get_symbol_quick_analysis,
+        (
+            "Build a deterministic quick stock analysis for a single NSE symbol using existing "
+            "stage snapshot, EOD technical setup, recent levels, fundamentals, and F&O signal "
+            "where available. Use for bare ticker prompts like GABRIEL or BAJAJCON."
+        ),
+        {"type": "object", "properties": {"symbol": {"type": "string"}}, "required": ["symbol"]},
+    ),
     "discover_financial_filings": (
         discover_financial_filings,
         "Discover ranked latest-results filing candidates from NSE, BSE, and Screener for a symbol.",
@@ -7589,6 +8050,22 @@ TOOL_REGISTRY: dict[str, Any] = {
             "required": ["screen_type"],
         },
     ),
+    "run_quality_breakout_screener": (
+        __import__("terminal.composite_screeners", fromlist=["run_quality_breakout_screener"]).run_quality_breakout_screener,
+        (
+            "Run a composite EOD screener for stocks creating new highs, 52W momentum, "
+            "VCP-like tight ranges, or breakouts with a fundamental quality overlay. "
+            "Returns reason tags, risk flags, source counts, and TradingView-ready symbols."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "top_n": {"type": "integer", "default": 15},
+                "mode": {"type": "string", "enum": ["strict", "balanced", "broad"], "default": "balanced"},
+            },
+            "required": [],
+        },
+    ),
     "get_long_term_growth_candidates": (
         get_long_term_growth_candidates,
         (
@@ -7634,8 +8111,21 @@ TOOL_REGISTRY: dict[str, Any] = {
     ),
     "get_market_breadth": (
         get_market_breadth,
-        "Get overall NSE market breadth: advance/decline, RS distribution, stage breakdown",
-        {"type": "object", "properties": {}, "required": []},
+        (
+            "Get NSE breadth: advance/decline, RS distribution, and stage breakdown. "
+            "Pass index='NIFTY 500' or another index when the user asks about a "
+            "specific index; omit index only for whole scored-universe breadth."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "index": {
+                    "type": "string",
+                    "description": "Optional NSE index scope such as NIFTY 50, NIFTY 200, NIFTY 500, NIFTY MIDCAP 100, or NIFTY SMALLCAP 250.",
+                }
+            },
+            "required": [],
+        },
     ),
     "get_global_market_assessment": (
         get_global_market_assessment,
@@ -7808,6 +8298,28 @@ TOOL_REGISTRY: dict[str, Any] = {
             "required": ["query"],
         },
     ),
+    "get_cached_financials": (
+        get_cached_financials,
+        (
+            "Read cached structured financial statements for a stock from PostgreSQL. "
+            "Returns quarterly P&L, annual P&L, balance sheet, cash flow, section counts, "
+            "and explicit pg_sources: scores.quarterly_results, scores.annual_results, "
+            "scores.balance_sheet, scores.cash_flow. Use this FIRST when the user asks for "
+            "cached PostgreSQL financial statements, PG-grounded fundamentals, deep fundamental "
+            "analysis from PG, quarterly sales/PAT/EPS, annual ROCE, balance sheet, or cash flow."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "quarterly_limit": {"type": "integer", "default": 6},
+                "annual_limit": {"type": "integer", "default": 5},
+                "include_balance_sheet": {"type": "boolean", "default": True},
+                "include_cash_flow": {"type": "boolean", "default": True},
+            },
+            "required": ["symbol"],
+        },
+    ),
     "scrape_screener_in": (
         scrape_screener_in,
         (
@@ -7923,6 +8435,22 @@ TOOL_REGISTRY: dict[str, Any] = {
                 "max_results": {"type": "integer", "default": 15},
             },
             "required": ["symbol"],
+        },
+    ),
+
+    "get_insider_alerts": (
+        get_insider_alerts,
+        (
+            "Return recent insider trading and bulk-deal alerts from the local alerts database. "
+            "Use when user asks 'show insider alerts', 'any insider activity today', "
+            "'bulk deal alerts', 'insider buying alerts' WITHOUT specifying a symbol."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "top_n":      {"type": "integer", "default": 20},
+                "alert_type": {"type": "string", "default": ""},
+            },
         },
     ),
 
@@ -8200,6 +8728,12 @@ def get_options_chain(symbol: str = "NIFTY", expiry_index: int = 0) -> dict:
             else:
                 url = f"https://www.nseindia.com/api/option-chain-equities?symbol={symbol}"
             resp = session.get(url, timeout=15)
+            if resp.status_code == 404:
+                # NSE occasionally returns 404 for index endpoint; retry equities path
+                url = f"https://www.nseindia.com/api/option-chain-equities?symbol={symbol}"
+                resp = session.get(url, timeout=15)
+            if not resp.ok:
+                return _postgres_options_chain_summary(symbol, expiry_index)
             data = resp.json()
 
         if not data or "records" not in data:
@@ -8851,6 +9385,27 @@ TOOL_REGISTRY.update({
                 },
             },
             "required": ["symbols"],
+        },
+    ),
+    "screen_portfolio_forensic_watchlist": (
+        screen_portfolio_forensic_watchlist,
+        (
+            "Run forensic accounting screening across the current portfolio holdings. "
+            "Loads holdings from the configured portfolio source, screens up to eight "
+            "holdings with Beneish, Piotroski and Altman models, and ranks high-risk "
+            "holdings first. Use for: forensic screen my portfolio, accounting red "
+            "flags in my holdings, financial health of my portfolio."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "max_symbols": {
+                    "type": "integer",
+                    "description": "Maximum portfolio symbols to screen; capped at 8.",
+                    "default": 8,
+                },
+            },
+            "required": [],
         },
     ),
     "search_broker_research": (
