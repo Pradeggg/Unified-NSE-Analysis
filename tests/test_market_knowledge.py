@@ -124,6 +124,45 @@ class MarketKnowledgeTests(unittest.TestCase):
         self.assertIn("technical indicator", result["answer_markdown"])
         self.assertFalse(any("w/api.php" in call.args[0] for call in mock_get.call_args_list))
 
+    @patch("requests.get")
+    def test_market_knowledge_skips_empty_investopedia_snippet(self, mock_get):
+        def _mock_empty_investopedia(url, params=None, **kwargs):
+            response = Mock()
+            response.status_code = 200
+            response.raise_for_status = Mock()
+            response.json.side_effect = ValueError("not json")
+            if "/api/rest_v1/page/summary/" in url:
+                response.json.side_effect = None
+                response.json.return_value = {
+                    "title": "Return on capital employed",
+                    "extract": "Return on capital employed compares operating profit to capital employed.",
+                    "content_urls": {"desktop": {"page": "https://en.wikipedia.org/wiki/Return_on_capital_employed"}},
+                }
+                response.text = ""
+                return response
+            if "duckduckgo.com" in url:
+                response.text = """
+                <html><body>
+                  <a class="result__a" href="/l/?uddg=https%3A%2F%2Fwww.investopedia.com%2Fterms%2Fr%2Froce.asp">
+                    ROCE Definition
+                  </a>
+                </body></html>
+                """
+                return response
+            if "investopedia.com" in url:
+                response.text = "<html><body><article>\u200b</article></body></html>"
+                return response
+            raise AssertionError(f"Unexpected URL: {url}")
+
+        mock_get.side_effect = _mock_empty_investopedia
+
+        result = search_market_knowledge("explain ROCE")
+
+        self.assertEqual({src["source"] for src in result["sources"]}, {"Wikipedia"})
+        self.assertNotIn("- Investopedia: \u200b", result["answer_markdown"])
+        self.assertNotIn("Investopedia - ROCE Definition", result["answer_markdown"])
+        self.assertIn("ROCE = operating profit", result["answer_markdown"])
+
     def test_keyword_router_detects_market_education_questions(self):
         examples = [
             "what is a PE",

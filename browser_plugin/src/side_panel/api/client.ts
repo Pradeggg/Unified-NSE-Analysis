@@ -7,6 +7,8 @@ import type {
   ChartCapturePayload,
   KeyLevels,
   PatternFinding,
+  BacktestResult,
+  LeaderRow,
 } from "../../types";
 
 const BASE_URL = "http://localhost:8765";
@@ -101,6 +103,42 @@ export async function fetchKeyLevels(
 ): Promise<ApiResponse<KeyLevels>> {
   const params = new URLSearchParams({ symbol, exchange, timeframe });
   return apiFetch<KeyLevels>(`/api/chart/levels?${params}`);
+}
+
+// ── Backtest ──────────────────────────────────────────────────────────────
+
+export async function runBacktest(
+  symbol: string,
+  timeframe: string,
+  strategy: string,
+  initialCapital = 100000,
+  riskPct = 1.0,
+  maxHoldBars = 20,
+): Promise<ApiResponse<BacktestResult>> {
+  return apiFetch<BacktestResult>("/api/backtest/run", {
+    method: "POST",
+    body: JSON.stringify({
+      symbol, timeframe, strategy,
+      initial_capital: initialCapital,
+      risk_per_trade_pct: riskPct,
+      max_holding_bars: maxHoldBars,
+    }),
+  });
+}
+
+export async function fetchStrategies(): Promise<ApiResponse<{ strategies: Array<{ id: string; name: string; min_bars: number }> }>> {
+  return apiFetch("/api/backtest/strategies");
+}
+
+export async function fetchLeaderboard(
+  symbol?: string,
+  timeframe?: string,
+  limit = 20,
+): Promise<ApiResponse<{ leaderboard: LeaderRow[]; count: number }>> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (symbol)    params.set("symbol", symbol);
+  if (timeframe) params.set("timeframe", timeframe);
+  return apiFetch(`/api/backtest/leaderboard?${params}`);
 }
 
 // ── Pattern findings from K13 engine ──────────────────────────────────────

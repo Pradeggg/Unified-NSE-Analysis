@@ -139,11 +139,109 @@ def _fmt_text(v) -> str:
     return s if s and s.lower() not in {"nan", "none", "null"} else "N/A"
 
 
+def _research_price_chart_markdown(symbol: str, rows: list[dict]) -> str:
+    """Return an embedded SVG price chart as Markdown image syntax."""
+    clean_rows: list[dict] = []
+    for row in rows or []:
+        try:
+            close = float(row.get("close"))
+        except Exception:
+            continue
+        clean_rows.append(
+            {
+                "date": str(row.get("trade_date") or ""),
+                "close": close,
+                "volume": float(row.get("volume") or 0),
+            }
+        )
+    if len(clean_rows) < 5:
+        return ""
+
+    import urllib.parse
+
+    width, height = 920, 330
+    pad_l, pad_r, pad_t, pad_b = 54, 20, 24, 46
+    chart_h = 210
+    vol_h = 44
+    closes = [r["close"] for r in clean_rows]
+    volumes = [r["volume"] for r in clean_rows]
+    cmin, cmax = min(closes), max(closes)
+    if cmax == cmin:
+        cmax = cmin + 1
+    vmax = max(volumes) or 1
+    plot_w = width - pad_l - pad_r
+
+    def x_for(i: int) -> float:
+        if len(clean_rows) == 1:
+            return pad_l + plot_w / 2
+        return pad_l + (i / (len(clean_rows) - 1)) * plot_w
+
+    def y_for(value: float) -> float:
+        return pad_t + chart_h - ((value - cmin) / (cmax - cmin)) * chart_h
+
+    points = " ".join(
+        f"{x_for(i):.1f},{y_for(row['close']):.1f}"
+        for i, row in enumerate(clean_rows)
+    )
+    vol_y = pad_t + chart_h + 22
+    bar_w = max(1.0, plot_w / len(clean_rows) * 0.62)
+    vol_bars = []
+    for i, row in enumerate(clean_rows):
+        h = max(1.0, (row["volume"] / vmax) * vol_h)
+        x = x_for(i) - bar_w / 2
+        y = vol_y + vol_h - h
+        color = "#16a34a" if i == 0 or row["close"] >= clean_rows[i - 1]["close"] else "#dc2626"
+        vol_bars.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{bar_w:.1f}" height="{h:.1f}" fill="{color}" opacity="0.45"/>')
+
+    first = clean_rows[0]
+    last = clean_rows[-1]
+    ret = ((last["close"] / first["close"]) - 1) * 100 if first["close"] else 0
+    trend_color = "#16a34a" if ret >= 0 else "#dc2626"
+    grid = []
+    for frac in (0.0, 0.25, 0.5, 0.75, 1.0):
+        y = pad_t + chart_h * frac
+        value = cmax - (cmax - cmin) * frac
+        grid.append(f'<line x1="{pad_l}" y1="{y:.1f}" x2="{width-pad_r}" y2="{y:.1f}" stroke="#e2e8f0" stroke-width="1"/>')
+        grid.append(f'<text x="8" y="{y+4:.1f}" font-size="11" fill="#64748b">{value:,.0f}</text>')
+
+    svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">'
+        '<rect width="100%" height="100%" rx="12" fill="#f8fafc"/>'
+        f'<text x="{pad_l}" y="18" font-size="14" font-weight="700" fill="#0f172a">{_html.escape(symbol.upper())} 6-month price and volume</text>'
+        f'<text x="{width-pad_r-170}" y="18" font-size="12" fill="{trend_color}">{ret:+.1f}% over chart</text>'
+        + "".join(grid)
+        + "".join(vol_bars)
+        + f'<polyline points="{points}" fill="none" stroke="{trend_color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>'
+        + f'<circle cx="{x_for(len(clean_rows)-1):.1f}" cy="{y_for(last["close"]):.1f}" r="4" fill="{trend_color}"/>'
+        + f'<text x="{pad_l}" y="{height-16}" font-size="11" fill="#64748b">{_html.escape(first["date"])}</text>'
+        + f'<text x="{width-pad_r-96}" y="{height-16}" font-size="11" fill="#64748b">{_html.escape(last["date"])}</text>'
+        + f'<text x="{width-pad_r-114}" y="{y_for(last["close"])-8:.1f}" font-size="12" font-weight="700" fill="{trend_color}">Close {last["close"]:,.2f}</text>'
+        + '</svg>'
+    )
+    data_uri = "data:image/svg+xml;utf8," + urllib.parse.quote(svg, safe="")
+    return "\n".join(
+        [
+            "## Price Chart & Technical Narrative",
+            "",
+            f"![{symbol.upper()} 6-month price and volume chart]({data_uri})",
+            "",
+            (
+                f"> The embedded chart uses {len(clean_rows)} local EOD sessions from "
+                f"{first['date']} to {last['date']}. Close moved from "
+                f"₹{first['close']:,.2f} to ₹{last['close']:,.2f} ({ret:+.1f}%). "
+                "Use this visual together with the technical-score and stage tables below."
+            ),
+            "",
+        ]
+    )
+
+
 def _build_postgres_research_context(symbol: str) -> str:
     """Build a data-backed research context from PostgreSQL for /report research."""
     if not symbol:
         return ""
     sym = symbol.upper().strip()
+    chart_rows: list[dict] = []
     try:
         import psycopg2
         from psycopg2.extras import RealDictCursor
@@ -214,6 +312,17 @@ def _build_postgres_research_context(symbol: str) -> str:
                     (sym, sym),
                 )
                 row = cur.fetchone()
+                cur.execute(
+                    """
+                    SELECT trade_date, close, volume
+                    FROM market.equity_eod
+                    WHERE symbol = %s
+                    ORDER BY trade_date DESC
+                    LIMIT 126
+                    """,
+                    (sym,),
+                )
+                chart_rows = list(reversed(cur.fetchall()))
         finally:
             conn.close()
     except Exception:
@@ -285,6 +394,7 @@ def _build_postgres_research_context(symbol: str) -> str:
         f"| Latest turnover / 20D avg turnover | ₹{_fmt_num(row.get('latest_turnover'), 2)} / ₹{_fmt_num(row.get('avg_turnover_20d'), 2)} |",
         f"| F&O stock | {'Yes' if row.get('is_fno') else 'No'} |",
         "",
+        _research_price_chart_markdown(sym, chart_rows),
         "## Pre-computed Score Availability",
         "",
         "| Metric | Value |",
@@ -333,6 +443,18 @@ def _inline_md(text: str) -> str:
     text = re.sub(r'(?<![\w_])_([^_\n]+?)_(?![\w_])', r'<em>\1</em>', text)
     text = re.sub(r'`(.+?)`',           r'<code>\1</code>', text)
 
+    def _md_image(match: re.Match) -> str:
+        alt = _html.unescape(match.group(1)).strip()
+        src = _html.unescape(match.group(2)).strip()
+        if src.startswith("<") and src.endswith(">"):
+            src = src[1:-1].strip()
+        src = src.strip("\"'")
+        return (
+            f'<img src="{_html.escape(src, quote=True)}" '
+            f'alt="{_html.escape(alt, quote=True)}" '
+            f'style="max-width:100%;height:auto;border-radius:8px;" />'
+        )
+
     def _md_link(match: re.Match) -> str:
         label = _html.unescape(match.group(1)).strip()
         href = _html.unescape(match.group(2)).strip()
@@ -346,6 +468,7 @@ def _inline_md(text: str) -> str:
             f'{_html.escape(label)}</a>'
         )
 
+    text = re.sub(r'!\[([^\]]*)\]\(([^)]+)\)', _md_image, text)
     text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', _md_link, text)
     text = _linkify_urls(text)
     text = _colorise_signals(text)
@@ -459,6 +582,14 @@ def _md_to_html_basic(md_text: str) -> str:
             out.append(_html.escape(raw))
             continue
 
+        # ── Trusted raw report widgets emitted by internal builders ───────
+        # Keep this before table detection so JavaScript/CSS containing pipes
+        # such as "||" is not mistaken for a Markdown table.
+        if raw.lstrip().startswith(('<div class="aa-', '<section class="aa-')):
+            _flush_list(); _flush_table(); _flush_blockquote(); _flush_kv()
+            out.append(raw)
+            continue
+
         # ── Table rows ────────────────────────────────────────────────────
         if _is_table_row(raw):
             _flush_list(); _flush_blockquote(); _flush_kv()
@@ -509,13 +640,6 @@ def _md_to_html_basic(md_text: str) -> str:
             _flush_blockquote()
             _flush_kv()
             out.append('<div class="gap"></div>')
-            continue
-
-        # ── Trusted raw report widgets emitted by internal builders ───────
-        # These are generated by this module, not user-supplied Markdown.
-        if raw.lstrip().startswith(('<div class="aa-', '<section class="aa-')):
-            _flush_list(); _flush_blockquote(); _flush_kv()
-            out.append(raw)
             continue
 
         # ── Horizontal rule ───────────────────────────────────────────────
@@ -2082,6 +2206,18 @@ REPORT_TYPES = {
             "Signal Distribution",
         ],
     },
+    "diagnosis": {
+        "title": "{symbol} — Fundamental Driver Diagnosis",
+        "badge": "badge-fundamental",
+        "badge_label": "FUNDAMENTAL DIAGNOSIS",
+        "sections": [
+            "Short Answer",
+            "Metric Bridge",
+            "Evidence",
+            "Interpretation",
+            "What to Watch",
+        ],
+    },
 }
 
 
@@ -2812,6 +2948,65 @@ def _strategy_lab_strategy_name(strategy_id: str, specs: dict[str, dict], catalo
     return strategy_id.replace("_", " ").replace(" v1", "").title()
 
 
+def _strategy_lab_rule_text(rule: dict) -> str:
+    indicator = str(rule.get("indicator") or "").replace("_", " ").upper()
+    operator = str(rule.get("operator") or "").replace("_", " ")
+    value = rule.get("value")
+    if isinstance(value, list):
+        value_text = " and ".join(_fmt_text(item) for item in value)
+    else:
+        value_text = _fmt_text(value).replace("_", " ").upper()
+    return f"{indicator} {operator} {value_text}".strip()
+
+
+def _strategy_lab_rule_group_text(group: dict | None, *, joiner: str = " AND ") -> str:
+    if not isinstance(group, dict):
+        return "Not specified in the executable strategy spec."
+    rules = group.get("all") or group.get("any") or []
+    if not rules:
+        return "Not specified in the executable strategy spec."
+    return joiner.join(_strategy_lab_rule_text(rule) for rule in rules if isinstance(rule, dict))
+
+
+def _strategy_lab_add_rules_text(spec: dict) -> str:
+    add_rules = [rule for rule in spec.get("add_rules") or [] if isinstance(rule, dict)]
+    if not add_rules:
+        return "No pyramiding configured; additions are disabled after initial entry."
+    parts = []
+    for rule in add_rules:
+        condition = _strategy_lab_rule_text(rule)
+        size = _fmt_pct_plain(rule.get("size_pct"), 1)
+        risk = _fmt_pct_plain(rule.get("risk_per_trade_pct"), 2) if rule.get("risk_per_trade_pct") is not None else "strategy risk budget"
+        kind = str(rule.get("kind") or "add").replace("_", " ")
+        parts.append(f"{kind}: add {size} when {condition}; incremental risk {risk}.")
+    return " ".join(parts)
+
+
+def _strategy_lab_stop_loss_text(spec: dict, fallback: dict[str, str]) -> str:
+    risk = spec.get("risk") if isinstance(spec.get("risk"), dict) else {}
+    initial_stop = risk.get("initial_stop") if isinstance(risk.get("initial_stop"), dict) else {}
+    if initial_stop.get("type") == "atr":
+        multiple = _fmt_num(initial_stop.get("multiple"), 2)
+        indicator = str(initial_stop.get("indicator") or "atr_14").replace("_", " ").upper()
+        return f"Initial protective stop is {multiple}x {indicator} from entry; risk per trade is {_fmt_pct_plain(risk.get('risk_per_trade_pct'), 2)}."
+    return fallback.get("risk") or "Uses the configured protective stop from the strategy spec."
+
+
+def _strategy_lab_target_text(spec: dict) -> str:
+    exit_text = _strategy_lab_rule_group_text(spec.get("exit"), joiner=" OR ")
+    return (
+        "No fixed price target is configured. Profits are managed by trend continuation, adds where configured, "
+        f"and rule exits: {exit_text}"
+    )
+
+
+def _strategy_lab_position_sizing_text(spec: dict) -> str:
+    risk = spec.get("risk") if isinstance(spec.get("risk"), dict) else {}
+    risk_pct = _fmt_pct_plain(risk.get("risk_per_trade_pct"), 2) if risk else "strategy risk budget"
+    max_position = _fmt_pct_plain(risk.get("max_position_pct"), 1) if risk else "strategy cap"
+    return f"Size each entry from stop distance and risk budget: {risk_pct} portfolio risk per trade, capped at {max_position} of portfolio value."
+
+
 def _strategy_lab_strategy_playbook(rows: list[dict]) -> str:
     catalog = _strategy_lab_strategy_catalog()
     specs = _strategy_lab_strategy_specs_by_id()
@@ -2827,15 +3022,9 @@ def _strategy_lab_strategy_playbook(rows: list[dict]) -> str:
         if sid not in ordered_ids:
             ordered_ids.append(sid)
 
-    md = [
-        "## Strategy Playbook",
-        "",
-        "This section explains what each strategy is, what it is trying to capture, and why its backtest result should be interpreted differently from the others.",
-        "",
-        "| Strategy | What it is | Entry logic | Exit/Risk | Best regime | Caveat |",
-        "|---|---|---|---|---|---|",
-    ]
+    cards = []
     for sid in ordered_ids:
+        spec = specs.get(sid) or {}
         details = catalog.get(sid) or {
             "what": "Built-in paper strategy.",
             "entry": "Uses the configured strategy specification.",
@@ -2843,13 +3032,48 @@ def _strategy_lab_strategy_playbook(rows: list[dict]) -> str:
             "regime": "Depends on the signal family.",
             "caveat": "Review the strategy specification before sizing.",
         }
-        strategy = f"{_strategy_lab_strategy_name(sid, specs, catalog)} (`{sid}`)"
-        md.append(
-            f"| **{_md_cell(strategy)}** | {_md_cell(details.get('what'))} | "
-            f"{_md_cell(details.get('entry'))} | {_md_cell(details.get('risk'))} | "
-            f"{_md_cell(details.get('regime'))} | {_md_cell(details.get('caveat'))} |"
+        name = _strategy_lab_strategy_name(sid, specs, catalog)
+        entry_text = _strategy_lab_rule_group_text(spec.get("entry")) if spec else details.get("entry")
+        exit_text = _strategy_lab_rule_group_text(spec.get("exit"), joiner=" OR ") if spec else details.get("risk")
+        risk = spec.get("risk") if isinstance(spec.get("risk"), dict) else {}
+        cards.append(
+            '<div class="aa-playbook-card">'
+            f'<button type="button" class="aa-playbook-header" onclick="toggleStrategyLabWindow(this)">'
+            f'<span><strong>{_html.escape(name)}</strong><em>{_html.escape(sid)}</em></span>'
+            f'<span class="aa-window-caret">▾</span></button>'
+            '<div class="aa-playbook-body">'
+            f'<p><strong>What it is:</strong> {_html.escape(_fmt_text(details.get("what")))}</p>'
+            '<div class="aa-playbook-grid">'
+            f'<div><h4>Entry Criteria</h4><p>{_html.escape(_fmt_text(entry_text))}</p></div>'
+            f'<div><h4>Add / Pyramid Criteria</h4><p>{_html.escape(_strategy_lab_add_rules_text(spec))}</p></div>'
+            f'<div><h4>Exit Criteria</h4><p>{_html.escape(_fmt_text(exit_text))}</p></div>'
+            f'<div><h4>Stop Loss</h4><p>{_html.escape(_strategy_lab_stop_loss_text(spec, details))}</p></div>'
+            f'<div><h4>Targets / Profit Taking</h4><p>{_html.escape(_strategy_lab_target_text(spec))}</p></div>'
+            f'<div><h4>Position Sizing</h4><p>{_html.escape(_strategy_lab_position_sizing_text(spec))}</p></div>'
+            f'<div><h4>Best Regime</h4><p>{_html.escape(_fmt_text(details.get("regime")))}</p></div>'
+            f'<div><h4>Caveat</h4><p>{_html.escape(_fmt_text(details.get("caveat")))}</p></div>'
+            '</div>'
+            '<table class="aa-playbook-mini">'
+            f'<tr><td>Risk Per Trade</td><td>{_html.escape(_fmt_pct_plain(risk.get("risk_per_trade_pct"), 2) if risk else "n/a")}</td></tr>'
+            f'<tr><td>Max Position</td><td>{_html.escape(_fmt_pct_plain(risk.get("max_position_pct"), 1) if risk else "n/a")}</td></tr>'
+            f'<tr><td>Universe</td><td>{_html.escape(json.dumps(spec.get("universe") or {}, sort_keys=True) if spec else "n/a")}</td></tr>'
+            '</table>'
+            '</div></div>'
         )
-    return "\n".join(md)
+    return "\n".join(
+        [
+            "## Strategy Playbook",
+            "",
+            (
+                '<div class="aa-lab-section aa-strategy-playbook">'
+                '<div class="aa-lab-hdr"><strong>Strategy Playbook</strong>'
+                '<span>Executable rules, risk sizing, add logic, exits, and target handling</span></div>'
+                '<div class="aa-playbook-intro">Each card maps the strategy narrative back to the current built-in strategy specification used by the paper-trading replay.</div>'
+                f'{"".join(cards)}'
+                '</div>'
+            ),
+        ]
+    )
 
 
 def _strategy_lab_council_fallback(
@@ -3100,6 +3324,273 @@ def _strategy_lab_widget(title: str, body: str) -> str:
         'border-radius:8px;background:#ffffff;box-shadow:0 1px 3px rgba(15,23,42,.08);">'
         f'<div style="font-size:13px;font-weight:800;color:#1e3a5f;margin-bottom:8px;">{_html.escape(title)}</div>'
         f'{body}</div>'
+    )
+
+
+def _strategy_lab_detail_assets() -> str:
+    return (
+        '<div class="aa-strategy-lab-assets">'
+        '<style>'
+        '.aa-lab-section{margin:18px 0;border:1px solid #dbe3ef;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(15,23,42,.08);overflow:hidden}'
+        '.aa-lab-hdr{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 16px;background:#1e3a5f;color:#fff}'
+        '.aa-lab-hdr strong{font-size:14px}.aa-lab-hdr span{font-size:12px;opacity:.78}'
+        '.aa-lab-table{width:100%;border-collapse:collapse;font-size:12px}.aa-lab-table th{background:#f8fafc;color:#475569;text-transform:uppercase;font-size:10px;letter-spacing:.04em;padding:8px 10px;text-align:left;border-bottom:1px solid #e2e8f0}'
+        '.aa-lab-table td{padding:8px 10px;border-bottom:1px solid #eef2f7;vertical-align:top}.aa-lab-table td.num,.aa-lab-table th.num{text-align:right}'
+        '.aa-strategy-row,.aa-position-row{cursor:pointer}.aa-strategy-row:hover,.aa-position-row:hover{background:#f8fafc}'
+        '.aa-detail-row{display:none;background:#f8fafc}.aa-detail-row.open{display:table-row}.aa-detail-cell{padding:14px!important;background:#f8fafc!important}'
+        '.aa-detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.aa-detail-card{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px}'
+        '.aa-detail-card h4{margin:0 0 8px;font-size:11px;color:#334155;text-transform:uppercase;letter-spacing:.06em}.aa-detail-card table{width:100%;border-collapse:collapse}.aa-detail-card td{padding:4px 0;border:0;font-size:11px}.aa-detail-card td:first-child{color:#64748b;padding-right:10px}.aa-detail-card td:last-child{text-align:right;color:#0f172a;font-weight:650}'
+        '.aa-pill{display:inline-block;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:800}.aa-pill-primary{background:#dbeafe;color:#1d4ed8}.aa-pill-good{background:#dcfce7;color:#15803d}.aa-pill-warn{background:#fef3c7;color:#92400e}.aa-pill-bad{background:#fee2e2;color:#b91c1c}.aa-row-hint{color:#64748b;font-size:10px;margin-left:6px}'
+        '.aa-lab-tabs{margin:18px 0 24px}.aa-lab-tabbar{position:sticky;top:56px;z-index:30;display:flex;gap:8px;flex-wrap:wrap;padding:10px;background:#eef4fb;border:1px solid #dbe3ef;border-radius:10px;margin-bottom:14px}'
+        '.aa-lab-tab{border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:800;cursor:pointer}.aa-lab-tab.active{background:#1e3a5f;color:#fff;border-color:#1e3a5f}.aa-lab-tab-panel{display:none}.aa-lab-tab-panel.active{display:block}'
+        '.aa-window{border:1px solid #dbe3ef;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(15,23,42,.08);margin:12px 0;overflow:hidden}.aa-window-header{width:100%;border:0;background:#f8fafc;color:#0f172a;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;cursor:pointer;text-align:left}.aa-window-title{font-size:13px;font-weight:850}.aa-window-meta{font-size:11px;color:#64748b;font-weight:650}.aa-window-body{padding:14px}.aa-window.collapsed>.aa-window-body{display:none}.aa-window-caret{font-size:13px;color:#64748b}.aa-window.collapsed .aa-window-caret{transform:rotate(-90deg)}'
+        '.aa-subwindow{border:1px solid #e2e8f0;border-radius:8px;background:#fff;margin:10px 0;overflow:hidden}.aa-subwindow-header{width:100%;border:0;background:#f8fafc;color:#334155;display:flex;justify-content:space-between;gap:10px;padding:10px 12px;font-size:12px;font-weight:800;cursor:pointer;text-align:left}.aa-subwindow-body{padding:12px}.aa-subwindow.collapsed>.aa-subwindow-body{display:none}'
+        '.aa-strategy-playbook{border-radius:10px}.aa-playbook-intro{padding:12px 16px;color:#475569;font-size:12px;border-bottom:1px solid #e2e8f0;background:#f8fafc}.aa-playbook-card{border-bottom:1px solid #e2e8f0;background:#fff}.aa-playbook-card:last-child{border-bottom:0}.aa-playbook-header{width:100%;border:0;background:#fff;color:#0f172a;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 16px;cursor:pointer;text-align:left}.aa-playbook-header strong{display:block;font-size:13px}.aa-playbook-header em{display:block;font-style:normal;font-size:10px;color:#64748b;margin-top:2px}.aa-playbook-body{padding:0 16px 16px}.aa-playbook-card.collapsed>.aa-playbook-body{display:none}.aa-playbook-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:10px}.aa-playbook-grid>div{border:1px solid #e2e8f0;border-radius:8px;padding:10px;background:#f8fafc}.aa-playbook-grid h4{margin:0 0 6px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#475569}.aa-playbook-grid p,.aa-playbook-body p{font-size:12px;color:#1f2937;margin:0}.aa-playbook-mini{width:100%;border-collapse:collapse;margin-top:12px;font-size:11px}.aa-playbook-mini td{padding:6px 8px;border-top:1px solid #e2e8f0}.aa-playbook-mini td:first-child{color:#64748b}.aa-playbook-mini td:last-child{text-align:right;font-weight:700;color:#0f172a}'
+        '</style>'
+        '<script>'
+        'function toggleStrategyLabDetail(id){var el=document.getElementById(id);if(!el)return;el.classList.toggle("open");}'
+        'function toggleStrategyLabWindow(btn){var w=btn&&btn.closest?btn.closest(".aa-window,.aa-subwindow,.aa-playbook-card"):null;if(w)w.classList.toggle("collapsed");}'
+        'function switchStrategyLabTab(tab){document.querySelectorAll(".aa-lab-tab").forEach(function(b){b.classList.toggle("active",b.dataset.tab===tab);});document.querySelectorAll(".aa-lab-tab-panel").forEach(function(p){p.classList.toggle("active",p.dataset.tab===tab);});}'
+        'function buildStrategyLabTabs(){var body=document.getElementById("report-body");if(!body||body.querySelector(".aa-lab-tabbar"))return;var h2s=Array.from(body.children).filter(function(el){return el.tagName==="H2";});if(!h2s.length)return;'
+        'function tabFor(title){var t=(title||"").toLowerCase();if(t.indexOf("daily paper portfolio")>=0)return"paper";if(t.indexOf("risk-adjusted")>=0||t.indexOf("cost and turnover")>=0||t.indexOf("recommended paper")>=0)return"risk";if(t.indexOf("run artifacts")>=0)return"artifacts";if(t.indexOf("strategy playbook")>=0)return"playbook";if(t.indexOf("strategy leaderboard")>=0||t.indexOf("strategy verdict")>=0||t.indexOf("detailed analysis")>=0||t.indexOf("market and run")>=0||t.indexOf("fundamental and quarterly")>=0||t.indexOf("charts and visual")>=0)return"strategy";return"overview";}'
+        'var labels={overview:"Overview",strategy:"Strategy Lab",playbook:"Strategy Playbook",paper:"Paper Trading",risk:"Risk & Turnover",artifacts:"Artifacts"};var shell=document.createElement("div");shell.className="aa-lab-tabs";shell.innerHTML=\'<div class="aa-lab-tabbar" role="tablist"></div><div class="aa-lab-tab-panels"></div>\';body.insertBefore(shell,h2s[0]);var bar=shell.querySelector(".aa-lab-tabbar");var panels=shell.querySelector(".aa-lab-tab-panels");var panelByKey={};["overview","strategy","playbook","paper","risk","artifacts"].forEach(function(key){var b=document.createElement("button");b.type="button";b.className="aa-lab-tab"+(key==="overview"?" active":"");b.dataset.tab=key;b.textContent=labels[key];b.onclick=function(){switchStrategyLabTab(key);};bar.appendChild(b);var p=document.createElement("div");p.className="aa-lab-tab-panel"+(key==="overview"?" active":"");p.dataset.tab=key;panels.appendChild(p);panelByKey[key]=p;});'
+        'function wrapH3Sections(parent){var h3s=Array.from(parent.children).filter(function(el){return el.tagName==="H3";});if(!h3s.length)return;var first=h3s[0];var nodes=Array.from(parent.children);var moving=[];var started=false;nodes.forEach(function(n){if(n===first)started=true;if(started)moving.push(n);});moving.forEach(function(n){if(n.parentNode===parent)parent.removeChild(n);});var current=null;var currentBody=null;moving.forEach(function(n){if(n.tagName==="H3"){current=document.createElement("div");current.className="aa-subwindow collapsed";var title=n.textContent.trim();current.innerHTML=\'<button type="button" class="aa-subwindow-header" onclick="toggleStrategyLabWindow(this)"><span></span><span>▾</span></button><div class="aa-subwindow-body"></div>\';current.querySelector("span").textContent=title;currentBody=current.querySelector(".aa-subwindow-body");parent.appendChild(current);}else if(currentBody){currentBody.appendChild(n);}else{parent.appendChild(n);}});var firstSub=parent.querySelector(".aa-subwindow");if(firstSub)firstSub.classList.remove("collapsed");}'
+        'var nodes=Array.from(body.children);var moving=[];var started=false;nodes.forEach(function(n){if(n===shell)return;if(n.tagName==="H2")started=true;if(started)moving.push(n);});moving.forEach(function(n){if(n.parentNode===body)body.removeChild(n);});var currentWin=null;var currentBody=null;var openSeen={};moving.forEach(function(n){if(n.tagName==="H2"){var title=n.textContent.trim();var key=tabFor(title);currentWin=document.createElement("div");currentWin.className="aa-window";currentWin.id=n.id||"";var collapsed=(key!=="overview"&&!openSeen[key]);if(collapsed)currentWin.classList.add("collapsed");openSeen[key]=true;currentWin.innerHTML=\'<button type="button" class="aa-window-header" onclick="toggleStrategyLabWindow(this)"><span class="aa-window-title"></span><span class="aa-window-meta"></span><span class="aa-window-caret">▾</span></button><div class="aa-window-body"></div>\';currentWin.querySelector(".aa-window-title").textContent=title;currentWin.querySelector(".aa-window-meta").textContent=key==="paper"?"Paper book isolated in this tab":"Click header to collapse or expand";currentBody=currentWin.querySelector(".aa-window-body");panelByKey[key].appendChild(currentWin);}else if(currentBody){currentBody.appendChild(n);}else{panelByKey.overview.appendChild(n);}});document.querySelectorAll(".aa-window-body").forEach(wrapH3Sections);if(location.hash&&document.querySelector(location.hash)){var target=document.querySelector(location.hash);var panel=target.closest(".aa-lab-tab-panel");if(panel)switchStrategyLabTab(panel.dataset.tab);}}'
+        'document.addEventListener("DOMContentLoaded",buildStrategyLabTabs);'
+        '</script>'
+        '</div>'
+    )
+
+
+def _strategy_lab_html_table(rows: list[tuple[str, object]]) -> str:
+    body = []
+    for label, value in rows:
+        body.append(
+            f'<tr><td>{_html.escape(str(label))}</td><td>{_html.escape(_fmt_text(value))}</td></tr>'
+        )
+    return '<table>' + ''.join(body) + '</table>'
+
+
+def _strategy_lab_load_symbol_fundamentals(symbols: list[str]) -> dict[str, dict[str, object]]:
+    clean = sorted({str(symbol or "").strip().upper() for symbol in symbols if str(symbol or "").strip()})
+    if not clean:
+        return {}
+    try:
+        import psycopg2
+
+        conn = psycopg2.connect(PG_DSN)
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT symbol,
+                           company_name,
+                           sector,
+                           stage,
+                           technical_score,
+                           rsi,
+                           trading_signal,
+                           trend_signal,
+                           relative_strength,
+                           fundamental_score,
+                           enhanced_fund_score,
+                           earnings_quality,
+                           sales_growth,
+                           financial_strength,
+                           institutional_backing,
+                           can_slim_score,
+                           minervini_score,
+                           investment_score,
+                           fund_details::text,
+                           narrative
+                    FROM scores.stage_snapshots
+                    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)
+                      AND symbol = ANY(%s)
+                    """,
+                    (clean,),
+                )
+                cols = [desc[0] for desc in cur.description]
+                return {str(row[0]).upper(): dict(zip(cols, row)) for row in cur.fetchall()}
+        finally:
+            conn.close()
+    except Exception:
+        return {}
+
+
+def _strategy_lab_parse_fund_details(raw: object) -> dict[str, object]:
+    if isinstance(raw, dict):
+        return raw
+    if not raw:
+        return {}
+    try:
+        parsed = json.loads(str(raw))
+        return parsed if isinstance(parsed, dict) else {}
+    except (TypeError, json.JSONDecodeError):
+        return {}
+
+
+def _strategy_lab_fund_summary(fund: dict[str, object]) -> str:
+    details = _strategy_lab_parse_fund_details(fund.get("fund_details"))
+    parts = []
+    for key in ("pnl_summary", "quarterly_summary", "ratios_summary", "investor_summary"):
+        value = details.get(key) or fund.get(key)
+        if value:
+            parts.append(str(value))
+    narrative = fund.get("narrative")
+    if narrative:
+        parts.append(str(narrative))
+    return " ".join(parts[:3])
+
+
+def _strategy_lab_interactive_leaderboard(
+    summary: dict,
+    rows: list[dict],
+    turnover_rows: list[dict[str, object]],
+) -> str:
+    if not rows:
+        return ""
+    catalog = _strategy_lab_strategy_catalog()
+    specs = _strategy_lab_strategy_specs_by_id()
+    turnover_by_id = {str(row.get("strategy_id") or ""): row for row in turnover_rows}
+    body = []
+    for idx, row in enumerate(rows):
+        rank = int(_float_or_none(row.get("rank")) or idx + 1)
+        sid = str(row.get("strategy_id") or "n/a")
+        detail_id = f"aa-strategy-detail-{idx}"
+        verdict, reason = _strategy_lab_verdict(row, rank)
+        details = catalog.get(sid) or {}
+        spec = specs.get(sid) or {}
+        turns = turnover_by_id.get(sid) or {}
+        verdict_class = "aa-pill-good" if verdict == "Primary" else "aa-pill-warn" if "Watch" in verdict or "Monitor" in verdict else "aa-pill-bad" if verdict in {"Avoid", "Quarantine"} else "aa-pill-primary"
+        body.append(
+            f'<tr class="aa-strategy-row" onclick="toggleStrategyLabDetail(\'{detail_id}\')" title="Click for strategy diagnostics">'
+            f'<td>#{rank}<span class="aa-row-hint">details</span></td>'
+            f'<td><strong>{_html.escape(_strategy_lab_strategy_name(sid, specs, catalog))}</strong><br><span style="color:#64748b;font-size:10px">{_html.escape(sid)}</span></td>'
+            f'<td><span class="aa-pill {verdict_class}">{_html.escape(verdict)}</span></td>'
+            f'<td class="num">{_fmt_pct(row.get("total_return_pct"), 2)}</td>'
+            f'<td class="num">{_fmt_pct_plain(row.get("max_drawdown_pct"), 2)}</td>'
+            f'<td class="num">{_fmt_num(row.get("profit_factor"), 2)}</td>'
+            f'<td class="num">₹{_fmt_num(row.get("expectancy"), 0)}</td>'
+            f'<td class="num">{_fmt_pct_plain(row.get("turnover_pct"), 1)}</td>'
+            f'<td class="num">{row.get("fills", 0)}</td>'
+            f'<td class="num">{_fmt_pct_plain(row.get("win_rate_pct"), 1)}</td>'
+            '</tr>'
+        )
+        body.append(
+            f'<tr class="aa-detail-row" id="{detail_id}"><td colspan="10" class="aa-detail-cell">'
+            '<div class="aa-detail-grid">'
+            '<div class="aa-detail-card"><h4>Strategy Details</h4>'
+            + _strategy_lab_html_table([
+                ("What", details.get("what") or spec.get("description") or "Built-in paper strategy"),
+                ("Entry", details.get("entry") or "Uses configured strategy entry rules"),
+                ("Exit / Risk", details.get("risk") or "Uses configured exit and risk rules"),
+                ("Best Regime", details.get("regime") or "Depends on signal family"),
+                ("Verdict Reason", reason),
+            ])
+            + '</div>'
+            '<div class="aa-detail-card"><h4>Performance Diagnostics</h4>'
+            + _strategy_lab_html_table([
+                ("Total Return", _fmt_pct(row.get("total_return_pct"), 2)),
+                ("Excess Return", _fmt_pct(row.get("excess_return_pct"), 2)),
+                ("Max Drawdown", _fmt_pct_plain(row.get("max_drawdown_pct"), 2)),
+                ("Profit Factor", _fmt_num(row.get("profit_factor"), 2)),
+                ("Cost Drag", _fmt_pct_plain(row.get("cost_drag_pct"), 2)),
+            ])
+            + '</div>'
+            '<div class="aa-detail-card"><h4>Turnover / Audit</h4>'
+            + _strategy_lab_html_table([
+                ("Buy Notional", f"₹{_fmt_num(turns.get('buy_notional'), 0)}"),
+                ("Sell Notional", f"₹{_fmt_num(turns.get('sell_notional'), 0)}"),
+                ("Filled Notional", f"₹{_fmt_num(turns.get('total_notional'), 0)}"),
+                ("Capital Turns", f"{_fmt_num((_float_or_none(turns.get('turnover_pct')) or 0.0) / 100.0, 2)}x"),
+                ("Symbols Touched", turns.get("symbols", "n/a")),
+            ])
+            + '</div>'
+            '</div></td></tr>'
+        )
+    return (
+        '<div class="aa-lab-section"><div class="aa-lab-hdr"><strong>Interactive Strategy Leaderboard</strong>'
+        '<span>Click a strategy row for rules, diagnostics, and turnover decomposition</span></div>'
+        '<div style="overflow:auto"><table class="aa-lab-table"><thead><tr>'
+        '<th>Rank</th><th>Strategy</th><th>Verdict</th><th class="num">Return</th><th class="num">Max DD</th>'
+        '<th class="num">PF</th><th class="num">Expectancy</th><th class="num">Turnover</th><th class="num">Fills</th><th class="num">Win %</th>'
+        '</tr></thead><tbody>'
+        + ''.join(body)
+        + '</tbody></table></div></div>'
+    )
+
+
+def _strategy_lab_interactive_positions(positions: list[dict], fund_lookup: dict[str, dict[str, object]]) -> str:
+    if not positions:
+        return ""
+    body = []
+    for idx, row in enumerate(positions[:40]):
+        symbol = str(row.get("symbol") or "").upper()
+        detail_id = f"aa-position-detail-{idx}-{re.sub(r'[^A-Za-z0-9_-]+', '', symbol)}"
+        fund = fund_lookup.get(symbol, {})
+        upnl = _float_or_none(row.get("unrealized_pnl")) or 0.0
+        upct = _float_or_none(row.get("unrealized_pct")) or 0.0
+        color = "#15803d" if upnl >= 0 else "#dc2626"
+        body.append(
+            f'<tr class="aa-position-row" onclick="toggleStrategyLabDetail(\'{detail_id}\')" title="Click for position, technical, and fundamental details">'
+            f'<td><strong>{_html.escape(symbol)}</strong><span class="aa-row-hint">details</span></td>'
+            f'<td>{_html.escape(_fmt_text(fund.get("company_name") or symbol))}</td>'
+            f'<td class="num">{row.get("quantity", "0")}</td>'
+            f'<td class="num">₹{_fmt_num(row.get("current_price"), 2)}</td>'
+            f'<td class="num">₹{_fmt_num(row.get("market_value"), 0)}</td>'
+            f'<td class="num" style="color:{color};font-weight:750">₹{_fmt_num(upnl, 0)} ({upct:+.1f}%)</td>'
+            f'<td>{_html.escape(_fmt_text(row.get("stage") or fund.get("stage") or "n/a"))}</td>'
+            f'<td class="num">{_fmt_num(row.get("relative_strength"), 1)}</td>'
+            f'<td class="num">₹{_fmt_num(row.get("stop_price"), 2)}</td>'
+            f'<td class="num">₹{_fmt_num(row.get("target_price"), 2)}</td>'
+            '</tr>'
+        )
+        fund_summary = _strategy_lab_fund_summary(fund)
+        body.append(
+            f'<tr class="aa-detail-row" id="{detail_id}"><td colspan="10" class="aa-detail-cell">'
+            '<div class="aa-detail-grid">'
+            '<div class="aa-detail-card"><h4>Position Details</h4>'
+            + _strategy_lab_html_table([
+                ("Quantity", row.get("quantity", "0")),
+                ("Current Price", f"₹{_fmt_num(row.get('current_price'), 2)}"),
+                ("Market Value", f"₹{_fmt_num(row.get('market_value'), 2)}"),
+                ("Unrealized P&L", f"₹{_fmt_num(row.get('unrealized_pnl'), 2)}"),
+                ("Reward / Risk", _fmt_num(row.get("reward_risk"), 2)),
+            ])
+            + '</div>'
+            '<div class="aa-detail-card"><h4>Technical Details</h4>'
+            + _strategy_lab_html_table([
+                ("Stage", row.get("stage") or fund.get("stage") or "n/a"),
+                ("RSI", row.get("rsi_14") or fund.get("rsi") or "n/a"),
+                ("Relative Strength", row.get("relative_strength") or fund.get("relative_strength") or "n/a"),
+                ("Trading Signal", fund.get("trading_signal") or "n/a"),
+                ("Trend", fund.get("trend_signal") or "n/a"),
+                ("Technical Score", _fmt_num(fund.get("technical_score"), 0)),
+            ])
+            + '</div>'
+            '<div class="aa-detail-card"><h4>Fundamental Details</h4>'
+            + _strategy_lab_html_table([
+                ("Fund Score", _fmt_num(fund.get("fundamental_score"), 0)),
+                ("Enhanced Fund", _fmt_num(fund.get("enhanced_fund_score"), 0)),
+                ("Earnings Quality", _fmt_num(fund.get("earnings_quality"), 0)),
+                ("Sales Growth", _fmt_num(fund.get("sales_growth"), 0)),
+                ("CANSLIM", _fmt_num(fund.get("can_slim_score"), 0)),
+                ("Minervini", _fmt_num(fund.get("minervini_score"), 0)),
+                ("Investment Score", _fmt_num(fund.get("investment_score"), 0)),
+            ])
+            + (f'<div style="margin-top:8px;font-size:11px;line-height:1.55;color:#475569;text-align:left">{_html.escape(fund_summary)}</div>' if fund_summary else '<div style="margin-top:8px;font-size:11px;color:#94a3b8;text-align:left">No detailed fundamentals found for this symbol in the latest snapshot.</div>')
+            + '</div>'
+            '</div></td></tr>'
+        )
+    return (
+        '<div class="aa-lab-section"><div class="aa-lab-hdr"><strong>Clickable Paper Positions</strong>'
+        '<span>Click a paper holding for position, technical, and fundamental details</span></div>'
+        '<div style="overflow:auto"><table class="aa-lab-table"><thead><tr>'
+        '<th>Symbol</th><th>Company</th><th class="num">Qty</th><th class="num">Price</th><th class="num">Value</th>'
+        '<th class="num">Unrealized</th><th>Stage</th><th class="num">RS</th><th class="num">Stop</th><th class="num">Target</th>'
+        '</tr></thead><tbody>'
+        + ''.join(body)
+        + '</tbody></table></div></div>'
     )
 
 
@@ -3494,7 +3985,9 @@ def _build_strategy_lab_content() -> str:
     positions = _read_csv_rows(_strategy_lab_artifact_path(summary, summary_path, paper_artifacts.get("positions")))
     daily_pnl = _read_csv_rows(_strategy_lab_artifact_path(summary, summary_path, paper_artifacts.get("daily_pnl")))
     trades = _read_csv_rows(_strategy_lab_artifact_path(summary, summary_path, paper_artifacts.get("trades")), limit=5000)
+    next_orders = _read_csv_rows(_strategy_lab_artifact_path(summary, summary_path, paper_artifacts.get("next_orders")), limit=1000)
     turnover_rows = _strategy_lab_turnover_rows(summary, summary_path, rows)
+    fund_lookup = _strategy_lab_load_symbol_fundamentals([str(row.get("symbol") or "") for row in positions])
     narrative = _strategy_lab_narrative(summary, rows, paper, positions)
     council = _strategy_lab_council_deliberation(summary, rows, paper, positions, turnover_rows)
     stage2_count = stage_counts.get("STAGE_2", 0)
@@ -3505,6 +3998,8 @@ def _build_strategy_lab_content() -> str:
     md: list[str] = []
     md.append("# Portfolio Strategy Lab — NSE Paper Trading")
     md.append(f"**Generated:** {now.strftime('%d %b %Y, %H:%M IST')} · **Source:** `scores.stage_snapshots` + `market.equity_eod` + `scores.quarterly_results`")
+    md.append("")
+    md.append(_strategy_lab_detail_assets())
     md.append("")
     md.append("## Executive Summary")
     md.append("")
@@ -3601,6 +4096,19 @@ def _build_strategy_lab_content() -> str:
     if paper:
         md.append("## Daily Paper Portfolio")
         md.append("")
+        latest_trade_date = max((str(row.get("date")) for row in trades), default="")
+        blotter_trades = [row for row in trades if str(row.get("date")) == str(paper.get("as_of"))]
+        if not blotter_trades and latest_trade_date:
+            blotter_trades = [row for row in trades if str(row.get("date")) == latest_trade_date]
+        buy_count = sum(1 for row in blotter_trades if str(row.get("side")).upper() == "BUY")
+        sell_count = sum(1 for row in blotter_trades if str(row.get("side")).upper() == "SELL")
+        latest_nav = daily_pnl[-1] if daily_pnl else {}
+        nav_value = _float_or_none(latest_nav.get("nav")) or 0.0
+        market_value = _float_or_none(latest_nav.get("market_value")) or 0.0
+        exposure_pct = (market_value / nav_value * 100.0) if nav_value else 0.0
+
+        md.append("### Current Paper Book")
+        md.append("")
         md.append("| Metric | Value |")
         md.append("|---|---:|")
         md.append(f"| Selected Strategy | `{paper.get('selected_strategy_id', 'n/a')}` |")
@@ -3609,6 +4117,9 @@ def _build_strategy_lab_content() -> str:
         md.append(f"| Today P&L | ₹{_fmt_num(paper.get('today_pnl'), 2)} |")
         md.append(f"| Today Return | {_fmt_pct(paper.get('today_return_pct'), 2)} |")
         md.append(f"| Unrealized P&L | ₹{_fmt_num(paper.get('total_unrealized_pnl'), 2)} |")
+        md.append(f"| Market Exposure | {_fmt_pct_plain(exposure_pct, 1)} |")
+        md.append(f"| Latest Trade Date | {latest_trade_date or 'n/a'} |")
+        md.append(f"| Buys / Sells In Blotter | {buy_count} / {sell_count} |")
         md.append("")
         md.append("| Artifact | Path |")
         md.append("|---|---|")
@@ -3616,6 +4127,7 @@ def _build_strategy_lab_content() -> str:
         md.append(f"| Positions | `{paper_artifacts.get('positions', 'n/a')}` |")
         md.append(f"| Daily P&L | `{paper_artifacts.get('daily_pnl', 'n/a')}` |")
         md.append(f"| Trades | `{paper_artifacts.get('trades', 'n/a')}` |")
+        md.append(f"| Next Session Orders | `{paper_artifacts.get('next_orders', 'n/a')}` |")
         md.append(f"| Agent Actions | `{paper_artifacts.get('agent_actions', 'n/a')}` |")
         md.append(f"| Paper Report | `{paper_artifacts.get('report', 'n/a')}` |")
         md.append("")
@@ -3629,6 +4141,7 @@ def _build_strategy_lab_content() -> str:
         md.append(f"| Positions stored | {database.get('positions', 0)} |")
         md.append(f"| Daily P&L rows stored | {database.get('daily_pnl', 0)} |")
         md.append(f"| Transactions stored | {database.get('transactions', 0)} |")
+        md.append(f"| Next orders stored | {database.get('next_orders', 0)} |")
         md.append(f"| Agent actions stored | {database.get('agent_actions', 0)} |")
         if database.get("tables"):
             md.append(f"| Tables | {', '.join(f'`{table}`' for table in database.get('tables') or [])} |")
@@ -3639,28 +4152,54 @@ def _build_strategy_lab_content() -> str:
         if positions:
             md.append("### Current Holdings and Risk Levels")
             md.append("")
-            md.append("| Symbol | Qty | Price | Market Value | Unrealized P&L | Stop | Target | Stage | RS |")
-            md.append("|---|---:|---:|---:|---:|---:|---:|---|---:|")
-            for row in positions[:20]:
+            md.append(_strategy_lab_interactive_positions(positions, fund_lookup))
+            md.append("")
+
+        md.append("### Next Session Orders")
+        md.append("")
+        md.append("| Date | Order | Symbol | Action | Qty | Type | Signal Reason | Ref Price | Stop | Target | Est Risk | Est Notional |")
+        md.append("|---|---|---|---|---:|---|---|---:|---:|---:|---:|---:|")
+        if next_orders:
+            for row in next_orders[:30]:
                 md.append(
-                    f"| **{_fmt_text(row.get('symbol'))}** | {row.get('quantity', '0')} | "
-                    f"₹{_fmt_num(row.get('current_price'), 2)} | ₹{_fmt_num(row.get('market_value'), 2)} | "
-                    f"₹{_fmt_num(row.get('unrealized_pnl'), 2)} | ₹{_fmt_num(row.get('stop_price'), 2)} | "
-                    f"₹{_fmt_num(row.get('target_price'), 2)} | {_fmt_text(row.get('stage'))} | "
-                    f"{_fmt_num(row.get('relative_strength'), 1)} |"
+                    f"| {_fmt_text(row.get('date'))} | `{_fmt_text(row.get('order_id'))}` | "
+                    f"**{_fmt_text(row.get('symbol'))}** | {_fmt_text(row.get('trade_intent') or row.get('side'))} | "
+                    f"{row.get('quantity', '0')} | {_fmt_text(row.get('order_type'))} | "
+                    f"{_fmt_text(row.get('signal_reason') or 'n/a')} | ₹{_fmt_num(row.get('reference_price'), 2)} | "
+                    f"₹{_fmt_num(row.get('stop_price'), 2)} | ₹{_fmt_num(row.get('target_price'), 2)} | "
+                    f"₹{_fmt_num(row.get('estimated_risk'), 2)} | ₹{_fmt_num(row.get('estimated_notional'), 2)} |"
+                )
+        else:
+            md.append("| n/a | n/a | n/a | HOLD | 0 | n/a | no next-open paper orders | n/a | n/a | n/a | n/a | n/a |")
+        md.append("")
+
+        if trades:
+            md.append("### Today Trade Blotter")
+            md.append("")
+            md.append("| Date | Symbol | Action | Qty | Price | Signal Reason | Entry | Stop | Target | Realized | R | Hold Days |")
+            md.append("|---|---|---|---:|---:|---|---:|---:|---:|---:|---:|---:|")
+            for row in blotter_trades:
+                md.append(
+                    f"| {_fmt_text(row.get('date'))} | **{_fmt_text(row.get('symbol'))}** | "
+                    f"{_fmt_text(row.get('trade_intent') or row.get('side'))} | {row.get('quantity', '0')} | "
+                    f"₹{_fmt_num(row.get('price'), 2)} | {_fmt_text(row.get('signal_reason') or 'n/a')} | "
+                    f"₹{_fmt_num(row.get('entry_price'), 2)} | ₹{_fmt_num(row.get('stop_price'), 2)} | "
+                    f"₹{_fmt_num(row.get('target_price'), 2)} | ₹{_fmt_num(row.get('realized_pnl'), 2)} | "
+                    f"{_fmt_num(row.get('r_multiple'), 2)} | {_fmt_num(row.get('holding_period_days'), 0)} |"
                 )
             md.append("")
 
-        if trades:
             md.append("### Latest Paper Trades")
             md.append("")
-            md.append("| Date | Symbol | Side | Qty | Price | Fees |")
-            md.append("|---|---|---|---:|---:|---:|")
+            md.append("| Date | Symbol | Side | Intent | Qty | Price | Signal Reason | Realized | Hold Days |")
+            md.append("|---|---|---|---|---:|---:|---|---:|---:|")
             for row in trades[-15:]:
                 md.append(
                     f"| {_fmt_text(row.get('date'))} | **{_fmt_text(row.get('symbol'))}** | "
-                    f"{_fmt_text(row.get('side'))} | {row.get('quantity', '0')} | "
-                    f"₹{_fmt_num(row.get('price'), 2)} | ₹{_fmt_num(row.get('fees'), 2)} |"
+                    f"{_fmt_text(row.get('side'))} | {_fmt_text(row.get('trade_intent') or 'n/a')} | "
+                    f"{row.get('quantity', '0')} | ₹{_fmt_num(row.get('price'), 2)} | "
+                    f"{_fmt_text(row.get('signal_reason') or 'n/a')} | ₹{_fmt_num(row.get('realized_pnl'), 2)} | "
+                    f"{_fmt_num(row.get('holding_period_days'), 0)} |"
                 )
             md.append("")
 
@@ -3670,6 +4209,8 @@ def _build_strategy_lab_content() -> str:
         md.append("")
 
     md.append("## Strategy Leaderboard")
+    md.append("")
+    md.append(_strategy_lab_interactive_leaderboard(summary, rows, turnover_rows))
     md.append("")
     md.append("| Rank | Strategy | Strategy Verdict | Return | Max DD | Excess | Profit Factor | Expectancy | Turnover | Cost Drag | Fills | Win Rate |")
     md.append("|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
@@ -3787,20 +4328,76 @@ def _build_strategy_lab_content() -> str:
     return "\n".join(md)
 
 
+def _generate_diagnosis_preset_report(args: list[str], output_format: str) -> dict:
+    if len(args) < 2:
+        return {
+            "path": None,
+            "latest_path": None,
+            "format": output_format,
+            "title": "Fundamental Driver Diagnosis",
+            "report_type": "diagnosis",
+            "symbol": "",
+            "success": False,
+            "warnings": ["Usage: /report diagnosis SYMBOL eps|roce|margin|debt|cashflow"],
+            "note": "Usage: /report diagnosis SYMBOL eps|roce|margin|debt|cashflow",
+        }
+
+    from terminal.skills.commands import render_fundamental_driver_result
+    from terminal.skills.fundamental_driver import diagnose_fundamental_driver
+
+    symbol = str(args[0]).strip().upper()
+    metric = str(args[1]).strip().lower()
+    normalized_format = "md" if output_format.lower().strip() in {"md", "markdown"} else "html"
+    result = diagnose_fundamental_driver(symbol, metric)
+    markdown = render_fundamental_driver_result(result)
+    filename = f"{symbol}_fundamental_driver_{metric}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    title = f"{symbol} — {metric.upper()} Fundamental Driver Diagnosis"
+
+    archive = generate_report(
+        markdown,
+        report_type="diagnosis",
+        symbol=symbol,
+        output_format=normalized_format,
+        title=title,
+        filename=filename,
+    )
+    latest_dir = ROOT / "reports" / "latest"
+    latest_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = latest_dir / f"fundamental_driver_diagnosis.{archive.get('format', normalized_format)}"
+    if archive.get("success") and archive.get("path"):
+        shutil.copy2(Path(archive["path"]), latest_path)
+        archive["latest_path"] = str(latest_path)
+
+    archive.update(
+        {
+            "title": title,
+            "report_type": "diagnosis",
+            "symbol": symbol,
+            "markdown": markdown,
+            "warnings": list(result.warnings),
+            "note": f"Generated deterministic fundamental driver diagnosis for {symbol} {metric.upper()}.",
+        }
+    )
+    return archive
+
+
 def generate_preset_report(
     report_type: str,
     output_format: str = "html",
+    args: list[str] | tuple[str, ...] | None = None,
 ) -> dict:
     """
     Generate a data-direct preset report without requiring LLM content.
 
     Supported report_type values:
-        'sector-rotation', 'stage2', 'strategy-lab', 'portfolio-monitor'
+        'sector-rotation', 'stage2', 'strategy-lab', 'portfolio-monitor',
+        'swing-playbook', 'diagnosis'
 
     Returns:
         dict with keys: path, format, title, report_type, success, note
     """
     rt = report_type.lower().strip()
+    preset_args = list(args or [])
 
     # portfolio-monitor is self-contained — delegate directly
     if rt == "portfolio-monitor":
@@ -3817,10 +4414,36 @@ def generate_preset_report(
             "note":        result.get("note", ""),
         }
 
+    if rt in {"swing-playbook", "swing_playbook"}:
+        from terminal.swing_playbook import SwingPlaybookOptions, generate_swing_playbook
+
+        normalized_format = "md" if output_format.lower().strip() in {"md", "markdown"} else "html"
+        result = generate_swing_playbook(options=SwingPlaybookOptions(project_root=ROOT))
+        selected_path = (
+            result.markdown_path
+            if normalized_format == "md"
+            else result.html_path
+        )
+        return {
+            "success": result.success,
+            "path": selected_path,
+            "latest_path": selected_path,
+            "format": normalized_format,
+            "title": "Swing Trading Playbook",
+            "report_type": "swing-playbook",
+            "symbol": "MARKET",
+            "markdown": result.markdown,
+            "warnings": list(result.warnings),
+            "note": "Generated swing trading playbook report from current project data.",
+        }
+
+    if rt in {"diagnosis", "fundamental-driver", "fundamental_driver"}:
+        return _generate_diagnosis_preset_report(preset_args, output_format)
+
     if rt not in ("sector-rotation", "stage2", "strategy-lab"):
         raise ValueError(
             f"generate_preset_report supports sector-rotation, stage2, strategy-lab, "
-            f"portfolio-monitor; got '{rt}'"
+            f"portfolio-monitor, swing-playbook, diagnosis; got '{rt}'"
         )
 
     try:

@@ -95,10 +95,24 @@ def render_dashboard(tool_results: list[dict]) -> str:
 
     if brd and not brd.get("error"):
         lines.append("\n### 3. Breadth & Internal Health")
+        brd_index = brd.get("index") or brd.get("requested_index")
+        breadth_label = f"{brd_index} constituents" if brd_index else "DB universe"
         lines.append(
-            f"- DB universe: {brd.get('advances', '—')} advances / {brd.get('declines', '—')} declines; "
+            f"- {breadth_label}: {brd.get('advances', '—')} advances / {brd.get('declines', '—')} declines; "
             f"A/D ratio {brd.get('ad_ratio', '—')}."
         )
+        if brd_index and brd.get("composition_count"):
+            lines.append(
+                f"- Coverage: {brd.get('matched_count', brd.get('total_stocks'))}/"
+                f"{brd.get('composition_count')} constituents"
+                + (
+                    f" ({brd.get('coverage_pct'):.1f}%)."
+                    if isinstance(brd.get("coverage_pct"), (int, float))
+                    else "."
+                )
+            )
+        for warning in brd.get("warnings") or []:
+            lines.append(f"- Warning: {warning}.")
         if brd.get("avg_rs_pct") is not None:
             lines.append(f"- Average RS: {brd.get('avg_rs_pct'):+.1f}%.")
         sd = brd.get("stage_distribution") or {}

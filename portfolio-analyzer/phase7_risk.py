@@ -73,7 +73,20 @@ def load_holdings_weights() -> tuple[pd.DataFrame, dict]:
         # Expect columns like symbol/Symbol, quantity/Qty, optional value/Value or price
         sym_col = "symbol" if "symbol" in df.columns else (df.columns[0] if len(df.columns) else None)
         qty_col = next((c for c in df.columns if str(c).lower() in ("qty", "quantity", "qty.")), None)
-        val_col = next((c for c in df.columns if str(c).lower() in ("value", "market value", "amount")), None)
+        val_col = next(
+            (
+                c for c in df.columns
+                if str(c).lower() in (
+                    "value",
+                    "value_rs",
+                    "market value",
+                    "market_value",
+                    "value at market price",
+                    "amount",
+                )
+            ),
+            None,
+        )
         if sym_col and (qty_col or val_col):
             df = df.rename(columns={sym_col: "symbol"})
             df["symbol"] = df["symbol"].astype(str).str.strip().str.upper()
@@ -145,7 +158,7 @@ def portfolio_returns(weights: pd.DataFrame, stock_returns: pd.DataFrame) -> pd.
     """Weights: columns symbol, weight. stock_returns: columns = symbols. Returns portfolio daily return series."""
     if weights.empty or stock_returns.empty:
         return pd.Series(dtype=float)
-    w = weights.set_index("symbol")["weight"]
+    w = weights.groupby("symbol", as_index=True)["weight"].sum()
     common = [c for c in stock_returns.columns if c in w.index]
     if not common:
         return pd.Series(dtype=float)
@@ -246,7 +259,7 @@ def run_phase7(
     sharpe = sharpe_annual(port_ret, risk_free_rate)
     beta = beta_vs_index(port_ret, index_ret) if not index_ret.empty else np.nan
     mdd = max_drawdown(port_ret)
-    w = holdings.set_index("symbol")["weight"]
+    w = holdings.groupby("symbol", as_index=True)["weight"].sum()
     herf = concentration_herfindahl(w)
 
     risk_summary = {

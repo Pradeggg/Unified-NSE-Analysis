@@ -124,6 +124,8 @@ _MANUAL_STOCK_ALIASES: dict[str, str] = {
     "BHARAT FORGE":                   "BHARATFORG",
     "MARUTI SUZUKI":                  "MARUTI",
     "SUN PHARMA":                     "SUNPHARMA",
+    "SBI":                            "SBIN",
+    "STATE BANK OF INDIA":            "SBIN",
     "DR REDDY":                       "DRREDDY",
     "DR REDDYS":                      "DRREDDY",
     "DIXON TECH":                     "DIXON",
@@ -133,6 +135,11 @@ _MANUAL_STOCK_ALIASES: dict[str, str] = {
     "PREMIER ENERGIES":               "PREMIERENE",
     "HINDUSTAN AERONAUTICS":          "HAL",
     "BAJAJ AUTO":                     "BAJAJ-AUTO",
+    "CHENNPETRO":                     "CHENNPETRO",
+    "CHENNAI PETROLEUM":              "CHENNPETRO",
+    "CHENNAI PETROLEUM CORPORATION":  "CHENNPETRO",
+    "CHENNAI PETROLEUM CORPORATION LIMITED": "CHENNPETRO",
+    "CPCL":                           "CHENNPETRO",
 }
 
 

@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import csv
+import json
 import shlex
+import subprocess
+import sys
 from datetime import date, timedelta
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -13,6 +17,7 @@ from backtesting.data import inspect_backtest_data
 from backtesting.engine import BacktestConfig, run_backtest
 from backtesting.storage import load_latest_backtest_report, persist_backtest_result
 from backtesting.strategy_registry import list_strategies
+from terminal.reports import generate_preset_report
 
 
 def _strategy_ids() -> set[str]:
@@ -60,6 +65,7 @@ def _usage_block() -> str:
         "Usage:\n"
         "  /backtest list                            — show available strategies\n"
         "  /strategy-lab validate                    — check EOD data readiness\n"
+        "  /strategy-lab run                         — replay portfolio strategies + HTML report\n"
         "  /backtest run <strategy> [options]        — execute a backtest\n"
         "  /backtest <strategy> <SYMBOL>             — shorthand for last 2y on one symbol\n"
         "  /backtest report latest                   — show last persisted run\n"
@@ -77,7 +83,8 @@ def _usage_block() -> str:
         "Examples:\n"
         "  /backtest stage2 DMART\n"
         "  /backtest run vcp --symbol RELIANCE --from 2024-01-01\n"
-        "  /backtest run canslim --universe nifty500 --from 2024-01-01 --persist"
+        "  /backtest run canslim --universe nifty500 --from 2024-01-01 --persist\n"
+        "  /strategy-lab run --top-n 200"
     )
     return examples
 
@@ -123,6 +130,9 @@ def handle_backtest_command(text: str, *, project_root: Path | None = None) -> s
         return _render_latest_report()
 
     parts = shlex.split(raw)
+    if len(parts) >= 2 and parts[0].lower() == "/strategy-lab" and parts[1].lower() == "run":
+        return _run_portfolio_strategy_lab_command(parts[2:], project_root=project_root)
+
     if len(parts) >= 3 and parts[0].lower() == "/backtest" and parts[1].lower() == "run":
         return _run_backtest_command(parts[2:], project_root=project_root)
 
@@ -164,6 +174,115 @@ def _arg_value(parts: list[str], name: str, default: str | None = None) -> str |
     if idx + 1 >= len(parts):
         raise ValueError(f"Missing value for {name}")
     return parts[idx + 1]
+
+
+def _read_strategy_lab_summary(output_dir: Path) -> dict[str, Any]:
+    for summary_path in (
+        output_dir / "reports" / "strategy_comparison_summary.json",
+        output_dir / "summary.json",
+    ):
+        if not summary_path.exists():
+            continue
+        with summary_path.open(encoding="utf-8") as handle:
+            data = json.load(handle)
+        if isinstance(data, dict):
+            return data
+    return {}
+
+
+def _run_portfolio_strategy_lab_command(parts: list[str], *, project_root: Path | None = None) -> str:
+    root = Path(project_root or Path.cwd())
+    output_arg = _arg_value(parts, "--output-dir", "portfolio/data/nse_pg_strategy_lab/latest")
+    output_dir = Path(output_arg or "portfolio/data/nse_pg_strategy_lab/latest")
+    if not output_dir.is_absolute():
+        output_dir = root / output_dir
+
+    start = _arg_value(parts, "--start", "2025-01-01")
+    lookback = _arg_value(parts, "--lookback", "2024-01-01")
+    top_n = _arg_value(parts, "--top-n", "200")
+    slippage_bps = _arg_value(parts, "--slippage-bps", "5.0")
+    brokerage_bps = _arg_value(parts, "--brokerage-bps", "3.0")
+    run_id = _arg_value(parts, "--run-id", "NSE-PG-AGENT-STRATEGY-LAB")
+
+    cmd = [
+        sys.executable,
+        "-m",
+        "portfolio.cli",
+        "strategy-lab",
+        "--output-dir",
+        str(output_dir),
+        "--start",
+        str(start),
+        "--lookback",
+        str(lookback),
+        "--top-n",
+        str(top_n),
+        "--slippage-bps",
+        str(slippage_bps),
+        "--brokerage-bps",
+        str(brokerage_bps),
+        "--run-id",
+        str(run_id),
+    ]
+    if "--no-db-persist" in parts:
+        cmd.append("--no-db-persist")
+
+    try:
+        result = subprocess.run(cmd, cwd=root, capture_output=True, text=True, check=False)
+        if result.returncode != 0:
+            err = (result.stderr or result.stdout or "").strip()
+            return f"Strategy Lab portfolio replay failed with exit code {result.returncode}:\n{err}"
+
+        report = generate_preset_report("strategy-lab", "html")
+        summary = _read_strategy_lab_summary(output_dir)
+    except Exception as exc:
+        return f"Strategy Lab portfolio replay failed: {exc}"
+
+    latest_path = report.get("latest_path") or report.get("path") or ""
+    report_path = report.get("path") or latest_path
+    db = ((summary.get("paper_portfolio") or {}).get("database") or {})
+
+    lines = [
+        "Strategy Lab portfolio replay complete",
+        f"Output: {output_dir}",
+    ]
+    if report_path:
+        lines.append(f"Report: {report_path}")
+    if latest_path and latest_path != report_path:
+        lines.append(f"Latest: {latest_path}")
+    if db:
+        status = "OK" if db.get("success") else "FAILED"
+        daily_pnl_count = db.get("daily_pnl", db.get("daily_pnl_rows", 0))
+        lines.append(
+            "PostgreSQL: "
+            f"{status} "
+            f"(positions={db.get('positions', 0)}, "
+            f"daily_pnl={daily_pnl_count}, "
+            f"transactions={db.get('transactions', 0)}, "
+            f"agent_actions={db.get('agent_actions', 0)})"
+        )
+    else:
+        lines.append("PostgreSQL: not reported in strategy_comparison_summary.json")
+    stdout = _summarize_strategy_lab_stdout(result.stdout)
+    if stdout:
+        lines.append("")
+        lines.append("CLI output:")
+        lines.append(stdout)
+    return "\n".join(lines)
+
+
+def _summarize_strategy_lab_stdout(stdout: str) -> str:
+    """Return CLI stdout without raw artifact paths that trigger auto-analysis."""
+    keep: list[str] = []
+    for line in (stdout or "").splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        lower = stripped.lower()
+        if lower.startswith(("leaderboard:", "report:", "summary:")):
+            continue
+        keep.append(stripped)
+    return "\n".join(keep)[-1200:]
 
 
 def _run_backtest_command(parts: list[str], *, project_root: Path | None = None) -> str:

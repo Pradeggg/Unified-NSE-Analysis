@@ -15,6 +15,7 @@ from pathlib import Path
 import json
 import warnings
 warnings.filterwarnings('ignore')
+from price_adjustments import adjust_price_history_for_splits
 try:
     import psycopg2
     from psycopg2.extras import execute_values
@@ -421,6 +422,8 @@ def calculate_tech_score(stock_data, index_data=None, fundamental_data=None, sym
     Calculate enhanced technical score with CAN SLIM and Minervini indicators
     Returns dictionary with score, rsi, trend, relative_strength, etc.
     """
+    stock_data = adjust_price_history_for_splits(stock_data)
+
     if len(stock_data) < 50:
         return {
             'score': None, 'rsi': None, 'trend': 'NEUTRAL',

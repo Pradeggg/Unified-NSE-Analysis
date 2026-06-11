@@ -1,0 +1,342 @@
+id: market_3m_rotation_swing_v1
+version: 1
+status: validated
+domain: market_analysis
+title: 3M Market Rotation Swing Setup
+description: >
+  Build a three-month market rotation view with index returns, stage
+  distribution change, sector return leadership, liquid Stage 2 candidates,
+  and optional persisted VCP overlap.
+input_patterns:
+  - last 3 months market rotation
+  - three month swing candidates
+  - market regime and stage 2 leadership over 3 months
+  - find swing candidates from sector rotation
+tags:
+  - market_regime
+  - sector_rotation
+  - stage_2
+  - swing
+  - vcp
+  - last_3_months
+evidence_required:
+  tables:
+    - market.index_eod
+    - scores.stage_snapshots
+    - scores.stage2_vcp_picks
+  freshness:
+    max_age_days: 5
+    stale_is_error: false
+tool_plan_template: []
+sql_templates:
+  - name: index_returns_lookback
+    sql: >
+      WITH latest AS (
+        SELECT MAX(trade_date) AS as_of_date
+        FROM market.index_eod
+      ),
+      latest_prices AS (
+        SELECT i.index_symbol, i.trade_date AS as_of_date, i.close AS latest_close
+        FROM market.index_eod i
+        JOIN latest l ON i.trade_date = l.as_of_date
+      ),
+      base_prices AS (
+        SELECT DISTINCT ON (i.index_symbol)
+          i.index_symbol,
+          i.trade_date AS base_date,
+          i.close AS base_close
+        FROM market.index_eod i
+        JOIN latest l ON i.trade_date <= l.as_of_date - (:lookback_days * INTERVAL '1 day')
+        ORDER BY i.index_symbol, i.trade_date DESC
+      )
+      SELECT
+        lp.as_of_date,
+        lp.index_symbol,
+        bp.base_date,
+        lp.latest_close,
+        bp.base_close,
+        ROUND(((lp.latest_close - bp.base_close) / NULLIF(bp.base_close, 0)) * 100, 2) AS return_pct
+      FROM latest_prices lp
+      JOIN base_prices bp ON bp.index_symbol = lp.index_symbol
+      ORDER BY return_pct DESC NULLS LAST
+      LIMIT :limit
+    required_params:
+      - lookback_days
+      - limit
+    expected_columns:
+      - as_of_date
+      - index_symbol
+      - base_date
+      - latest_close
+      - base_close
+      - return_pct
+    row_limit: 100
+    safety_status: passed
+    safety_findings: []
+    metadata:
+      evidence_role: index_returns
+
+  - name: stage_distribution_change
+    sql: >
+      WITH latest AS (
+        SELECT MAX(snapshot_date) AS as_of_date
+        FROM scores.stage_snapshots
+      ),
+      base AS (
+        SELECT MAX(snapshot_date) AS base_date
+        FROM scores.stage_snapshots s
+        JOIN latest l ON s.snapshot_date <= l.as_of_date - (:lookback_days * INTERVAL '1 day')
+      ),
+      latest_counts AS (
+        SELECT s.stage, COUNT(*) AS latest_count
+        FROM scores.stage_snapshots s
+        JOIN latest l ON s.snapshot_date = l.as_of_date
+        GROUP BY s.stage
+      ),
+      base_counts AS (
+        SELECT s.stage, COUNT(*) AS base_count
+        FROM scores.stage_snapshots s
+        JOIN base b ON s.snapshot_date = b.base_date
+        GROUP BY s.stage
+      )
+      SELECT
+        l.as_of_date,
+        b.base_date,
+        COALESCE(lc.stage, bc.stage) AS stage,
+        COALESCE(lc.latest_count, 0) AS latest_count,
+        COALESCE(bc.base_count, 0) AS base_count,
+        COALESCE(lc.latest_count, 0) - COALESCE(bc.base_count, 0) AS count_change
+      FROM latest l
+      CROSS JOIN base b
+      LEFT JOIN latest_counts lc ON true
+      FULL OUTER JOIN base_counts bc ON bc.stage = lc.stage
+      ORDER BY stage
+    required_params:
+      - lookback_days
+    expected_columns:
+      - as_of_date
+      - base_date
+      - stage
+      - latest_count
+      - base_count
+      - count_change
+    row_limit: 25
+    safety_status: passed
+    safety_findings: []
+    metadata:
+      evidence_role: stage_distribution
+
+  - name: sector_returns_lookback
+    sql: >
+      WITH latest AS (
+        SELECT MAX(snapshot_date) AS as_of_date
+        FROM scores.stage_snapshots
+      ),
+      base AS (
+        SELECT MAX(snapshot_date) AS base_date
+        FROM scores.stage_snapshots s
+        JOIN latest l ON s.snapshot_date <= l.as_of_date - (:lookback_days * INTERVAL '1 day')
+      ),
+      latest_rows AS (
+        SELECT symbol, COALESCE(sector, 'Unknown') AS sector, price AS latest_price
+        FROM scores.stage_snapshots s
+        JOIN latest l ON s.snapshot_date = l.as_of_date
+        WHERE price IS NOT NULL
+      ),
+      base_rows AS (
+        SELECT symbol, price AS base_price
+        FROM scores.stage_snapshots s
+        JOIN base b ON s.snapshot_date = b.base_date
+        WHERE price IS NOT NULL
+      )
+      SELECT
+        l.as_of_date,
+        b.base_date,
+        lr.sector,
+        COUNT(*) AS stock_count,
+        ROUND(AVG(((lr.latest_price - br.base_price) / NULLIF(br.base_price, 0)) * 100), 2) AS avg_return_pct,
+        ROUND(AVG(CASE WHEN lr.latest_price > br.base_price THEN 1 ELSE 0 END) * 100, 2) AS advancer_pct
+      FROM latest l
+      CROSS JOIN base b
+      JOIN latest_rows lr ON true
+      JOIN base_rows br ON br.symbol = lr.symbol
+      GROUP BY l.as_of_date, b.base_date, lr.sector
+      HAVING COUNT(*) >= 3
+      ORDER BY avg_return_pct DESC NULLS LAST
+      LIMIT :limit
+    required_params:
+      - lookback_days
+      - limit
+    expected_columns:
+      - as_of_date
+      - base_date
+      - sector
+      - stock_count
+      - avg_return_pct
+      - advancer_pct
+    row_limit: 100
+    safety_status: passed
+    safety_findings: []
+    metadata:
+      evidence_role: sector_returns
+
+  - name: stage2_liquid_candidates
+    sql: >
+      WITH latest AS (
+        SELECT MAX(snapshot_date) AS as_of_date
+        FROM scores.stage_snapshots
+      )
+      SELECT
+        s.snapshot_date AS as_of_date,
+        s.symbol,
+        s.company_name,
+        s.sector,
+        s.price,
+        s.stage,
+        s.stage_score,
+        s.investment_score,
+        s.technical_score,
+        s.relative_strength,
+        s.rsi,
+        s.trading_signal,
+        s.enhanced_fund_score,
+        s.earnings_quality,
+        s.sales_growth,
+        s.financial_strength
+      FROM scores.stage_snapshots s
+      JOIN latest l ON s.snapshot_date = l.as_of_date
+      WHERE s.stage = 'STAGE_2'
+        AND COALESCE(s.price, 0) >= :min_price
+        AND COALESCE(s.investment_score, 0) >= :min_investment_score
+      ORDER BY s.investment_score DESC NULLS LAST, s.relative_strength DESC NULLS LAST
+      LIMIT :limit
+    required_params:
+      - min_price
+      - min_investment_score
+      - limit
+    expected_columns:
+      - as_of_date
+      - symbol
+      - company_name
+      - sector
+      - price
+      - stage
+      - stage_score
+      - investment_score
+      - technical_score
+      - relative_strength
+      - rsi
+      - trading_signal
+      - enhanced_fund_score
+      - earnings_quality
+      - sales_growth
+      - financial_strength
+    row_limit: 100
+    safety_status: passed
+    safety_findings: []
+    metadata:
+      evidence_role: stage2_candidates
+      required_filters:
+        stage: STAGE_2
+
+  - name: vcp_latest_candidates
+    sql: >
+      WITH latest AS (
+        SELECT MAX(snapshot_date) AS as_of_date
+        FROM scores.stage2_vcp_picks
+      )
+      SELECT
+        p.snapshot_date AS as_of_date,
+        p.rank,
+        p.symbol,
+        p.company_name,
+        p.sector,
+        p.price,
+        p.trading_signal,
+        p.investment_score,
+        p.enhanced_fund_score,
+        p.earnings_quality,
+        p.sales_growth,
+        p.financial_strength,
+        p.vcp_score,
+        p.vcp_breakout_pct,
+        p.vcp_contraction_pct,
+        p.narrative
+      FROM scores.stage2_vcp_picks p
+      JOIN latest l ON p.snapshot_date = l.as_of_date
+      ORDER BY p.rank ASC, p.vcp_score DESC NULLS LAST
+      LIMIT :limit
+    required_params:
+      - limit
+    expected_columns:
+      - as_of_date
+      - rank
+      - symbol
+      - company_name
+      - sector
+      - price
+      - trading_signal
+      - investment_score
+      - enhanced_fund_score
+      - earnings_quality
+      - sales_growth
+      - financial_strength
+      - vcp_score
+      - vcp_breakout_pct
+      - vcp_contraction_pct
+      - narrative
+    row_limit: 100
+    safety_status: passed
+    safety_findings: []
+    metadata:
+      evidence_role: vcp_overlap
+      optional: true
+
+output_contract:
+  - index_returns_lookback
+  - stage_distribution_change
+  - sector_returns_lookback
+  - stage2_liquid_candidates
+  - vcp_latest_candidates
+validation_rules:
+  - name: required_tables_exist
+    severity: error
+    config:
+      tables:
+        - market.index_eod
+        - scores.stage_snapshots
+        - scores.stage2_vcp_picks
+  - name: sql_is_read_only
+    severity: error
+    config:
+      require_named_params: true
+  - name: evidence_freshness_present
+    severity: warning
+    config:
+      max_age_days: 5
+  - name: vcp_overlap_optional
+    severity: warning
+    config:
+      optional_outputs:
+        - vcp_latest_candidates
+synthesis_guidance: >
+  Treat index and sector returns as context, stage distribution as market
+  breadth confirmation, Stage 2 candidates as the actionable swing universe,
+  and VCP overlap as optional confirmation. Do not claim VCP opportunity if
+  the optional VCP result set is empty.
+generation_model: human-authored
+created_by: codex
+metadata:
+  runtime:
+    default_params:
+      lookback_days: 90
+      limit: 25
+      min_price: 50
+      min_investment_score: 60
+  reviewer:
+    required_inputs:
+      - timeframe
+    intent_tags:
+      - market_rotation
+      - swing_candidates
+      - stage2

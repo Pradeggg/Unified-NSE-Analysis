@@ -12,6 +12,8 @@ def test_report_recommendation_is_recognized_as_preset_type():
 
     assert "recommendation" in nse_agent._REPORT_PRESET_TYPES_FOR_TEST
     assert "strategy-lab" in nse_agent._REPORT_PRESET_TYPES_FOR_TEST
+    assert "swing-playbook" in nse_agent._REPORT_PRESET_TYPES_FOR_TEST
+    assert "diagnosis" in nse_agent._REPORT_PRESET_TYPES_FOR_TEST
 
 
 def test_recommendation_report_command_forwards_args_and_options(monkeypatch):
@@ -133,6 +135,95 @@ def test_open_report_path_swallows_viewer_failures(monkeypatch):
     assert nse_agent._open_report_path("/tmp/report.html", nse_agent.console) is False
 
 
+def test_swing_playbook_report_preset_delegates_to_generator(monkeypatch, tmp_path):
+    calls = []
+
+    def fake_generate_swing_playbook(*, options=None, candidates=None):
+        calls.append({"options": options, "candidates": candidates})
+        html_path = tmp_path / "swing_playbook.html"
+        md_path = tmp_path / "swing_playbook.md"
+        candidates_path = tmp_path / "candidates.csv"
+        portfolio_path = tmp_path / "portfolio.csv"
+        html_path.write_text("<html>Swing</html>", encoding="utf-8")
+        md_path.write_text("# Swing", encoding="utf-8")
+        candidates_path.write_text("symbol\nAAA\n", encoding="utf-8")
+        portfolio_path.write_text("symbol\nAAA\n", encoding="utf-8")
+        from terminal.swing_playbook import SwingPlaybookResult
+
+        return SwingPlaybookResult(
+            success=True,
+            markdown="# Swing",
+            html_path=str(html_path),
+            markdown_path=str(md_path),
+            candidates_csv=str(candidates_path),
+            portfolio_csv=str(portfolio_path),
+        )
+
+    import terminal.swing_playbook as swing_playbook
+
+    monkeypatch.setattr(swing_playbook, "generate_swing_playbook", fake_generate_swing_playbook)
+
+    result = reports.generate_preset_report("swing-playbook", "html")
+
+    assert result["path"].endswith("swing_playbook.html")
+    assert result["latest_path"].endswith("swing_playbook.html")
+    assert result["format"] == "html"
+    assert result["title"] == "Swing Trading Playbook"
+    assert result["report_type"] == "swing-playbook"
+    assert result["symbol"] == "MARKET"
+    assert result["note"]
+    assert result["markdown"] == "# Swing"
+    assert result["warnings"] == []
+    assert calls[-1]["options"] is not None
+
+    for output_format in ("md", "markdown"):
+        result = reports.generate_preset_report("swing-playbook", output_format)
+
+        assert result["path"].endswith("swing_playbook.md")
+        assert result["latest_path"].endswith("swing_playbook.md")
+        assert result["format"] == "md"
+
+
+def test_diagnosis_report_preset_writes_latest_markdown_and_html(monkeypatch, tmp_path):
+    import terminal.reports as reports_module
+    from terminal.skills.fundamental_driver import FundamentalDriverResult
+
+    monkeypatch.setattr(reports_module, "ROOT", tmp_path)
+    monkeypatch.setattr(reports_module, "REPORTS_DIR", tmp_path / "reports" / "generated")
+
+    def fake_diagnose(symbol, metric, **kwargs):
+        return FundamentalDriverResult(
+            success=True,
+            symbol=symbol,
+            metric=metric,
+            short_answer=f"{symbol} {metric} explanation",
+            metric_bridge={"eps_change_pct": -12.3},
+            evidence=("P&L periods compared: Mar 2026 vs Mar 2025",),
+            interpretation="operating_margin_pressure",
+            what_to_watch=("Margin recovery",),
+            warnings=("Cache stale",),
+        )
+
+    monkeypatch.setattr("terminal.skills.fundamental_driver.diagnose_fundamental_driver", fake_diagnose)
+
+    html = reports.generate_preset_report("diagnosis", "html", args=["DMART", "eps"])
+    md = reports.generate_preset_report("diagnosis", "md", args=["DMART", "eps"])
+
+    assert html["success"] is True
+    assert html["report_type"] == "diagnosis"
+    assert html["symbol"] == "DMART"
+    assert html["format"] == "html"
+    assert html["latest_path"].endswith("fundamental_driver_diagnosis.html")
+    assert Path(html["path"]).exists()
+    assert Path(html["latest_path"]).exists()
+    assert "DMART eps explanation" in html["markdown"]
+    assert html["warnings"] == ["Cache stale"]
+
+    assert md["format"] == "md"
+    assert md["latest_path"].endswith("fundamental_driver_diagnosis.md")
+    assert "## Fundamental Driver Diagnosis" in Path(md["latest_path"]).read_text(encoding="utf-8")
+
+
 class TerminalReportsTests(unittest.TestCase):
     def test_generated_html_uses_agent_adda_standard_theme(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -174,6 +265,8 @@ class TerminalReportsTests(unittest.TestCase):
                     "Company| Tata Steel Limited  ",
                     "Symbol| TATASTEEL  ",
                     "",
+                    "![TATASTEEL 6-month chart](data:image/svg+xml;utf8,%3Csvg%3E%3C/svg%3E)",
+                    "",
                     "  * First indented bullet",
                     "  * [neutral-tata-steel-target-of-rs-180-motilal-oswal-13569217.html\" target=\"_blank\">Motilal Oswal's perspective](<https://www.moneycontrol.com/news/business/stocks/neutral-tata-steel-target-of-rs-180-motilal-oswal-13569217.html>)",
                 ]
@@ -183,6 +276,8 @@ class TerminalReportsTests(unittest.TestCase):
         self.assertIn('<table class="data-table"', html)
         self.assertIn("<th>Field</th><th>Value</th>", html)
         self.assertIn("<td>Company</td><td>Tata Steel Limited</td>", html)
+        self.assertIn('<img src="data:image/svg+xml;utf8,%3Csvg%3E%3C/svg%3E"', html)
+        self.assertIn('alt="TATASTEEL 6-month chart"', html)
         self.assertIn("<li>First indented bullet</li>", html)
         self.assertIn('href="https://www.moneycontrol.com/news/business/stocks/neutral-tata-steel-target-of-rs-180-motilal-oswal-13569217.html"', html)
         self.assertIn(">Motilal Oswal&#x27;s perspective</a>", html)
@@ -338,6 +433,7 @@ class TerminalReportsTests(unittest.TestCase):
                                 "positions": "paper/positions.csv",
                                 "daily_pnl": "paper/daily_pnl.csv",
                                 "trades": "paper/trades.csv",
+                                "next_orders": "paper/next_orders.csv",
                                 "agent_actions": "paper/agent_actions.jsonl",
                                 "report": "reports/paper_portfolio_report.md",
                             },
@@ -377,8 +473,15 @@ class TerminalReportsTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (paper_dir / "trades.csv").write_text(
-                "date,strategy_id,symbol,side,quantity,price,notional,fees,slippage,cash_effect,order_id,fill_id\n"
-                "2026-05-29,vcp_breakout_v1,AAA,BUY,10,100,1000,1,0.5,-1001,ord1,fill1\n",
+                "date,strategy_id,symbol,side,trade_intent,signal_date,signal_reason,order_type,entry_date,quantity,price,entry_price,stop_price,target_price,risk_amount,realized_pnl,r_multiple,holding_period_days,notional,fees,slippage,cash_effect,order_id,fill_id\n"
+                "2026-05-29,vcp_breakout_v1,AAA,BUY,ENTRY,2026-05-28,stage2 breakout with volume confirmation,MARKET_NEXT_OPEN,2026-05-29,10,100,100,90,120,100,, , ,1000,1,0.5,-1001,ord1,fill1\n"
+                "2026-05-29,vcp_breakout_v1,BBB,SELL,EXIT,2026-05-28,exit rule matched,MARKET_NEXT_OPEN,2026-05-28,5,200,190,175,220,75,49,0.67,1,1000,1,0.5,999,ord2,fill2\n",
+                encoding="utf-8",
+            )
+            (paper_dir / "next_orders.csv").write_text(
+                "date,order_id,strategy_id,symbol,side,trade_intent,quantity,order_type,signal_reason,reference_price,stop_price,target_price,risk_per_share,estimated_risk,estimated_notional\n"
+                "2026-05-29,ord-next-buy,vcp_breakout_v1,CCC,BUY,ENTRY,10,MARKET_NEXT_OPEN,entry rule matched,100,90,120,10,100,1000\n"
+                "2026-05-29,ord-next-sell,vcp_breakout_v1,AAA,SELL,EXIT,5,MARKET_NEXT_OPEN,exit rule matched,100,,,,,500\n",
                 encoding="utf-8",
             )
             state_dir = root / "portfolio" / "data" / "nse_pg_strategy_lab" / "latest" / "runs" / "vcp_breakout_v1" / "state"
@@ -419,9 +522,30 @@ class TerminalReportsTests(unittest.TestCase):
         self.assertIn("vcp_breakout_v1", html)
         self.assertIn("Cost and Turnover Diagnostics", html)
         self.assertIn("Daily Paper Portfolio", html)
+        self.assertIn("Current Paper Book", html)
+        self.assertIn("Today Trade Blotter", html)
+        self.assertIn("Next Session Orders", html)
+        self.assertIn("ord-next-buy", html)
+        self.assertIn("ord-next-sell", html)
+        self.assertIn("stage2 breakout with volume confirmation", html)
+        self.assertIn("exit rule matched", html)
+        self.assertIn("Realized", html)
         self.assertIn("LLM Narrative", html)
         self.assertIn("Strategy Return Chart", html)
         self.assertIn("Portfolio NAV Chart", html)
+        self.assertIn("aa-strategy-row", html)
+        self.assertIn("aa-position-row", html)
+        self.assertIn("toggleStrategyLabDetail", html)
+        self.assertIn("Strategy Details", html)
+        self.assertIn("Position Details", html)
+        self.assertIn("Fundamental Details", html)
+        self.assertIn('<div class="aa-strategy-lab-assets">', html)
+        self.assertNotIn("&lt;div class=&quot;aa-strategy-lab-assets&quot;", html)
+        self.assertIn("aa-lab-tabbar", html)
+        self.assertIn("aa-lab-tab-panel", html)
+        self.assertIn("aa-window-header", html)
+        self.assertIn("buildStrategyLabTabs", html)
+        self.assertIn("Paper Trading", html)
         self.assertIn("Strategy Verdict", html)
         self.assertIn("Turnover Decomposition", html)
         self.assertIn("total filled notional divided by starting capital", html)
@@ -432,6 +556,15 @@ class TerminalReportsTests(unittest.TestCase):
         self.assertIn("Portfolio P&amp;L", html)
         self.assertIn("Detailed Analysis", html)
         self.assertIn("Strategy Playbook", html)
+        self.assertIn("aa-strategy-playbook", html)
+        self.assertIn("Entry Criteria", html)
+        self.assertIn("Add / Pyramid Criteria", html)
+        self.assertIn("Exit Criteria", html)
+        self.assertIn("Stop Loss", html)
+        self.assertIn("Targets / Profit Taking", html)
+        self.assertIn("Position Sizing", html)
+        self.assertIn('playbook:"Strategy Playbook"', html)
+        self.assertIn('"overview","strategy","playbook","paper"', html)
         self.assertIn("What it is", html)
         self.assertIn("VCP Breakout", html)
         self.assertIn("Council Deliberations", html)

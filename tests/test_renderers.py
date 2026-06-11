@@ -7,8 +7,14 @@ import unittest
 
 from terminal.renderers import render
 from terminal.renderers._base import _get, _source_trail_lines, FOOTER, trail_and_footer
-from terminal.renderers.narrator import attach_narrative, build_narrative, NARRATION_INTENTS
+from terminal.renderers.narrator import (
+    NARRATION_INTENTS,
+    attach_narrative,
+    build_final_answer,
+    build_narrative,
+)
 from terminal.renderers import results_feed as _rf
+from terminal.agent import _synthesize_and_narrate
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -86,10 +92,182 @@ class TestNarrator(unittest.TestCase):
         result = build_narrative("stock_brief", "RELIANCE", [], "output", backend=None)
         self.assertEqual(result, "")
 
+    def test_build_narrative_generates_for_skill_store(self):
+        class Backend:
+            def chat(self, messages, tools=None, max_tokens=None):
+                assert max_tokens == 160
+                return {"content": "The selected workflow produced usable evidence."}
+
+        result = build_narrative(
+            "skill_store",
+            "find market swing candidates",
+            [{"tool": "skill_store.execute", "result": {"passed": True, "evidence": {"scan": {"row_count": 3}}}}],
+            "▶ SKILL STORE\n  Execution: passed",
+            backend=Backend(),
+        )
+
+        self.assertEqual(result, "The selected workflow produced usable evidence.")
+
+    def test_build_final_answer_uses_query_and_structured_evidence(self):
+        seen = {}
+
+        class Backend:
+            def chat(self, messages, tools=None, max_tokens=None):
+                seen["messages"] = messages
+                seen["max_tokens"] = max_tokens
+                return {"content": "BAJAJCON sales and EPS growth are accelerating from the rendered evidence."}
+
+        result = build_final_answer(
+            "stock_brief",
+            "analyze the sales and EPS growth of BAJAJCON",
+            [{"tool": "scrape_screener_in", "result": {"symbol": "BAJAJCON"}}],
+            "▶ SALES & EPS GROWTH\n  Quarterly Sales YoY: +30.8%\n  Quarterly EPS YoY: +115.5%",
+            backend=Backend(),
+        )
+
+        self.assertIn("BAJAJCON sales and EPS growth", result)
+        self.assertEqual(seen["max_tokens"], 700)
+        prompt_text = "\n".join(m["content"] for m in seen["messages"])
+        self.assertIn("analyze the sales and EPS growth of BAJAJCON", prompt_text)
+        self.assertIn("Quarterly Sales YoY: +30.8%", prompt_text)
+
+    def test_build_final_answer_prompt_requires_structured_answer_sections(self):
+        seen = {}
+
+        class Backend:
+            def chat(self, messages, tools=None, max_tokens=None):
+                seen["system"] = messages[0]["content"]
+                return {"content": "Direct answer."}
+
+        build_final_answer(
+            "stock_brief",
+            "analyze BAJAJCON growth",
+            [],
+            "▶ SNAPSHOT\n  Price: ₹582.20",
+            backend=Backend(),
+        )
+
+        system_prompt = seen["system"]
+        self.assertIn("Start with a terminal title line", system_prompt)
+        self.assertIn("━━━", system_prompt)
+        self.assertIn("▶ CURRENT OVERVIEW", system_prompt)
+        self.assertIn("▶ FINANCIAL PERFORMANCE", system_prompt)
+        self.assertIn("▶ TECHNICAL AND SECTOR CONTEXT", system_prompt)
+        self.assertIn("▶ KEY CONSIDERATIONS", system_prompt)
+        self.assertIn("▶ BOTTOM LINE", system_prompt)
+        self.assertIn("Avoid markdown heading syntax", system_prompt)
+        self.assertIn("Use one bullet level", system_prompt)
+        self.assertIn("Always include all five section headers", system_prompt)
+
+    def test_build_final_answer_strips_footer_and_source_trail_from_llm_text(self):
+        class Backend:
+            def chat(self, messages, tools=None, max_tokens=None):
+                return {
+                    "content": (
+                        "Direct answer.\n\n"
+                        "▶ SOURCE TRAIL\n  scrape_screener_in: ok\n\n"
+                        "━━━ Not investment advice. For research and learning only. ━━━"
+                    )
+                }
+
+        result = build_final_answer("stock_brief", "query", [], "structured", backend=Backend())
+
+        self.assertEqual(result, "Direct answer.")
+
+    def test_build_final_answer_normalizes_markdown_headings_to_terminal_sections(self):
+        class Backend:
+            def chat(self, messages, tools=None, max_tokens=None):
+                return {
+                    "content": (
+                        "### BAJAJCON — Growth Story\n\n"
+                        "#### Current Overview\n"
+                        "- Price: ₹582.20\n\n"
+                        "#### Financial Performance\n"
+                        "- Sales YoY: +30.8%\n\n"
+                        "#### Key Considerations\n"
+                        "- Valuation is high.\n"
+                    )
+                }
+
+        result = build_final_answer("stock_brief", "query", [], "structured", backend=Backend())
+
+        self.assertIn("━━━ BAJAJCON — Growth Story ━━━", result)
+        self.assertIn("▶ CURRENT OVERVIEW", result)
+        self.assertIn("▶ FINANCIAL PERFORMANCE", result)
+        self.assertIn("▶ KEY CONSIDERATIONS", result)
+        self.assertNotIn("###", result)
+        self.assertNotIn("####", result)
+
+    def test_build_final_answer_indents_bullet_continuation_lines(self):
+        class Backend:
+            def chat(self, messages, tools=None, max_tokens=None):
+                return {
+                    "content": (
+                        "━━━ BAJAJCON — Direct Answer ━━━\n\n"
+                        "▶ BOTTOM LINE\n"
+                        "  - Strong recent sales and EPS growth\n"
+                        "both quarterly and annually."
+                    )
+                }
+
+        result = build_final_answer("stock_brief", "query", [], "structured", backend=Backend())
+
+        self.assertIn("  - Strong recent sales and EPS growth\n    both quarterly", result)
+        self.assertNotIn("\nboth quarterly", result)
+
+    def test_build_final_answer_indents_section_paragraph_lines(self):
+        class Backend:
+            def chat(self, messages, tools=None, max_tokens=None):
+                return {
+                    "content": (
+                        "━━━ BAJAJCON — Direct Answer ━━━\n\n"
+                        "▶ BOTTOM LINE\n"
+                        "BAJAJCON shows strong short-term growth with constructive momentum in the market although valuation needs attention\n"
+                        "although long-term sales growth is weak."
+                    )
+                }
+
+        result = build_final_answer("stock_brief", "query", [], "structured", backend=Backend())
+
+        self.assertIn("▶ BOTTOM LINE\n  BAJAJCON shows strong short-term growth", result)
+        self.assertIn("\n  the market although valuation needs attention", result)
+        self.assertIn("\n  although long-term", result)
+        self.assertNotIn("\nBAJAJCON shows", result)
+        self.assertNotIn("\nalthough long-term", result)
+
+    def test_build_narrative_drops_unsupported_rs_percentile_claim(self):
+        class Backend:
+            def chat(self, messages, tools=None, max_tokens=None):
+                return {"content": "Relative strength is averaging at a low percentile, so risk is elevated."}
+
+        result = build_narrative(
+            "market_overview",
+            "show current market breadth and RS percentile distribution",
+            [{"tool": "get_market_breadth", "result": {"avg_rs_pct": 12.0}}],
+            "▶ DB UNIVERSE CONTEXT\n  Universe avg RS: +12.0%",
+            backend=Backend(),
+        )
+
+        self.assertEqual(result, "")
+
     def test_narration_intents_are_frozenset(self):
         self.assertIsInstance(NARRATION_INTENTS, frozenset)
         self.assertIn("stock_brief", NARRATION_INTENTS)
         self.assertIn("market_dashboard", NARRATION_INTENTS)
+        self.assertIn("skill_store", NARRATION_INTENTS)
+
+    def test_market_intelligence_intents_are_narrated(self):
+        expected = {
+            "market_swing_candidates",
+            "quality_breakouts",
+            "symbol_quick_analysis",
+            "stock_comparison",
+            "portfolio_review",
+            "market_knowledge",
+            "entity_topic_command",
+        }
+
+        self.assertTrue(expected.issubset(NARRATION_INTENTS))
 
 
 # ── results_feed helpers ──────────────────────────────────────────────────────
@@ -329,6 +507,117 @@ class TestDispatcher(unittest.TestCase):
         trs = [_tr("resolve_symbol", symbol="RELIANCE", name="Reliance Industries")]
         out = render("unknown_intent_xyz", trs)
         self.assertIsInstance(out, str)
+
+    def test_stock_brief_does_not_suggest_symbol_when_resolution_succeeded(self):
+        trs = [
+            _tr("resolve_symbol", symbol="CHENNPETRO", query="CHENNPETRO", candidates=["CHENNPETRO"]),
+            _tr("scrape_screener_in", error="network unavailable"),
+        ]
+        out = render("stock_brief", trs)
+
+        self.assertIn("MISSING EVIDENCE", out)
+        self.assertNotIn("Symbol not found", out)
+        self.assertNotIn("Did you mean", out)
+
+    def test_stock_brief_renders_pg_and_latest_results_fundamental_evidence(self):
+        trs = [
+            _tr("resolve_symbol", symbol="DMART"),
+            _tr("get_symbol_snapshot", symbol="DMART", price=4000, stage="STAGE_2"),
+            _tr(
+                "get_cached_financials",
+                symbol="DMART",
+                section_counts={"quarterly": 1, "annual": 1, "balance_sheet": 0, "cash_flow": 0},
+                quarterly=[{"period": "Mar 2026", "revenue": 14000, "pat": 800, "eps": 12.3}],
+                annual=[{"period": "FY26", "sales": 52000, "net_profit": 3000}],
+            ),
+            _tr("scrape_screener_in", error="network unavailable"),
+            _tr(
+                "get_latest_results",
+                symbol="DMART",
+                status="ok",
+                facts={
+                    "revenue": {"value": "14,000", "period": "Mar 2026", "source": "nse_filing"},
+                    "pat": {"value": "800", "period": "Mar 2026", "source": "nse_filing"},
+                },
+                source_trail={"discover_financial_filings": "ok", "search_nse_announcements": "ok"},
+                summary="Latest result confirms revenue and PAT.",
+            ),
+        ]
+        out = render("stock_brief", trs)
+
+        self.assertIn("FUNDAMENTAL EVIDENCE", out)
+        self.assertIn("PG financial cache", out)
+        self.assertIn("Mar 2026", out)
+        self.assertIn("LATEST RESULTS", out)
+        self.assertIn("Revenue", out)
+        self.assertIn("PAT", out)
+
+    def test_stock_brief_computes_sales_and_eps_growth_from_screener_tables(self):
+        trs = [
+            _tr("resolve_symbol", symbol="BAJAJCON"),
+            _tr(
+                "scrape_screener_in",
+                symbol="BAJAJCON",
+                quarterly={
+                    "_headers": ["Dec 2024", "Mar 2025", "Jun 2025", "Sep 2025", "Dec 2025", "Mar 2026"],
+                    "Sales+": ["234", "250", "267", "265", "306", "327"],
+                    "EPS in Rs": ["1.85", "2.26", "2.77", "3.24", "3.55", "4.87"],
+                },
+                annual_pl={
+                    "_headers": ["Mar 2022", "Mar 2023", "Mar 2024", "Mar 2025", "Mar 2026"],
+                    "Sales+": ["880", "961", "984", "965", "1,165"],
+                    "EPS in Rs": ["11.50", "9.63", "10.88", "9.14", "14.56"],
+                },
+            ),
+        ]
+
+        out = render("stock_brief", trs)
+
+        self.assertIn("SALES & EPS GROWTH", out)
+        self.assertIn("Quarterly Sales YoY: +30.8%", out)
+        self.assertIn("Quarterly EPS YoY: +115.5%", out)
+        self.assertIn("Quarterly Sales QoQ: +6.9%", out)
+        self.assertIn("Quarterly EPS QoQ: +37.2%", out)
+        self.assertIn("Annual Sales YoY: +20.7%", out)
+        self.assertIn("Annual EPS YoY: +59.3%", out)
+
+    def test_synthesize_prefers_llm_final_answer_before_evidence(self):
+        class Backend:
+            def chat(self, messages, tools=None, max_tokens=None):
+                return {
+                    "content": (
+                        "━━━ BAJAJCON — Direct Answer ━━━\n\n"
+                        "▶ CURRENT OVERVIEW\n"
+                        "  - BAJAJCON direct growth answer from the final synthesizer."
+                    )
+                }
+
+        trs = [
+            _tr("resolve_symbol", symbol="BAJAJCON"),
+            _tr(
+                "scrape_screener_in",
+                symbol="BAJAJCON",
+                quarterly={
+                    "_headers": ["Dec 2024", "Mar 2025", "Jun 2025", "Sep 2025", "Dec 2025", "Mar 2026"],
+                    "Sales+": ["234", "250", "267", "265", "306", "327"],
+                    "EPS in Rs": ["1.85", "2.26", "2.77", "3.24", "3.55", "4.87"],
+                },
+            ),
+        ]
+
+        out = _synthesize_and_narrate(
+            "stock_brief",
+            "analyze the sales and EPS growth of BAJAJCON",
+            trs,
+            Backend(),
+        )
+
+        self.assertIn("▶ ANSWER", out)
+        self.assertLess(out.index("BAJAJCON direct growth answer"), out.index("▶ QUARTERLY RESULTS"))
+        self.assertIn("\n  ━━━ BAJAJCON — Direct Answer ━━━", out)
+        self.assertIn("\n  ▶ CURRENT OVERVIEW", out)
+        self.assertNotIn("\n▶ CURRENT OVERVIEW", out)
+        self.assertIn("▶ SALES & EPS GROWTH", out)
 
     def test_render_always_returns_str(self):
         # All registered intents must return a string

@@ -1,0 +1,1470 @@
+[
+  {
+    "symbol": "MANINDS",
+    "portfolio": {
+      "symbol": "MANINDS",
+      "inputs": "MAN INDUSTRIES (I) LTD.",
+      "company_name": "MANINDS",
+      "sector": "Capital Goods & Industrials",
+      "mcap": "MID_CAP",
+      "price": "528.75",
+      "stage": "STAGE_2",
+      "signal": "BUY",
+      "trend": "BULLISH",
+      "portfolio_score": "80.5",
+      "investment_score": "58.9",
+      "technical_score": "60.7",
+      "enhanced_fund_score": "69.25",
+      "relative_strength": "47.35",
+      "chg_1d": "1.86",
+      "chg_1w": "6.57",
+      "chg_1m": "1.54",
+      "rsi_snapshot": "37.4",
+      "rsi_tech": "51.9",
+      "adx": "30.1",
+      "macd": "bearish",
+      "supertrend": "SELL",
+      "above_sma20": "False",
+      "above_sma50": "True",
+      "above_sma200": "True",
+      "pct_from_52h": "-12.8",
+      "52w_high": "606.4",
+      "52w_low": "258.05",
+      "rating": "ACCUMULATE / CORE WATCH",
+      "snapshot_error": "",
+      "tech_error": ""
+    },
+    "collected_at": "2026-06-10T23:32:52",
+    "source_trail": [
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "scrape_screener_in",
+      "explain_intraday_setup"
+    ],
+    "errors": [],
+    "snapshot": {
+      "data_source": "PostgreSQL scores.stage_snapshots",
+      "company_name": "MANINDS",
+      "stage": "STAGE_2",
+      "stage_score": 0.67,
+      "investment_score": 58.9,
+      "price": 528.75,
+      "rsi": 37.4,
+      "relative_strength": 47.35,
+      "change_1d_pct": 1.86,
+      "change_1w_pct": 6.57,
+      "change_1m_pct": 1.54,
+      "market_cap_cat": "MID_CAP",
+      "sector": "Capital Goods & Industrials",
+      "trading_signal": "BUY",
+      "trend_signal": "BULLISH",
+      "supertrend_state": "BEARISH",
+      "supertrend_value": 611.62,
+      "technical_score": 60.7,
+      "fundamental_score": null,
+      "narrative": "MANINDS (STAGE 2) shows strong momentum with Technical Score 61, RSI 37 (oversold), and a BUY signal on BULLISH. Fundamentals: Enhanced Fund Score 69, Earnings Quality 64, Sales Growth 78. Composite Investment Score 59 — well-positioned for a trending move.",
+      "stance": "BULLISH",
+      "can_slim_score": 10.0,
+      "minervini_score": 15.0,
+      "enhanced_fund_score": 69.25,
+      "earnings_quality": 63.6,
+      "sales_growth": 78.33,
+      "financial_strength": 69.33,
+      "institutional_backing": 61.0,
+      "symbol": "MANINDS",
+      "snapshot_date": "2026-06-10",
+      "rs_pct": 47.35,
+      "missing_evidence": [],
+      "missing_optional_scores": [],
+      "evidence_coverage": "complete"
+    },
+    "technical": {
+      "symbol": "MANINDS",
+      "price": 528.75,
+      "open": 519.45,
+      "high": 554.4,
+      "low": 519.0,
+      "chg_pct": 1.86,
+      "rsi": 51.9,
+      "adx": 30.1,
+      "macd": "bearish",
+      "supertrend": "SELL",
+      "sma20": 534.49,
+      "sma50": 504.49,
+      "sma200": 426.25,
+      "above_sma20": false,
+      "above_sma50": true,
+      "above_sma200": true,
+      "52w_high": 606.4,
+      "52w_low": 258.05,
+      "pct_from_52h": -12.8,
+      "vol_last": 1056904,
+      "vol_avg_20d": 1367440,
+      "vol_ratio": 0.77,
+      "technical_score": 60,
+      "score_method": "derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX",
+      "data_bars": 274,
+      "as_of": "2026-06-10",
+      "data_source": "PostgreSQL market.equity_eod",
+      "postgres_persist": null
+    },
+    "fundamentals": {
+      "symbol": "MANINDS",
+      "source_url": "https://www.screener.in/company/MANINDS/consolidated/",
+      "nse_url": "https://www.nseindia.com/get-quotes/equity?symbol=MANINDS",
+      "bse_url": "https://www.bseindia.com/stock-share-price/man-industries-india-ltd/MANINDS/513269/",
+      "bse_scrip": "513269",
+      "ratios": {
+        "Market Cap": "3,978",
+        "Current Price": "529",
+        "High / Low": "607",
+        "Stock P/E": "23.3",
+        "Book Value": "278",
+        "Dividend Yield": "0.00",
+        "ROCE": "16.2",
+        "ROE": "9.23",
+        "Face Value": "5.00"
+      },
+      "pros": [],
+      "cons": [
+        "Though the company is reporting repeated profits, it is not paying out dividend",
+        "Company has a low return on equity of 9.17% over last 3 years.",
+        "Debtor days have increased from 79.3 to 103 days.",
+        "Company's cost of borrowing seems high"
+      ],
+      "quarterly": {
+        "Sales+": [
+          "732",
+          "1,218",
+          "742",
+          "834",
+          "830",
+          "1,157"
+        ],
+        "Expenses+": [
+          "653",
+          "1,097",
+          "693",
+          "713",
+          "703",
+          "1,018"
+        ],
+        "Operating Profit": [
+          "79",
+          "121",
+          "49",
+          "121",
+          "128",
+          "140"
+        ],
+        "OPM %": [
+          "11%",
+          "10%",
+          "7%",
+          "15%",
+          "15%",
+          "12%"
+        ],
+        "Other Income+": [
+          "6",
+          "15",
+          "31",
+          "-19",
+          "8",
+          "8"
+        ],
+        "Interest": [
+          "26",
+          "35",
+          "30",
+          "30",
+          "38",
+          "52"
+        ],
+        "Depreciation": [
+          "11",
+          "11",
+          "13",
+          "22",
+          "21",
+          "23"
+        ],
+        "Profit before tax": [
+          "47",
+          "91",
+          "38",
+          "49",
+          "76",
+          "73"
+        ],
+        "Tax %": [
+          "27%",
+          "25%",
+          "28%",
+          "25%",
+          "28%",
+          "30%"
+        ],
+        "Net Profit+": [
+          "34",
+          "68",
+          "28",
+          "37",
+          "55",
+          "51"
+        ],
+        "EPS in Rs": [
+          "5.27",
+          "10.53",
+          "4.11",
+          "4.93",
+          "7.34",
+          "6.78"
+        ],
+        "Raw PDF": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "_headers": [
+          "Dec 2024",
+          "Mar 2025",
+          "Jun 2025",
+          "Sep 2025",
+          "Dec 2025",
+          "Mar 2026"
+        ]
+      },
+      "annual_pl": {
+        "Sales+": [
+          "2,139",
+          "2,231",
+          "3,142",
+          "3,505",
+          "3,564"
+        ],
+        "Expenses+": [
+          "1,958",
+          "2,094",
+          "2,901",
+          "3,204",
+          "3,125"
+        ],
+        "Operating Profit": [
+          "181",
+          "137",
+          "241",
+          "301",
+          "439"
+        ],
+        "OPM %": [
+          "8%",
+          "6%",
+          "8%",
+          "9%",
+          "12%"
+        ],
+        "Other Income+": [
+          "37",
+          "39",
+          "52",
+          "52",
+          "29"
+        ],
+        "Interest": [
+          "37",
+          "41",
+          "88",
+          "100",
+          "152"
+        ],
+        "Depreciation": [
+          "45",
+          "46",
+          "61",
+          "45",
+          "79"
+        ],
+        "Profit before tax": [
+          "135",
+          "89",
+          "144",
+          "208",
+          "237"
+        ],
+        "Tax %": [
+          "25%",
+          "25%",
+          "27%",
+          "26%",
+          "28%"
+        ],
+        "Net Profit+": [
+          "102",
+          "67",
+          "105",
+          "153",
+          "170"
+        ],
+        "EPS in Rs": [
+          "17.16",
+          "11.15",
+          "16.24",
+          "23.66",
+          "22.73"
+        ],
+        "Dividend Payout %": [
+          "0%",
+          "0%",
+          "12%",
+          "0%",
+          "0%"
+        ],
+        "_headers": [
+          "Mar 2022",
+          "Mar 2023",
+          "Mar 2024",
+          "Mar 2025",
+          "Mar 2026"
+        ]
+      },
+      "balance_sheet": {
+        "Equity Capital": [
+          "30",
+          "30",
+          "32",
+          "32",
+          "38"
+        ],
+        "Reserves": [
+          "913",
+          "1,102",
+          "1,372",
+          "1,575",
+          "2,049"
+        ],
+        "Borrowings+": [
+          "57",
+          "301",
+          "326",
+          "476",
+          "628"
+        ],
+        "Other Liabilities+": [
+          "821",
+          "427",
+          "684",
+          "1,696",
+          "2,306"
+        ],
+        "Total Liabilities": [
+          "1,820",
+          "1,860",
+          "2,415",
+          "3,779",
+          "5,021"
+        ],
+        "Fixed Assets+": [
+          "318",
+          "553",
+          "605",
+          "643",
+          "864"
+        ],
+        "CWIP": [
+          "20",
+          "14",
+          "31",
+          "133",
+          "326"
+        ],
+        "Investments": [
+          "102",
+          "0",
+          "228",
+          "26",
+          "71"
+        ],
+        "Other Assets+": [
+          "1,379",
+          "1,293",
+          "1,552",
+          "2,977",
+          "3,760"
+        ],
+        "Total Assets": [
+          "1,820",
+          "1,860",
+          "2,415",
+          "3,779",
+          "5,021"
+        ],
+        "_headers": [
+          "Mar 2022",
+          "Mar 2023",
+          "Mar 2024",
+          "Mar 2025",
+          "Mar 2026"
+        ]
+      },
+      "cash_flow": {
+        "Cash from Operating Activity+": [
+          "451",
+          "-120",
+          "345",
+          "68",
+          "515"
+        ],
+        "Cash from Investing Activity+": [
+          "-119",
+          "-135",
+          "-279",
+          "-41",
+          "-594"
+        ],
+        "Cash from Financing Activity+": [
+          "-267",
+          "211",
+          "86",
+          "30",
+          "136"
+        ],
+        "Net Cash Flow": [
+          "65",
+          "-45",
+          "152",
+          "56",
+          "57"
+        ],
+        "Free Cash Flow": [
+          "405",
+          "-328",
+          "228",
+          "-86",
+          "175"
+        ],
+        "CFO/OP": [
+          "275%",
+          "-68%",
+          "157%",
+          "40%",
+          "119%"
+        ],
+        "_headers": [
+          "Mar 2022",
+          "Mar 2023",
+          "Mar 2024",
+          "Mar 2025",
+          "Mar 2026"
+        ]
+      },
+      "peers": [],
+      "shareholding": {
+        "_quarters": [
+          "Jun 2023",
+          "Sep 2023",
+          "Dec 2023",
+          "Mar 2024",
+          "Jun 2024",
+          "Sep 2024",
+          "Dec 2024",
+          "Mar 2025",
+          "Jun 2025",
+          "Sep 2025",
+          "Dec 2025",
+          "Mar 2026"
+        ],
+        "Promoters": "43.21%",
+        "Promoters_trend": [
+          "45.68%",
+          "49.61%",
+          "49.61%",
+          "46.15%",
+          "46.12%",
+          "46.15%",
+          "46.15%",
+          "46.20%",
+          "48.21%",
+          "43.21%",
+          "43.21%",
+          "43.21%"
+        ],
+        "FIIs": "2.41%",
+        "FIIs_trend": [
+          "2.22%",
+          "1.61%",
+          "2.14%",
+          "1.64%",
+          "1.84%",
+          "2.52%",
+          "2.16%",
+          "3.33%",
+          "2.19%",
+          "2.32%",
+          "3.35%",
+          "2.41%"
+        ],
+        "DIIs": "1.34%",
+        "DIIs_trend": [
+          "0.04%",
+          "0.04%",
+          "0.64%",
+          "3.31%",
+          "3.31%",
+          "3.27%",
+          "2.64%",
+          "1.03%",
+          "0.88%",
+          "1.68%",
+          "1.26%",
+          "1.34%"
+        ],
+        "Public": "53.03%",
+        "Public_trend": [
+          "52.05%",
+          "48.72%",
+          "47.60%",
+          "48.90%",
+          "48.72%",
+          "48.05%",
+          "49.05%",
+          "49.43%",
+          "48.73%",
+          "52.77%",
+          "52.18%",
+          "53.03%"
+        ],
+        "No. of Shareholders": "50,913",
+        "No. of Shareholders_trend": [
+          "31,539",
+          "34,330",
+          "35,193",
+          "44,206",
+          "46,295",
+          "53,582",
+          "56,984",
+          "56,405",
+          "59,257",
+          "54,425",
+          "51,822",
+          "50,913"
+        ]
+      },
+      "announcements": [
+        {
+          "title": "All",
+          "url": "https://www.bseindia.com/stock-share-price/man-industries-india-ltd/MANINDS/513269/corp-announcements/"
+        },
+        {
+          "title": "Rumour verification - Regulation 30(11)2d - Company denies any undisclosed material event behind recent share price and ",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=a56cb229-20cc-43e2-9713-923981c20dae.pdf"
+        },
+        {
+          "title": "Announcement under Regulation 30 (LODR)-Credit Rating2 Jun - CRISIL upgraded long-term rating to A+/Stable; short-term A",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=aae0e0b3-7f86-4309-beca-c2e459dddc1c.pdf"
+        },
+        {
+          "title": "Announcement under Regulation 30 (LODR)-Analyst / Investor Meet - Outcome1 Jun - Conference call transcript for May 26, ",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=9c94f225-d723-440d-8374-fcbe2661d46f.pdf"
+        },
+        {
+          "title": "Statement Of Deviation Or Variation In Respect Of Preferential Issue Of 1219512 Convertible Warrants To Promoters And Pr",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=30cb5417-691d-4b65-8386-3c848bb0ec1d.pdf"
+        }
+      ],
+      "annual_reports": [
+        {
+          "label": "Financial Year 2022from bse",
+          "url": "https://www.bseindia.com/bseplus/AnnualReport/513269/76445513269.pdf"
+        },
+        {
+          "label": "Financial Year 2021from bse",
+          "url": "https://www.bseindia.com/bseplus/AnnualReport/513269/71847513269.pdf"
+        },
+        {
+          "label": "Financial Year 2020from bse",
+          "url": "https://www.bseindia.com/bseplus/AnnualReport/513269/66899513269.pdf"
+        },
+        {
+          "label": "Financial Year 2019from bse",
+          "url": "https://www.bseindia.com/bseplus/AnnualReport/513269/5132690319.pdf"
+        },
+        {
+          "label": "Financial Year 2018from bse",
+          "url": "https://www.bseindia.com/bseplus/AnnualReport/513269/5132690318.pdf"
+        },
+        {
+          "label": "Financial Year 2017from bse",
+          "url": "https://www.bseindia.com/bseplus/AnnualReport/513269/5132690317.pdf"
+        }
+      ],
+      "concalls": [
+        {
+          "period": "Jun 2026",
+          "transcript_url": "https://mangroup.com/wp-content/uploads/2026/06/Concall-Transcript_26.05.2026.pdf",
+          "transcript_label": "Jun 2026 Earnings Call Transcript",
+          "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=cf4977e1-f5b6-4696-b2bf-5ac75ca211ed.pdf",
+          "ai_summary_title": "Concall Summary - Jun 2026"
+        },
+        {
+          "period": "May 2026",
+          "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=ac816977-9a45-4a8d-ac35-060c66ba0ddd.pdf"
+        },
+        {
+          "period": "Feb 2026",
+          "transcript_url": "https://mangroup.com/wp-content/uploads/2026/02/Concall-Transcript_09.02.2026.pdf",
+          "transcript_label": "Feb 2026 Earnings Call Transcript",
+          "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=707b0849-bc0b-46dc-9c46-00bfdb9e2101.pdf",
+          "ai_summary_title": "Concall Summary - Feb 2026"
+        },
+        {
+          "period": "Nov 2025",
+          "transcript_url": "https://mangroup.com/wp-content/uploads/2025/11/Concall-Transcript_14.11.2025.pdf",
+          "transcript_label": "Nov 2025 Earnings Call Transcript",
+          "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=cc485681-561e-4a32-9a65-62ad99db4d5a.pdf",
+          "recording_url": "https://mangroup.com/wp-content/uploads/2025/11/Concall-Audio-Recording_14.11.2025.mp3",
+          "ai_summary_title": "Concall Summary - Nov 2025"
+        },
+        {
+          "period": "Aug 2025",
+          "transcript_url": "https://mangroup.com/wp-content/uploads/2025/08/Concall-Transcript_12.08.2025.pdf",
+          "transcript_label": "Aug 2025 Earnings Call Transcript",
+          "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=5e8caf1c-b5e9-4818-a080-49c8c17f45ee.pdf",
+          "recording_url": "https://mangroup.com/wp-content/uploads/2025/08/Concall-Audio-Recording_12.08.2025.mp3",
+          "ai_summary_title": "Concall Summary - Aug 2025"
+        },
+        {
+          "period": "May 2025",
+          "transcript_url": "https://mangroup.com/wp-content/uploads/2025/05/Concall-Transcript_13.05.2025.pdf",
+          "transcript_label": "May 2025 Earnings Call Transcript",
+          "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=d95ecc9b-3273-4dc3-99c2-c4d269660e2b.pdf",
+          "recording_url": "https://youtu.be/XHbWaH2s-7g",
+          "ai_summary_title": "Concall Summary - May 2025"
+        },
+        {
+          "period": "Mar 2025",
+          "transcript_url": "https://mangroup.com/wp-content/uploads/2025/02/Concall-Transcript_13.02.2025.pdf",
+          "transcript_label": "Mar 2025 Earnings Call Transcript",
+          "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=2ac44e61-270c-434e-beb1-81ccb127c1b0.pdf",
+          "ai_summary_title": "Concall Summary - Feb 2025"
+        },
+        {
+          "period": "Feb 2025",
+          "transcript_url": "https://nsearchives.nseindia.com/corporate/MANINDS_19022025105818_MIIL_Concall_Transcript_13022025.pdf",
+          "transcript_label": "Feb 2025 Earnings Call Transcript",
+          "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=d3ef323f-ff39-48f1-bea7-69b9e043dcce.pdf",
+          "recording_url": "https://mangroup.com/wp-content/uploads/2025/02/Concall-Audio-Recording_13.02.2025.mp3",
+          "ai_summary_title": "Concall Summary - Feb 2025"
+        }
+      ],
+      "concalls_link": "https://www.screener.in/company/MANINDS/#concalls",
+      "note": "Found 8 concall entries. Transcript PDFs are directly accessible. AI summaries on screener.in require login. Full concall list: https://www.screener.in/company/MANINDS/#concalls"
+    },
+    "trade_setup": {
+      "symbol": "MANINDS",
+      "timeframe": "15m",
+      "data_mode": "intraday",
+      "source": "PostgreSQL intraday.ohlcv_bars",
+      "latest_timestamp": "2026-05-21 15:15:00",
+      "latest_close": 564.05,
+      "setup_label": "SHORT_SETUP",
+      "setup_side": "short",
+      "score": 10,
+      "indicators": {
+        "rsi": 41.5,
+        "macd": -6.4864,
+        "macd_signal": -2.7006,
+        "macd_hist": -3.7858,
+        "supertrend": 580.84,
+        "supertrend_dir": -1,
+        "ema9": 569.71,
+        "ema21": 578.11,
+        "ema50": 578.73,
+        "ema200": 561.35,
+        "bb_pct": 0.22,
+        "bb_width": 0.1197,
+        "atr": 10.94,
+        "volume_ratio": 1.08
+      },
+      "signals": [
+        {
+          "strategy": "Supertrend",
+          "direction": "SELL",
+          "entry": 564.05,
+          "target": 542.17,
+          "stoploss": 580.84,
+          "rr": 1.3,
+          "strength": "Moderate (in downtrend)",
+          "note": "Supertrend bearish — resistance at 580.84",
+          "indicator": {
+            "supertrend": 580.84,
+            "direction": "BEARISH"
+          },
+          "strategy_key": "supertrend",
+          "setup_label": "SHORT_SETUP",
+          "copy_rule": "Research setup only; not a buy/sell recommendation."
+        },
+        {
+          "strategy": "Gap and Go",
+          "direction": "SELL",
+          "entry": 564.05,
+          "target": 536.7,
+          "stoploss": 580.46,
+          "rr": 1.67,
+          "strength": "Strong",
+          "note": "Gap down -1.5%, bearish continuation + MACD negative",
+          "indicator": {
+            "gap_pct": -1.52
+          },
+          "strategy_key": "gap",
+          "setup_label": "SHORT_SETUP",
+          "copy_rule": "Research setup only; not a buy/sell recommendation."
+        },
+        {
+          "strategy": "EMA Ribbon Bear",
+          "direction": "SELL",
+          "entry": 564.05,
+          "target": 520.7,
+          "stoploss": 581.39,
+          "rr": 2.5,
+          "strength": "High",
+          "note": "EMA 9/21/50 just stacked bearish. RSI=41.5",
+          "indicator": {
+            "ema9": 569.71,
+            "ema21": 578.11,
+            "ema50": 578.73,
+            "rsi": 41.5
+          },
+          "strategy_key": "ema_ribbon",
+          "setup_label": "SHORT_SETUP",
+          "copy_rule": "Research setup only; not a buy/sell recommendation."
+        },
+        {
+          "strategy": "Multi-Confirm SELL",
+          "direction": "SELL",
+          "entry": 564.05,
+          "target": 505.46,
+          "stoploss": 583.58,
+          "rr": 3.0,
+          "strength": "Strong",
+          "note": "3/4 signals aligned bearish: MACD EMA RSI ",
+          "indicator": {
+            "macd_bear": true,
+            "ema_bear": true,
+            "rsi": 41.5,
+            "vol_above_avg": false
+          },
+          "strategy_key": "multi_confirm",
+          "setup_label": "SHORT_SETUP",
+          "copy_rule": "Research setup only; not a buy/sell recommendation."
+        }
+      ],
+      "analyzers": {
+        "TrendAgent": [
+          "Supertrend is bearish",
+          "MACD histogram is negative"
+        ],
+        "MomentumAgent": [
+          "MACD histogram is negative"
+        ],
+        "LevelsAgent": {
+          "support": [
+            561.35,
+            555.7
+          ],
+          "resistance": [
+            569.71,
+            572.1
+          ],
+          "invalidation_level": 569.71,
+          "technical_target_zones": [
+            561.35,
+            555.7
+          ]
+        },
+        "RiskAgent": [
+          "Technical setup only; no order placement or recommendation",
+          "Confirm freshness, liquidity, spreads, and market regime before using this for research"
+        ]
+      },
+      "levels": {
+        "symbol": "MANINDS",
+        "timeframe": "15m",
+        "data_mode": "intraday",
+        "source": "PostgreSQL intraday.ohlcv_bars",
+        "latest_timestamp": "2026-05-21 15:15:00",
+        "latest_close": 564.05,
+        "pivot": 562.75,
+        "supports": [
+          561.35,
+          555.7,
+          546.35,
+          539.3
+        ],
+        "resistances": [
+          569.71,
+          572.1,
+          578.11,
+          578.73
+        ],
+        "ema_levels": {
+          "ema9": 569.71,
+          "ema21": 578.11,
+          "ema50": 578.73,
+          "ema200": 561.35
+        },
+        "pivot_levels": {
+          "PP": 562.75,
+          "R1": 572.1,
+          "R2": 579.15,
+          "R3": 588.5,
+          "S1": 555.7,
+          "S2": 546.35,
+          "S3": 539.3
+        },
+        "copy_rule": "Technical levels only. Not investment advice or a trade recommendation."
+      },
+      "invalidation_level": 569.71,
+      "technical_target_zones": [
+        561.35,
+        555.7
+      ],
+      "position_sizing": {
+        "risk_per_trade": 5000.0,
+        "risk_per_share": 5.66,
+        "lot_size": null,
+        "cash": {
+          "shares": 883,
+          "capital_required": 498056.15
+        },
+        "futures": null,
+        "options_note": "Not an F&O symbol; options/futures not available."
+      },
+      "risk_reward_frame": {
+        "risk_per_share": 5.66,
+        "rupee_risk": 4997.78,
+        "t1_rr": 0.48,
+        "t1_rupee_reward": 2384.1,
+        "t2_rr": 1.48,
+        "t2_rupee_reward": 7373.05
+      },
+      "trade_plan": {
+        "direction": "SHORT",
+        "entry_confirmations": [
+          "Price stays below ₹569.71 on retest",
+          "Supertrend confirms bearish",
+          "RSI 42 confirms weakness (below 50)",
+          "MACD histogram aligned with direction"
+        ],
+        "scale_out": [
+          "Book 50% at T1 (₹561.35), trail SL to entry for remainder",
+          "Book remaining at T2 (₹555.70) or trail with Supertrend"
+        ],
+        "invalidation_action": "Exit full position if price closes above ₹569.71. Do not average into a losing setup."
+      },
+      "disclaimer": "Research and learning only. Not investment advice. Not a recommendation to buy, sell, trade, copy, or replicate. Users are responsible for their own risk, compliance, and legal obligations. Agent Adda is not SEBI registered."
+    },
+    "verdict": "Constructive Sherlock"
+  },
+  {
+    "symbol": "DATAPATTNS",
+    "portfolio": {
+      "symbol": "DATAPATTNS",
+      "inputs": "DATA PATTERNS INDIA LTD",
+      "company_name": "DATAPATTNS",
+      "sector": "Defence & Aerospace",
+      "mcap": "LARGE_CAP",
+      "price": "4353.8",
+      "stage": "STAGE_2",
+      "signal": "HOLD",
+      "trend": "STRONG_BULLISH",
+      "portfolio_score": "69.2",
+      "investment_score": "60.7",
+      "technical_score": "68.0",
+      "enhanced_fund_score": "52.76",
+      "relative_strength": "29.95",
+      "chg_1d": "-4.49",
+      "chg_1w": "9.11",
+      "chg_1m": "7.17",
+      "rsi_snapshot": "64.9",
+      "rsi_tech": "59.3",
+      "adx": "25.4",
+      "macd": "bullish",
+      "supertrend": "SELL",
+      "above_sma20": "True",
+      "above_sma50": "True",
+      "above_sma200": "True",
+      "pct_from_52h": "-7.8",
+      "52w_high": "4722.0",
+      "52w_low": "2121.0",
+      "rating": "ACCUMULATE / CORE WATCH",
+      "snapshot_error": "",
+      "tech_error": ""
+    },
+    "collected_at": "2026-06-10T23:32:53",
+    "source_trail": [
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "scrape_screener_in",
+      "explain_intraday_setup"
+    ],
+    "errors": [],
+    "snapshot": {
+      "data_source": "PostgreSQL scores.stage_snapshots",
+      "company_name": "DATAPATTNS",
+      "stage": "STAGE_2",
+      "stage_score": 0.73,
+      "investment_score": 60.7,
+      "price": 4353.8,
+      "rsi": 64.9,
+      "relative_strength": 29.95,
+      "change_1d_pct": -4.49,
+      "change_1w_pct": 9.11,
+      "change_1m_pct": 7.17,
+      "market_cap_cat": "LARGE_CAP",
+      "sector": "Defence & Aerospace",
+      "trading_signal": "HOLD",
+      "trend_signal": "STRONG_BULLISH",
+      "supertrend_state": "BULLISH",
+      "supertrend_value": 3781.92,
+      "technical_score": 68.0,
+      "fundamental_score": null,
+      "narrative": "DATAPATTNS (STAGE 2) shows mixed momentum with Technical Score 68, RSI 65 (bullish zone), and a HOLD signal on STRONG_BULLISH. Fundamentals: Enhanced Fund Score 53, Earnings Quality 55, Sales Growth 55. Composite Investment Score 61 — suitable for monitoring on confirmation.",
+      "stance": "NEUTRAL",
+      "can_slim_score": 14.0,
+      "minervini_score": 4.0,
+      "enhanced_fund_score": 52.76,
+      "earnings_quality": 55.0,
+      "sales_growth": 55.0,
+      "financial_strength": 70.0,
+      "institutional_backing": 71.0,
+      "symbol": "DATAPATTNS",
+      "snapshot_date": "2026-06-10",
+      "rs_pct": 29.95,
+      "missing_evidence": [],
+      "missing_optional_scores": [],
+      "evidence_coverage": "complete"
+    },
+    "technical": {
+      "symbol": "DATAPATTNS",
+      "price": 4353.8,
+      "open": 4600.0,
+      "high": 4722.0,
+      "low": 4335.0,
+      "chg_pct": -4.49,
+      "rsi": 59.3,
+      "adx": 25.4,
+      "macd": "bullish",
+      "supertrend": "SELL",
+      "sma20": 4045.12,
+      "sma50": 3833.55,
+      "sma200": 3041.08,
+      "above_sma20": true,
+      "above_sma50": true,
+      "above_sma200": true,
+      "52w_high": 4722.0,
+      "52w_low": 2121.0,
+      "pct_from_52h": -7.8,
+      "vol_last": 2525116,
+      "vol_avg_20d": 1303711,
+      "vol_ratio": 1.94,
+      "technical_score": 85,
+      "score_method": "derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX",
+      "data_bars": 274,
+      "as_of": "2026-06-10",
+      "data_source": "PostgreSQL market.equity_eod",
+      "postgres_persist": null
+    },
+    "fundamentals": {
+      "symbol": "DATAPATTNS",
+      "source_url": "https://www.screener.in/company/DATAPATTNS/consolidated/",
+      "nse_url": "https://www.nseindia.com/get-quotes/equity?symbol=DATAPATTNS",
+      "bse_url": "https://www.bseindia.com/stock-share-price/data-patterns-india-ltd/DATAPATTNS/543428/",
+      "bse_scrip": "543428",
+      "ratios": {
+        "Market Cap": "₹24374 Cr",
+        "Current Price": "₹4353.80",
+        "52W High": "₹4722.00",
+        "52W Low": "₹2131.00",
+        "Stock P/E": "90.10",
+        "Forward P/E": "54.41",
+        "Price to Book": "14.05",
+        "Book Value": "₹309.99",
+        "Dividend Yield": "0.17%",
+        "ROE": "16.73%",
+        "Gross Margin": "63.24%",
+        "Operating Margin": "54.21%",
+        "Net Margin": "29.34%",
+        "Revenue Growth": "-13.00%",
+        "Earnings Growth": "21.20%",
+        "Debt/Equity": "0.30",
+        "EV/EBITDA": "64.08",
+        "Beta": "0.53",
+        "_source": "yfinance (screener.in values are JS-rendered)"
+      },
+      "pros": [],
+      "cons": [],
+      "quarterly": {
+        "_headers": [
+          "Mar 2026",
+          "Dec 2025",
+          "Sep 2025",
+          "Jun 2025",
+          "Mar 2025"
+        ],
+        "Total Revenue": [
+          "344.85 Cr",
+          "173.13 Cr",
+          "307.46 Cr",
+          "99.33 Cr",
+          "396.21 Cr"
+        ],
+        "Gross Profit": [
+          "253.14 Cr",
+          "134.07 Cr",
+          "118.43 Cr",
+          "79.23 Cr",
+          "193.89 Cr"
+        ],
+        "Operating Income": [
+          "186.95 Cr",
+          "74.67 Cr",
+          "62.83 Cr",
+          "26.59 Cr",
+          "145.61 Cr"
+        ],
+        "Net Income": [
+          "138.38 Cr",
+          "58.30 Cr",
+          "49.19 Cr",
+          "25.50 Cr",
+          "114.08 Cr"
+        ]
+      },
+      "annual_pl": {
+        "_headers": [
+          "Mar 2026",
+          "Mar 2025",
+          "Mar 2024",
+          "Mar 2023",
+          "Mar 2022"
+        ],
+        "Total Revenue": [
+          "924.77 Cr",
+          "708.35 Cr",
+          "519.80 Cr",
+          "453.45 Cr",
+          "nan Cr"
+        ],
+        "Gross Profit": [
+          "584.87 Cr",
+          "432.25 Cr",
+          "354.68 Cr",
+          "282.54 Cr",
+          "nan Cr"
+        ],
+        "Operating Income": [
+          "351.04 Cr",
+          "261.08 Cr",
+          "206.37 Cr",
+          "170.61 Cr",
+          "nan Cr"
+        ],
+        "Net Income": [
+          "271.37 Cr",
+          "221.81 Cr",
+          "181.69 Cr",
+          "123.99 Cr",
+          "nan Cr"
+        ]
+      },
+      "balance_sheet": {
+        "_headers": []
+      },
+      "cash_flow": {
+        "_headers": []
+      },
+      "peers": [],
+      "shareholding": {
+        "_quarters": [
+          "Jun 2023",
+          "Sep 2023",
+          "Dec 2023",
+          "Mar 2024",
+          "Jun 2024",
+          "Sep 2024",
+          "Dec 2024",
+          "Mar 2025",
+          "Jun 2025",
+          "Sep 2025",
+          "Dec 2025",
+          "Mar 2026"
+        ],
+        "Promoters": "42.41%",
+        "Promoters_trend": [
+          "42.41%",
+          "42.41%",
+          "42.41%",
+          "42.41%",
+          "42.41%",
+          "42.41%",
+          "42.41%",
+          "42.41%",
+          "42.41%",
+          "42.41%",
+          "42.41%",
+          "42.41%"
+        ],
+        "FIIs": "12.47%",
+        "FIIs_trend": [
+          "5.32%",
+          "7.17%",
+          "6.74%",
+          "14.56%",
+          "14.95%",
+          "14.39%",
+          "14.05%",
+          "12.75%",
+          "12.78%",
+          "11.40%",
+          "11.54%",
+          "12.47%"
+        ],
+        "DIIs": "11.68%",
+        "DIIs_trend": [
+          "11.11%",
+          "9.55%",
+          "9.15%",
+          "11.58%",
+          "8.52%",
+          "8.72%",
+          "8.84%",
+          "7.36%",
+          "8.08%",
+          "9.79%",
+          "10.27%",
+          "11.68%"
+        ],
+        "Public": "33.43%",
+        "Public_trend": [
+          "41.15%",
+          "40.88%",
+          "41.71%",
+          "31.44%",
+          "34.12%",
+          "34.47%",
+          "34.70%",
+          "37.47%",
+          "36.72%",
+          "36.39%",
+          "35.77%",
+          "33.43%"
+        ],
+        "No. of Shareholders": "2,00,453",
+        "No. of Shareholders_trend": [
+          "1,05,277",
+          "1,19,555",
+          "1,29,610",
+          "1,37,499",
+          "1,79,719",
+          "1,90,556",
+          "2,01,026",
+          "2,23,255",
+          "2,30,210",
+          "2,19,673",
+          "2,09,497",
+          "2,00,453"
+        ]
+      },
+      "announcements": [
+        {
+          "title": "All",
+          "url": "https://www.bseindia.com/stock-share-price/data-patterns-india-ltd/DATAPATTNS/543428/corp-announcements/"
+        },
+        {
+          "title": "Compliances-Reg.24(A)-Annual Secretarial Compliance22 May - Filed Annual Secretarial Compliance Report for FY ended Marc",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=309218c8-5fbd-41f2-8361-247156fcd77e.pdf"
+        },
+        {
+          "title": "Announcement under Regulation 30 (LODR)-Earnings Call Transcript22 May - The Transcript of the Earnings Conference Call ",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=b5abfea9-bcf3-4a36-9b12-f8e4d38ffcfe.pdf"
+        },
+        {
+          "title": "Announcement under Regulation 30 (LODR)-Newspaper Publication15 May - Copies of Newspaper Advertisement regarding Audite",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=8f5fe9bc-c87b-483e-ab4f-5a24d5d220fc.pdf"
+        },
+        {
+          "title": "Announcement under Regulation 30 (LODR)-Monitoring Agency Report15 May - ICRA reports no deviation in Data Patterns’ QIP",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=eb4e508c-4e31-4e67-9ead-bcfe790c7779.pdf"
+        },
+        {
+          "title": "Announcement under Regulation 30 (LODR)-Analyst / Investor Meet - Outcome15 May - Audio recording of FY26 earnings confe",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=c8238f8e-c38f-4070-b633-527b1c719766.pdf"
+        }
+      ],
+      "annual_reports": [
+        {
+          "label": "Financial Year 2022from bse",
+          "url": "https://www.bseindia.com/bseplus/AnnualReport/543428/74327543428_26_08_22.pdf"
+        }
+      ],
+      "concalls": [
+        {
+          "period": "May 2026",
+          "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=b5abfea9-bcf3-4a36-9b12-f8e4d38ffcfe.pdf",
+          "transcript_label": "May 2026 Earnings Call Transcript",
+          "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=c11380d9-fed3-41f7-bf61-e417f8918934.pdf",
+          "recording_url": "https://www.datapatternsindia.com/investors/files/Earnings-Call-Recording-Q4-2025-26.mp3",
+          "ai_summary_title": "Concall Summary - May 2026"
+        },
+        {
+          "period": "Feb 2026",
+          "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=0fb404b6-c7db-4f47-ae84-cc42fbc0e85a.pdf",
+          "transcript_label": "Feb 2026 Earnings Call Transcript",
+          "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=51352476-a5b6-428d-af8f-7f27303d974b.pdf",
+          "recording_url": "https://youtu.be/Ojpz7VOIKHg",
+          "ai_summary_title": "Concall Summary - Feb 2026"
+        },
+        {
+          "period": "Nov 2025",
+          "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=64d2f0b0-d7d7-4f1a-98dd-08f875887122.pdf",
+          "transcript_label": "Nov 2025 Earnings Call Transcript",
+          "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=91558b6b-9bb1-43eb-93dc-55cfe67d02a8.pdf",
+          "recording_url": "https://www.datapatternsindia.com/investors/files/Earnings-Call-Recording-Q2-FY-2025-26.mp3",
+          "ai_summary_title": "Concall Summary - Nov 2025"
+        },
+        {
+          "period": "Aug 2025",
+          "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=edd311e6-df6b-48ac-8c2b-4ad73ff342c8.pdf",
+          "transcript_label": "Aug 2025 Earnings Call Transcript",
+          "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=00884ab8-f6ed-4336-87ce-82831cfb985e.pdf",
+          "recording_url": "https://www.datapatternsindia.com/investors/files/Earnings-Call-Recording-Q1-FY-2025-26.mp3",
+          "ai_summary_title": "Concall Summary - Aug 2025"
+        },
+        {
+          "period": "May 2025",
+          "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=660d9389-5e40-4eb1-a7b5-559489c51fcb.pdf",
+          "transcript_label": "May 2025 Earnings Call Transcript",
+          "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=359c655f-e816-4615-aab2-587211e82c36.pdf",
+          "recording_url": "https://youtu.be/HzaNHXMOnYE?si=uiti7hhiMwS4HVfp",
+          "ai_summary_title": "Concall Summary - May 2025"
+        },
+        {
+          "period": "Feb 2025",
+          "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=6483dac0-b971-4b74-b0bd-9a4b73bf55d7.pdf",
+          "transcript_label": "Feb 2025 Earnings Call Transcript",
+          "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=8f85551c-ea8b-43e9-89e2-431d71990fe0.pdf",
+          "recording_url": "https://youtu.be/QTlQn8VlFeY",
+          "ai_summary_title": "Concall Summary - Feb 2025"
+        },
+        {
+          "period": "Nov 2024",
+          "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=d888d9a5-73ba-49bb-98cc-59f9b3e3305a.pdf",
+          "transcript_label": "Nov 2024 Earnings Call Transcript",
+          "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=9c784af1-2580-467c-97ad-c4465ccb07db.pdf",
+          "recording_url": "https://www.datapatternsindia.com/investors/files/GON0220241111156626.mp3",
+          "ai_summary_title": "Concall Summary - Nov 2024"
+        },
+        {
+          "period": "Aug 2024",
+          "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=9ecb9a74-da0f-4c07-872b-53eabe28a910.pdf",
+          "transcript_label": "Aug 2024 Earnings Call Transcript",
+          "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=6fbb847c-01d6-4608-a380-4efd5eb3eead.pdf",
+          "ai_summary_title": "Concall Summary - Aug 2024"
+        }
+      ],
+      "concalls_link": "https://www.screener.in/company/DATAPATTNS/#concalls",
+      "note": "Found 8 concall entries. Transcript PDFs are directly accessible. AI summaries on screener.in require login. Full concall list: https://www.screener.in/company/DATAPATTNS/#concalls"
+    },
+    "trade_setup": {
+      "symbol": "DATAPATTNS",
+      "timeframe": "15m",
+      "data_mode": "intraday",
+      "source": "PostgreSQL intraday.ohlcv_bars",
+      "latest_timestamp": "2026-05-22 09:15:00",
+      "latest_close": 3994.9,
+      "setup_label": "LONG_SETUP",
+      "setup_side": "long",
+      "score": 100,
+      "indicators": {
+        "rsi": 74.5,
+        "macd": 24.4408,
+        "macd_signal": 21.5179,
+        "macd_hist": 2.923,
+        "supertrend": 3916.31,
+        "supertrend_dir": 1,
+        "ema9": 3940.24,
+        "ema21": 3917.98,
+        "ema50": 3871.68,
+        "ema200": 3814.54,
+        "bb_pct": 1.26,
+        "bb_width": 0.0261,
+        "atr": 27.86,
+        "volume_ratio": 1.32
+      },
+      "signals": [
+        {
+          "strategy": "MACD Crossover",
+          "direction": "BUY",
+          "entry": 3994.9,
+          "target": 4064.56,
+          "stoploss": 3953.1,
+          "rr": 1.67,
+          "strength": "Strong",
+          "note": "MACD bullish crossover above EMA21",
+          "indicator": {
+            "macd": 24.4408,
+            "signal": 21.5179,
+            "hist": 2.923
+          },
+          "strategy_key": "macd",
+          "setup_label": "LONG_SETUP",
+          "copy_rule": "Research setup only; not a buy/sell recommendation."
+        },
+        {
+          "strategy": "Supertrend",
+          "direction": "BUY",
+          "entry": 3994.9,
+          "target": 4050.63,
+          "stoploss": 3916.31,
+          "rr": 0.71,
+          "strength": "Moderate (in uptrend)",
+          "note": "Supertrend bullish — support at 3916.31",
+          "indicator": {
+            "supertrend": 3916.31,
+            "direction": "BULLISH"
+          },
+          "strategy_key": "supertrend",
+          "setup_label": "LONG_SETUP",
+          "copy_rule": "Research setup only; not a buy/sell recommendation."
+        },
+        {
+          "strategy": "Multi-Confirm BUY",
+          "direction": "BUY",
+          "entry": 3994.9,
+          "target": 4267.48,
+          "stoploss": 3904.04,
+          "rr": 3.0,
+          "strength": "Strong",
+          "note": "3/4 signals aligned bullish: MACD EMA Vol",
+          "indicator": {
+            "macd_bull": true,
+            "ema_bull": true,
+            "rsi": 74.5,
+            "vol_above_avg": true
+          },
+          "strategy_key": "multi_confirm",
+          "setup_label": "LONG_SETUP",
+          "copy_rule": "Research setup only; not a buy/sell recommendation."
+        }
+      ],
+      "analyzers": {
+        "TrendAgent": [
+          "Supertrend is bullish",
+          "MACD histogram is positive"
+        ],
+        "MomentumAgent": [
+          "MACD histogram is positive",
+          "RSI 74.5 supports momentum without extreme overextension"
+        ],
+        "LevelsAgent": {
+          "support": [
+            3940.24,
+            3930.47
+          ],
+          "resistance": [
+            4005.7,
+            4009.07
+          ],
+          "invalidation_level": 3940.24,
+          "technical_target_zones": [
+            4005.7,
+            4009.07
+          ]
+        },
+        "RiskAgent": [
+          "Technical setup only; no order placement or recommendation",
+          "Confirm freshness, liquidity, spreads, and market regime before using this for research"
+        ]
+      },
+      "levels": {
+        "symbol": "DATAPATTNS",
+        "timeframe": "15m",
+        "data_mode": "intraday",
+        "source": "PostgreSQL intraday.ohlcv_bars",
+        "latest_timestamp": "2026-05-22 09:15:00",
+        "latest_close": 3994.9,
+        "pivot": 3944.23,
+        "supports": [
+          3940.24,
+          3930.47,
+          3917.98,
+          3911.5
+        ],
+        "resistances": [
+          4005.7,
+          4009.07
+        ],
+        "ema_levels": {
+          "ema9": 3940.24,
+          "ema21": 3917.98,
+          "ema50": 3871.68,
+          "ema200": 3814.54
+        },
+        "pivot_levels": {
+          "PP": 3944.23,
+          "R1": 3969.77,
+          "R2": 3983.53,
+          "R3": 4009.07,
+          "S1": 3930.47,
+          "S2": 3904.93,
+          "S3": 3891.17
+        },
+        "copy_rule": "Technical levels only. Not investment advice or a trade recommendation."
+      },
+      "invalidation_level": 3940.24,
+      "technical_target_zones": [
+        4005.7,
+        4009.07
+      ],
+      "position_sizing": {
+        "risk_per_trade": 5000.0,
+        "risk_per_share": 54.66,
+        "lot_size": null,
+        "cash": {
+          "shares": 91,
+          "capital_required": 363535.9
+        },
+        "futures": null,
+        "options_note": "Not an F&O symbol; options/futures not available."
+      },
+      "risk_reward_frame": {
+        "risk_per_share": 54.66,
+        "rupee_risk": 4974.06,
+        "t1_rr": 0.2,
+        "t1_rupee_reward": 982.8,
+        "t2_rr": 0.26,
+        "t2_rupee_reward": 1289.47
+      },
+      "trade_plan": {
+        "direction": "LONG",
+        "entry_confirmations": [
+          "Price holds above ₹3,940.24 on retest",
+          "Supertrend confirms bullish",
+          "RSI 74 supports momentum (above 50)",
+          "MACD histogram aligned with direction"
+        ],
+        "scale_out": [
+          "Book 50% at T1 (₹4,005.70), trail SL to entry for remainder",
+          "Book remaining at T2 (₹4,009.07) or trail with Supertrend"
+        ],
+        "invalidation_action": "Exit full position if price closes below ₹3,940.24. Do not average into a losing setup."
+      },
+      "disclaimer": "Research and learning only. Not investment advice. Not a recommendation to buy, sell, trade, copy, or replicate. Users are responsible for their own risk, compliance, and legal obligations. Agent Adda is not SEBI registered."
+    },
+    "verdict": "Constructive Sherlock"
+  }
+]

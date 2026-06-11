@@ -14,7 +14,7 @@ attach_narrative(structured_output, narrative) -> str
 from __future__ import annotations
 
 # Re-export the narrative helpers so callers only need one import
-from .narrator import build_narrative, attach_narrative, NARRATION_INTENTS
+from .narrator import build_final_answer, build_narrative, attach_narrative, NARRATION_INTENTS
 
 _YOUTUBE_INTENTS = frozenset({
     "youtube_video_analysis",
@@ -82,6 +82,9 @@ def render(
         header = market.render_situation_assessment(tool_results, assessment_plan)
         body   = _sb.render(intent, tool_results, assessment_plan)
         return (header + "\n" + body).strip() if header else body
+    if intent == "market_swing_candidates":
+        from . import market_swing
+        return market_swing.render(tool_results)
     if intent == "startup_morning_briefing":
         return market.render_morning_briefing(tool_results)
 
@@ -89,6 +92,16 @@ def render(
     from . import fno
     if intent == "fno_overview":
         return fno.render(tool_results)
+
+    # ── composite screeners ───────────────────────────────────────────────
+    if intent == "quality_breakouts":
+        from . import quality_breakouts
+        return quality_breakouts.render(tool_results)
+
+    # ── bare-symbol quick analysis ────────────────────────────────────────
+    if intent == "symbol_quick_analysis":
+        from . import symbol_quick_analysis
+        return symbol_quick_analysis.render(tool_results)
 
     # ── fallback: stock_brief + screener + intraday + forensic ────────────
     from . import stock_brief

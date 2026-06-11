@@ -1,0 +1,531 @@
+id: portfolio_incremental_add_trim_v1
+version: 1
+status: validated
+domain: portfolio_review
+title: Portfolio Incremental Add Trim Situation
+description: >
+  Review the current portfolio state before recommending incremental adds,
+  trims, holds, and sector exposure actions using existing holdings, current
+  market value, position weights, sector weights, stages, signals, and scores.
+input_patterns:
+  - review my portfolio for incremental add or trim
+  - what should I add or reduce in my portfolio
+  - portfolio sector concentration and position sizing
+  - add incrementally based on current holdings
+  - reduce exposure by sector and stock position size
+tags:
+  - portfolio
+  - incremental_add
+  - trim
+  - sector_exposure
+  - position_sizing
+  - existing_holdings
+evidence_required:
+  tables:
+    - portfolio.holdings
+    - scores.stage_snapshots
+  freshness:
+    max_age_days: 5
+    stale_is_error: false
+tool_plan_template: []
+sql_templates:
+  - name: portfolio_current_state
+    sql: >
+      WITH latest AS (
+        SELECT MAX(snapshot_date) AS as_of_date
+        FROM scores.stage_snapshots
+      ),
+      holdings AS (
+        SELECT
+          UPPER(symbol) AS symbol,
+          SUM(qty) AS qty,
+          CASE WHEN SUM(qty) = 0 THEN NULL ELSE SUM(qty * COALESCE(avg_cost, 0)) / NULLIF(SUM(qty), 0) END AS avg_cost,
+          MIN(buy_date) AS first_buy_date
+        FROM portfolio.holdings
+        WHERE account = :account
+        GROUP BY UPPER(symbol)
+        HAVING SUM(qty) > 0
+      ),
+      valued AS (
+        SELECT
+          l.as_of_date,
+          h.symbol,
+          h.qty,
+          h.avg_cost,
+          h.first_buy_date,
+          s.company_name,
+          COALESCE(s.sector, 'Unknown') AS sector,
+          s.price,
+          s.stage,
+          s.trading_signal,
+          s.investment_score,
+          s.technical_score,
+          s.enhanced_fund_score,
+          s.relative_strength,
+          s.rsi,
+          h.qty * COALESCE(s.price, h.avg_cost, 0) AS market_value,
+          h.qty * COALESCE(h.avg_cost, 0) AS cost_value
+        FROM holdings h
+        CROSS JOIN latest l
+        LEFT JOIN scores.stage_snapshots s
+          ON s.symbol = h.symbol
+         AND s.snapshot_date = l.as_of_date
+      ),
+      weighted AS (
+        SELECT
+          *,
+          ROUND((market_value / NULLIF(SUM(market_value) OVER (), 0)) * 100, 2) AS position_weight_pct
+        FROM valued
+      )
+      SELECT
+        as_of_date,
+        symbol,
+        company_name,
+        sector,
+        qty,
+        avg_cost,
+        price,
+        market_value,
+        cost_value,
+        ROUND((market_value / NULLIF(SUM(market_value) OVER (), 0)) * 100, 2) AS position_weight_pct,
+        stage,
+        trading_signal,
+        investment_score,
+        technical_score,
+        enhanced_fund_score,
+        relative_strength,
+        rsi,
+        'EXISTING_HOLDING' AS holding_state
+      FROM valued
+      ORDER BY market_value DESC NULLS LAST
+      LIMIT :limit
+    required_params:
+      - account
+      - limit
+    expected_columns:
+      - as_of_date
+      - symbol
+      - company_name
+      - sector
+      - qty
+      - avg_cost
+      - price
+      - market_value
+      - cost_value
+      - position_weight_pct
+      - stage
+      - trading_signal
+      - investment_score
+      - technical_score
+      - enhanced_fund_score
+      - relative_strength
+      - rsi
+      - holding_state
+    row_limit: 200
+    safety_status: passed
+    safety_findings: []
+    metadata:
+      evidence_role: current_holdings
+      required_filters:
+        holding_state: EXISTING_HOLDING
+
+  - name: sector_exposure_warnings
+    sql: >
+      WITH latest AS (
+        SELECT MAX(snapshot_date) AS as_of_date
+        FROM scores.stage_snapshots
+      ),
+      holdings AS (
+        SELECT UPPER(symbol) AS symbol, SUM(qty) AS qty, SUM(qty * COALESCE(avg_cost, 0)) AS cost_value
+        FROM portfolio.holdings
+        WHERE account = :account
+        GROUP BY UPPER(symbol)
+        HAVING SUM(qty) > 0
+      ),
+      valued AS (
+        SELECT
+          l.as_of_date,
+          COALESCE(s.sector, 'Unknown') AS sector,
+          h.qty * COALESCE(s.price, h.cost_value / NULLIF(h.qty, 0), 0) AS market_value
+        FROM holdings h
+        CROSS JOIN latest l
+        LEFT JOIN scores.stage_snapshots s
+          ON s.symbol = h.symbol
+         AND s.snapshot_date = l.as_of_date
+      ),
+      weighted AS (
+        SELECT
+          *,
+          ROUND((market_value / NULLIF(SUM(market_value) OVER (), 0)) * 100, 2) AS position_weight_pct
+        FROM valued
+      )
+      SELECT
+        as_of_date,
+        sector,
+        COUNT(*) AS holding_count,
+        ROUND(SUM(market_value), 2) AS sector_value,
+        ROUND((SUM(market_value) / NULLIF(SUM(SUM(market_value)) OVER (), 0)) * 100, 2) AS sector_weight_pct,
+        CASE
+          WHEN (SUM(market_value) / NULLIF(SUM(SUM(market_value)) OVER (), 0)) * 100 > :max_sector_weight_pct
+          THEN 'OVERWEIGHT'
+          ELSE 'OK'
+        END AS exposure_status
+      FROM valued
+      GROUP BY as_of_date, sector
+      ORDER BY sector_weight_pct DESC NULLS LAST
+      LIMIT :limit
+    required_params:
+      - account
+      - max_sector_weight_pct
+      - limit
+    expected_columns:
+      - as_of_date
+      - sector
+      - holding_count
+      - sector_value
+      - sector_weight_pct
+      - exposure_status
+    row_limit: 100
+    safety_status: passed
+    safety_findings: []
+    metadata:
+      evidence_role: sector_exposure
+
+  - name: add_candidates
+    sql: >
+      WITH latest AS (
+        SELECT MAX(snapshot_date) AS as_of_date
+        FROM scores.stage_snapshots
+      ),
+      holdings AS (
+        SELECT UPPER(symbol) AS symbol, SUM(qty) AS qty
+        FROM portfolio.holdings
+        WHERE account = :account
+        GROUP BY UPPER(symbol)
+        HAVING SUM(qty) > 0
+      )
+      SELECT
+        s.snapshot_date AS as_of_date,
+        s.symbol,
+        s.company_name,
+        s.sector,
+        s.price,
+        s.stage,
+        s.trading_signal,
+        s.investment_score,
+        s.technical_score,
+        s.enhanced_fund_score,
+        s.relative_strength,
+        s.rsi,
+        CASE WHEN h.symbol IS NULL THEN 'NEW_POSITION' ELSE 'EXISTING_HOLDING' END AS holding_state,
+        CASE WHEN h.symbol IS NULL THEN 'START_SMALL' ELSE 'ADD_INCREMENTALLY' END AS action_bucket
+      FROM scores.stage_snapshots s
+      JOIN latest l ON s.snapshot_date = l.as_of_date
+      LEFT JOIN holdings h ON h.symbol = s.symbol
+      WHERE s.stage = 'STAGE_2'
+        AND COALESCE(s.investment_score, 0) >= :min_add_score
+        AND COALESCE(s.price, 0) > 0
+      ORDER BY
+        CASE WHEN h.symbol IS NULL THEN 1 ELSE 0 END,
+        s.investment_score DESC NULLS LAST,
+        s.relative_strength DESC NULLS LAST
+      LIMIT :limit
+    required_params:
+      - account
+      - min_add_score
+      - limit
+    expected_columns:
+      - as_of_date
+      - symbol
+      - company_name
+      - sector
+      - price
+      - stage
+      - trading_signal
+      - investment_score
+      - technical_score
+      - enhanced_fund_score
+      - relative_strength
+      - rsi
+      - holding_state
+      - action_bucket
+    row_limit: 100
+    safety_status: passed
+    safety_findings: []
+    metadata:
+      evidence_role: add_candidates
+
+  - name: trim_candidates
+    sql: >
+      WITH latest AS (
+        SELECT MAX(snapshot_date) AS as_of_date
+        FROM scores.stage_snapshots
+      ),
+      holdings AS (
+        SELECT UPPER(symbol) AS symbol, SUM(qty) AS qty, SUM(qty * COALESCE(avg_cost, 0)) AS cost_value
+        FROM portfolio.holdings
+        WHERE account = :account
+        GROUP BY UPPER(symbol)
+        HAVING SUM(qty) > 0
+      ),
+      valued AS (
+        SELECT
+          l.as_of_date,
+          h.symbol,
+          h.qty,
+          s.company_name,
+          COALESCE(s.sector, 'Unknown') AS sector,
+          s.price,
+          s.stage,
+          s.trading_signal,
+          s.investment_score,
+          s.technical_score,
+          s.enhanced_fund_score,
+          s.relative_strength,
+          h.qty * COALESCE(s.price, h.cost_value / NULLIF(h.qty, 0), 0) AS market_value
+        FROM holdings h
+        CROSS JOIN latest l
+        LEFT JOIN scores.stage_snapshots s
+          ON s.symbol = h.symbol
+         AND s.snapshot_date = l.as_of_date
+      ),
+      weighted AS (
+        SELECT
+          *,
+          ROUND((market_value / NULLIF(SUM(market_value) OVER (), 0)) * 100, 2) AS position_weight_pct
+        FROM valued
+      )
+      SELECT
+        as_of_date,
+        symbol,
+        company_name,
+        sector,
+        qty,
+        price,
+        market_value,
+        position_weight_pct,
+        stage,
+        trading_signal,
+        investment_score,
+        technical_score,
+        enhanced_fund_score,
+        relative_strength,
+        'EXISTING_HOLDING' AS holding_state,
+        CASE
+          WHEN position_weight_pct > :max_position_weight_pct THEN 'TRIM_SIZE'
+          WHEN COALESCE(stage, '') IN ('STAGE_3', 'STAGE_4') THEN 'TRIM_WEAK_STAGE'
+          WHEN COALESCE(investment_score, 0) < :min_investment_score THEN 'TRIM_LOW_SCORE'
+          ELSE 'WATCH'
+        END AS action_bucket
+      FROM weighted
+      WHERE
+        position_weight_pct > :max_position_weight_pct
+        OR COALESCE(stage, '') IN ('STAGE_3', 'STAGE_4')
+        OR COALESCE(investment_score, 0) < :min_investment_score
+      ORDER BY position_weight_pct DESC NULLS LAST, investment_score ASC NULLS LAST
+      LIMIT :limit
+    required_params:
+      - account
+      - max_position_weight_pct
+      - min_investment_score
+      - limit
+    expected_columns:
+      - as_of_date
+      - symbol
+      - company_name
+      - sector
+      - qty
+      - price
+      - market_value
+      - position_weight_pct
+      - stage
+      - trading_signal
+      - investment_score
+      - technical_score
+      - enhanced_fund_score
+      - relative_strength
+      - holding_state
+      - action_bucket
+    row_limit: 100
+    safety_status: passed
+    safety_findings: []
+    metadata:
+      evidence_role: trim_candidates
+      required_filters:
+        holding_state: EXISTING_HOLDING
+
+  - name: hold_candidates
+    sql: >
+      WITH latest AS (
+        SELECT MAX(snapshot_date) AS as_of_date
+        FROM scores.stage_snapshots
+      ),
+      holdings AS (
+        SELECT UPPER(symbol) AS symbol, SUM(qty) AS qty, SUM(qty * COALESCE(avg_cost, 0)) AS cost_value
+        FROM portfolio.holdings
+        WHERE account = :account
+        GROUP BY UPPER(symbol)
+        HAVING SUM(qty) > 0
+      ),
+      valued AS (
+        SELECT
+          l.as_of_date,
+          h.symbol,
+          h.qty,
+          s.company_name,
+          COALESCE(s.sector, 'Unknown') AS sector,
+          s.price,
+          s.stage,
+          s.trading_signal,
+          s.investment_score,
+          s.technical_score,
+          s.enhanced_fund_score,
+          s.relative_strength,
+          h.qty * COALESCE(s.price, h.cost_value / NULLIF(h.qty, 0), 0) AS market_value
+        FROM holdings h
+        CROSS JOIN latest l
+        LEFT JOIN scores.stage_snapshots s
+          ON s.symbol = h.symbol
+         AND s.snapshot_date = l.as_of_date
+      ),
+      weighted AS (
+        SELECT
+          *,
+          ROUND((market_value / NULLIF(SUM(market_value) OVER (), 0)) * 100, 2) AS position_weight_pct
+        FROM valued
+      )
+      SELECT
+        as_of_date,
+        symbol,
+        company_name,
+        sector,
+        qty,
+        price,
+        market_value,
+        position_weight_pct,
+        stage,
+        trading_signal,
+        investment_score,
+        technical_score,
+        enhanced_fund_score,
+        relative_strength,
+        'EXISTING_HOLDING' AS holding_state,
+        'HOLD_MONITOR' AS action_bucket
+      FROM weighted
+      WHERE COALESCE(stage, '') = 'STAGE_2'
+        AND COALESCE(investment_score, 0) >= :min_investment_score
+        AND position_weight_pct BETWEEN :min_position_weight_pct AND :max_position_weight_pct
+      ORDER BY investment_score DESC NULLS LAST, relative_strength DESC NULLS LAST
+      LIMIT :limit
+    required_params:
+      - account
+      - min_investment_score
+      - min_position_weight_pct
+      - max_position_weight_pct
+      - limit
+    expected_columns:
+      - as_of_date
+      - symbol
+      - company_name
+      - sector
+      - qty
+      - price
+      - market_value
+      - position_weight_pct
+      - stage
+      - trading_signal
+      - investment_score
+      - technical_score
+      - enhanced_fund_score
+      - relative_strength
+      - holding_state
+      - action_bucket
+    row_limit: 100
+    safety_status: passed
+    safety_findings: []
+    metadata:
+      evidence_role: hold_candidates
+      required_filters:
+        holding_state: EXISTING_HOLDING
+
+  - name: target_allocation_caveats
+    sql: >
+      SELECT
+        CURRENT_DATE AS as_of_date,
+        'missing_target_allocation' AS caveat,
+        'No target allocation table is part of the approved V1 contract, actions must be incremental and risk-bounded.' AS explanation
+      UNION ALL
+      SELECT
+        CURRENT_DATE,
+        'position_sizing_limits',
+        'Use max sector and max position thresholds supplied at runtime, avoid inferred user targets.'
+      UNION ALL
+      SELECT
+        CURRENT_DATE,
+        'existing_holdings_required',
+        'Recommendations are based on portfolio.holdings for the selected account.'
+    required_params: []
+    expected_columns:
+      - as_of_date
+      - caveat
+      - explanation
+    row_limit: 10
+    safety_status: passed
+    safety_findings: []
+    metadata:
+      evidence_role: caveats
+
+output_contract:
+  - portfolio_current_state
+  - sector_exposure_warnings
+  - add_candidates
+  - trim_candidates
+  - hold_candidates
+  - target_allocation_caveats
+validation_rules:
+  - name: required_tables_exist
+    severity: error
+    config:
+      tables:
+        - portfolio.holdings
+        - scores.stage_snapshots
+  - name: sql_is_read_only
+    severity: error
+    config:
+      require_named_params: true
+  - name: existing_holdings_required
+    severity: error
+    config:
+      source_table: portfolio.holdings
+  - name: missing_target_allocation_caveat_required
+    severity: warning
+    config:
+      output: target_allocation_caveats
+synthesis_guidance: >
+  Do not treat the portfolio as a greenfield portfolio. Start from existing
+  holdings, current market value, position weights, sector exposure, and signal
+  quality. Use incremental add language for existing holdings and start-small
+  language for new positions. Trim guidance must refer to over-sized positions,
+  weak stages, weak scores, or sector concentration. Always mention missing
+  target allocation caveats when no approved target allocation evidence is
+  present, and never infer user-specific allocation targets.
+generation_model: human-authored
+created_by: codex
+metadata:
+  runtime:
+    default_params:
+      account: DEFAULT
+      max_sector_weight_pct: 25
+      max_position_weight_pct: 12
+      min_position_weight_pct: 2
+      min_investment_score: 65
+      min_add_score: 72
+      limit: 25
+  reviewer:
+    intent_tags:
+      - portfolio_review
+      - incremental_add
+      - trim
+      - sector_exposure
+      - position_sizing
+    required_inputs: []

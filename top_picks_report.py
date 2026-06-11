@@ -20,13 +20,18 @@ Outputs:
 from __future__ import annotations
 
 import argparse
+import csv
 import html as html_mod
 import json
 import os
 import re
 import sys
+import time
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from datetime import date, datetime
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -73,6 +78,10 @@ from sector_rotation_report import (  # noqa: E402
 REPORTS_DIR = ROOT / "reports"
 TOP_PICKS_DIR = REPORTS_DIR / "top_picks"
 LATEST_DIR = REPORTS_DIR / "latest"
+PROFILE_CACHE_DIR = ROOT / "data" / "company_profiles"
+PROFILE_CACHE_DAYS = int(os.environ.get("TOP_PICKS_PROFILE_CACHE_DAYS", "14"))
+PROFILE_FETCH_TIMEOUT = int(os.environ.get("TOP_PICKS_PROFILE_FETCH_TIMEOUT", "12"))
+PORTFOLIO_LAB_DIR = ROOT / "portfolio" / "data" / "nse_pg_strategy_lab" / "latest"
 DEFAULT_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 MAX_PICKS = 10
 PG_DSN = (
@@ -113,6 +122,9 @@ TV_CROSSHAIR_JS = """
     const tip   = grp.querySelector(".cx-tooltip");
     const tipBg = grp.querySelector(".cx-tipbg");
     const tipTxt= grp.querySelector(".cx-tiptxt");
+    const wrap = svg.closest(".tp-chart-wrap");
+    const fullView = {x: 0, y: 0, w: svg.viewBox.baseVal.width, h: svg.viewBox.baseVal.height};
+    let visibleStart = 0, visibleCount = N;
 
     const xFor = i => padL + (i + 0.5) * (cw / N);
     const iForX = x => Math.max(0, Math.min(N-1, Math.round((x - padL)/(cw/N) - 0.5)));
@@ -126,6 +138,30 @@ TV_CROSSHAIR_JS = """
       pt.x = evt.clientX; pt.y = evt.clientY;
       const ctm = svg.getScreenCTM().inverse();
       return pt.matrixTransform(ctm);
+    }
+    function setView(start, count){
+      count = Math.max(12, Math.min(N, Math.round(count)));
+      start = Math.max(0, Math.min(N - count, Math.round(start)));
+      visibleStart = start;
+      visibleCount = count;
+      if (wrap) {
+        wrap.classList.toggle("zoomed-tight", count <= 35);
+        wrap.classList.toggle("zoomed-range", count <= 65);
+      }
+      const step = cw / N;
+      const x0 = Math.max(0, padL + start * step - 10);
+      const x1 = Math.min(fullView.w, padL + (start + count) * step + 150);
+      svg.setAttribute("viewBox", `${x0} ${fullView.y} ${Math.max(220, x1 - x0)} ${fullView.h}`);
+    }
+    function setRange(range){
+      if (range === "all") { setView(0, N); return; }
+      const count = Math.min(N, Number(range) || N);
+      setView(N - count, count);
+    }
+    function zoom(mult){
+      const newCount = Math.max(12, Math.min(N, visibleCount * mult));
+      const center = visibleStart + visibleCount / 2;
+      setView(center - newCount / 2, newCount);
     }
     function onMove(evt){
       const p = svgCoord(evt);
@@ -183,6 +219,57 @@ TV_CROSSHAIR_JS = """
       if (p.x >= padL && p.x <= padL+cw && p.y >= padT && p.y <= padT+ph) onMove(e);
     });
     svg.addEventListener("mouseleave", onLeave);
+    svg.addEventListener("wheel", function(e){
+      e.preventDefault();
+      zoom(e.deltaY < 0 ? 0.78 : 1.28);
+    }, {passive:false});
+    let dragX = null, dragStart = 0;
+    svg.addEventListener("mousedown", function(e){
+      if (e.button !== 0) return;
+      dragX = e.clientX;
+      dragStart = visibleStart;
+      svg.classList.add("is-panning");
+    });
+    window.addEventListener("mousemove", function(e){
+      if (dragX == null) return;
+      const pxPerBar = Math.max(1, svg.getBoundingClientRect().width / visibleCount);
+      const barsMoved = (dragX - e.clientX) / pxPerBar;
+      setView(dragStart + barsMoved, visibleCount);
+    });
+    window.addEventListener("mouseup", function(){
+      dragX = null;
+      svg.classList.remove("is-panning");
+    });
+    if (wrap) {
+      wrap.querySelectorAll("[data-range]").forEach(function(btn){
+        btn.addEventListener("click", function(){
+          wrap.querySelectorAll("[data-range]").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          setRange(btn.dataset.range || "all");
+        });
+      });
+      wrap.querySelectorAll("[data-zoom]").forEach(function(btn){
+        btn.addEventListener("click", function(){
+          const action = btn.dataset.zoom;
+          if (action === "in") zoom(0.72);
+          else if (action === "out") zoom(1.35);
+          else {
+            wrap.querySelectorAll("[data-range]").forEach(b => b.classList.remove("active"));
+            const sixMonth = wrap.querySelector('[data-range="130"]');
+            if (sixMonth) sixMonth.classList.add("active");
+            setRange("130");
+          }
+        });
+      });
+      const annBtn = wrap.querySelector("[data-toggle-ann]");
+      if (annBtn) {
+        annBtn.addEventListener("click", function(){
+          const on = !wrap.classList.contains("show-ann");
+          wrap.classList.toggle("show-ann", on);
+          annBtn.classList.toggle("active", on);
+        });
+      }
+    }
   }
   function init(){ document.querySelectorAll("svg.tp-tv-chart").forEach(wire); }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
@@ -315,7 +402,7 @@ html{scroll-padding-top:72px;scroll-behavior:smooth}
   padding:10px 14px;margin:18px 0 0;
   background:#fff;border:1px solid var(--tp-line);border-radius:12px;
   box-shadow:0 4px 14px -10px rgba(15,23,42,.25);
-  position:sticky;top:8px;z-index:30;
+  position:relative;z-index:1;
 }
 .tp-toc-title{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--tp-mute);font-weight:700;align-self:center;margin-right:6px}
 .tp-toc a{
@@ -381,6 +468,24 @@ html{scroll-padding-top:72px;scroll-behavior:smooth}
 .tp-sub.violet h4{color:#5b21b6} .tp-sub.violet .ico{background:#5b21b6}
 .tp-sub.teal{background:#f0fdfa;border-color:#99f6e4}
 .tp-sub.teal h4{color:#0f766e} .tp-sub.teal .ico{background:#0f766e}
+.tp-chart-wrap{position:relative}
+.tp-chart-toolbar{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;
+  margin:0 0 8px 0;
+}
+.tp-chart-group{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.tp-chart-btn{
+  height:26px;min-width:30px;padding:0 9px;border:1px solid #2a2e39;border-radius:4px;
+  background:#1e222d;color:#d1d4dc;font-size:11px;font-weight:800;line-height:24px;
+  cursor:pointer;font-family:inherit;
+}
+.tp-chart-btn:hover,.tp-chart-btn.active{background:#2563eb;border-color:#3b82f6;color:#fff}
+.tp-tv-chart{touch-action:none;user-select:none}
+.tp-tv-chart.is-panning,.tp-tv-chart.is-panning .cx-area{cursor:grabbing!important}
+.tp-ann{display:none}
+.tp-chart-wrap.show-ann .tp-ann{display:inline}
+.tp-chart-wrap.show-ann .tp-pat{display:inline}
+.tp-chart-wrap.show-ann.zoomed-tight .tp-pat{display:none}
 
 /* Tables */
 .tp-tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:.83rem}
@@ -990,7 +1095,8 @@ def _detect_patterns(chart: dict, swing_window: int = 5) -> list[dict]:
 def _svg_candlestick(chart: dict, *, symbol: str = "", entry_low=None, entry_high=None, stop=None,
                      t1=None, t2=None, t3=None,
                      width: int = 1000, price_h: int = 380, vol_h: int = 80,
-                     rsi_h: int = 70, profile_w: int = 80) -> str:
+                     rsi_h: int = 70, profile_w: int = 80,
+                     show_pattern_annotations: bool = False) -> str:
     """TradingView-style chart: dark theme, right-side price axis with last-price flag,
     OHLC + EMA legend overlay, symbol watermark, separate volume + RSI sub-panels,
     S/R + pivots + entry/stop/targets + volume profile."""
@@ -1079,6 +1185,7 @@ def _svg_candlestick(chart: dict, *, symbol: str = "", entry_low=None, entry_hig
     parts = [
         f'<svg id="{chart_id}" class="tp-tv-chart" '
         f'viewBox="0 0 {width} {height}" width="100%" height="{height}" '
+        f'preserveAspectRatio="none" '
         f'xmlns="http://www.w3.org/2000/svg" style="display:block;background:{BG};'
         f'border-radius:8px;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif" '
         f'data-pad-l="{pad_l}" data-pad-t="{pad_t}" data-chart-w="{chart_w}" '
@@ -1299,53 +1406,55 @@ def _svg_candlestick(chart: dict, *, symbol: str = "", entry_low=None, entry_hig
     parts.append(_poly(ema50_s,  EMA50_C))
     parts.append(_poly(ema200_s, EMA200_C, w=1.8))
 
-    # ── Pattern annotations (drawn over candles, under legend)
+    # ── Optional pattern annotations. The default report keeps these out of
+    # the candle area and shows compact chips below the chart for readability.
     patterns = _detect_patterns(chart)
-    PATTERN_BG = "#1f2937"
-    for idx, pat in enumerate(patterns):
-        col = pat["color"]
-        anchors = pat.get("anchors") or []
-        if not anchors: continue
-        pts = [(x_for(i), y_price(p)) for (i, p) in anchors]
-        # connecting polyline for multi-anchor patterns
-        if len(pts) >= 2:
-            poly = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
-            parts.append(f'<polyline points="{poly}" fill="none" stroke="{col}" '
-                         f'stroke-width="1.6" stroke-dasharray="4,3" opacity="0.85"/>')
-        # circle markers at each anchor
-        for x, y in pts:
-            parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4.5" fill="{BG}" '
-                         f'stroke="{col}" stroke-width="2"/>')
-        # label tag near last anchor, with offset
-        lx, ly = pts[-1]
-        # offset to keep tags from overlapping each other
-        offy = -18 - (idx * 22)
-        # if too high, push down on same side
-        if ly + offy < pad_t + 6:
-            offy = 26 + (idx * 22)
-        tx = lx + 10
-        ty = ly + offy
-        # clamp horizontally
-        if tx + 160 > pad_l + chart_w:
-            tx = lx - 170
-        label = pat["label"]
-        note = pat.get("note", "")
-        # connector line from anchor to label
-        parts.append(f'<line x1="{lx:.1f}" y1="{ly:.1f}" x2="{tx+4:.1f}" y2="{ty+4:.1f}" '
-                     f'stroke="{col}" stroke-width="1" opacity="0.7"/>')
-        # rounded label box
-        text_len = max(len(label), len(note)) * 5.6 + 16
-        box_w = min(220, max(110, int(text_len)))
-        parts.append(
-            f'<g class="tp-pat"><title>{html_mod.escape(label + " — " + note)}</title>'
-            f'<rect x="{tx:.1f}" y="{ty-3:.1f}" width="{box_w}" height="30" rx="4" '
-            f'fill="{PATTERN_BG}" stroke="{col}" stroke-width="1.2" opacity="0.96"/>'
-            f'<text x="{tx+7:.1f}" y="{ty+9:.1f}" font-size="10" font-weight="800" '
-            f'fill="{col}">{html_mod.escape(label)}</text>'
-            f'<text x="{tx+7:.1f}" y="{ty+22:.1f}" font-size="8.5" '
-            f'fill="#cbd5e1">{html_mod.escape(note[:38])}</text>'
-            f'</g>'
-        )
+    if show_pattern_annotations:
+        PATTERN_BG = "#1f2937"
+        for idx, pat in enumerate(patterns):
+            col = pat["color"]
+            anchors = pat.get("anchors") or []
+            if not anchors: continue
+            pts = [(x_for(i), y_price(p)) for (i, p) in anchors]
+            # connecting polyline for multi-anchor patterns
+            if len(pts) >= 2:
+                poly = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
+                parts.append(f'<polyline class="tp-ann" points="{poly}" fill="none" stroke="{col}" '
+                             f'stroke-width="1.6" stroke-dasharray="4,3" opacity="0.85"/>')
+            # circle markers at each anchor
+            for x, y in pts:
+                parts.append(f'<circle class="tp-ann" cx="{x:.1f}" cy="{y:.1f}" r="4.5" fill="{BG}" '
+                             f'stroke="{col}" stroke-width="2"/>')
+            # label tag near last anchor, with offset
+            lx, ly = pts[-1]
+            # offset to keep tags from overlapping each other
+            offy = -18 - (idx * 22)
+            # if too high, push down on same side
+            if ly + offy < pad_t + 6:
+                offy = 26 + (idx * 22)
+            tx = lx + 10
+            ty = ly + offy
+            # clamp horizontally
+            if tx + 160 > pad_l + chart_w:
+                tx = lx - 170
+            label = pat["label"]
+            note = pat.get("note", "")
+            # connector line from anchor to label
+            parts.append(f'<line class="tp-ann" x1="{lx:.1f}" y1="{ly:.1f}" x2="{tx+4:.1f}" y2="{ty+4:.1f}" '
+                         f'stroke="{col}" stroke-width="1" opacity="0.7"/>')
+            # rounded label box
+            text_len = max(len(label), len(note)) * 5.6 + 16
+            box_w = min(220, max(110, int(text_len)))
+            parts.append(
+                f'<g class="tp-ann tp-pat"><title>{html_mod.escape(label + " — " + note)}</title>'
+                f'<rect x="{tx:.1f}" y="{ty-3:.1f}" width="{box_w}" height="30" rx="4" '
+                f'fill="{PATTERN_BG}" stroke="{col}" stroke-width="1.2" opacity="0.96"/>'
+                f'<text x="{tx+7:.1f}" y="{ty+9:.1f}" font-size="10" font-weight="800" '
+                f'fill="{col}">{html_mod.escape(label)}</text>'
+                f'<text x="{tx+7:.1f}" y="{ty+22:.1f}" font-size="8.5" '
+                f'fill="#cbd5e1">{html_mod.escape(note[:38])}</text>'
+                f'</g>'
+            )
 
     # ── Last-price flag on right axis (TV signature)
     last_close = closes[-1]
@@ -1807,6 +1916,10 @@ def _fetchone(conn, sql: str, params: tuple = ()) -> dict | None:
 # Signal 4: Composite investment_score   (ties/fallback)
 #
 # Conviction tiers:
+#   "strategy+vcp+sector" — best portfolio-lab strategy + VCP + top sector ★★★★
+#   "strategy+sector+s2"  — best portfolio-lab strategy + top sector/S2    ★★★
+#   "strategy+vcp"        — best portfolio-lab strategy + VCP              ★★★
+#   "strategy"            — best portfolio-lab strategy + current Stage 2  ★★
 #   "vcp+sector"  — appears in both top-VCP picks AND a top-ranked sector  ★★★
 #   "sector+s2"   — Stage 2 stock from a dynamically top-ranked sector     ★★
 #   "vcp"         — VCP pick not in top sector (strong pattern, weak sector) ★★
@@ -1817,12 +1930,18 @@ def _fetchone(conn, sql: str, params: tuple = ()) -> dict | None:
 class PickRationale:
     symbol: str
     sector: str
-    source: str      # "vcp+sector" | "sector+s2" | "vcp" | "sector_rot" | "stage2"
+    source: str
     sector_rot_score: float | None
     stage2_score: float | None
     vcp_score: float | None
     sector_strength: float | None
     rationale: str
+    strategy_confirmed: bool = False
+    strategy_id: str | None = None
+    strategy_name: str | None = None
+    strategy_signal: str | None = None
+    strategy_rank: int | None = None
+    strategy_return_pct: float | None = None
 
 
 _SECTOR_EXCLUDE = frozenset({
@@ -1865,8 +1984,13 @@ def _load_top_sectors(conn, snap_date: str, top_n: int = 10) -> dict[str, float]
     )}
 
 
-def _load_vcp_picks(conn, snap_date: str, min_inv_score: float = 55.0) -> list[dict]:
+def _load_vcp_picks(conn, snap_date: str, min_inv_score: float = 45.0, min_vcp_score: float = 50.0) -> list[dict]:
     """Stage 2 VCP-confirmed picks from scores.stage2_vcp_picks."""
+    with conn.cursor() as cur:
+        cur.execute("SELECT to_regclass('scores.stage2_vcp_picks')")
+        if cur.fetchone()[0] is None:
+            print("   ⚠️  scores.stage2_vcp_picks missing — continuing without VCP-confirmed source")
+            return []
     return _fetchall(conn, """
         SELECT symbol, sector, price, investment_score, enhanced_fund_score,
                vcp_score, vcp_breakout_pct, vcp_contraction_pct,
@@ -1878,10 +2002,11 @@ def _load_vcp_picks(conn, snap_date: str, min_inv_score: float = 55.0) -> list[d
             WHERE snapshot_date <= %s
         )
           AND investment_score >= %s
+          AND vcp_score >= %s
           AND supertrend_state = 'BULLISH'
         ORDER BY investment_score DESC NULLS LAST
         LIMIT 40
-    """, (snap_date, min_inv_score))
+    """, (snap_date, min_inv_score, min_vcp_score))
 
 
 def _load_stage2_leaders(conn, snap_date: str) -> list[dict]:
@@ -1900,6 +2025,107 @@ def _load_stage2_leaders(conn, snap_date: str) -> list[dict]:
     """, (snap_date,))
 
 
+def _load_rows_for_symbols(conn, snap_date: str, symbols: set[str]) -> list[dict]:
+    if not symbols:
+        return []
+    return _fetchall(conn, """
+        SELECT symbol, sector, price, technical_score, relative_strength,
+               enhanced_fund_score, investment_score, trading_signal,
+               trend_signal, stance, stage, supertrend_state
+        FROM scores.stage_snapshots
+        WHERE snapshot_date=%s
+          AND symbol = ANY(%s)
+          AND stage='STAGE_2'
+        ORDER BY investment_score DESC NULLS LAST
+    """, (snap_date, list(symbols)))
+
+
+def _portfolio_lab_best_strategy_confirmations() -> dict[str, dict]:
+    """Return symbols confirmed by the portfolio lab's current best strategy.
+
+    Confirmation sources:
+    - `paper/next_orders.csv`: BUY/ENTRY orders from the best-ranked strategy.
+    - `paper/positions.csv`: open positions held by the best-ranked strategy.
+    """
+    leaderboard_path = PORTFOLIO_LAB_DIR / "reports" / "strategy_leaderboard.csv"
+    positions_path = PORTFOLIO_LAB_DIR / "paper" / "positions.csv"
+    orders_path = PORTFOLIO_LAB_DIR / "paper" / "next_orders.csv"
+    if not leaderboard_path.exists():
+        return {}
+    try:
+        with leaderboard_path.open(newline="", encoding="utf-8") as f:
+            leaderboard = list(csv.DictReader(f))
+    except OSError:
+        return {}
+    if not leaderboard:
+        return {}
+    best = sorted(leaderboard, key=lambda r: int(float(r.get("rank") or 9999)))[0]
+    best_id = str(best.get("strategy_id") or "").strip()
+    if not best_id:
+        return {}
+    best_name = str(best.get("name") or best_id).strip()
+    try:
+        best_rank = int(float(best.get("rank") or 1))
+    except (TypeError, ValueError):
+        best_rank = 1
+    try:
+        best_return = float(best.get("total_return_pct")) if best.get("total_return_pct") not in (None, "") else None
+    except (TypeError, ValueError):
+        best_return = None
+    try:
+        best_dd = float(best.get("max_drawdown_pct")) if best.get("max_drawdown_pct") not in (None, "") else None
+    except (TypeError, ValueError):
+        best_dd = None
+
+    def base(signal: str) -> dict:
+        return {
+            "strategy_id": best_id,
+            "strategy_name": best_name,
+            "strategy_signal": signal,
+            "strategy_rank": best_rank,
+            "strategy_return_pct": best_return,
+            "strategy_max_drawdown_pct": best_dd,
+        }
+
+    out: dict[str, dict] = {}
+    if positions_path.exists():
+        try:
+            with positions_path.open(newline="", encoding="utf-8") as f:
+                for row in csv.DictReader(f):
+                    sym = str(row.get("symbol") or "").upper().strip()
+                    strategies = str(row.get("strategy_ids") or "")
+                    if sym and best_id in strategies:
+                        item = base("open_position")
+                        item.update({
+                            "quantity": row.get("quantity"),
+                            "unrealized_pct": row.get("unrealized_pct"),
+                            "reward_risk": row.get("reward_risk"),
+                        })
+                        out[sym] = item
+        except OSError:
+            pass
+    if orders_path.exists():
+        try:
+            with orders_path.open(newline="", encoding="utf-8") as f:
+                for row in csv.DictReader(f):
+                    sym = str(row.get("symbol") or "").upper().strip()
+                    side = str(row.get("side") or "").upper().strip()
+                    intent = str(row.get("trade_intent") or "").upper().strip()
+                    strategy_id = str(row.get("strategy_id") or "").strip()
+                    if sym and strategy_id == best_id and side == "BUY":
+                        item = base("next_buy")
+                        item.update({
+                            "trade_intent": intent or "ENTRY",
+                            "quantity": row.get("quantity"),
+                            "reference_price": row.get("reference_price"),
+                            "signal_reason": row.get("signal_reason"),
+                        })
+                        out[sym] = item
+        except OSError:
+            pass
+    return out
+
+
 _MAX_PER_SECTOR = 2   # cap to ensure diversification across sectors
 
 def build_pick_list(conn, snap_date: str, n: int = MAX_PICKS) -> list[PickRationale]:
@@ -1907,9 +2133,12 @@ def build_pick_list(conn, snap_date: str, n: int = MAX_PICKS) -> list[PickRation
     top_sectors     = _load_top_sectors(conn, snap_date, top_n=12)
     vcp_picks       = _load_vcp_picks(conn, snap_date)
     stage2_leaders  = _load_stage2_leaders(conn, snap_date)
+    strategy_conf   = _portfolio_lab_best_strategy_confirmations()
+    strategy_rows   = _load_rows_for_symbols(conn, snap_date, set(strategy_conf))
 
     vcp_syms  = {r["symbol"]: r for r in vcp_picks}
     st2_syms  = {r["symbol"]: r for r in stage2_leaders}
+    strategy_row_by_sym = {r["symbol"]: r for r in strategy_rows}
 
     picks: list[PickRationale] = []
     seen: set[str] = set()
@@ -1920,11 +2149,12 @@ def build_pick_list(conn, snap_date: str, n: int = MAX_PICKS) -> list[PickRation
         if sym in seen or len(picks) >= n:
             return
         sect = (row.get("sector") or "").strip()
-        # Enforce diversification cap (higher-conviction tiers bypass it slightly)
-        bypass = source in ("vcp+sector",)
-        sector_cap = _MAX_PER_SECTOR + (1 if bypass else 0)
+        # Enforce diversification cap, but allow persisted VCP-confirmed and
+        # best-strategy-confirmed names to surface when the setup is thematic.
+        sector_cap = _MAX_PER_SECTOR + (3 if ("vcp" in source or "strategy" in source) else 0)
         if sect and per_sector.get(sect, 0) >= sector_cap:
             return
+        strat = strategy_conf.get(sym) or {}
         per_sector[sect] = per_sector.get(sect, 0) + 1
         picks.append(PickRationale(
             symbol=sym,
@@ -1935,8 +2165,40 @@ def build_pick_list(conn, snap_date: str, n: int = MAX_PICKS) -> list[PickRation
             vcp_score=float((vcp_row or {}).get("vcp_score") or 0) if vcp_row else None,
             sector_strength=top_sectors.get(row.get("sector") or "", None),
             rationale=rationale,
+            strategy_confirmed=bool(strat),
+            strategy_id=strat.get("strategy_id"),
+            strategy_name=strat.get("strategy_name"),
+            strategy_signal=strat.get("strategy_signal"),
+            strategy_rank=strat.get("strategy_rank"),
+            strategy_return_pct=strat.get("strategy_return_pct"),
         ))
         seen.add(sym)
+
+    # ── Tier 0: portfolio-lab best strategy confirmation + other signals ──
+    for sym, row in strategy_row_by_sym.items():
+        if len(picks) >= n: break
+        sect = row.get("sector") or ""
+        vcp_row = vcp_syms.get(sym)
+        inv = float(row.get("investment_score") or 0)
+        strat = strategy_conf.get(sym) or {}
+        strat_name = strat.get("strategy_id") or "portfolio lab best strategy"
+        strat_signal = str(strat.get("strategy_signal") or "").replace("_", " ")
+        if vcp_row and sect in top_sectors:
+            src = "strategy+vcp+sector"
+            extra = f", VCP={float(vcp_row.get('vcp_score') or 0):.0f}, top sector strength={top_sectors[sect]:.0f}"
+        elif sect in top_sectors:
+            src = "strategy+sector+s2"
+            extra = f", top sector strength={top_sectors[sect]:.0f}"
+        elif vcp_row:
+            src = "strategy+vcp"
+            extra = f", VCP={float(vcp_row.get('vcp_score') or 0):.0f}"
+        else:
+            src = "strategy"
+            extra = ""
+        _add(sym, row, src,
+             f"Portfolio lab best strategy `{strat_name}` confirms as {strat_signal}; "
+             f"current Stage 2 inv={inv:.1f}{extra}",
+             vcp_row=vcp_row)
 
     # ── Tier 1: VCP-confirmed + in a top-ranked sector  ───────────────────
     for r in vcp_picks:
@@ -1947,9 +2209,13 @@ def build_pick_list(conn, snap_date: str, n: int = MAX_PICKS) -> list[PickRation
         strength = top_sectors[sect]
         inv  = float(r.get("investment_score") or 0)
         vcp  = float(r.get("vcp_score") or 0)
-        _add(sym, r, "vcp+sector",
+        source = "vcp+sector"
+        if sym in strategy_conf:
+            source = "strategy+vcp+sector"
+        _add(sym, r, source,
              f"VCP-confirmed Stage 2 (vcp={vcp:.0f}, inv={inv:.1f}) "
-             f"in top-ranked sector {sect} (strength={strength:.0f})",
+             f"in top-ranked sector {sect} (strength={strength:.0f})"
+             + (f"; strategy `{strategy_conf[sym].get('strategy_id')}` confirms" if sym in strategy_conf else ""),
              vcp_row=r)
 
     # ── Tier 2: Stage 2 + top-ranked sector (no VCP confirmation needed) ──
@@ -1963,9 +2229,12 @@ def build_pick_list(conn, snap_date: str, n: int = MAX_PICKS) -> list[PickRation
         strength = top_sectors[sect]
         vcp_row  = vcp_syms.get(sym)
         src = "vcp+sector" if vcp_row else "sector+s2"
+        if sym in strategy_conf:
+            src = "strategy+vcp+sector" if vcp_row else "strategy+sector+s2"
         _add(sym, r, src,
              f"Stage 2 leader in top sector {sect} (strength={strength:.0f}), "
-             f"inv={inv:.1f}" + (f", VCP confirmed" if vcp_row else ""),
+             f"inv={inv:.1f}" + (f", VCP confirmed" if vcp_row else "")
+             + (f", strategy `{strategy_conf[sym].get('strategy_id')}` confirms" if sym in strategy_conf else ""),
              vcp_row=vcp_row)
 
     # ── Tier 3: VCP picks not already included ────────────────────────────
@@ -1974,9 +2243,11 @@ def build_pick_list(conn, snap_date: str, n: int = MAX_PICKS) -> list[PickRation
         sym  = r["symbol"]
         inv  = float(r.get("investment_score") or 0)
         vcp  = float(r.get("vcp_score") or 0)
-        _add(sym, r, "vcp",
+        source = "strategy+vcp" if sym in strategy_conf else "vcp"
+        _add(sym, r, source,
              f"VCP-confirmed Stage 2 (vcp={vcp:.0f}, inv={inv:.1f}); "
-             f"sector {r.get('sector','')} not in current top-10 rotation",
+             f"sector {r.get('sector','')} not in current top-10 rotation"
+             + (f"; strategy `{strategy_conf[sym].get('strategy_id')}` confirms" if sym in strategy_conf else ""),
              vcp_row=r)
 
     # ── Tier 4: Stage 2 leaders by investment_score (broad fallback) ──────
@@ -1984,9 +2255,11 @@ def build_pick_list(conn, snap_date: str, n: int = MAX_PICKS) -> list[PickRation
         if len(picks) >= n: break
         sym = r["symbol"]
         inv = float(r.get("investment_score") or 0)
-        _add(sym, r, "stage2",
+        source = "strategy" if sym in strategy_conf else "stage2"
+        _add(sym, r, source,
              f"Stage 2 momentum leader; inv={inv:.1f}, "
-             f"fund={r.get('enhanced_fund_score')}")
+             f"fund={r.get('enhanced_fund_score')}"
+             + (f"; strategy `{strategy_conf[sym].get('strategy_id')}` confirms" if sym in strategy_conf else ""))
 
     return picks[:n]
 
@@ -2827,9 +3100,43 @@ def get_fundamentals(conn, sym: str) -> dict | None:
                updated_at
         FROM scores.fundamentals WHERE symbol=%s
     """, (sym,))
+    screener_fb = None
     if fund is None:
-        return None
+        screener_fb = get_screener_ratio_fallback(sym)
+        if not screener_fb.get("_parsed"):
+            return None
+        fund = {
+            "symbol": sym,
+            "piotroski_score": None,
+            "beneish_m_score": None,
+            "altman_z_score": None,
+            "forensic_risk": None,
+            "revenue_growth_3y": None,
+            "pat_growth_3y": None,
+            "roe": None,
+            "roce": None,
+            "debt_to_equity": None,
+            "promoter_holding": None,
+            "pnl_summary": "",
+            "quarterly_summary": "",
+            "balance_sheet_summary": "",
+            "cash_flow_summary": "",
+            "investor_summary": "",
+            "ratios_summary": screener_fb.get("ratios_summary") or "",
+            "updated_at": screener_fb.get("fetched_at"),
+            "_live_screener_ratio_fallback": screener_fb,
+        }
     parsed = _parse_summaries(fund)
+    if not all(parsed.get(k) is not None for k in ("pe_ratio", "mkt_cap_cr", "book_value", "div_yield_pct")):
+        screener_fb = screener_fb or get_screener_ratio_fallback(sym)
+        fb_parsed = screener_fb.get("_parsed") or {}
+        if fb_parsed:
+            for key, value in fb_parsed.items():
+                if parsed.get(key) is None:
+                    parsed[key] = value
+            if screener_fb.get("ratios_summary") and not fund.get("ratios_summary"):
+                fund["ratios_summary"] = screener_fb["ratios_summary"]
+            fund["_live_screener_ratio_fallback"] = screener_fb
     fund["_parsed"] = parsed
     # Backfill canonical numeric fields when they're NULL but text-derivable
     if fund.get("roce") is None and parsed.get("roce_pct") is not None:
@@ -3004,6 +3311,300 @@ def _decimal_to_float(obj):
     return obj
 
 
+def _is_missing_value(v: Any) -> bool:
+    if v is None:
+        return True
+    if isinstance(v, str):
+        return v.strip().lower() in {"", "—", "-", "na", "n/a", "none", "null", "not available"}
+    return False
+
+
+class _HTMLTextExtractor(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self._skip = 0
+        self.parts: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in {"script", "style", "noscript", "svg"}:
+            self._skip += 1
+        if tag in {"p", "div", "section", "br", "li", "h1", "h2", "h3"} and not self._skip:
+            self.parts.append(" ")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in {"script", "style", "noscript", "svg"} and self._skip:
+            self._skip -= 1
+        if tag in {"p", "div", "section", "li"} and not self._skip:
+            self.parts.append(" ")
+
+    def handle_data(self, data: str) -> None:
+        if not self._skip:
+            self.parts.append(data)
+
+    def text(self) -> str:
+        return _squash(" ".join(self.parts))
+
+
+def _squash(text: str) -> str:
+    return re.sub(r"\s+", " ", html_mod.unescape(str(text or ""))).strip()
+
+
+def _strip_tags(fragment: str) -> str:
+    parser = _HTMLTextExtractor()
+    parser.feed(fragment or "")
+    return parser.text()
+
+
+def _extract_meta_description(raw: str) -> str:
+    for pat in [
+        r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']+)["\']',
+        r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']description["\']',
+    ]:
+        m = re.search(pat, raw, flags=re.I)
+        if m:
+            return _squash(m.group(1))
+    return ""
+
+
+def _extract_screener_profile(raw: str) -> tuple[str, str | None]:
+    about = ""
+    for pat in [
+        r'<div[^>]+class=["\'][^"\']*\babout\b[^"\']*["\'][^>]*>(.*?)</div>',
+        r'<section[^>]+id=["\']about["\'][^>]*>(.*?)</section>',
+    ]:
+        m = re.search(pat, raw, flags=re.I | re.S)
+        if m:
+            about = _strip_tags(m.group(1))
+            break
+    if about:
+        about = re.sub(r"^(About|About the company)\s+", "", about, flags=re.I).strip()
+        about = re.split(
+            r"\s+(Key Points|Pros|Cons|Documents|Peers|Quarters|Profit & Loss)\b",
+            about,
+            maxsplit=1,
+        )[0].strip()
+    if not about:
+        about = _extract_meta_description(raw)
+
+    website = None
+    site_match = re.search(
+        r'<div[^>]+class=["\'][^"\']*\bcompany-links\b[^"\']*["\'][^>]*>\s*'
+        r'<a\s+href=["\'](https?://[^"\']+)["\']',
+        raw,
+        flags=re.I | re.S,
+    )
+    if site_match:
+        website = html_mod.unescape(site_match.group(1)).strip()
+    else:
+        for href in re.findall(r'href=["\'](https?://[^"\']+)["\']', raw, flags=re.I):
+            href_l = href.lower()
+            if not any(skip in href_l for skip in (
+                "screener.in", "bseindia.com", "nseindia.com", "nsearchives",
+                ".pdf", ".mp3", ".m4a", "linkedin.com", "twitter.com", "x.com",
+            )):
+                website = html_mod.unescape(href).strip()
+                break
+
+    # Keep the business description concise in card layouts.
+    if len(about) > 520:
+        about = about[:520].rsplit(" ", 1)[0].rstrip(".,;") + "."
+    return about, website
+
+
+COMPANY_PROFILE_FALLBACKS: dict[str, str] = {
+    "NETWEB": "Netweb Technologies provides high-end computing solutions including HPC, private cloud, AI systems, data-center servers and storage for enterprise, research and government customers.",
+    "RPTECH": "Rashi Peripherals is an Indian technology distribution company supplying IT hardware, components, peripherals and enterprise technology products through a national channel network.",
+    "PRECWIRE": "Precision Wires India manufactures enamelled copper winding wires and related conductors used in motors, transformers, appliances and electrical equipment.",
+    "SHILPAMED": "Shilpa Medicare is a pharmaceutical company focused on APIs, formulations and specialty oncology-oriented products across regulated and emerging markets.",
+    "CHENNPETRO": "Chennai Petroleum Corporation operates petroleum refineries and produces fuels, lubricants and petrochemical feedstocks.",
+    "NATIONALUM": "National Aluminium Company is an integrated aluminium producer with bauxite mining, alumina refining, aluminium smelting and captive power operations.",
+    "GRANULES": "Granules India manufactures pharmaceutical APIs, pharmaceutical formulation intermediates and finished dosage products for global markets.",
+    "BAJAJCON": "Bajaj Consumer Care is an FMCG personal-care company best known for hair oil and related consumer products.",
+    "ASTRAMICRO": "Astra Microwave Products designs and manufactures RF, microwave and digital systems for defence, aerospace, space, meteorology and telecom applications.",
+    "THERMAX": "Thermax provides engineering solutions in energy and environment, including heating, cooling, water and wastewater, air pollution control and chemicals.",
+}
+
+
+def get_company_profile(symbol: str, company_name: str | None = None) -> dict:
+    """Fetch and cache a short company business description for the report.
+
+    Screener is tried first because it is already the source of the fundamental
+    summaries in this workflow. Cached JSON keeps daily refreshes fast; the
+    cache is refreshed every TOP_PICKS_PROFILE_CACHE_DAYS days.
+    """
+    sym = (symbol or "").upper().strip()
+    PROFILE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cache_path = PROFILE_CACHE_DIR / f"{sym}.json"
+    now = time.time()
+    try:
+        if cache_path.exists() and now - cache_path.stat().st_mtime < PROFILE_CACHE_DAYS * 86400:
+            cached = json.loads(cache_path.read_text(encoding="utf-8"))
+            if cached.get("description"):
+                return cached
+    except Exception:
+        pass
+
+    source_url = f"https://www.screener.in/company/{sym}/"
+    profile = {
+        "symbol": sym,
+        "company_name": company_name or sym,
+        "description": "",
+        "source": "screener.in",
+        "source_url": source_url,
+        "website_url": None,
+        "fetched_at": datetime.now().isoformat(timespec="seconds"),
+        "status": "not_fetched",
+    }
+    try:
+        req = urllib.request.Request(
+            source_url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (compatible; NSE Top Picks Report/1.0)",
+                "Accept": "text/html,application/xhtml+xml",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=PROFILE_FETCH_TIMEOUT) as resp:
+            raw = resp.read().decode("utf-8", errors="ignore")
+        desc, website = _extract_screener_profile(raw)
+        if desc:
+            profile.update({
+                "description": desc,
+                "website_url": website,
+                "status": "live",
+            })
+        else:
+            raise ValueError("no business description parsed from Screener page")
+    except (urllib.error.URLError, TimeoutError, ValueError, OSError) as exc:
+        profile.update({
+            "description": COMPANY_PROFILE_FALLBACKS.get(sym, f"{company_name or sym}: business description unavailable from live profile lookup."),
+            "source": "local fallback",
+            "source_url": source_url,
+            "status": f"fallback: {exc}",
+        })
+
+    try:
+        cache_path.write_text(json.dumps(profile, indent=2, ensure_ascii=False), encoding="utf-8")
+    except Exception:
+        pass
+    return profile
+
+
+def _extract_screener_top_ratios(raw: str) -> dict:
+    m = re.search(r'<ul[^>]+id=["\']top-ratios["\'][^>]*>(.*?)</ul>', raw, flags=re.I | re.S)
+    if not m:
+        return {}
+    ratios: dict[str, float] = {}
+    for li in re.findall(r"<li\b[^>]*>(.*?)</li>", m.group(1), flags=re.I | re.S):
+        name_m = re.search(r'<span[^>]+class=["\']name["\'][^>]*>(.*?)</span>', li, flags=re.I | re.S)
+        if not name_m:
+            continue
+        name = _squash(_strip_tags(name_m.group(1))).lower()
+        nums = [
+            float(x.replace(",", ""))
+            for x in re.findall(r'<span[^>]+class=["\']number["\'][^>]*>\s*([-+]?\d[\d,]*(?:\.\d+)?)\s*</span>', li, flags=re.I)
+        ]
+        if not nums:
+            continue
+        value = nums[0]
+        if "market cap" in name:
+            ratios["mkt_cap_cr"] = value
+        elif "stock p/e" in name or name == "p/e":
+            ratios["pe_ratio"] = value
+        elif "book value" in name:
+            ratios["book_value"] = value
+        elif "dividend yield" in name:
+            ratios["div_yield_pct"] = value
+        elif name == "roce":
+            ratios["roce_pct"] = value
+        elif name == "roe":
+            ratios["roe_pct"] = value
+        elif "current price" in name:
+            ratios["current_price"] = value
+    return ratios
+
+
+def get_screener_ratio_fallback(symbol: str) -> dict:
+    sym = (symbol or "").upper().strip()
+    PROFILE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cache_path = PROFILE_CACHE_DIR / f"{sym}.ratios.json"
+    now = time.time()
+    try:
+        if cache_path.exists() and now - cache_path.stat().st_mtime < PROFILE_CACHE_DAYS * 86400:
+            cached = json.loads(cache_path.read_text(encoding="utf-8"))
+            if cached.get("_parsed"):
+                return cached
+    except Exception:
+        pass
+
+    source_url = f"https://www.screener.in/company/{sym}/"
+    out = {
+        "symbol": sym,
+        "ratios_summary": "",
+        "_parsed": {},
+        "source": "screener.in",
+        "source_url": source_url,
+        "fetched_at": datetime.now().isoformat(timespec="seconds"),
+        "status": "not_fetched",
+    }
+    try:
+        req = urllib.request.Request(
+            source_url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (compatible; NSE Top Picks Report/1.0)",
+                "Accept": "text/html,application/xhtml+xml",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=PROFILE_FETCH_TIMEOUT) as resp:
+            raw = resp.read().decode("utf-8", errors="ignore")
+        parsed = _extract_screener_top_ratios(raw)
+        if not parsed:
+            raise ValueError("no top ratios parsed from Screener page")
+        bits = []
+        if parsed.get("pe_ratio") is not None:
+            bits.append(f"P/E: {parsed['pe_ratio']}")
+        if parsed.get("roce_pct") is not None:
+            bits.append(f"ROCE: {parsed['roce_pct']}%")
+        if parsed.get("roe_pct") is not None:
+            bits.append(f"ROE: {parsed['roe_pct']}%")
+        if parsed.get("div_yield_pct") is not None:
+            bits.append(f"Div Yield: {parsed['div_yield_pct']}%")
+        if parsed.get("book_value") is not None:
+            bits.append(f"Book Value: {parsed['book_value']}")
+        if parsed.get("mkt_cap_cr") is not None:
+            bits.append(f"Mkt Cap: {parsed['mkt_cap_cr']} Cr")
+        out.update({
+            "ratios_summary": "; ".join(bits),
+            "_parsed": parsed,
+            "status": "live",
+        })
+    except (urllib.error.URLError, TimeoutError, ValueError, OSError) as exc:
+        out["status"] = f"fallback failed: {exc}"
+    try:
+        cache_path.write_text(json.dumps(out, indent=2, ensure_ascii=False), encoding="utf-8")
+    except Exception:
+        pass
+    return out
+
+
+def _normalise_analyst_consensus(ps: dict, fallback: dict | None) -> None:
+    if not isinstance(ps, dict):
+        return
+    if not isinstance(ps.get("analyst_consensus"), dict):
+        if isinstance(fallback, dict):
+            ps["analyst_consensus"] = fallback
+        return
+    ac = ps["analyst_consensus"]
+    fb = fallback if isinstance(fallback, dict) else {}
+    for key in ("consensus_rating", "target_median", "target_low", "target_high", "target_rationale", "estimate_trend"):
+        if _is_missing_value(ac.get(key)) and not _is_missing_value(fb.get(key)):
+            ac[key] = fb.get(key)
+    for key in ("bull_points", "bear_points"):
+        if not ac.get(key) and fb.get(key):
+            ac[key] = fb.get(key)
+    if _is_missing_value(ac.get("rating_disclaimer")):
+        ac["rating_disclaimer"] = fb.get("rating_disclaimer") or "Synthesised from dossier — no live broker poll wired."
+
+
 def _serialize_stocks_for_llm(stocks: list[dict]) -> str:
     """Compact JSON dossier per stock — feeds the deep-analysis LLM pass."""
     rows = []
@@ -3018,6 +3619,12 @@ def _serialize_stocks_for_llm(stocks: list[dict]) -> str:
             "symbol": s["symbol"],
             "sector": s["sector"],
             "source_screen": s["source"],
+            "strategy_lab_confirmation": s.get("strategy_confirmation") or {},
+            "company_profile": {
+                "description": (s.get("company_profile") or {}).get("description"),
+                "source": (s.get("company_profile") or {}).get("source"),
+                "source_status": (s.get("company_profile") or {}).get("status"),
+            },
             "sector_context": {
                 "sector_strength": sec.get("sector_strength"),
                 "sector_avg_rs_pct": sec.get("avg_rs"),
@@ -3502,6 +4109,10 @@ def generate_narratives(stocks: list[dict], macro_context: str, snap_date: str,
             fb = (rule_fallback["per_stock"].get(sym) or {}).get("analyst_consensus")
             if isinstance(fb, dict):
                 per_stock[sym]["analyst_consensus"] = fb
+        _normalise_analyst_consensus(
+            per_stock[sym],
+            (rule_fallback["per_stock"].get(sym) or {}).get("analyst_consensus"),
+        )
     print(f"   pass 1 done: {chunks_ok}/{len(chunks)} chunks ok, {chunks_failed} fell back to rule-based")
 
     # ---- Pass 2: portfolio-level refinement ----
@@ -3580,6 +4191,106 @@ def _pct(v: Any, decimals: int = 1) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 # Markdown + HTML rendering
 # ─────────────────────────────────────────────────────────────────────────────
+def _selection_methodology_markdown() -> str:
+    return (
+        "## Methodology\n\n"
+        "Top picks are not selected from a single indicator. The report looks for names where "
+        "market structure, sector strength, price action, strategy evidence, and risk/reward "
+        "all point in the same direction.\n\n"
+        "### Core Inputs\n\n"
+        "1. **Sector Rotation Report** — finds leading sectors and the highest investment-score "
+        "stocks inside those sectors.\n"
+        "2. **Stage 2 / VCP Tracker** — prioritises Weinstein Stage 2 stocks and persisted "
+        "`scores.stage2_vcp_picks` candidates.\n"
+        "3. **Portfolio Strategy Lab** — gives extra weight to symbols confirmed by the "
+        "best-ranked paper strategy's open positions or next BUY orders.\n"
+        "4. **Technical Strength** — uses 260 trading days of EOD data: EMA20/50/200 stack, "
+        "EMA50 slope, RSI(14), ATR(14), 52-week position, 1M/3M/6M/1Y returns, volume ratio, "
+        "support/resistance, pivots, and volume profile.\n"
+        "5. **Fundamental and Risk Checks** — uses Piotroski F-score, Altman Z, Beneish M, "
+        "ROE/ROCE, 3-year growth, debt/equity, promoter holding, cash-flow quality, valuation, "
+        "stop loss, targets, and risk/reward.\n\n"
+        "### Weinstein Stage Framework\n\n"
+        "Stan Weinstein's stage analysis is the primary trend filter:\n\n"
+        "- **Stage 1 — Base / Accumulation:** price moves sideways after a decline, moving "
+        "averages flatten, and institutions may be accumulating. This is a watchlist phase, "
+        "not the preferred buying phase.\n"
+        "- **Stage 2 — Advancing / Uptrend:** price breaks out of the base, trades above key "
+        "moving averages, the 50-day average rises, and relative strength improves. This is "
+        "the preferred long-only buying zone.\n"
+        "- **Stage 3 — Top / Distribution:** price becomes volatile near highs, momentum fades, "
+        "and moving averages flatten. This is a caution or profit-protection phase.\n"
+        "- **Stage 4 — Decline / Downtrend:** price trades below key moving averages with "
+        "lower highs/lows. Long-only systems usually avoid these names.\n\n"
+        "The report therefore gives first preference to **Stage 2 leaders**, especially where "
+        "the stock also shows sector leadership, VCP/breakout evidence, and strategy confirmation.\n\n"
+        "### How Ranking Works\n\n"
+        "The final rank balances several signals rather than blindly chasing the strongest "
+        "one-day mover:\n\n"
+        "- **Stage and trend quality:** Stage 2, rising averages, and strong 52-week positioning "
+        "rank higher.\n"
+        "- **Relative strength:** stocks outperforming the broader universe rank higher.\n"
+        "- **Sector leadership:** strong stocks in strong sectors get preference over isolated moves.\n"
+        "- **VCP / breakout evidence:** a Volatility Contraction Pattern means a strong stock "
+        "has paused with tighter ranges and reduced supply before a potential breakout.\n"
+        "- **Portfolio strategy confirmation:** paper-trading strategies such as breakout or "
+        "Darvas-style systems add independent confirmation when they mark the stock as an open "
+        "position or next BUY.\n"
+        "- **Risk/reward:** targets, stop-loss distance, ATR volatility, and risk score prevent "
+        "high-momentum but poor-risk trades from dominating the list.\n"
+        "- **Fundamental quality:** profitability, leverage, cash-flow quality, growth, and "
+        "valuation checks reduce false positives.\n\n"
+        "Triple-confirmed names, where sector rotation + Stage 2/VCP + portfolio strategy "
+        "evidence agree, are prioritised. Dual-confirmed names can still qualify when their "
+        "trend, relative strength, and risk/reward are strong.\n\n"
+        "### How to Read the Picks\n\n"
+        "A high-ranked pick should be read as a research shortlist candidate, not a direct "
+        "investment instruction. The strongest candidates typically combine Stage 2 structure, "
+        "leadership versus the market, constructive sector context, defined stop-loss, and "
+        "acceptable reward-to-risk. The report is for research and learning only; it is not "
+        "investment advice.\n\n"
+    )
+
+
+def _selection_methodology_html() -> str:
+    return """
+<div class="tp-sub" style="margin-top:14px;background:#fff">
+  <h4><span class="ico">📐</span> Methodology</h4>
+  <p style="font-size:.83rem;color:#475569;margin:0 0 8px">
+    Top picks are not selected from a single indicator. The report looks for names where market structure,
+    sector strength, price action, strategy evidence, and risk/reward all point in the same direction.
+  </p>
+  <h5 style="font-size:.78rem;color:#0f172a;margin:12px 0 6px;text-transform:uppercase;letter-spacing:.08em">Core Inputs</h5>
+  <ol style="margin:0 0 8px 22px;font-size:.83rem;color:#334155;line-height:1.6">
+    <li><strong>Sector Rotation Report</strong> — leading sectors and highest investment-score names inside them.</li>
+    <li><strong>Stage 2 / VCP Tracker</strong> — Weinstein-stage-2 universe plus persisted <code>scores.stage2_vcp_picks</code>.</li>
+    <li><strong>Portfolio Strategy Lab</strong> — confirmation from the best-ranked paper strategy's open positions or next BUY orders.</li>
+    <li><strong>Technical Strength</strong> — 260d EOD trend, EMA stack, RSI/ATR, 52w position, returns, volume, support/resistance, pivots, and volume profile.</li>
+    <li><strong>Fundamental and Risk Checks</strong> — Piotroski F, Altman Z, Beneish M, ROE/ROCE, growth, D/E, promoter holding, cash flow, valuation, stops, targets, and risk/reward.</li>
+  </ol>
+  <h5 style="font-size:.78rem;color:#0f172a;margin:12px 0 6px;text-transform:uppercase;letter-spacing:.08em">Weinstein Stage Framework</h5>
+  <ul style="margin:0 0 8px 20px;font-size:.83rem;color:#334155;line-height:1.6">
+    <li><strong>Stage 1 — Base / Accumulation:</strong> sideways action after a decline; watchlist phase.</li>
+    <li><strong>Stage 2 — Advancing / Uptrend:</strong> breakout above the base, rising averages, and improving relative strength; preferred long-only buying zone.</li>
+    <li><strong>Stage 3 — Top / Distribution:</strong> volatility near highs, fading momentum, flattening averages; caution phase.</li>
+    <li><strong>Stage 4 — Decline / Downtrend:</strong> price below key averages and lower highs/lows; usually avoided by long-only systems.</li>
+  </ul>
+  <h5 style="font-size:.78rem;color:#0f172a;margin:12px 0 6px;text-transform:uppercase;letter-spacing:.08em">How Ranking Works</h5>
+  <p style="font-size:.83rem;color:#334155;margin:0;line-height:1.6">
+    The final rank balances Stage 2 trend quality, relative strength, sector leadership, VCP or breakout evidence,
+    portfolio strategy confirmation, target/stop risk-reward, and fundamental quality. Triple-confirmed names
+    where sector rotation + Stage 2/VCP + strategy evidence agree are prioritised, followed by dual-confirmed
+    candidates with strong trend and acceptable risk.
+  </p>
+  <p style="font-size:.78rem;color:#64748b;margin:8px 0 0;line-height:1.55">
+    A high-ranked pick is a research shortlist candidate, not a direct investment instruction. The strongest
+    candidates combine Stage 2 structure, leadership versus the market, constructive sector context, defined
+    stop-loss, and acceptable reward-to-risk.
+  </p>
+</div>
+"""
+
+
 def render_markdown(snap_date: str, picks: list[PickRationale], enriched: list[dict],
                     narratives: dict, macro_context: str) -> str:
     out: list[str] = []
@@ -3592,11 +4303,7 @@ def render_markdown(snap_date: str, picks: list[PickRationale], enriched: list[d
     out.append(f"{narratives.get('executive_summary','')}\n\n")
     out.append(f"**Macro context:** {macro_context}\n\n")
 
-    out.append("## Methodology\n\n")
-    out.append("Picks merge two independent screens:\n\n")
-    out.append("1. **Sector Rotation Report** — top investment-score names within the leading sectors.\n")
-    out.append("2. **Stage 2 Tracker** — Weinstein-stage-2 universe ranked by `scores.stage_snapshots.investment_score`.\n\n")
-    out.append("Dual-confirmed names (both screens) are prioritised. Per-stock deep dive uses 260 trading days of EOD: EMA20/50/200 stack, EMA50 slope, RSI(14), ATR(14), 52w hi/lo, 1M/3M/6M/1Y returns, volume ratio. Fundamentals: Piotroski F-score, Altman Z, Beneish M, ROE/ROCE, 3Y growth, D/E, promoter holding.\n\n")
+    out.append(_selection_methodology_markdown())
 
     out.append("## Pick Summary\n\n")
     out.append("| # | Symbol | Sector | Price | Stage | Inv.Score | RS% | 6M Tgt | RR(4M) | Risk | Source |\n")
@@ -3629,9 +4336,26 @@ def render_markdown(snap_date: str, picks: list[PickRationale], enriched: list[d
         tech = e["tech"]
         fund = e["fund"] or {}
         narr = per_stock_narr.get(p.symbol, {})
+        profile = e.get("company_profile") or {}
 
         out.append(f"### {i}. {p.symbol} — {p.sector}\n\n")
         out.append(f"**Why selected:** {p.rationale}\n\n")
+        if p.strategy_confirmed:
+            signal = (p.strategy_signal or "").replace("_", " ") or "confirmed"
+            ret = f", {p.strategy_return_pct:.2f}% return" if p.strategy_return_pct is not None else ""
+            out.append(
+                f"**Portfolio lab confirmation:** `{p.strategy_id}` ({p.strategy_name or 'best strategy'}, "
+                f"rank {p.strategy_rank or 1}{ret}) marks this as **{signal}**.\n\n"
+            )
+        if profile.get("description"):
+            out.append(f"**What the company does:** {profile['description']}\n\n")
+            source = profile.get("source") or "company profile"
+            source_url = profile.get("source_url") or ""
+            status = profile.get("status") or ""
+            out.append(f"*Company profile source: {source} ({status})")
+            if source_url:
+                out.append(f" — {source_url}")
+            out.append("*\n\n")
         if narr.get("thesis"):
             out.append(f"**Thesis:** {narr['thesis']}\n\n")
         if narr.get("technical_view"):
@@ -3899,7 +4623,7 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
         else:
             _add("EPS", _nz(eps_v) if eps_v is not None else None)
 
-    # ---- Valuation rows (P/E derived, market-cap bucket, etc.) ----
+    # ---- Valuation rows (prefer parsed Screener ratios, then derived values) ----
     rows_val = []
     if fund or snap:
         p_ = (fund or {}).get("_parsed") or {}
@@ -3908,13 +4632,21 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
         except (TypeError, ValueError):
             price = None
         eps_v = p_.get("eps")
-        pe = (price / eps_v) if (price and eps_v) else None
+        if eps_v is None and analytics.get("eps_latest") is not None:
+            eps_v = analytics.get("eps_latest")
+        pe_ratio = p_.get("pe_ratio")
+        pe_derived = (price / eps_v) if (price and eps_v) else None
         def _addv(label, v):
             rows_val.append((label, v if v not in (None, "") else "—"))
         _addv("Price", f"₹{price:,.1f}" if price is not None else None)
         _addv("EPS (TTM proxy)", f"{eps_v:.2f}" if eps_v is not None else None)
-        _addv("P/E (price ÷ EPS)", f"{pe:.1f}x" if pe is not None else None)
+        _addv("P/E (Screener ratios)", f"{float(pe_ratio):.1f}x" if pe_ratio is not None else None)
+        if pe_derived is not None and (pe_ratio is None or abs(float(pe_ratio) - float(pe_derived)) > 1.0):
+            _addv("P/E (derived price ÷ EPS)", f"{pe_derived:.1f}x")
+        _addv("Market cap (Screener)", f"₹{float(p_['mkt_cap_cr']):,.0f} Cr" if p_.get("mkt_cap_cr") is not None else None)
         _addv("Market-cap bucket", snap.get("market_cap_cat") if snap else None)
+        _addv("Book value", f"₹{float(p_['book_value']):,.1f}" if p_.get("book_value") is not None else None)
+        _addv("Dividend yield", _pct(p_.get("div_yield_pct")) if p_.get("div_yield_pct") is not None else None)
         _addv("Sales (latest)",
               f"₹{p_['sales_latest_cr']:,.0f} Cr ({_pct(p_.get('sales_yoy_pct'))} YoY)"
               if p_.get('sales_latest_cr') is not None else None)
@@ -4218,6 +4950,7 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
             t1=narr.get("potential_target_short_term") or rr.get("target_2m"),
             t2=narr.get("target_4m") or rr.get("target_4m"),
             t3=narr.get("potential_target_long_term") or rr.get("target_6m"),
+            show_pattern_annotations=True,
         )
         pv = tech["chart"].get("pivots") or {}
         sup = tech["chart"].get("support_levels") or []
@@ -4248,6 +4981,22 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
             '<span style="background:#e879f9;padding:3px 8px;border-radius:3px">RSI 14</span>'
             '</div>'
         )
+        patterns = _detect_patterns(tech["chart"])
+        pattern_chips = ""
+        if patterns:
+            chips = "".join(
+                f'<span title="{h(str(pat.get("note") or ""))}" '
+                f'style="background:{h(str(pat.get("color") or "#64748b"))};'
+                f'color:#fff;padding:3px 8px;border-radius:3px">'
+                f'{h(str(pat.get("label") or pat.get("kind") or "Pattern"))}</span>'
+                for pat in patterns[:6]
+            )
+            pattern_chips = (
+                '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;font-size:.7rem;'
+                'font-weight:700;letter-spacing:.03em;color:#fff">'
+                '<span style="color:#9ca3af;background:transparent;padding:3px 0">Detected patterns:</span>'
+                f'{chips}</div>'
+            )
         chart_narr = (narr.get("chart_narrative") or "").strip()
         chart_narr_html = (
             f'<div style="margin-top:12px;padding:12px 14px;background:#0b0e14;'
@@ -4260,8 +5009,25 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
         candlestick_html = f"""
 <div class="tp-sub" style="margin-top:12px;background:#0f1218;border-color:#1e222d">
   <h4 style="color:#d1d4dc"><span class="ico">📈</span> 6-Month Price Action — TradingView-style: Candles · EMAs · Volume · RSI · S/R · Pivots · Volume Profile · Entry/Stop/Targets</h4>
-  {candle_svg}
+  <div class="tp-chart-wrap">
+    <div class="tp-chart-toolbar" aria-label="Chart controls">
+      <div class="tp-chart-group" aria-label="Time range">
+        <button type="button" class="tp-chart-btn" data-range="22" title="Show latest 1 month">1M</button>
+        <button type="button" class="tp-chart-btn" data-range="65" title="Show latest 3 months">3M</button>
+        <button type="button" class="tp-chart-btn active" data-range="130" title="Show latest 6 months">6M</button>
+        <button type="button" class="tp-chart-btn" data-range="all" title="Show all loaded bars">All</button>
+      </div>
+      <div class="tp-chart-group" aria-label="Zoom and overlays">
+        <button type="button" class="tp-chart-btn" data-zoom="in" title="Zoom in">+</button>
+        <button type="button" class="tp-chart-btn" data-zoom="out" title="Zoom out">-</button>
+        <button type="button" class="tp-chart-btn" data-zoom="reset" title="Reset view">Reset</button>
+        <button type="button" class="tp-chart-btn" data-toggle-ann="1" title="Show or hide chart annotations">Annotations</button>
+      </div>
+    </div>
+    {candle_svg}
+  </div>
   {legend_chips}
+  {pattern_chips}
   {chart_narr_html}
   <div style="margin-top:8px;font-size:.75rem;color:#9ca3af;line-height:1.6">{"<br>".join(meta_bits)}</div>
 </div>
@@ -4537,9 +5303,54 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
 
     # Conviction chip
     conv_cls = {"HIGH":"green","MEDIUM":"amber","LOW":"slate"}.get(conv, "slate")
-    src_label = {"dual":"Dual-Confirmed","sector_rot":"Sector Leader","stage2":"Stage 2"}.get(p.source, p.source or "")
-    src_cls = {"dual":"green","sector_rot":"blue","stage2":"violet"}.get(p.source, "slate")
+    src_label = {
+        "dual": "Dual-Confirmed",
+        "sector_rot": "Sector Leader",
+        "stage2": "Stage 2",
+        "sector+s2": "Sector + Stage 2",
+        "vcp+sector": "VCP + Sector",
+        "vcp": "VCP",
+        "strategy+vcp+sector": "Strategy + VCP + Sector",
+        "strategy+sector+s2": "Strategy + Sector + S2",
+        "strategy+vcp": "Strategy + VCP",
+        "strategy": "Strategy + Stage 2",
+    }.get(p.source, p.source or "")
+    src_cls = {
+        "dual": "green",
+        "sector_rot": "blue",
+        "stage2": "violet",
+        "sector+s2": "blue",
+        "vcp+sector": "green",
+        "vcp": "amber",
+        "strategy+vcp+sector": "green",
+        "strategy+sector+s2": "green",
+        "strategy+vcp": "green",
+        "strategy": "blue",
+    }.get(p.source, "slate")
     risk_chip_cls = {"LOW":"green","MEDIUM":"amber","HIGH":"red"}.get(risk_tier, "slate")
+    profile = e.get("company_profile") or {}
+    profile_desc = str(profile.get("description") or "").strip()
+    profile_source = str(profile.get("source") or "company profile").strip()
+    profile_status = str(profile.get("status") or "").strip()
+    profile_website = str(profile.get("website_url") or "").strip()
+    profile_source_url = str(profile.get("source_url") or "").strip()
+    profile_links = []
+    if profile_website:
+        profile_links.append(f'<a href="{h(profile_website)}" target="_blank" rel="noopener">Company website</a>')
+    if profile_source_url:
+        profile_links.append(f'<a href="{h(profile_source_url)}" target="_blank" rel="noopener">{h(profile_source)}</a>')
+    profile_meta = " · ".join(profile_links + ([h(profile_status)] if profile_status else []))
+    profile_meta_html = (
+        f'<p style="margin:8px 0 0;font-size:.72rem;color:#64748b">Source: {profile_meta}</p>'
+        if profile_meta else ""
+    )
+    profile_html = (
+        '<div class="tp-sub" style="margin-top:12px;background:#f8fafc;border-color:#cbd5e1">'
+        '<h4><span class="ico">B</span> What the company does</h4>'
+        f'<p style="margin:0;color:#334155;line-height:1.6">{h(profile_desc)}</p>'
+        f'{profile_meta_html}'
+        '</div>'
+    ) if profile_desc else ""
 
     # Tech KV table
     def _kv(rows):
@@ -4565,6 +5376,7 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
       <h2 class="tp-card-name">{h(p.symbol)} <small>· {h(p.sector)}</small></h2>
       <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">
         <span class="tp-chip {src_cls}">{h(src_label)}</span>
+        {f'<span class="tp-chip green">Best Strategy: {h(p.strategy_id or "")} · {h((p.strategy_signal or "").replace("_", " "))}</span>' if p.strategy_confirmed else ''}
         {f'<span class="tp-chip {conv_cls}">Conviction: {h(conv)}</span>' if conv else ''}
         {f'<span class="tp-chip {risk_chip_cls}">Risk: {h(risk_tier)}</span>' if risk_tier else ''}
         <span class="tp-chip blue">Signal: {h(snap.get('trading_signal') or '—')}</span>
@@ -4576,6 +5388,8 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
 
   <div class="tp-card-bd">
     <div class="tp-kpi-row">{kpi_tiles_html}</div>
+
+    {profile_html}
 
     {candlestick_html}
 
@@ -4609,8 +5423,8 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
         <h4><span class="ico">$</span> Valuation</h4>
         {_kv(rows_val) if rows_val else '<p style="color:#64748b;margin:0">No valuation inputs.</p>'}
         <p style="margin-top:8px;font-size:.7rem;color:#64748b;line-height:1.5">
-          P/E is derived as <code>price ÷ EPS (TTM proxy)</code> from <code>scores.fundamentals.ratios_summary</code>.
-          Forward multiples (P/B, EV/EBITDA, div yield) not currently in dataset.
+          Valuation fields come from <code>scores.fundamentals.ratios_summary</code> when available.
+          Derived P/E is shown only when it materially differs from the parsed Screener ratio.
         </p>
       </div>
       <div class="tp-sub violet">
@@ -4753,7 +5567,7 @@ def render_html(snap_date: str, picks: list[PickRationale], enriched: list[dict]
     <div>
       <div class="tp-hero-kicker">{h(AGENT_BRAND)} · Equity Research</div>
       <h1 class="tp-hero-title">Top Investment Picks Analysis</h1>
-      <p class="tp-hero-sub">Highest-conviction names merged from the Sector Rotation Report and Stage 2 Tracker, with deep technical · fundamental · risk-reward analysis and LLM-narrated investment thesis.</p>
+      <p class="tp-hero-sub">Highest-conviction names merged from Sector Rotation, Stage 2/VCP, and the Portfolio Strategy Lab best strategy, with deep technical · fundamental · risk-reward analysis.</p>
       <div class="tp-hero-meta">
         <span class="tp-pill blue">Report Date · {h(snap_date)}</span>
         <span class="tp-pill green">{len(picks)} picks</span>
@@ -4825,7 +5639,18 @@ def render_html(snap_date: str, picks: list[PickRationale], enriched: list[dict]
         risk_chip_cls = ("green" if (rs_val is not None and rs_val <= 3) else
                          "amber" if (rs_val is not None and rs_val <= 6) else
                          "red"   if rs_val is not None else "slate")
-        src_chip = {"dual":("green","Dual"),"sector_rot":("blue","Sector"),"stage2":("violet","Stage2")}.get(p.source,("slate", p.source or ""))
+        src_chip = {
+            "dual": ("green", "Dual"),
+            "sector_rot": ("blue", "Sector"),
+            "stage2": ("violet", "Stage2"),
+            "sector+s2": ("blue", "Sector+S2"),
+            "vcp+sector": ("green", "VCP+Sector"),
+            "vcp": ("amber", "VCP"),
+            "strategy+vcp+sector": ("green", "Strategy+VCP+Sector"),
+            "strategy+sector+s2": ("green", "Strategy+Sector+S2"),
+            "strategy+vcp": ("green", "Strategy+VCP"),
+            "strategy": ("blue", "Strategy+S2"),
+        }.get(p.source, ("slate", p.source or ""))
         summary_rows.append(
             f"<tr><td style='font-weight:700;color:#64748b'>{i}</td>"
             f"<td><a href='#pick-{i}'>{h(p.symbol)}</a></td>"
@@ -4911,17 +5736,7 @@ def render_html(snap_date: str, picks: list[PickRationale], enriched: list[dict]
         + "".join(cards) + '</div>'
     ) if cards else ""
 
-    methodology_html = """
-<div class="tp-sub" style="margin-top:14px;background:#fff">
-  <h4><span class="ico">📐</span> Methodology</h4>
-  <p style="font-size:.83rem;color:#475569;margin:0 0 6px">Picks merge two independent screens:</p>
-  <ol style="margin:0 0 6px 22px;font-size:.83rem;color:#334155;line-height:1.6">
-    <li><strong>Sector Rotation Report</strong> — top investment-score names within leading sectors (RS, momentum, tech + fund score).</li>
-    <li><strong>Stage 2 Tracker</strong> — Weinstein-stage-2 universe ranked by <code>scores.stage_snapshots.investment_score</code>.</li>
-  </ol>
-  <p style="font-size:.78rem;color:#64748b;margin:4px 0 0">Dual-confirmed names are prioritised. Per-stock dive uses 260d EOD (EMA 20/50/200, RSI/ATR, returns), 6-month candles with S/R + pivots + volume profile, and fundamentals (Piotroski F, Altman Z, Beneish M, ROE/ROCE, 3Y growth, D/E, promoter).</p>
-</div>
-"""
+    methodology_html = _selection_methodology_html()
 
     disclaimer_html = f"""
 <div class="tp-sub warn" style="margin-top:14px">
@@ -4993,10 +5808,21 @@ def build_report(snap_date: str | None = None, use_llm: bool = True,
             tech_row = compute_technicals(conn, p.symbol, snap_date)
             fund_row = get_fundamentals(conn, p.symbol)
             analytics_row = compute_financial_analytics(qtr, ann, bs, cf)
+            company_name = (snap_row or {}).get("company_name") if snap_row else None
             enriched.append({
                 "symbol": p.symbol,
                 "sector": p.sector,
                 "source": p.source,
+                "pick_rationale": p.rationale,
+                "strategy_confirmation": {
+                    "confirmed": p.strategy_confirmed,
+                    "strategy_id": p.strategy_id,
+                    "strategy_name": p.strategy_name,
+                    "signal": p.strategy_signal,
+                    "rank": p.strategy_rank,
+                    "total_return_pct": p.strategy_return_pct,
+                } if p.strategy_confirmed else {},
+                "company_profile": get_company_profile(p.symbol, company_name),
                 "snapshot": snap_row,
                 "tech": tech_row,
                 "fund": fund_row,

@@ -2,10 +2,23 @@ import { useState, useEffect, useCallback } from "react";
 import { Header }        from "./components/Header";
 import { CaptureButton } from "./components/CaptureButton";
 import { ChatPanel }     from "./components/ChatPanel";
+import { BacktestTab }   from "./components/BacktestTab";
 import { useChartContext } from "./store/chartContext";
 import { analyzeChart, askFollowUp, healthCheck } from "./api/client";
-import type { Exchange, Timeframe, AnalysisResult, PageMetadata } from "../types";
+import type {
+  Exchange,
+  Timeframe,
+  AnalysisResult,
+  PageMetadata,
+  CaptureVisibleTabRequest,
+  CaptureVisibleTabResponse,
+  SelectCaptureAreaResponse,
+  CaptureSelectionRect,
+  SelectCaptureAreaRequest,
+} from "../types";
 import "./App.css";
+
+type MainTab = "analyze" | "backtest";
 
 export function App() {
   const [symbol, setSymbol]       = useState("BANKNIFTY");
@@ -14,8 +27,143 @@ export function App() {
   const [apiReachable, setApiReachable] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [analysing, setAnalysing] = useState(false);
+  const [captureError, setCaptureError] = useState<string | null>(null);
+  const [mainTab, setMainTab]     = useState<MainTab>("analyze");
 
-  const { ctx, loading, createContext, addConclusion, resetContext } = useChartContext();
+  const { ctx, loading, createContext, addConclusion, applyAnalysisResult, resetContext } = useChartContext();
+
+
+  function applyPageMetadata(metadata: PageMetadata) {
+    const { symbol: s, exchange: e, timeframe: t } = metadata;
+    if (s) setSymbol(s);
+    if (e) setExchange(e);
+    if (t) setTimeframe(t);
+  }
+
+  async function captureVisibleTabDirect(): Promise<CaptureVisibleTabResponse> {
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      lastFocusedWindow: true,
+    });
+    if (!tab?.id || tab.windowId == null) {
+      throw new Error("No active chart tab was found.");
+    }
+
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      chrome.tabs.captureVisibleTab(tab.windowId, { format: "png" }, (url) => {
+        const error = chrome.runtime.lastError;
+        if (error) {
+          reject(new Error(error.message));
+          return;
+        }
+        if (!url) {
+          reject(new Error("Chrome returned an empty screenshot."));
+          return;
+        }
+        resolve(url);
+      });
+    });
+
+    return {
+      ok: true,
+      dataUrl,
+      tab: {
+        id: tab.id,
+        windowId: tab.windowId,
+        url: tab.url ?? null,
+        title: tab.title ?? null,
+      },
+      error: null,
+    };
+  }
+
+  async function requestVisibleTabCapture(): Promise<CaptureVisibleTabResponse> {
+    const request: CaptureVisibleTabRequest = { type: "CAPTURE_VISIBLE_TAB" };
+    try {
+      return await new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage(request, (response: CaptureVisibleTabResponse | undefined) => {
+          const error = chrome.runtime.lastError;
+          if (error) {
+            reject(new Error(error.message));
+            return;
+          }
+          if (!response) {
+            reject(new Error("The background worker did not return a capture response."));
+            return;
+          }
+          resolve(response);
+        });
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (
+        message.includes("message port closed") ||
+        message.includes("Receiving end does not exist") ||
+        message.includes("background worker")
+      ) {
+        return captureVisibleTabDirect();
+      }
+      throw error;
+    }
+  }
+
+  async function requestAreaSelection(): Promise<SelectCaptureAreaResponse> {
+    const request: SelectCaptureAreaRequest = { type: "SELECT_CAPTURE_AREA" };
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(request, (response: SelectCaptureAreaResponse | undefined) => {
+        const error = chrome.runtime.lastError;
+        if (error) {
+          reject(new Error(error.message));
+          return;
+        }
+        if (!response) {
+          reject(new Error("The chart page did not return a selected area."));
+          return;
+        }
+        resolve(response);
+      });
+    });
+  }
+
+  async function cropDataUrlToRect(dataUrl: string, rect: CaptureSelectionRect): Promise<string> {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Failed to load screenshot for cropping."));
+      img.src = dataUrl;
+    });
+
+    const scaleX = image.naturalWidth / rect.viewportWidth;
+    const scaleY = image.naturalHeight / rect.viewportHeight;
+    const sourceX = Math.max(0, Math.round(rect.x * scaleX));
+    const sourceY = Math.max(0, Math.round(rect.y * scaleY));
+    const sourceWidth = Math.min(image.naturalWidth - sourceX, Math.round(rect.width * scaleX));
+    const sourceHeight = Math.min(image.naturalHeight - sourceY, Math.round(rect.height * scaleY));
+
+    if (sourceWidth <= 0 || sourceHeight <= 0) {
+      throw new Error("Selected area is outside the captured screenshot.");
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = sourceWidth;
+    canvas.height = sourceHeight;
+    const context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("Browser canvas is unavailable for screenshot crop.");
+    }
+    context.drawImage(
+      image,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
+      0,
+      0,
+      sourceWidth,
+      sourceHeight
+    );
+    return canvas.toDataURL("image/png");
+  }
 
   // ── API health ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -30,13 +178,18 @@ export function App() {
   useEffect(() => {
     function onMessage(msg: { type: string; payload?: PageMetadata }) {
       if (msg.type === "PAGE_METADATA" && msg.payload) {
-        const { symbol: s, exchange: e, timeframe: t } = msg.payload;
-        if (s) setSymbol(s);
-        if (e) setExchange(e);
-        if (t) setTimeframe(t);
+        applyPageMetadata(msg.payload);
       }
     }
     chrome.runtime.onMessage.addListener(onMessage);
+
+    chrome.runtime.sendMessage({ type: "GET_ACTIVE_METADATA" }, (msg) => {
+      if (chrome.runtime.lastError) return;
+      if (msg?.type === "ACTIVE_METADATA" && msg.payload) {
+        applyPageMetadata(msg.payload);
+      }
+    });
+
     return () => chrome.runtime.onMessage.removeListener(onMessage);
   }, []);
 
@@ -48,46 +201,64 @@ export function App() {
   }, [symbol, exchange, timeframe]);
 
   // ── Capture + auto-analyse ────────────────────────────────────────────────
-  const handleCapture = useCallback(async () => {
+  const handleCapture = useCallback(async (mode: "visible" | "area" = "visible") => {
     if (capturing || analysing) return;
+    setCaptureError(null);
     setCapturing(true);
     try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab?.id) throw new Error("No active tab");
+      const selection = mode === "area" ? await requestAreaSelection() : null;
+      if (selection && (!selection.ok || !selection.rect)) {
+        throw new Error(selection.error ?? "Area selection failed.");
+      }
 
-      // Screenshot the visible chart.
-      const dataUrl: string = await new Promise((resolve, reject) => {
-        chrome.tabs.captureVisibleTab(
-          tab.windowId!,
-          { format: "png" },
-          (url) => chrome.runtime.lastError ? reject(chrome.runtime.lastError) : resolve(url)
-        );
-      });
+      const capture = await requestVisibleTabCapture();
+      if (!capture.ok || !capture.dataUrl) {
+        throw new Error(capture.error ?? "Chart capture failed.");
+      }
 
-      createContext(symbol, exchange, timeframe, dataUrl);
+      const imageDataUrl = selection?.rect
+        ? await cropDataUrlToRect(capture.dataUrl, selection.rect)
+        : capture.dataUrl;
+
+      createContext(symbol, exchange, timeframe, imageDataUrl);
       setCapturing(false);
       setAnalysing(true);
 
       // Auto-fire initial analysis immediately — image is the source of truth.
       const res = await analyzeChart({
-        image: dataUrl,
-        source_url: tab.url ?? null,
-        page_title: tab.title ?? null,
+        image: imageDataUrl,
+        source_url: capture.tab?.url ?? null,
+        page_title: capture.tab?.title ?? null,
         user_symbol: symbol,
         exchange,
         timeframe,
         visible_indicators: [],
-        user_question: "Analyze this chart and give me the full setup.",
+        user_question: [
+          "Analyze the captured chart as a technical trading setup.",
+          `MANDATORY: Start the answer with ▶ IDENTITY and include Visible, Context (${exchange}:${symbol} · ${timeframe}), Match, and Type before any bias or trade setup.`,
+          "If the screenshot/header is cropped or unreadable, explicitly say the visible instrument is unreadable and use the provided chart context.",
+          "Inventory every visible indicator/annotation before concluding: EMAs, Supertrend, RSI, volume, levels, labels, and drawn zones.",
+          "Use private plan-of-thought decomposition and tree-of-thought scenario checks for bull, bear, and range/no-trade cases.",
+          "Then produce precise support, resistance, invalidation, targets, volume/RSI read, scenarios, final trade plan, and confidence.",
+        ].join(" "),
         conflict_policy: "prefer_pg",
       });
-      if (res.ok && res.data) addConclusion(res.data.answer);
+      if (!res.ok || !res.data) {
+        throw new Error(res.error ?? "Agent Adda analysis failed.");
+      }
+      if (res.data.error) {
+        throw new Error(res.data.error);
+      }
+      applyAnalysisResult(res.data);
     } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setCaptureError(message);
       console.error("Capture/analysis failed:", err);
     } finally {
       setCapturing(false);
       setAnalysing(false);
     }
-  }, [capturing, analysing, symbol, exchange, timeframe, createContext, addConclusion]);
+  }, [capturing, analysing, symbol, exchange, timeframe, createContext, applyAnalysisResult]);
 
   // ── Follow-up send ────────────────────────────────────────────────────────
   const handleSend = useCallback(
@@ -116,26 +287,52 @@ export function App() {
         onTimeframeChange={setTimeframe}
       />
 
-      <main className="main">
-        <CaptureButton
-          disabled={!apiReachable || busy}
-          capturing={capturing}
-          capturedAt={ctx?.captured_at ?? null}
-          onCapture={handleCapture}
-        />
+      {/* Main tab strip */}
+      <div className="main-tabs">
+        <button
+          className={`main-tab ${mainTab === "analyze" ? "main-tab--active" : ""}`}
+          onClick={() => setMainTab("analyze")}
+        >🔍 Analyze</button>
+        <button
+          className={`main-tab ${mainTab === "backtest" ? "main-tab--active" : ""}`}
+          onClick={() => setMainTab("backtest")}
+        >📊 Backtest</button>
+      </div>
 
-        {analysing && (
-          <div className="analysing-banner">
-            🔍 Agent Adda is reading the chart…
-          </div>
+      <main className="main">
+        {mainTab === "analyze" && (
+          <>
+            <section className="capture-area">
+              <CaptureButton
+                disabled={!apiReachable || busy}
+                capturing={capturing}
+                analysing={analysing}
+                capturedAt={ctx?.captured_at ?? null}
+                onCapture={handleCapture}
+              />
+            </section>
+
+            {captureError && (
+              <div className="capture-error" role="alert">
+                {captureError}
+              </div>
+            )}
+
+            {/* Chat panel — locked for follow-up until initial analysis has run */}
+            <ChatPanel
+              captureId={ctx?.llm_conclusions.length ? ctx.capture_id : null}
+              initialAnalysis={ctx?.llm_conclusions[0]}
+              symbol={symbol}
+              exchange={exchange}
+              timeframe={timeframe}
+              onSend={handleSend}
+            />
+          </>
         )}
 
-        {/* Chat panel — locked for follow-up until initial analysis has run */}
-        <ChatPanel
-          captureId={ctx?.llm_conclusions.length ? ctx.capture_id : null}
-          initialAnalysis={ctx?.llm_conclusions[0]}
-          onSend={handleSend}
-        />
+        {mainTab === "backtest" && (
+          <BacktestTab symbol={symbol} timeframe={timeframe} />
+        )}
       </main>
 
       <footer className="footer">Research only — not investment advice</footer>

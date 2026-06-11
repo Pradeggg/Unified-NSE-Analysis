@@ -16,6 +16,7 @@
 -- Extensions
 CREATE EXTENSION IF NOT EXISTS pg_trgm;           -- fuzzy symbol/name search
 CREATE EXTENSION IF NOT EXISTS btree_gist;        -- range index support
+CREATE EXTENSION IF NOT EXISTS vector;            -- pgvector skill-store embeddings
 
 -- =============================================================================
 -- SCHEMAS
@@ -28,6 +29,8 @@ CREATE SCHEMA IF NOT EXISTS signals;
 CREATE SCHEMA IF NOT EXISTS breadth;
 CREATE SCHEMA IF NOT EXISTS macro;
 CREATE SCHEMA IF NOT EXISTS portfolio;
+CREATE SCHEMA IF NOT EXISTS agent_skills;
+CREATE SCHEMA IF NOT EXISTS agent_learning;
 
 -- =============================================================================
 -- 1. REF — Master / Reference Data
@@ -374,6 +377,40 @@ CREATE TABLE scores.stage_changes (
     PRIMARY KEY (change_date, compare_date, symbol)
 );
 
+-- Daily VCP breakout picks derived from Stage 2 tracker reports
+CREATE TABLE scores.stage2_vcp_picks (
+    snapshot_date        DATE        NOT NULL,
+    rank                 INTEGER     NOT NULL,
+    symbol               TEXT        NOT NULL,
+    company_name         TEXT,
+    sector               TEXT,
+    price                NUMERIC(12,2),
+    live_price           NUMERIC(12,2),
+    price_date           DATE,
+    change_1d_pct        NUMERIC(8,4),
+    change_1w_pct        NUMERIC(8,4),
+    rsi                  NUMERIC(6,2),
+    relative_strength    NUMERIC(8,4),
+    trading_signal       TEXT,
+    trend_signal         TEXT,
+    supertrend_state     TEXT,
+    investment_score     NUMERIC(6,2),
+    enhanced_fund_score  NUMERIC(6,2),
+    earnings_quality     NUMERIC(6,2),
+    sales_growth         NUMERIC(6,2),
+    financial_strength   NUMERIC(6,2),
+    vcp_score            NUMERIC(8,2),
+    vcp_breakout_pct     NUMERIC(8,4),
+    vcp_contraction_pct  NUMERIC(8,4),
+    stance               TEXT,
+    narrative            TEXT,
+    fund_details         JSONB,
+    source_report        TEXT,
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (snapshot_date, symbol)
+);
+
 -- Long-term pattern screener results (from long_term_screeners_*.csv)
 CREATE TABLE scores.long_term_screeners (
     score_date          DATE        NOT NULL,
@@ -682,6 +719,55 @@ CREATE OR REPLACE VIEW scores.v_latest_cash_flow AS
 SELECT DISTINCT ON (symbol) *
 FROM scores.cash_flow
 ORDER BY symbol, period_end DESC NULLS LAST, fetched_at DESC;
+
+-- LLM-authored daily results analysis: one row per (symbol, period_end).
+-- Rebuilt by `scripts/analyze_daily_results.py` on every fresh filing.
+CREATE TABLE IF NOT EXISTS scores.results_analysis (
+    symbol                 TEXT        NOT NULL,
+    period_end             DATE        NOT NULL,
+    period_label           TEXT,
+    company_name           TEXT,
+    industry               TEXT,
+    filing_date            DATE,
+    filing_url             TEXT,
+    audited                TEXT,
+    consolidated           TEXT,
+    business_summary       TEXT,
+    growth_yoy_revenue_pct NUMERIC(10,2),
+    growth_qoq_revenue_pct NUMERIC(10,2),
+    growth_yoy_pat_pct     NUMERIC(10,2),
+    growth_qoq_pat_pct     NUMERIC(10,2),
+    opm_delta_pp           NUMERIC(10,2),
+    eps_yoy_pct            NUMERIC(10,2),
+    pl_commentary          TEXT,
+    bs_commentary          TEXT,
+    cf_commentary          TEXT,
+    ratios_snapshot        JSONB,
+    credit_rating_note     TEXT,
+    credit_rating_source   TEXT,
+    fii_dii_context        TEXT,
+    insider_activity_note  TEXT,
+    key_strengths          TEXT[],
+    key_risks              TEXT[],
+    verdict                TEXT,            -- beat | inline | miss | mixed | unknown
+    score                  NUMERIC(5,2),
+    report_path            TEXT,
+    llm_model              TEXT,
+    source_trail           JSONB,
+    analysis_json          JSONB,
+    created_at             TIMESTAMPTZ DEFAULT now(),
+    updated_at             TIMESTAMPTZ DEFAULT now(),
+    PRIMARY KEY (symbol, period_end)
+);
+CREATE INDEX IF NOT EXISTS idx_results_analysis_filing_date
+    ON scores.results_analysis (filing_date DESC NULLS LAST);
+CREATE INDEX IF NOT EXISTS idx_results_analysis_symbol_filed
+    ON scores.results_analysis (symbol, filing_date DESC NULLS LAST);
+
+CREATE OR REPLACE VIEW scores.v_latest_results_analysis AS
+SELECT DISTINCT ON (symbol) *
+FROM scores.results_analysis
+ORDER BY symbol, period_end DESC NULLS LAST, updated_at DESC;
 
 -- =============================================================================
 -- 5. SIGNALS — Trading Signals, Flows, Events, Alerts
@@ -1008,6 +1094,10 @@ CREATE INDEX idx_ss_stage          ON scores.stage_snapshots (stage, snapshot_da
 CREATE INDEX idx_ss_inv_score      ON scores.stage_snapshots (snapshot_date DESC, investment_score DESC);
 CREATE INDEX idx_ss_signal         ON scores.stage_snapshots (trading_signal, snapshot_date DESC);
 CREATE INDEX idx_ss_sector         ON scores.stage_snapshots (sector, snapshot_date DESC);
+
+-- scores.stage2_vcp_picks
+CREATE INDEX idx_vcp_picks_date_rank ON scores.stage2_vcp_picks (snapshot_date DESC, rank);
+CREATE INDEX idx_vcp_picks_symbol_date ON scores.stage2_vcp_picks (symbol, snapshot_date DESC);
 
 -- scores.ma_breadth
 CREATE INDEX idx_mab_date          ON scores.ma_breadth (snapshot_date DESC);
@@ -1389,3 +1479,254 @@ CREATE INDEX IF NOT EXISTS critic_reviews_run_idx
     ON recommendation_reports.critic_reviews(run_id, iteration);
 CREATE INDEX IF NOT EXISTS signal_log_council_run_idx
     ON signals.signal_log(council_run_id);
+
+-- =============================================================================
+-- 15. AGENT_SKILLS — Validated Skill Store
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS agent_skills.skill_cards (
+    card_pk             BIGSERIAL PRIMARY KEY,
+    id                  TEXT        NOT NULL,
+    version             INTEGER     NOT NULL DEFAULT 1,
+    status              TEXT        NOT NULL DEFAULT 'generated'
+        CHECK (status IN ('generated', 'test_failed', 'review_pending', 'validated', 'production', 'deprecated')),
+    domain              TEXT        NOT NULL,
+    title               TEXT        NOT NULL,
+    description         TEXT        NOT NULL,
+    input_patterns      TEXT[]      NOT NULL DEFAULT '{}',
+    tags                TEXT[]      NOT NULL DEFAULT '{}',
+    evidence_required   JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    tool_plan_template  JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    output_contract     TEXT[]      NOT NULL DEFAULT '{}',
+    validation_rules    TEXT[]      NOT NULL DEFAULT '{}',
+    synthesis_guidance  TEXT,
+    card_payload        JSONB       NOT NULL,
+    generation_model    TEXT,
+    created_by          TEXT,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (id, version)
+);
+
+CREATE TABLE IF NOT EXISTS agent_skills.skill_embeddings (
+    embedding_id        BIGSERIAL PRIMARY KEY,
+    skill_id            TEXT        NOT NULL,
+    skill_version       INTEGER     NOT NULL DEFAULT 1,
+    embedding_model     TEXT        NOT NULL,
+    embedding_dimension INTEGER     NOT NULL,
+    embedding_text      TEXT        NOT NULL,
+    embedding           VECTOR(384) NOT NULL,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (skill_id, skill_version, embedding_model),
+    FOREIGN KEY (skill_id, skill_version)
+        REFERENCES agent_skills.skill_cards(id, version)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS agent_skills.skill_sql_templates (
+    template_id         BIGSERIAL PRIMARY KEY,
+    skill_id            TEXT        NOT NULL,
+    skill_version       INTEGER     NOT NULL DEFAULT 1,
+    template_name       TEXT        NOT NULL,
+    sql_text            TEXT        NOT NULL,
+    required_params     TEXT[]      NOT NULL DEFAULT '{}',
+    expected_columns    TEXT[]      NOT NULL DEFAULT '{}',
+    row_limit           INTEGER     NOT NULL DEFAULT 500,
+    safety_status       TEXT        NOT NULL DEFAULT 'pending'
+        CHECK (safety_status IN ('pending', 'passed', 'failed')),
+    safety_findings     JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (skill_id, skill_version, template_name),
+    FOREIGN KEY (skill_id, skill_version)
+        REFERENCES agent_skills.skill_cards(id, version)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS agent_skills.skill_tests (
+    test_id             BIGSERIAL PRIMARY KEY,
+    skill_id            TEXT        NOT NULL,
+    skill_version       INTEGER     NOT NULL DEFAULT 1,
+    test_name           TEXT        NOT NULL,
+    fixture_payload     JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    expected_payload    JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (skill_id, skill_version, test_name),
+    FOREIGN KEY (skill_id, skill_version)
+        REFERENCES agent_skills.skill_cards(id, version)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS agent_skills.skill_validation_runs (
+    validation_id       BIGSERIAL PRIMARY KEY,
+    skill_id            TEXT        NOT NULL,
+    skill_version       INTEGER     NOT NULL DEFAULT 1,
+    status_before       TEXT,
+    status_after        TEXT        NOT NULL
+        CHECK (status_after IN ('generated', 'test_failed', 'review_pending', 'validated', 'production', 'deprecated')),
+    checks              JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    findings            JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    reviewer_decision   JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (skill_id, skill_version)
+        REFERENCES agent_skills.skill_cards(id, version)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS agent_skills.skill_retrieval_logs (
+    retrieval_id        BIGSERIAL PRIMARY KEY,
+    event_ts            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    query_hash          TEXT        NOT NULL,
+    normalized_query    TEXT,
+    selected_skill_id   TEXT,
+    selected_version    INTEGER,
+    candidates          JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    reviewer_decision   JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    elapsed_ms          INTEGER,
+    metadata            JSONB       NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE TABLE IF NOT EXISTS agent_skills.skill_execution_logs (
+    execution_id        BIGSERIAL PRIMARY KEY,
+    retrieval_id        BIGINT REFERENCES agent_skills.skill_retrieval_logs(retrieval_id) ON DELETE SET NULL,
+    skill_id            TEXT        NOT NULL,
+    skill_version       INTEGER     NOT NULL DEFAULT 1,
+    event_ts            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    steps               JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    validation_status   TEXT        NOT NULL,
+    validation_findings JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    elapsed_ms          INTEGER,
+    metadata            JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    FOREIGN KEY (skill_id, skill_version)
+        REFERENCES agent_skills.skill_cards(id, version)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS agent_skills.skill_feedback (
+    feedback_id         BIGSERIAL PRIMARY KEY,
+    event_ts            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    retrieval_id        BIGINT REFERENCES agent_skills.skill_retrieval_logs(retrieval_id) ON DELETE SET NULL,
+    execution_id        BIGINT REFERENCES agent_skills.skill_execution_logs(execution_id) ON DELETE SET NULL,
+    skill_id            TEXT,
+    skill_version       INTEGER,
+    feedback_type       TEXT        NOT NULL,
+    feedback_payload    JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    created_by          TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_skill_cards_status
+    ON agent_skills.skill_cards(status);
+CREATE INDEX IF NOT EXISTS idx_agent_skill_cards_domain
+    ON agent_skills.skill_cards(domain);
+CREATE INDEX IF NOT EXISTS idx_agent_skill_cards_tags
+    ON agent_skills.skill_cards USING GIN(tags);
+CREATE INDEX IF NOT EXISTS idx_agent_skill_embeddings_embedding
+    ON agent_skills.skill_embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+CREATE INDEX IF NOT EXISTS idx_agent_skill_sql_templates_skill
+    ON agent_skills.skill_sql_templates(skill_id, skill_version);
+CREATE INDEX IF NOT EXISTS idx_agent_skill_validation_runs_skill
+    ON agent_skills.skill_validation_runs(skill_id, skill_version, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_skill_retrieval_logs_selected
+    ON agent_skills.skill_retrieval_logs(selected_skill_id, event_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_skill_execution_logs_skill
+    ON agent_skills.skill_execution_logs(skill_id, skill_version, event_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_skill_feedback_skill
+    ON agent_skills.skill_feedback(skill_id, skill_version, event_ts DESC);
+
+-- =============================================================================
+-- 16. AGENT_LEARNING — Usage-Driven Learning Loop
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS agent_learning.interaction_events (
+    event_id            BIGSERIAL PRIMARY KEY,
+    event_ts            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    raw_query           TEXT,
+    normalized_query    TEXT,
+    selected_intent     TEXT,
+    route_type          TEXT,
+    detected_entities   JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    tools_executed      JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    artifacts           JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    errors              JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    missing_evidence    JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    payload             JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS agent_learning.workflow_chains (
+    chain_id            BIGSERIAL PRIMARY KEY,
+    chain_key           TEXT        NOT NULL,
+    started_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ended_at            TIMESTAMPTZ,
+    event_ids           BIGINT[]    NOT NULL DEFAULT '{}',
+    chain_payload       JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS agent_learning.daily_summaries (
+    summary_id          BIGSERIAL PRIMARY KEY,
+    summary_date        DATE        NOT NULL,
+    summary_payload     JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (summary_date)
+);
+
+CREATE TABLE IF NOT EXISTS agent_learning.patterns (
+    pattern_id          BIGSERIAL PRIMARY KEY,
+    pattern_key         TEXT        NOT NULL UNIQUE,
+    status              TEXT        NOT NULL DEFAULT 'observed',
+    pattern_payload     JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    first_seen_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_seen_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS agent_learning.proposals (
+    proposal_id         BIGSERIAL PRIMARY KEY,
+    proposal_type       TEXT        NOT NULL,
+    title               TEXT        NOT NULL,
+    status              TEXT        NOT NULL DEFAULT 'observed'
+        CHECK (status IN ('observed', 'proposed', 'generated', 'test_failed', 'review_pending', 'validated', 'production', 'deprecated')),
+    source_pattern_id   BIGINT      REFERENCES agent_learning.patterns(pattern_id) ON DELETE SET NULL,
+    proposal_payload    JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS agent_learning.proposal_validation_runs (
+    validation_run_id   BIGSERIAL PRIMARY KEY,
+    proposal_id         BIGINT      REFERENCES agent_learning.proposals(proposal_id) ON DELETE CASCADE,
+    status_before       TEXT,
+    status_after        TEXT
+        CHECK (status_after IN ('observed', 'proposed', 'generated', 'test_failed', 'review_pending', 'validated', 'production', 'deprecated')),
+    checks              JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    findings            JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS agent_learning.promotion_runs (
+    promotion_run_id    BIGSERIAL PRIMARY KEY,
+    proposal_id         BIGINT      REFERENCES agent_learning.proposals(proposal_id) ON DELETE SET NULL,
+    status              TEXT        NOT NULL,
+    promotion_payload   JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS agent_learning.learning_audits (
+    audit_id            BIGSERIAL PRIMARY KEY,
+    audit_type          TEXT        NOT NULL,
+    audit_payload       JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_learning_interaction_events_ts
+    ON agent_learning.interaction_events(event_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_learning_workflow_chains_key
+    ON agent_learning.workflow_chains(chain_key, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_learning_patterns_status
+    ON agent_learning.patterns(status, last_seen_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_learning_proposals_status
+    ON agent_learning.proposals(status, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_learning_validation_runs_proposal
+    ON agent_learning.proposal_validation_runs(proposal_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_learning_promotion_runs_proposal
+    ON agent_learning.promotion_runs(proposal_id, created_at DESC);

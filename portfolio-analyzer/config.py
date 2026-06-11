@@ -54,6 +54,7 @@ CREDIT_RATINGS_CSV = OUTPUT_DIR / "credit_ratings.csv"
 # Phase 5
 STOCK_NARRATIVES_JSON = OUTPUT_DIR / "stock_narratives.json"
 STOCK_NARRATIVES_MD = OUTPUT_DIR / "stock_narratives.md"
+LLM_STOCK_VIEWS_JSON = OUTPUT_DIR / "llm_stock_views.json"
 
 # Phase 6
 REPORT_MD = OUTPUT_DIR / "portfolio_comprehensive_report.md"

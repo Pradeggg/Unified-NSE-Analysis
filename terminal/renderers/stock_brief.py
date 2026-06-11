@@ -1333,8 +1333,9 @@ def render(
                 f"Snapshot: {growth_research.get('snapshot_date', '—')}"
             )
             lines.append(
-                "  Candidate ranking uses enhanced fundamentals, financial strength, "
-                "sales growth, investment score, and RS."
+                "  Candidate ranking uses a combined technical + fundamental score: "
+                "technical score, enhanced fundamentals, investment score, "
+                "financial strength, RS, and Stage 2 trend bonus."
             )
             candidates = growth_research.get("candidates") or []
             if candidates:
@@ -1346,8 +1347,10 @@ def render(
                         f"  {row.get('symbol', '—'):<12} "
                         f"{str(row.get('company_name') or '')[:24]:<24} "
                         f"Stage {row.get('stage', '—'):<8} Inv {row.get('investment_score', '—')} "
+                        f"Tech {row.get('technical_score', '—')} "
                         f"Fund {row.get('enhanced_fund_score', '—')} "
-                        f"Growth {row.get('sales_growth', '—')} RS {rs_txt}"
+                        f"Growth {row.get('sales_growth', '—')} RS {rs_txt} "
+                        f"Score {row.get('combined_score', '—')}"
                     )
             research_items = growth_research.get("research_items") or []
             if research_items:

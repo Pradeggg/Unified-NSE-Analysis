@@ -38,6 +38,8 @@ Thumbs.db
 *.log
 *.bak
 __pycache__/
+logs/_email_body_*.html
+logs/_email_preview_*.html
 reports/_apex_*
 reports/_test_*
 reports/temp/
@@ -55,6 +57,8 @@ data/_insider_cache/
 data/_macro_cache/
 data/voice_sessions/
 data/charts/
+data/_archive_data_*/
+data/company_profiles/
 tmp/
 working-sector/output/sector_rotation_missing_fundamentals.txt
 nse_analysis.db
@@ -79,21 +83,49 @@ data/data/
 data/company_descriptions_cache.json
 data/financial_sources_registry.json
 data/voice_briefing.mp3
+data/nse_database.sqlite
 
 # Generated analysis/report artifacts
 reports/All_*.html
 reports/All_*.csv
 reports/Enhanced_Comprehensive_Analysis_*.html
+reports/comprehensive_nse_enhanced_*.csv
 reports/NSE_Analysis_Report_*.md
 reports/global/us_market_report_*.html
 reports/sector_rotation/**/*.html
+reports/sector_rotation/**/*.md
 reports/sector_rotation/**/*.pdf
+reports/sector_rotation/**/*.txt
 reports/sector_rotation/stage2_tracker_*.html
+reports/latest/
 reports/strategy_council/
 reports/talk_2_stocks/assets/
 reports/talk_2_stocks/*.docx
 reports/talk_2_stocks/*.pdf
 reports/qa/
+reports/agent_adda_eval/
+reports/dashboards/
+reports/email_packages/
+reports/learning/
+reports/pg_grounded_queries/
+reports/report_validation/
+reports/research_council/
+reports/results_analysis/
+reports/screenshots/
+reports/swing_playbook/
+reports/top_picks/
+reports/visual_scan/
+
+# Generated portfolio analysis outputs
+portfolio-analyzer/input/
+portfolio-analyzer/runs/
+portfolio/data/nse_pg_strategy_lab/
+
+# Experimental generated skill corpora; curated corpora under skill_store/stored
+# and explicitly committed generated_* directories remain tracked.
+skill_store/generated_new_families*/
+skill_store/generated_new_families*.jsonl
+skill_store/generated_swing_review_heal_smoke/
 
 # Large files that exceed GitHub's 100MB limit
 # These files are too large for GitHub without Git LFS

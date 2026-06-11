@@ -174,6 +174,7 @@ test("POST /api/analysis/followup → 404 for unknown capture_id", async ({ requ
 });
 
 test("POST /api/analysis/followup → 200 with valid capture_id", async ({ request }) => {
+  test.setTimeout(90_000); // two GPT-4o calls can take up to 60s total
   // First, create a capture.
   const capture = await request.post("/api/analysis/chart", {
     data: {
@@ -216,3 +217,69 @@ test("GET /api/patterns/query returns graceful response", async ({ request }) =>
     expect(body.patterns[0]).toHaveProperty("pattern_type");
   }
 });
+
+// ── TF normalisation (TradingView sends raw numbers) ─────────────────────────
+
+test("POST /api/analysis/chart accepts TradingView TF '1' → normalised to 1m", async ({ request }) => {
+  const res = await request.post("/api/analysis/chart", {
+    data: {
+      user_symbol: "BANKNIFTY",
+      exchange: "NSE",
+      timeframe: "1",          // TradingView raw 1-min code
+      visible_indicators: [],
+      user_question: "Bias?",
+      conflict_policy: "prefer_pg",
+      image: TINY_PNG,
+    },
+  });
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(body.timeframe).toBe("1m");   // must be normalised
+});
+
+test("POST /api/analysis/chart accepts TradingView TF '60' → normalised to 1h", async ({ request }) => {
+  const res = await request.post("/api/analysis/chart", {
+    data: {
+      user_symbol: "NIFTY", exchange: "NSE", timeframe: "60",
+      visible_indicators: [], user_question: "test",
+      conflict_policy: "prefer_pg", image: TINY_PNG,
+    },
+  });
+  expect(res.status()).toBe(200);
+  expect((await res.json()).timeframe).toBe("1h");
+});
+
+// ── BANKNIFTY 1D fallback (index has no EOD snapshot) ────────────────────────
+
+test("GET /api/chart/ohlcv BANKNIFTY 1D returns bars via intraday fallback", async ({ request }) => {
+  const res = await request.get("/api/chart/ohlcv?symbol=BANKNIFTY&timeframe=1D&limit=5");
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(Array.isArray(body.bars)).toBe(true);
+  expect(body.bars.length).toBeGreaterThan(0);   // fallback must provide bars
+  // Timestamps are UNIX seconds.
+  expect(String(body.bars[0].time).length).toBe(10);
+});
+
+test("GET /api/chart/ohlcv NIFTY 1D also returns bars", async ({ request }) => {
+  const res = await request.get("/api/chart/ohlcv?symbol=NIFTY&timeframe=1D&limit=5");
+  expect(res.status()).toBe(200);
+  expect((await res.json()).bars.length).toBeGreaterThan(0);
+});
+
+// ── Web app proxy (Vite :5173 → API :8765) ───────────────────────────────────
+
+test("Vite proxy /api/health returns 200", async ({ request }) => {
+  const res = await fetch("http://localhost:5173/api/health");
+  expect(res.status).toBe(200);
+  const body = await res.json();
+  expect(body.status).toBe("ok");
+});
+
+test("Vite proxy /api/chart/ohlcv returns bars", async () => {
+  const res = await fetch("http://localhost:5173/api/chart/ohlcv?symbol=BANKNIFTY&timeframe=5m&limit=3");
+  expect(res.status).toBe(200);
+  const body = await res.json();
+  expect(body.bars.length).toBeGreaterThan(0);
+});
+

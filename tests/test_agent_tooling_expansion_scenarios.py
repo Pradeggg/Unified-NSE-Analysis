@@ -75,6 +75,26 @@ def test_scenario_sakar_indicator_terms_do_not_trigger_symbol_validation_failure
     assert "SYMBOL VALIDATION FAILED" not in result["answer"]
 
 
+def test_scenario_deep_analysis_of_lowercase_stock_uses_stock_plan_not_market_overview():
+    agent = Agent()
+    agent.backend = object()
+    with patch("terminal.agent._execute_plan") as execute_plan:
+        execute_plan.return_value = [
+            {"tool": "resolve_symbol", "args": {"query": "BAJAJCON"}, "result": {"symbol": "BAJAJCON"}},
+            {"tool": "get_symbol_snapshot", "args": {"symbol": "BAJAJCON"}, "result": {"symbol": "BAJAJCON"}},
+            {"tool": "get_technical_setup", "args": {"symbol": "BAJAJCON"}, "result": {"symbol": "BAJAJCON"}},
+            {"tool": "get_sector_context", "args": {"sector_or_symbol": "BAJAJCON"}, "result": {"symbol": "BAJAJCON"}},
+            {"tool": "scrape_screener_in", "args": {"symbol": "BAJAJCON"}, "result": {"symbol": "BAJAJCON"}},
+            {"tool": "search_nse_announcements", "args": {"symbol": "BAJAJCON"}, "result": {"symbol": "BAJAJCON", "announcements": []}},
+        ]
+        result = agent.query("deep analysis of bajajcon")
+
+    assert result["intent"] == "stock_brief"
+    plan = execute_plan.call_args.args[0]
+    assert ("resolve_symbol", {"query": "BAJAJCON"}) in plan
+    assert ("get_live_market_overview", {}) not in plan
+
+
 def test_scenario_comprehensive_fno_routes_to_composite_tool():
     routed = _keyword_intent("Give a comprehensive F&O overview for NIFTY with PCR max pain futures basis and best options strategy")
 

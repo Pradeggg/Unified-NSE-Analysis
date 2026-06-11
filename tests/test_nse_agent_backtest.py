@@ -1,5 +1,7 @@
 import unittest
 import tempfile
+import json
+import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
@@ -20,6 +22,112 @@ class NSEAgentBacktestTests(unittest.TestCase):
         self.assertIn("Strategy Lab", output)
         self.assertIn("EOD", output)
         self.assertTrue("ok" in output.lower() or "blocked" in output.lower())
+
+    @patch("terminal.backtest.generate_preset_report", create=True)
+    @patch("subprocess.run")
+    def test_strategy_lab_run_invokes_portfolio_replay_and_reports_db_status(
+        self,
+        mock_run,
+        mock_report,
+    ):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output_dir = root / "portfolio" / "data" / "nse_pg_strategy_lab" / "latest"
+            output_dir.mkdir(parents=True)
+            (output_dir / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "paper_portfolio": {
+                            "database": {
+                                "success": True,
+                                "positions": 6,
+                                "daily_pnl_rows": 347,
+                                "transactions": 418,
+                                "agent_actions": 5,
+                            }
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=["python"],
+                returncode=0,
+                stdout="summary ok",
+                stderr="",
+            )
+            mock_report.return_value = {
+                "success": True,
+                "path": str(root / "reports" / "portfolio_strategy_lab.html"),
+                "latest_path": str(root / "reports" / "latest" / "portfolio_strategy_lab.html"),
+            }
+
+            output = handle_backtest_command(
+                f"/strategy-lab run --output-dir {output_dir} --top-n 50",
+                project_root=root,
+            )
+
+        self.assertIn("Strategy Lab portfolio replay complete", output)
+        self.assertIn("Report:", output)
+        self.assertIn("PostgreSQL: OK", output)
+        self.assertIn("transactions=418", output)
+        cmd = mock_run.call_args.args[0]
+        self.assertIn("portfolio.cli", cmd)
+        self.assertIn("--top-n", cmd)
+        self.assertIn("50", cmd)
+        mock_report.assert_called_once_with("strategy-lab", "html")
+
+    @patch("terminal.backtest.generate_preset_report", create=True)
+    @patch("subprocess.run")
+    def test_strategy_lab_run_reads_current_summary_artifact_for_db_status(
+        self,
+        mock_run,
+        mock_report,
+    ):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output_dir = root / "portfolio" / "data" / "nse_pg_strategy_lab" / "latest"
+            reports_dir = output_dir / "reports"
+            reports_dir.mkdir(parents=True)
+            (reports_dir / "strategy_comparison_summary.json").write_text(
+                json.dumps(
+                    {
+                        "paper_portfolio": {
+                            "database": {
+                                "success": True,
+                                "positions": 7,
+                                "daily_pnl": 347,
+                                "transactions": 725,
+                                "agent_actions": 5,
+                            }
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=["python"],
+                returncode=0,
+                stdout="Strategy lab complete\nSummary: reports/strategy_comparison_summary.json\n",
+                stderr="",
+            )
+            mock_report.return_value = {
+                "success": True,
+                "path": str(root / "reports" / "portfolio_strategy_lab.html"),
+                "latest_path": str(root / "reports" / "latest" / "portfolio_strategy_lab.html"),
+            }
+
+            output = handle_backtest_command(
+                f"/strategy-lab run --output-dir {output_dir} --top-n 300",
+                project_root=root,
+            )
+
+        self.assertIn("PostgreSQL: OK", output)
+        self.assertIn("positions=7", output)
+        self.assertIn("daily_pnl=347", output)
+        self.assertIn("transactions=725", output)
+        self.assertNotIn("not reported in summary.json", output)
+        self.assertNotIn("strategy_comparison_summary.json", output)
 
     def test_unknown_backtest_command_returns_usage(self):
         output = handle_backtest_command("/backtest nonsense")

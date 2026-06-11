@@ -241,6 +241,12 @@ tbody tr.row-match { outline: 2px solid #fef08a; outline-offset: -2px; }
 @media (max-width: 700px) { .chart-grid { grid-template-columns: 1fr; } }
 .chart-card { background: #fff; border-radius: var(--md-radius); padding: 16px; box-shadow: var(--md-elevation-1); }
 .chart-card h4 { margin: 0 0 12px 0; font-size: 0.88rem; font-weight: 500; color: var(--md-text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+.static-chart-fallback { margin-top: 10px; display: grid; gap: 7px; }
+.static-bar-row { display: grid; grid-template-columns: minmax(72px, 112px) 1fr minmax(42px, auto); align-items: center; gap: 8px; font-size: 0.78rem; }
+.static-bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--md-text-secondary); }
+.static-bar-track { height: 9px; background: #e2e8f0; border-radius: 5px; overflow: hidden; }
+.static-bar-fill { height: 100%; border-radius: 5px; min-width: 2px; }
+.static-bar-value { text-align: right; font-variant-numeric: tabular-nums; }
 """
 
 
@@ -784,6 +790,37 @@ def _build_heat_tiles_from_csvs() -> str:
         f'<div class="heat-tiles">{"".join(tiles)}</div>'
         '</div>'
     )
+
+
+def _static_bar_chart(labels: list, values: list, colors: list | None = None, value_suffix: str = "") -> str:
+    """Small no-JS chart fallback used when Chart.js is blocked or offline."""
+    rows = []
+    numeric = []
+    for v in values:
+        try:
+            numeric.append(float(v))
+        except (TypeError, ValueError):
+            numeric.append(0.0)
+    max_v = max(numeric) if numeric else 0.0
+    if max_v <= 0:
+        return '<div class="static-chart-fallback"><div class="static-bar-label">No chart data</div></div>'
+    palette = colors or ["#0d9488", "#0891b2", "#7c3aed", "#ca8a04", "#dc2626"]
+    for i, (label, value) in enumerate(zip(labels, numeric)):
+        if value <= 0:
+            continue
+        width = max(2.0, min(100.0, value / max_v * 100.0))
+        color = palette[i % len(palette)]
+        value_text = f"{value:,.0f}{value_suffix}" if value_suffix else f"{value:,.0f}"
+        rows.append(
+            '<div class="static-bar-row">'
+            f'<div class="static-bar-label" title="{html_module.escape(str(label))}">{html_module.escape(str(label))}</div>'
+            '<div class="static-bar-track">'
+            f'<div class="static-bar-fill" style="width:{width:.1f}%;background:{html_module.escape(color)}"></div>'
+            '</div>'
+            f'<div class="static-bar-value">{html_module.escape(value_text)}</div>'
+            '</div>'
+        )
+    return f'<div class="static-chart-fallback">{"".join(rows)}</div>'
 
 
 def _build_holdings_tab() -> str:
@@ -1747,6 +1784,10 @@ def build_report_html_structured() -> str:
         "top15_labels": _top15_labels, "top15_vals": _top15_vals,
         "hist_labels": _hist_labels, "hist_vals": _hist_buckets,
     }, ensure_ascii=False)
+    _dec_fallback = _static_bar_chart(_dec_order, _dec_vals, _dec_colors)
+    _cap_fallback = _static_bar_chart(_cap_labels, _cap_vals, _cap_colors, value_suffix="")
+    _top15_fallback = _static_bar_chart(_top15_labels, _top15_vals, ["#0d9488"], value_suffix="L")
+    _hist_fallback = _static_bar_chart(_hist_labels, _hist_buckets, ["#0891b2"])
 
     overview_html = (
         '<div class="summary-grid">'
@@ -1759,10 +1800,10 @@ def build_report_html_structured() -> str:
         + "</div>"
         + heat_tiles_html
         + '<div class="chart-grid">'
-        + '<div class="chart-card"><h4>Decision Distribution</h4><canvas id="chart-dec" height="200"></canvas></div>'
-        + '<div class="chart-card"><h4>Market-Cap Breakdown (by value)</h4><canvas id="chart-cap" height="200"></canvas></div>'
-        + '<div class="chart-card"><h4>Top 15 Holdings by Value (₹ Lakh)</h4><canvas id="chart-top15" height="200"></canvas></div>'
-        + '<div class="chart-card"><h4>Technical Score Distribution</h4><canvas id="chart-hist" height="200"></canvas></div>'
+        + f'<div class="chart-card"><h4>Decision Distribution</h4><canvas id="chart-dec" height="200"></canvas>{_dec_fallback}</div>'
+        + f'<div class="chart-card"><h4>Market-Cap Breakdown (by value)</h4><canvas id="chart-cap" height="200"></canvas>{_cap_fallback}</div>'
+        + f'<div class="chart-card"><h4>Top 15 Holdings by Value (₹ Lakh)</h4><canvas id="chart-top15" height="200"></canvas>{_top15_fallback}</div>'
+        + f'<div class="chart-card"><h4>Technical Score Distribution</h4><canvas id="chart-hist" height="200"></canvas>{_hist_fallback}</div>'
         + '</div>'
         + f'<script type="application/json" id="chart-data-json">{_chart_data}</script>'
         + '<div class="card-section"><h3 class="card-title">PnL summary</h3>'

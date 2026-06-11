@@ -489,6 +489,295 @@ def _html_from_markdown(markdown: str, title: str) -> str:
     )
 
 
+def _fmt_price(value: float | None) -> str:
+    if value is None:
+        return "-"
+    try:
+        return f"Rs {float(value):,.2f}"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _fmt_pct(value: float | None) -> str:
+    if value is None:
+        return "-"
+    try:
+        return f"{float(value):.1f}%"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _badge_class(value: str) -> str:
+    normalized = (value or "").strip().upper().replace(" ", "_")
+    if normalized in {"CANDIDATE", "ADD_OK", "STRONG_BUY", "BUY"}:
+        return "badge-good"
+    if normalized in {"WATCHLIST", "HOLD", "TIGHTEN_STOP", "INTRADAY_CONFIRM"}:
+        return "badge-watch"
+    if normalized in {"EXIT_WATCH", "NO_FRESH_ADD", "SELL", "AVOID"}:
+        return "badge-risk"
+    return "badge-muted"
+
+
+def _score_bar(value: float) -> str:
+    width = max(0.0, min(100.0, float(value or 0.0)))
+    return (
+        '<div class="score-cell">'
+        f'<b>{width:.1f}</b>'
+        '<span class="score-track">'
+        f'<span class="score-fill" style="width:{width:.1f}%"></span>'
+        '</span></div>'
+    )
+
+
+def _evidence_chips(candidate: PlaybookCandidate) -> str:
+    chips: list[str] = []
+    for item in candidate.evidence:
+        label, _, value = item.partition("=")
+        label = label.strip()
+        value = value.strip()
+        if not label:
+            continue
+        cls = "ev-chip"
+        if label.lower() in {"stage", "score"}:
+            cls += " ev-strong"
+        elif label.lower() in {"fund", "vcp"}:
+            cls += " ev-fund"
+        chips.append(
+            f'<span class="{cls}"><span>{html.escape(label)}</span>{html.escape(value)}</span>'
+        )
+    return "".join(chips) or '<span class="muted">No evidence trail</span>'
+
+
+def _candidate_html_rows(candidates: list[PlaybookCandidate]) -> str:
+    if not candidates:
+        return '<tr><td colspan="12" class="empty">No candidates for this sleeve.</td></tr>'
+    rows: list[str] = []
+    for rank, candidate in enumerate(candidates, 1):
+        risk = candidate.risk_plan
+        breakdown = candidate.score_breakdown
+        rr = f"{risk.r_multiple_target_1:.1f}R / {risk.r_multiple_target_2:.1f}R"
+        rows.append(
+            "<tr>"
+            f'<td class="rank">#{rank}</td>'
+            f'<td><div class="symbol">{html.escape(candidate.symbol)}</div><div class="subtle">{html.escape(candidate.sleeve.title())}</div></td>'
+            f'<td>{_score_bar(candidate.score)}</td>'
+            f'<td><span class="badge {_badge_class(candidate.action_label)}">{html.escape(candidate.action_label)}</span></td>'
+            f'<td><span class="badge {_badge_class(candidate.entry_label)}">{html.escape(candidate.entry_label)}</span></td>'
+            f'<td class="num" data-val="{risk.entry_trigger:.4f}">{_fmt_price(risk.entry_trigger)}</td>'
+            f'<td class="num risk" data-val="{risk.initial_stop:.4f}">{_fmt_price(risk.initial_stop)}</td>'
+            f'<td class="num good" data-val="{risk.target_1:.4f}">{_fmt_price(risk.target_1)}</td>'
+            f'<td class="num good" data-val="{risk.target_2:.4f}">{_fmt_price(risk.target_2)}</td>'
+            f'<td class="num" data-val="{risk.stop_distance_pct:.4f}">{_fmt_pct(risk.stop_distance_pct)}</td>'
+            f'<td class="num">{html.escape(rr)}</td>'
+            f'<td class="evidence">{_evidence_chips(candidate)}'
+            '<details class="breakdown"><summary>Score mix</summary>'
+            f"<span>Tech {breakdown.technical:.1f}</span>"
+            f"<span>RS {breakdown.relative_strength:.1f}</span>"
+            f"<span>Pattern {breakdown.pattern:.1f}</span>"
+            f"<span>Context {breakdown.context:.1f}</span>"
+            f"<span>Fund {breakdown.fundamentals:.1f}</span>"
+            f"<span>Liq {breakdown.liquidity:.1f}</span>"
+            "</details></td>"
+            "</tr>"
+        )
+    return "\n".join(rows)
+
+
+def _candidate_table_html(candidates: list[PlaybookCandidate], table_id: str) -> str:
+    return (
+        '<div class="tbl-wrap">'
+        f'<table class="data-table" id="{html.escape(table_id)}" data-sortable="true">'
+        "<thead><tr>"
+        "<th>#</th><th>Symbol</th><th>Score</th><th>Action</th><th>Entry</th>"
+        "<th>Trigger</th><th>Stop</th><th>Target 1</th><th>Target 2</th>"
+        "<th>Stop Dist</th><th>Targets</th><th>Evidence</th>"
+        "</tr></thead>"
+        f"<tbody>{_candidate_html_rows(candidates)}</tbody>"
+        "</table></div>"
+    )
+
+
+def _portfolio_actions_html(actions: list[PortfolioAction]) -> str:
+    if not actions:
+        return (
+            '<div class="empty-state">'
+            "<h3>No portfolio actions available</h3>"
+            "<p>The swing input did not include portfolio holding columns for this run, "
+            "so the playbook is showing market candidates only.</p>"
+            "</div>"
+        )
+    rows: list[str] = []
+    for action in actions:
+        rows.append(
+            "<tr>"
+            f'<td><div class="symbol">{html.escape(action.symbol)}</div></td>'
+            f'<td><span class="badge {_badge_class(action.label)}">{html.escape(action.label)}</span></td>'
+            f'<td class="num">{_fmt_price(action.stop)}</td>'
+            f"<td>{html.escape(action.reason)}</td>"
+            f"<td>{html.escape(action.risk_note)}</td>"
+            "</tr>"
+        )
+    return (
+        '<div class="tbl-wrap"><table class="data-table" data-sortable="true">'
+        "<thead><tr><th>Symbol</th><th>Action</th><th>Stop</th><th>Reason</th><th>Risk Note</th></tr></thead>"
+        f"<tbody>{''.join(rows)}</tbody></table></div>"
+    )
+
+
+def _render_swing_playbook_html(
+    *,
+    tactical: list[PlaybookCandidate],
+    position: list[PlaybookCandidate],
+    portfolio_actions: list[PortfolioAction],
+    warnings: list[str],
+    as_of: str,
+    title: str = "Swing Trading Playbook",
+) -> str:
+    try:
+        from terminal.reports import _LOGO_DATA_URI
+    except Exception:
+        _LOGO_DATA_URI = ""
+
+    swing_allowed = bool(tactical or position)
+    all_candidates = tactical + position
+    true_candidates = [c for c in all_candidates if c.action_label == "CANDIDATE"]
+    watchlist = [c for c in all_candidates if c.action_label != "CANDIDATE"]
+    best = max(all_candidates, key=lambda c: c.score, default=None)
+    logo_html = (
+        f'<img class="brand-logo" src="{_LOGO_DATA_URI}" alt="Agent Adda logo">'
+        if _LOGO_DATA_URI
+        else '<div class="brand-logo brand-fallback">AA</div>'
+    )
+    warnings_html = (
+        "".join(f"<li>{html.escape(warning)}</li>" for warning in warnings)
+        if warnings
+        else "<li>No missing optional evidence was detected in the candidate frame.</li>"
+    )
+    best_html = (
+        f'<b>{html.escape(best.symbol)}</b> leads the current playbook with score '
+        f'<b>{best.score:.1f}</b>, trigger <b>{_fmt_price(best.risk_plan.entry_trigger)}</b>, '
+        f'and stop <b>{_fmt_price(best.risk_plan.initial_stop)}</b>.'
+        if best
+        else "No eligible swing setup was generated for this run."
+    )
+
+    css = r"""
+:root{--bg:#f0f4f8;--card:#fff;--text:#1a2332;--muted:#64748b;--border:#e2e8f0;--primary:#1e3a5f;--primary-alt:#2563eb;--good:#16a34a;--risk:#dc2626;--watch:#d97706;--hdr-h:56px;--radius:8px;--shadow:0 1px 3px rgba(0,0,0,.08);--shadow-md:0 4px 8px rgba(0,0,0,.1)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Inter",sans-serif;font-size:14px;line-height:1.6}a{color:var(--primary-alt);text-decoration:none}
+.site-hdr{background:var(--primary);color:#fff;position:sticky;top:0;z-index:50;box-shadow:var(--shadow-md);min-height:var(--hdr-h)}
+.hdr-inner{max-width:1400px;margin:0 auto;padding:9px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.hdr-brand{display:flex;align-items:center;gap:10px}.brand-logo{width:38px;height:38px;border-radius:8px;object-fit:cover;background:#fff;border:1px solid rgba(255,255,255,.4);display:grid;place-items:center;color:var(--primary);font-weight:900}.hdr-kicker{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.78)}.hdr-title{font-size:1.08rem;font-weight:800;letter-spacing:-.02em}.hdr-meta{display:flex;gap:8px;flex-wrap:wrap}.mbadge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}.mbadge-date{background:rgba(255,255,255,.18)}.mbadge-data{background:rgba(255,255,255,.1);color:rgba(255,255,255,.86)}
+.disc{background:#fff8e1;border-bottom:1px solid #ffe082;color:#5d4037;padding:7px 20px;font-size:11px;text-align:center}
+.main-nav{background:var(--card);border-bottom:2px solid var(--border);position:sticky;top:var(--hdr-h);z-index:40}.nav-inner{max-width:1400px;margin:0 auto;padding:0 16px;display:flex;overflow-x:auto}.nav-btn{background:none;border:0;padding:10px 18px;font-size:13px;font-weight:650;color:var(--muted);cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-2px;white-space:nowrap}.nav-btn:hover{color:var(--primary-alt)}.nav-btn.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:800}
+.content{max-width:1400px;margin:0 auto;padding:20px}.tab-pane{display:none}.tab-pane.active{display:block}
+.metrics-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}.metric-card{flex:1;min-width:160px;background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:14px 16px;box-shadow:var(--shadow)}.metric-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px;font-weight:800}.metric-value{font-size:1.55rem;font-weight:900;color:var(--primary);line-height:1}.metric-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.overview-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:20px}.card{background:var(--card);border:1px solid var(--border);box-shadow:var(--shadow);border-radius:var(--radius);padding:18px;margin-bottom:16px}.card h2,.card h3{margin:0 0 10px;color:var(--primary)}.card h2{font-size:18px}.card h3{font-size:14px;text-transform:uppercase;letter-spacing:.04em}.card p{margin:0 0 10px}.callout{border-left:4px solid var(--primary-alt);background:#f8fbff}.risk-callout{border-left-color:var(--watch);background:#fffaf0}.list-clean{list-style:none;margin:0;padding:0}.list-clean li{position:relative;padding-left:14px;margin:0 0 8px}.list-clean li:before{content:"";position:absolute;left:0;top:.72em;width:6px;height:6px;border-radius:50%;background:var(--primary-alt)}
+.tbl-wrap{display:block;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--radius);border:1px solid var(--border);background:var(--card);margin-bottom:16px;box-shadow:var(--shadow)}.data-table{width:100%;min-width:1180px;border-collapse:collapse;font-size:13px}.data-table thead tr{background:var(--primary)}.data-table th{padding:10px;color:#fff;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;cursor:pointer}.data-table th:hover{background:#2d5480}.data-table th.sort-asc:after{content:" ↑";opacity:.75}.data-table th.sort-desc:after{content:" ↓";opacity:.75}.data-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}.data-table tbody tr:hover td{background:#f0f7ff}.num{text-align:right;font-variant-numeric:tabular-nums}.rank{font-weight:900;color:var(--muted);width:48px}.symbol{font-weight:900;color:#0f172a;letter-spacing:.02em}.subtle,.muted{font-size:11px;color:var(--muted)}.good{color:var(--good);font-weight:750}.risk{color:var(--risk);font-weight:750}
+.badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}.badge-good{background:#dcfce7;color:#166534}.badge-watch{background:#fef3c7;color:#92400e}.badge-risk{background:#fee2e2;color:#991b1b}.badge-muted{background:#f1f5f9;color:#475569}
+.score-cell{min-width:92px}.score-cell b{display:inline-block;margin-bottom:3px}.score-track{display:block;height:7px;background:#e2e8f0;border-radius:999px;overflow:hidden}.score-fill{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#1e3a5f,#38bdf8)}
+.evidence{min-width:300px}.ev-chip{display:inline-flex;gap:5px;align-items:center;margin:2px 4px 2px 0;padding:3px 7px;border-radius:999px;background:#f1f5f9;color:#334155;font-size:11px;font-weight:750}.ev-chip span{color:#64748b;text-transform:uppercase;font-size:9px;letter-spacing:.05em}.ev-strong{background:#e0f2fe;color:#075985}.ev-fund{background:#f0fdf4;color:#166534}.breakdown{margin-top:6px}.breakdown summary{cursor:pointer;color:var(--primary-alt);font-size:11px;font-weight:800}.breakdown span{display:inline-block;margin:5px 6px 0 0;font-size:11px;color:#475569}
+.empty-state{padding:24px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px}.empty-state h3{margin:0 0 6px;color:var(--primary)}.empty{padding:18px!important;color:var(--muted);text-align:center}
+.footer{font-size:11px;color:var(--muted);padding:16px 0 4px}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}.search{width:min(360px,100%);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font:inherit;background:#fff}.section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.section-title h2{margin:0}.section-title p{margin:0;color:var(--muted);font-size:12px}
+@media(max-width:900px){.overview-grid{grid-template-columns:1fr}.content{padding:14px}.main-nav{top:auto;position:static}.site-hdr{position:static}.data-table{min-width:1050px}}
+@media print{.main-nav,.disc,.toolbar{display:none!important}.tab-pane{display:block!important}.site-hdr{position:static}.content{padding:0}.card,.metric-card,.tbl-wrap{box-shadow:none}}
+"""
+    js = r"""
+(function(){
+  function showTab(id){
+    document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.toggle('active',p.id==='tab-'+id);});
+    document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.toggle('active',b.dataset.tab===id);});
+    history.replaceState(null,'','#'+id);
+  }
+  document.querySelectorAll('.nav-btn').forEach(function(b){b.addEventListener('click',function(){showTab(b.dataset.tab);});});
+  var initial=(location.hash||'#overview').replace('#','');
+  if(document.getElementById('tab-'+initial)){showTab(initial);}
+  document.querySelectorAll('.search').forEach(function(input){
+    input.addEventListener('input',function(){
+      var q=input.value.toLowerCase(), table=document.getElementById(input.dataset.table);
+      if(!table)return;
+      table.querySelectorAll('tbody tr').forEach(function(row){row.style.display=row.textContent.toLowerCase().indexOf(q)>=0?'':'none';});
+    });
+  });
+  document.querySelectorAll('.data-table[data-sortable]').forEach(function(table){
+    table.querySelectorAll('th').forEach(function(th,idx){
+      th.addEventListener('click',function(){
+        var tbody=table.querySelector('tbody'); if(!tbody)return;
+        var rows=Array.from(tbody.querySelectorAll('tr'));
+        var asc=th.dataset.sort!=='asc';
+        rows.sort(function(a,b){
+          var av=(a.cells[idx]&&(a.cells[idx].dataset.val||a.cells[idx].textContent.trim()))||'';
+          var bv=(b.cells[idx]&&(b.cells[idx].dataset.val||b.cells[idx].textContent.trim()))||'';
+          var an=parseFloat(av.replace(/[^0-9.\-]/g,'')), bn=parseFloat(bv.replace(/[^0-9.\-]/g,''));
+          if(!isNaN(an)&&!isNaN(bn))return asc?an-bn:bn-an;
+          return asc?av.localeCompare(bv):bv.localeCompare(av);
+        });
+        table.querySelectorAll('th').forEach(function(h){h.classList.remove('sort-asc','sort-desc');h.dataset.sort='';});
+        th.dataset.sort=asc?'asc':'desc'; th.classList.add(asc?'sort-asc':'sort-desc');
+        rows.forEach(function(r){tbody.appendChild(r);});
+      });
+    });
+  });
+})();
+"""
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{html.escape(title)}</title>
+<style>{css}</style>
+</head>
+<body>
+<header class="site-hdr">
+  <div class="hdr-inner">
+    <div class="hdr-brand">{logo_html}<div><div class="hdr-kicker">Agent Adda</div><div class="hdr-title">{html.escape(title)}</div></div></div>
+    <div class="hdr-meta"><span class="mbadge mbadge-date">Generated {html.escape(as_of)}</span><span class="mbadge mbadge-data">Risk: {'Allowed' if swing_allowed else 'Blocked'}</span></div>
+  </div>
+</header>
+<div class="disc"><strong>Research only.</strong> Not investment advice or a trading recommendation. Confirm live price, liquidity, and risk before action.</div>
+<nav class="main-nav"><div class="nav-inner">
+  <button class="nav-btn active" data-tab="overview">Overview</button>
+  <button class="nav-btn" data-tab="tactical">Tactical</button>
+  <button class="nav-btn" data-tab="position">Position</button>
+  <button class="nav-btn" data-tab="portfolio">Portfolio Actions</button>
+  <button class="nav-btn" data-tab="warnings">Warnings</button>
+</div></nav>
+<main class="content">
+  <section id="tab-overview" class="tab-pane active">
+    <div class="metrics-row">
+      <div class="metric-card"><div class="metric-label">Swing Risk</div><div class="metric-value">{'YES' if swing_allowed else 'NO'}</div><div class="metric-sub">Balanced profile</div></div>
+      <div class="metric-card"><div class="metric-label">Tactical</div><div class="metric-value">{len(tactical)}</div><div class="metric-sub">shorter-horizon setups</div></div>
+      <div class="metric-card"><div class="metric-label">Position</div><div class="metric-value">{len(position)}</div><div class="metric-sub">wider-stop setups</div></div>
+      <div class="metric-card"><div class="metric-label">Candidates</div><div class="metric-value">{len(true_candidates)}</div><div class="metric-sub">{len(watchlist)} watchlist rows</div></div>
+      <div class="metric-card"><div class="metric-label">Portfolio Actions</div><div class="metric-value">{len(portfolio_actions)}</div><div class="metric-sub">holding-aware actions</div></div>
+    </div>
+    <div class="overview-grid">
+      <div class="card callout"><h2>Daily Action Sheet</h2><p>{best_html}</p><ul class="list-clean"><li>Risk profile: Balanced; max 1.0% account risk per trade; target 8-12 open positions.</li><li>Use entries as confirmation triggers, not blind buy levels.</li><li>Prefer candidates over watchlist rows when breadth is cautious.</li></ul></div>
+      <div class="card risk-callout"><h3>Execution Guardrails</h3><ul class="list-clean"><li>Buy only above trigger.</li><li>Respect the initial stop.</li><li>Reduce size when stop distance is wide.</li><li>Recheck live liquidity before orders.</li></ul></div>
+    </div>
+  </section>
+  <section id="tab-tactical" class="tab-pane">
+    <div class="card"><div class="section-title"><h2>Tactical Swing Candidates</h2><input class="search" data-table="tactical-table" type="search" placeholder="Search symbol, evidence, action"></div></div>
+    {_candidate_table_html(tactical, "tactical-table")}
+  </section>
+  <section id="tab-position" class="tab-pane">
+    <div class="card"><div class="section-title"><h2>Position Swing Candidates</h2><input class="search" data-table="position-table" type="search" placeholder="Search symbol, evidence, action"></div></div>
+    {_candidate_table_html(position, "position-table")}
+  </section>
+  <section id="tab-portfolio" class="tab-pane">
+    <div class="card"><h2>Portfolio Actions</h2><p class="muted">Holding-aware actions are shown only when the input frame includes portfolio columns.</p></div>
+    {_portfolio_actions_html(portfolio_actions)}
+  </section>
+  <section id="tab-warnings" class="tab-pane">
+    <div class="card"><h2>Source Freshness And Warnings</h2><ul class="list-clean">{warnings_html}</ul></div>
+    <div class="card"><h2>Disclaimer</h2><p>Not investment advice. For research and learning only.</p></div>
+  </section>
+  <div class="footer">Generated by Agent Adda Swing Playbook.</div>
+</main>
+<script>{js}</script>
+</body>
+</html>"""
+
+
 def _write_candidate_csv(path: Path, candidates: list[PlaybookCandidate]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -783,7 +1072,13 @@ def generate_swing_playbook(
 
     archive_md.write_text(markdown, encoding="utf-8")
     latest_md.write_text(markdown, encoding="utf-8")
-    html_text = _html_from_markdown(markdown, "Swing Trading Playbook")
+    html_text = _render_swing_playbook_html(
+        tactical=tactical,
+        position=position,
+        portfolio_actions=portfolio_actions,
+        warnings=warnings,
+        as_of=as_of,
+    )
     archive_html.write_text(html_text, encoding="utf-8")
     latest_html.write_text(html_text, encoding="utf-8")
     _write_candidate_csv(latest_candidates, tactical + position)

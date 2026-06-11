@@ -404,3 +404,10 @@ def test_generate_swing_playbook_writes_markdown_html_and_csv(tmp_path):
     assert "## Position Swing Candidates" in markdown
     assert "## Portfolio Actions" in markdown
     assert "EOD_READY" in markdown
+    html = Path(result.html_path).read_text(encoding="utf-8")
+    assert "Agent Adda" in html
+    assert 'class="site-hdr"' in html
+    assert 'class="metrics-row"' in html
+    assert 'data-tab="tactical"' in html
+    assert 'id="tactical-table"' in html
+    assert "badge-good" in html

@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "description": "Capture NSE/BSE charts and get grounded technical analysis from Agent Adda.",
 
-  "permissions": ["activeTab", "storage", "sidePanel"],
-  "host_permissions": ["http://localhost:8765/*"],
+  "permissions": ["activeTab", "tabs", "storage", "sidePanel", "scripting"],
+  "host_permissions": ["<all_urls>", "http://localhost:8765/*"],
 
   "background": {
     "service_worker": "background.js",

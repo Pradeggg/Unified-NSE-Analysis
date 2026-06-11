@@ -471,6 +471,19 @@ def test_market_situation_provider_handles_market_wide_ask():
     assert decision.intent == "market_situation"
 
 
+def test_market_situation_provider_does_not_hijack_screener_in_fundamentals():
+    pack = _empty_pack()
+    prompt = (
+        "Fundamental analysis of RIC from screener.in — P/E, P/B, ROE, "
+        "ROCE, debt/equity, revenue growth, pros and cons."
+    )
+
+    decision = UnifiedRouter().route(prompt, pack)
+
+    assert decision.reasoning_summary.selected_branch != "MarketSituationProvider"
+    assert "get_live_market_overview" not in str(decision.tool_plan_tuples())
+
+
 def test_direct_intent_provider_is_last_resort_fallback():
     pack = _empty_pack()
     decision = UnifiedRouter(providers=[DirectIntentProvider()]).route("show me the RSI", pack)

@@ -124,3 +124,93 @@ export interface ApiResponse<T> {
   error: string | null;
   status_code: number;
 }
+
+// ── Backtest types ────────────────────────────────────────────────────────
+
+export interface BtMetrics {
+  total_trades: number;
+  wins: number;
+  losses: number;
+  win_rate: number;
+  total_pnl: number;
+  return_pct: number;
+  avg_win: number;
+  avg_loss: number;
+  max_drawdown_pct: number;
+  sharpe: number;
+}
+
+export interface BtTrade {
+  entry_time: number | null;
+  exit_time: number | null;
+  direction: "BUY" | "SELL";
+  entry_price: number;
+  exit_price: number;
+  qty: number;
+  pnl: number;
+  exit_reason: string;
+  note: string;
+  rr: number;
+}
+
+export interface BacktestResult {
+  symbol: string;
+  timeframe: string;
+  strategy: string;
+  bars_used: number;
+  metrics: BtMetrics;
+  trades: BtTrade[];
+  run_id: number | null;
+}
+
+export interface LeaderRow {
+  rank: number;
+  symbol: string;
+  timeframe: string;
+  strategy_id: string;
+  strategy_name: string;
+  total_trades: number;
+  win_rate: number;
+  return_pct: number;
+  sharpe: number;
+  options_score: number;
+}
+
+// ── Extension runtime messages ───────────────────────────────────────────
+
+export interface CaptureVisibleTabRequest {
+  type: "CAPTURE_VISIBLE_TAB";
+}
+
+export interface CapturedTabInfo {
+  id: number | null;
+  windowId: number | null;
+  url: string | null;
+  title: string | null;
+}
+
+export interface CaptureVisibleTabResponse {
+  ok: boolean;
+  dataUrl: string | null;
+  tab: CapturedTabInfo | null;
+  error: string | null;
+}
+
+export interface CaptureSelectionRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  viewportWidth: number;
+  viewportHeight: number;
+}
+
+export interface SelectCaptureAreaRequest {
+  type: "SELECT_CAPTURE_AREA";
+}
+
+export interface SelectCaptureAreaResponse {
+  ok: boolean;
+  rect: CaptureSelectionRect | null;
+  error: string | null;
+}

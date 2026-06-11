@@ -48,6 +48,14 @@ _BUILT_IN_STRATEGY_SPECS: list[dict[str, Any]] = [
             "timeframe": "daily",
             "all": [_rule("close", "above", "sma_50"), _rule("sma_50", "above", "sma_200")],
         },
+        "fundamentals": {
+            "all": [
+                _rule("latest_result_age_days", "lte", 220),
+                _rule("sales_growth_pct", "gte", 0),
+                _rule("pat_growth_pct", "gte", 0),
+                _rule("opm_yoy_delta", "gte", -5),
+            ]
+        },
         "volume": {"timeframe": "daily", "all": [_rule("volume_ratio_20d", "gte", 1.1)]},
         "risk": _atr_risk(multiple=2.0, risk_per_trade_pct=1.0, max_position_pct=10.0),
         "add_rules": [
@@ -133,6 +141,13 @@ _BUILT_IN_STRATEGY_SPECS: list[dict[str, Any]] = [
             ]
         },
         "trend_filters": {"timeframe": "daily", "all": [_rule("close", "above", "sma_50")]},
+        "fundamentals": {
+            "all": [
+                _rule("latest_result_age_days", "lte", 220),
+                _rule("sales_growth_pct", "gte", 0),
+                _rule("pat_growth_pct", "gte", 0),
+            ]
+        },
         "risk": _atr_risk(multiple=2.0, risk_per_trade_pct=0.75, max_position_pct=8.0),
         "add_rules": [],
         "exit": {"any": [_rule("relative_strength", "below", 60), _rule("close", "below", "sma_50")]},
@@ -152,6 +167,14 @@ _BUILT_IN_STRATEGY_SPECS: list[dict[str, Any]] = [
         },
         "pullbacks": {"timeframe": "daily", "all": [_rule("rsi_14", "between", [45, 65])]},
         "breakouts": {"timeframe": "daily", "all": [_rule("volume_ratio_20d", "gte", 1.5)]},
+        "fundamentals": {
+            "all": [
+                _rule("latest_result_age_days", "lte", 220),
+                _rule("sales_growth_pct", "gte", 0),
+                _rule("pat_growth_pct", "gte", 0),
+                _rule("opm_yoy_delta", "gte", -5),
+            ]
+        },
         "risk": _atr_risk(multiple=1.8, risk_per_trade_pct=0.75, max_position_pct=8.0),
         "add_rules": [
             {
@@ -165,6 +188,47 @@ _BUILT_IN_STRATEGY_SPECS: list[dict[str, Any]] = [
             }
         ],
         "exit": {"any": [_rule("close", "below", "sma_20"), _rule("rsi_14", "below", 45)]},
+    },
+    {
+        "strategy_id": "persisted_vcp_picks_v1",
+        "name": "Persisted VCP Picks",
+        "universe": {"stage": "STAGE_2", "min_price": 50, "source": "scores.stage2_vcp_picks"},
+        "entry": {
+            "all": [
+                _rule("vcp_pick", "gte", 1),
+                _rule("stage", "eq", "STAGE_2"),
+                _rule("vcp_score", "gte", 75),
+                _rule("close", "above", "sma_20"),
+                _rule("rsi_14", "between", [50, 75]),
+            ]
+        },
+        "stage_2": {"timeframe": "daily", "all": [_rule("stage", "eq", "STAGE_2")]},
+        "breakouts": {
+            "timeframe": "daily",
+            "all": [
+                _rule("vcp_pick", "gte", 1),
+                _rule("vcp_breakout_pct", "gte", 1.5),
+            ],
+        },
+        "risk": _atr_risk(multiple=1.8, risk_per_trade_pct=0.75, max_position_pct=8.0),
+        "add_rules": [
+            {
+                "kind": "breakout_add",
+                "indicator": "vcp_score",
+                "operator": "gte",
+                "value": 90,
+                "size_pct": 3.0,
+                "risk_per_trade_pct": 0.4,
+                "timeframe": "daily",
+            }
+        ],
+        "exit": {
+            "any": [
+                _rule("stage", "in", ["STAGE_3", "STAGE_4"]),
+                _rule("close", "below", "sma_20"),
+                _rule("rsi_14", "below", 45),
+            ]
+        },
     },
     {
         "strategy_id": "darvas_box_breakout_v1",
@@ -236,9 +300,11 @@ _BUILT_IN_STRATEGY_SPECS: list[dict[str, Any]] = [
         },
         "fundamentals": {
             "all": [
+                _rule("latest_result_age_days", "lte", 220),
                 _rule("eps_growth_pct", "gte", 20),
                 _rule("sales_growth_pct", "gte", 15),
-                _rule("roe_pct", "gte", 15),
+                _rule("pat_growth_pct", "gte", 15),
+                _rule("opm_yoy_delta", "gte", 0),
             ]
         },
         "volume": {"timeframe": "daily", "all": [_rule("volume_ratio_20d", "gte", 1.2)]},

@@ -1,0 +1,383 @@
+id: vcp_breakouts_with_fundamentals_v1
+version: 1
+status: validated
+domain: screening
+title: VCP Breakouts With Fundamentals
+description: >
+  Find Stage 2 VCP breakout candidates and high-quality breakout or new-high
+  candidates with strong technical and fundamental evidence, returning a
+  bounded TradingView-ready watchlist.
+input_patterns:
+  - stocks creating new highs or VCP or breakouts with good fundamentals
+  - VCP breakouts with strong fundamentals
+  - breakout candidates for TradingView
+  - quality breakouts with RS and fundamentals
+tags:
+  - vcp
+  - breakout
+  - new_high
+  - fundamentals
+  - stage_2
+  - tradingview
+  - watchlist
+evidence_required:
+  tables:
+    - scores.stage2_vcp_picks
+    - scores.stage_snapshots
+  freshness:
+    max_age_days: 5
+    stale_is_error: false
+tool_plan_template: []
+sql_templates:
+  - name: vcp_quality_candidates
+    sql: >
+      WITH latest_vcp AS (
+        SELECT MAX(snapshot_date) AS as_of_date
+        FROM scores.stage2_vcp_picks
+      ),
+      latest_stage AS (
+        SELECT MAX(snapshot_date) AS stage_date
+        FROM scores.stage_snapshots
+      )
+      SELECT
+        v.snapshot_date AS as_of_date,
+        v.rank,
+        v.symbol,
+        v.company_name,
+        v.sector,
+        v.price,
+        s.stage,
+        v.trading_signal,
+        v.trend_signal,
+        v.rsi,
+        v.relative_strength,
+        v.investment_score,
+        v.enhanced_fund_score,
+        v.earnings_quality,
+        v.sales_growth,
+        v.financial_strength,
+        v.vcp_score,
+        v.vcp_breakout_pct,
+        v.vcp_contraction_pct,
+        'VCP_BREAKOUT' AS setup_type,
+        ('NSE:' || v.symbol) AS tradingview_symbol
+      FROM scores.stage2_vcp_picks v
+      JOIN latest_vcp lv ON v.snapshot_date = lv.as_of_date
+      LEFT JOIN latest_stage ls ON true
+      LEFT JOIN scores.stage_snapshots s
+        ON s.symbol = v.symbol
+       AND s.snapshot_date = ls.stage_date
+      WHERE COALESCE(s.stage, 'STAGE_2') = 'STAGE_2'
+        AND COALESCE(v.price, 0) >= :min_price
+        AND COALESCE(v.relative_strength, 0) >= :min_rs
+        AND COALESCE(v.investment_score, 0) >= :min_investment_score
+        AND COALESCE(v.enhanced_fund_score, 0) >= :min_fund_score
+        AND COALESCE(v.vcp_score, 0) >= :min_vcp_score
+      ORDER BY v.vcp_score DESC NULLS LAST, v.investment_score DESC NULLS LAST, v.rank ASC
+      LIMIT :limit
+    required_params:
+      - min_price
+      - min_rs
+      - min_investment_score
+      - min_fund_score
+      - min_vcp_score
+      - limit
+    expected_columns:
+      - as_of_date
+      - rank
+      - symbol
+      - company_name
+      - sector
+      - price
+      - stage
+      - trading_signal
+      - trend_signal
+      - rsi
+      - relative_strength
+      - investment_score
+      - enhanced_fund_score
+      - earnings_quality
+      - sales_growth
+      - financial_strength
+      - vcp_score
+      - vcp_breakout_pct
+      - vcp_contraction_pct
+      - setup_type
+      - tradingview_symbol
+    row_limit: 100
+    safety_status: passed
+    safety_findings: []
+    metadata:
+      evidence_role: vcp_candidates
+      required_filters:
+        stage: STAGE_2
+
+  - name: stage2_new_high_candidates
+    sql: >
+      WITH latest AS (
+        SELECT MAX(snapshot_date) AS as_of_date
+        FROM scores.stage_snapshots
+      )
+      SELECT
+        s.snapshot_date AS as_of_date,
+        s.symbol,
+        s.company_name,
+        s.sector,
+        s.price,
+        s.stage,
+        s.trading_signal,
+        s.trend_signal,
+        s.rsi,
+        s.relative_strength,
+        s.change_1m_pct,
+        s.investment_score,
+        s.technical_score,
+        s.enhanced_fund_score,
+        s.earnings_quality,
+        s.sales_growth,
+        s.financial_strength,
+        CASE
+          WHEN COALESCE(s.trading_signal, '') IN ('STRONG_BUY', 'BUY') THEN 'QUALITY_BREAKOUT'
+          ELSE 'STAGE2_MOMENTUM'
+        END AS setup_type,
+        ('NSE:' || s.symbol) AS tradingview_symbol
+      FROM scores.stage_snapshots s
+      JOIN latest l ON s.snapshot_date = l.as_of_date
+      WHERE s.stage = 'STAGE_2'
+        AND COALESCE(s.price, 0) >= :min_price
+        AND COALESCE(s.relative_strength, 0) >= :min_rs
+        AND COALESCE(s.investment_score, 0) >= :min_investment_score
+        AND COALESCE(s.enhanced_fund_score, s.fundamental_score, 0) >= :min_fund_score
+        AND (
+          COALESCE(s.trading_signal, '') IN ('STRONG_BUY', 'BUY')
+          OR COALESCE(s.change_1m_pct, 0) > 0
+        )
+      ORDER BY s.investment_score DESC NULLS LAST, s.relative_strength DESC NULLS LAST
+      LIMIT :limit
+    required_params:
+      - min_price
+      - min_rs
+      - min_investment_score
+      - min_fund_score
+      - limit
+    expected_columns:
+      - as_of_date
+      - symbol
+      - company_name
+      - sector
+      - price
+      - stage
+      - trading_signal
+      - trend_signal
+      - rsi
+      - relative_strength
+      - change_1m_pct
+      - investment_score
+      - technical_score
+      - enhanced_fund_score
+      - earnings_quality
+      - sales_growth
+      - financial_strength
+      - setup_type
+      - tradingview_symbol
+    row_limit: 100
+    safety_status: passed
+    safety_findings: []
+    metadata:
+      evidence_role: new_high_breakout_candidates
+      required_filters:
+        stage: STAGE_2
+
+  - name: tradingview_symbol_list
+    sql: >
+      WITH latest_vcp AS (
+        SELECT MAX(snapshot_date) AS as_of_date
+        FROM scores.stage2_vcp_picks
+      ),
+      latest_stage AS (
+        SELECT MAX(snapshot_date) AS as_of_date
+        FROM scores.stage_snapshots
+      ),
+      candidates AS (
+        SELECT
+          v.snapshot_date AS as_of_date,
+          v.symbol,
+          ('NSE:' || v.symbol) AS tradingview_symbol,
+          COALESCE(v.vcp_score, 0) + COALESCE(v.investment_score, 0) AS rank_score
+        FROM scores.stage2_vcp_picks v
+        JOIN latest_vcp lv ON v.snapshot_date = lv.as_of_date
+        WHERE COALESCE(v.price, 0) >= :min_price
+          AND COALESCE(v.relative_strength, 0) >= :min_rs
+          AND COALESCE(v.investment_score, 0) >= :min_investment_score
+          AND COALESCE(v.enhanced_fund_score, 0) >= :min_fund_score
+          AND COALESCE(v.vcp_score, 0) >= :min_vcp_score
+        UNION
+        SELECT
+          s.snapshot_date AS as_of_date,
+          s.symbol,
+          ('NSE:' || s.symbol) AS tradingview_symbol,
+          COALESCE(s.investment_score, 0) + COALESCE(s.relative_strength, 0) AS rank_score
+        FROM scores.stage_snapshots s
+        JOIN latest_stage ls ON s.snapshot_date = ls.as_of_date
+        WHERE s.stage = 'STAGE_2'
+          AND COALESCE(s.price, 0) >= :min_price
+          AND COALESCE(s.relative_strength, 0) >= :min_rs
+          AND COALESCE(s.investment_score, 0) >= :min_investment_score
+          AND COALESCE(s.enhanced_fund_score, s.fundamental_score, 0) >= :min_fund_score
+          AND COALESCE(s.trading_signal, '') IN ('STRONG_BUY', 'BUY')
+      ),
+      ranked AS (
+        SELECT DISTINCT ON (symbol)
+          as_of_date,
+          symbol,
+          tradingview_symbol,
+          rank_score
+        FROM candidates
+        ORDER BY symbol, rank_score DESC NULLS LAST
+      )
+      SELECT
+        MAX(as_of_date) AS as_of_date,
+        STRING_AGG(tradingview_symbol, ',' ORDER BY rank_score DESC NULLS LAST, symbol) AS tradingview_symbols,
+        COUNT(*) AS symbol_count
+      FROM (
+        SELECT *
+        FROM ranked
+        ORDER BY rank_score DESC NULLS LAST, symbol
+        LIMIT :limit
+      ) bounded
+    required_params:
+      - min_price
+      - min_rs
+      - min_investment_score
+      - min_fund_score
+      - min_vcp_score
+      - limit
+    expected_columns:
+      - as_of_date
+      - tradingview_symbols
+      - symbol_count
+    row_limit: 1
+    safety_status: passed
+    safety_findings: []
+    metadata:
+      evidence_role: tradingview_list
+
+  - name: filter_explanation
+    sql: >
+      SELECT
+        CURRENT_DATE AS as_of_date,
+        'stage' AS filter_name,
+        'STAGE_2' AS filter_value,
+        'Candidates must be Weinstein Stage 2.' AS explanation
+      UNION ALL
+      SELECT CURRENT_DATE, 'relative_strength', ('' || :min_rs), 'Minimum relative strength threshold.'
+      UNION ALL
+      SELECT CURRENT_DATE, 'price', ('' || :min_price), 'Minimum price threshold used as a liquidity proxy.'
+      UNION ALL
+      SELECT CURRENT_DATE, 'investment_score', ('' || :min_investment_score), 'Minimum composite investment score.'
+      UNION ALL
+      SELECT CURRENT_DATE, 'enhanced_fund_score', ('' || :min_fund_score), 'Minimum fundamental quality score.'
+      UNION ALL
+      SELECT CURRENT_DATE, 'vcp_score', ('' || :min_vcp_score), 'Minimum VCP score for VCP-labelled candidates only.'
+    required_params:
+      - min_rs
+      - min_price
+      - min_investment_score
+      - min_fund_score
+      - min_vcp_score
+    expected_columns:
+      - as_of_date
+      - filter_name
+      - filter_value
+      - explanation
+    row_limit: 25
+    safety_status: passed
+    safety_findings: []
+    metadata:
+      evidence_role: filter_explanation
+
+  - name: portfolio_overlap_optional
+    sql: >
+      WITH selected AS (
+        SELECT
+          v.snapshot_date AS as_of_date,
+          v.symbol,
+          'candidate' AS overlap_status
+        FROM scores.stage2_vcp_picks v
+        WHERE v.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)
+        ORDER BY v.rank ASC
+        LIMIT :limit
+      )
+      SELECT
+        as_of_date,
+        symbol,
+        overlap_status
+      FROM selected
+      WHERE false
+    required_params:
+      - limit
+    expected_columns:
+      - as_of_date
+      - symbol
+      - overlap_status
+    row_limit: 100
+    safety_status: passed
+    safety_findings: []
+    metadata:
+      evidence_role: portfolio_overlap
+      optional: true
+
+output_contract:
+  - vcp_quality_candidates
+  - stage2_new_high_candidates
+  - tradingview_symbol_list
+  - filter_explanation
+  - portfolio_overlap_optional
+validation_rules:
+  - name: required_tables_exist
+    severity: error
+    config:
+      tables:
+        - scores.stage2_vcp_picks
+        - scores.stage_snapshots
+  - name: sql_is_read_only
+    severity: error
+    config:
+      require_named_params: true
+  - name: bounded_candidate_list
+    severity: error
+    config:
+      max_limit: 100
+  - name: vcp_label_requires_vcp_table
+    severity: error
+    config:
+      source_table: scores.stage2_vcp_picks
+  - name: portfolio_overlap_optional
+    severity: warning
+    config:
+      optional_outputs:
+        - portfolio_overlap_optional
+synthesis_guidance: >
+  VCP evidence must come from scores.stage2_vcp_picks. Do not label non-VCP
+  candidates as VCP; Stage 2 candidates from scores.stage_snapshots may be
+  described only as quality breakout, new-high, or momentum candidates based on
+  their explicit evidence. Explain all filters and return the TradingView-ready
+  symbols exactly as provided in tradingview_symbol_list.
+generation_model: human-authored
+created_by: codex
+metadata:
+  runtime:
+    default_params:
+      limit: 25
+      min_rs: 20
+      min_price: 50
+      min_investment_score: 65
+      min_fund_score: 65
+      min_vcp_score: 60
+  reviewer:
+    intent_tags:
+      - screening
+      - vcp_breakouts
+      - quality_breakouts
+      - tradingview_watchlist
+    required_inputs: []

@@ -115,6 +115,186 @@ def test_generation_can_run_review_heal_pipeline_when_requested(tmp_path):
     assert "validation_errors" not in rows[0]
 
 
+def test_import_skill_cards_jsonl_promotes_passed_cards_and_saves_embeddings(tmp_path):
+    from terminal.skills.embedding_provider import EmbeddingResult
+
+    from skill_store.importer import import_skill_cards_jsonl
+
+    class FakeRepo:
+        def __init__(self):
+            self.cards = []
+            self.embeddings = []
+
+        def upsert_skill_card(self, card):
+            self.cards.append(dict(card))
+            return dict(card)
+
+        def save_embedding(self, skill_id, model, dimension, vector, embedding_text, *, version=1):
+            self.embeddings.append(
+                {
+                    "skill_id": skill_id,
+                    "model": model,
+                    "dimension": dimension,
+                    "vector": list(vector),
+                    "embedding_text": embedding_text,
+                    "version": version,
+                }
+            )
+            return {"embedding_id": len(self.embeddings)}
+
+    class FakeProvider:
+        def embed_texts(self, texts, model=None):
+            return EmbeddingResult(
+                model="fake-sentence-transformer",
+                dimension=384,
+                vectors=[[0.1] * 384 for _ in texts],
+            )
+
+    source = tmp_path / "cards.jsonl"
+    passed_card = {
+        "id": "fundamental_roce_driver_diagnostics_example_01_v1",
+        "version": 1,
+        "status": "review_pending",
+        "domain": "fundamental_analysis",
+        "title": "ROCE Driver Diagnostics",
+        "description": "Explain ROCE drivers.",
+        "input_patterns": ["why is roce high"],
+        "tags": ["fundamental", "roce"],
+        "evidence_required": {"tables": ["scores.annual_results", "scores.balance_sheet"]},
+        "sql_templates": {
+            "annual_latest": "SELECT symbol, roce_pct FROM scores.annual_results LIMIT 50",
+        },
+        "tool_plan_template": [{"sql_templates": []}],
+        "output_contract": ["driver_summary"],
+        "validation_rules": ["source_trail_required"],
+        "review": {"status": "pass"},
+    }
+    failed_card = {**passed_card, "id": "failed_v1", "status": "test_failed", "validation_errors": ["bad"]}
+    source.write_text(
+        json.dumps(passed_card, sort_keys=True) + "\n" + json.dumps(failed_card, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    repo = FakeRepo()
+
+    result = import_skill_cards_jsonl(source, repository=repo, embedding_provider=FakeProvider())
+
+    assert result.total == 2
+    assert result.selected == 1
+    assert result.imported == 1
+    assert result.skipped == 1
+    assert result.errors == ()
+    assert repo.cards[0]["status"] == "validated"
+    assert repo.cards[0]["source_status"] == "review_pending"
+    assert repo.cards[0]["sql_templates"] == [
+        {
+            "name": "annual_latest",
+            "sql": "SELECT symbol, roce_pct FROM scores.annual_results LIMIT 50",
+            "safety_status": "passed",
+            "safety_findings": [],
+        }
+    ]
+    assert repo.cards[0]["raw_generated_fields"]["sql_templates"] == passed_card["sql_templates"]
+    assert repo.embeddings[0]["skill_id"] == "fundamental_roce_driver_diagnostics_example_01_v1"
+    assert repo.embeddings[0]["model"] == "fake-sentence-transformer"
+    assert "ROCE Driver Diagnostics" in repo.embeddings[0]["embedding_text"]
+
+
+def test_import_skill_cards_jsonl_dry_run_counts_without_db_or_embeddings(tmp_path):
+    from skill_store.importer import import_skill_cards_jsonl
+
+    source = tmp_path / "cards.jsonl"
+    source.write_text(
+        json.dumps(
+            {
+                "id": "swing_trade_playbook_setup_review_example_01_v1",
+                "version": 1,
+                "status": "review_pending",
+                "domain": "swing_trading",
+                "title": "Swing Trade Playbook Setup Review",
+                "description": "Review swing setup.",
+                "input_patterns": ["swing setup"],
+                "tags": ["swing"],
+                "evidence_required": {"tables": ["scores.stage_snapshots"]},
+                "output_contract": ["setup_review"],
+                "validation_rules": ["source_trail_required"],
+                "review": {"status": "pass"},
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = import_skill_cards_jsonl(source, dry_run=True)
+
+    assert result.total == 1
+    assert result.selected == 1
+    assert result.imported == 0
+    assert result.dry_run is True
+    assert result.embedding_model is None
+
+
+def test_import_skill_cards_jsonl_normalizes_raw_sql_template_lists(tmp_path):
+    from terminal.skills.embedding_provider import EmbeddingResult
+
+    from skill_store.importer import import_skill_cards_jsonl
+
+    class FakeRepo:
+        def __init__(self):
+            self.cards = []
+            self.embeddings = []
+
+        def upsert_skill_card(self, card):
+            self.cards.append(dict(card))
+            return dict(card)
+
+        def save_embedding(self, skill_id, model, dimension, vector, embedding_text, *, version=1):
+            self.embeddings.append((skill_id, model, dimension, vector, embedding_text, version))
+            return {"embedding_id": 1}
+
+    class FakeProvider:
+        def embed_texts(self, texts, model=None):
+            return EmbeddingResult(model="fake-sentence-transformer", dimension=384, vectors=[[0.1] * 384])
+
+    source = tmp_path / "cards.jsonl"
+    source.write_text(
+        json.dumps(
+            {
+                "id": "fundamental_eps_decline_explainer_example_10_v1",
+                "version": 1,
+                "status": "review_pending",
+                "domain": "fundamental_analysis",
+                "title": "EPS Decline Explainer",
+                "description": "Explain EPS decline.",
+                "input_patterns": ["why eps falling"],
+                "tags": ["eps"],
+                "evidence_required": {"tables": ["scores.quarterly_results"]},
+                "sql_templates": ["SELECT symbol, eps FROM scores.quarterly_results LIMIT 20"],
+                "output_contract": ["eps_bridge"],
+                "validation_rules": [{"sql_permissions": "read-only"}],
+                "review": {"status": "pass"},
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    repo = FakeRepo()
+
+    result = import_skill_cards_jsonl(source, repository=repo, embedding_provider=FakeProvider())
+
+    assert result.imported == 1
+    assert repo.cards[0]["sql_templates"] == [
+        {
+            "name": "template_1",
+            "sql": "SELECT symbol, eps FROM scores.quarterly_results LIMIT 20",
+            "safety_status": "passed",
+            "safety_findings": [],
+        }
+    ]
+    assert repo.cards[0]["validation_rules"] == ['{"sql_permissions": "read-only"}']
+
+
 def test_expanded_seed_briefs_generate_unique_schema_safe_varieties():
     from skill_store.schema_catalog import default_schema_catalog
     from skill_store.seeds import expanded_seed_briefs
@@ -126,6 +306,81 @@ def test_expanded_seed_briefs_generate_unique_schema_safe_varieties():
     assert len({seed.id for seed in seeds}) == 1000
     assert all(seed.input_patterns for seed in seeds)
     assert all(catalog.has_table(table) for seed in seeds for table in seed.evidence_tables)
+
+
+def test_default_seed_briefs_include_missing_analysis_families_with_schema_backing():
+    from skill_store.schema_catalog import default_schema_catalog
+    from skill_store.seeds import default_seed_briefs
+
+    catalog = default_schema_catalog()
+    seeds = default_seed_briefs()
+    by_id = {seed.id: seed for seed in seeds}
+    expected_ids = {
+        "fundamental_roce_driver_diagnostics",
+        "fundamental_eps_decline_explainer",
+        "fundamental_margin_bridge_review",
+        "fundamental_cashflow_quality_review",
+        "fundamental_debt_interest_risk_review",
+        "valuation_growth_quality_review",
+        "fno_signal_confirmation_review",
+        "index_sector_relative_strength_review",
+        "strategy_lab_performance_diagnostics",
+        "swing_trade_playbook_setup_review",
+    }
+
+    assert expected_ids <= set(by_id)
+    assert all(catalog.has_table(table) for seed in seeds for table in seed.evidence_tables)
+    assert by_id["fundamental_roce_driver_diagnostics"].domain == "fundamental_analysis"
+    assert "scores.balance_sheet" in by_id["fundamental_roce_driver_diagnostics"].evidence_tables
+    assert "scores.cash_flow" in by_id["fundamental_cashflow_quality_review"].evidence_tables
+    assert "derivatives.fno_signals" in by_id["fno_signal_confirmation_review"].evidence_tables
+    assert "derivatives.fno_signals" in by_id["swing_trade_playbook_setup_review"].evidence_tables
+
+
+def test_selected_seed_examples_generate_requested_count_per_seed():
+    from skill_store.seeds import selected_seed_examples
+
+    seeds = selected_seed_examples(
+        [
+            "fundamental_roce_driver_diagnostics",
+            "fno_signal_confirmation_review",
+        ],
+        20,
+    )
+
+    assert len(seeds) == 40
+    assert len({seed.id for seed in seeds}) == 40
+    assert seeds[0].id == "fundamental_roce_driver_diagnostics_example_01"
+    assert seeds[19].id == "fundamental_roce_driver_diagnostics_example_20"
+    assert seeds[20].id == "fno_signal_confirmation_review_example_01"
+    assert all(seed.input_patterns for seed in seeds)
+
+
+def test_fno_generation_prompt_includes_derivative_schema_and_join_rules():
+    from skill_store.generator import build_generation_prompt
+    from skill_store.schema_catalog import default_schema_catalog
+    from skill_store.seeds import default_seed_briefs
+
+    seed = next(item for item in default_seed_briefs() if item.id == "fno_signal_confirmation_review")
+    prompt = build_generation_prompt(seed, default_schema_catalog())
+    schema = prompt["approved_schema"]
+
+    assert schema["derivatives.fno_signals"]["columns"] == [
+        "snapshot_date",
+        "symbol",
+        "pcr",
+        "oi_change_5d",
+        "price_change",
+        "buildup",
+        "max_pain",
+        "fno_signal",
+    ]
+    assert "derivatives.fno_eod" not in schema
+    assert any(
+        rule["condition"] == "derivatives.fno_signals.symbol = scores.stage_snapshots.symbol"
+        for rule in prompt["schema_join_rules"]
+    )
+    assert any("latest F&O signals" in rule for rule in prompt["global_sql_rules"])
 
 
 def test_dry_run_generation_supports_target_count_batches_and_model_override(tmp_path):
@@ -424,6 +679,49 @@ def test_schema_auditor_understands_table_alias_columns():
     assert audit_skill_card(card, default_schema_catalog()) == []
 
 
+def test_schema_auditor_does_not_treat_single_table_alias_as_column():
+    from skill_store.schema_auditor import audit_skill_card
+    from skill_store.schema_catalog import default_schema_catalog
+
+    card = {
+        "id": "single_table_alias_v1",
+        "evidence_required": {"tables": ["scores.cash_flow"]},
+        "sql_templates": {
+            "ok": (
+                "SELECT DISTINCT ON (cf.symbol) cf.symbol, cf.operating_cf, cf.investing_cf "
+                "FROM scores.cash_flow cf "
+                "WHERE cf.period_type = 'annual' "
+                "ORDER BY cf.symbol, cf.period_end DESC NULLS LAST"
+            )
+        },
+    }
+
+    assert audit_skill_card(card, default_schema_catalog()) == []
+
+
+def test_schema_auditor_ignores_psycopg_placeholders_and_unqualified_subquery_sources():
+    from skill_store.schema_auditor import audit_skill_card
+    from skill_store.schema_catalog import default_schema_catalog
+
+    card = {
+        "id": "placeholder_and_subquery_source_v1",
+        "evidence_required": {"tables": ["scores.balance_sheet", "scores.quarterly_results"]},
+        "sql_templates": {
+            "placeholder": (
+                "SELECT q.symbol, q.eps "
+                "FROM scores.quarterly_results q "
+                "WHERE q.symbol = %s AND q.period_type = 'quarter'"
+            ),
+            "subquery_source": (
+                "SELECT * FROM scores.balance_sheet "
+                "WHERE (symbol, period_end) IN (SELECT symbol, period_end FROM latest_annual_results)"
+            ),
+        },
+    }
+
+    assert audit_skill_card(card, default_schema_catalog()) == []
+
+
 def test_card_from_seed_keeps_deterministic_seed_id_for_expanded_variants():
     from skill_store.generator import _card_from_seed
     from skill_store.seeds import expanded_seed_briefs
@@ -713,6 +1011,105 @@ def test_pipeline_heals_bad_generated_python_tool():
     assert result.attempts == 2
     assert result.findings == []
     assert result.card["review"]["status"] == "pass"
+
+
+def test_review_heal_pipeline_preserves_identity_when_healer_returns_partial_card():
+    from skill_store.pipeline import run_review_heal_pipeline
+    from skill_store.reviewer import ReviewDecision
+
+    bad_card = {
+        "id": "partial_heal_identity_v1",
+        "version": 1,
+        "status": "generated",
+        "domain": "report_qa",
+        "title": "Partial Heal Identity",
+        "description": "Bad generated tool.",
+        "input_patterns": ["bad generated tool"],
+        "tags": ["test"],
+        "evidence_required": {"tables": ["report.enhanced_runs"]},
+        "python_tools": [
+            {
+                "id": "bad",
+                "language": "python",
+                "mode": "read_only",
+                "inputs": [],
+                "outputs": ["ok"],
+                "approved_tables": ["report.enhanced_runs"],
+                "code": "import os\ndef run(context):\n    os.system('echo bad')\n    return {'ok': False}\n",
+            }
+        ],
+        "output_contract": ["ok"],
+        "validation_rules": ["read_only_python"],
+    }
+
+    def reviewer(card, findings):
+        return ReviewDecision(status="needs_heal" if findings else "pass", findings=findings)
+
+    def healer(card, findings):
+        return {
+            "python_tools": [
+                {
+                    "id": "good",
+                    "language": "python",
+                    "mode": "read_only",
+                    "inputs": [],
+                    "outputs": ["ok"],
+                    "approved_tables": ["report.enhanced_runs"],
+                    "code": "def run(context):\n    return {'ok': True}\n",
+                }
+            ]
+        }
+
+    result = run_review_heal_pipeline(bad_card, reviewer=reviewer, healer=healer, max_attempts=2)
+
+    assert result.card["id"] == "partial_heal_identity_v1"
+    assert result.card["title"] == "Partial Heal Identity"
+    assert result.card["status"] == "review_pending"
+    assert result.findings == []
+
+
+def test_review_heal_pipeline_records_malformed_healer_output_without_crashing():
+    from skill_store.pipeline import run_review_heal_pipeline
+    from skill_store.reviewer import ReviewDecision
+
+    bad_card = {
+        "id": "malformed_healer_output_v1",
+        "version": 1,
+        "status": "generated",
+        "domain": "report_qa",
+        "title": "Malformed Healer Output",
+        "description": "Bad generated tool.",
+        "input_patterns": ["bad generated tool"],
+        "tags": ["test"],
+        "evidence_required": {"tables": ["report.enhanced_runs"]},
+        "python_tools": [
+            {
+                "id": "bad",
+                "language": "python",
+                "mode": "read_only",
+                "inputs": [],
+                "outputs": ["ok"],
+                "approved_tables": ["report.enhanced_runs"],
+                "code": "import os\ndef run(context):\n    os.system('echo bad')\n    return {'ok': False}\n",
+            }
+        ],
+        "output_contract": ["ok"],
+        "validation_rules": ["read_only_python"],
+    }
+
+    def reviewer(card, findings):
+        return ReviewDecision(status="needs_heal" if findings else "pass", findings=findings)
+
+    result = run_review_heal_pipeline(
+        bad_card,
+        reviewer=reviewer,
+        healer=lambda card, findings: ["not", "a", "card"],
+        max_attempts=2,
+    )
+
+    assert result.card["id"] == "malformed_healer_output_v1"
+    assert result.card["status"] == "test_failed"
+    assert any("healer returned list; expected object" in err for err in result.findings)
 
 
 def test_failed_corpus_healing_pass_promotes_repaired_cards(tmp_path):

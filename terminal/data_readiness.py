@@ -281,6 +281,13 @@ def plan_refresh(status: DataReadinessStatus, *, project_root: Path | None = Non
     if not status.needs_refresh:
         return RefreshPlan(action="none", reason="no refresh needed")
     root = _project_root(project_root)
+    if _has_postgres_connection_blocker(status):
+        script = root / "postgres" / "start_pg.sh"
+        return RefreshPlan(
+            action="start_postgres",
+            reason=", ".join(status.blockers),
+            command=(str(script), "start"),
+        )
     script = root / "daily_refresh.py"
     command = (sys.executable, str(script), "--skip-aux")
     if status.blockers:
@@ -290,6 +297,21 @@ def plan_refresh(status: DataReadinessStatus, *, project_root: Path | None = Non
     else:
         reason = status.status
     return RefreshPlan(action="run_refresh", reason=reason, command=command)
+
+
+def _has_postgres_connection_blocker(status: DataReadinessStatus) -> bool:
+    if not str(status.db_path).startswith("PostgreSQL:"):
+        return False
+    text = " ".join(status.blockers).lower()
+    return (
+        "postgres_error:" in text
+        and (
+            "connection to server" in text
+            or "no such file or directory" in text
+            or "connection refused" in text
+            or "could not connect" in text
+        )
+    )
 
 
 def _default_runner(command: tuple[str, ...], cwd: Path) -> int:
@@ -304,7 +326,7 @@ def execute_refresh_plan(
     today: str | date | None = None,
 ) -> RefreshResult:
     root = _project_root(project_root)
-    if refresh_plan.action != "run_refresh":
+    if refresh_plan.action not in {"run_refresh", "start_postgres"}:
         return RefreshResult(
             exit_code=None,
             plan=refresh_plan,
@@ -356,6 +378,9 @@ def render_readiness_panel(status: DataReadinessStatus, plan: RefreshPlan | None
     if action == "run_refresh":
         command = " ".join(shlex.quote(part) for part in (plan.command if plan else ()))
         action_text = f"run {command}".strip()
+    elif action == "start_postgres":
+        command = " ".join(shlex.quote(part) for part in (plan.command if plan else ()))
+        action_text = f"start local PostgreSQL: {command}".strip()
     else:
         action_text = "no refresh needed"
 
@@ -380,7 +405,10 @@ def render_readiness_panel(status: DataReadinessStatus, plan: RefreshPlan | None
 
         pg_health = get_postgres_health(PG_DSN)
         missing = pg_health.get("missing_tables") or []
-        missing_label = f"missing {len(missing)} table(s)" if missing else "required tables ready"
+        if pg_health.get("status") == "ok":
+            missing_label = f"missing {len(missing)} table(s)" if missing else "required tables ready"
+        else:
+            missing_label = f"missing {len(missing)} table(s)" if missing else "schema unavailable"
         lines.append(f"PostgreSQL: {pg_health.get('status')} · {missing_label}")
     except Exception as exc:
         lines.append(f"PostgreSQL: error · {exc}")

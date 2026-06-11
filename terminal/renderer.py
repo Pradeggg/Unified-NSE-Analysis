@@ -317,6 +317,30 @@ def render_market_breadth(data: dict) -> None:
                 Text(bar, style=colour),
             )
 
+    # ── Relative strength distribution ───────────────────────────────────────
+    percentiles = data.get("rs_percentiles") or {}
+    distribution = data.get("rs_distribution") or {}
+    if percentiles or distribution:
+        tbl.add_section()
+        tbl.add_row(Text("── RS Distribution ──", style="bold dim"), "", "")
+        if percentiles:
+            pct_bits = []
+            for key in ("p10", "p25", "p50", "p75", "p90"):
+                value = percentiles.get(key)
+                if isinstance(value, (int, float)):
+                    pct_bits.append(f"{key} {value:.1f}%")
+            if pct_bits:
+                tbl.add_row("RS percentiles", " | ".join(pct_bits), "")
+        for key in ("negative", "neutral_0_25", "positive_25_50", "strong_50_plus"):
+            row = distribution.get(key) if isinstance(distribution, dict) else None
+            if not isinstance(row, dict):
+                continue
+            label = str(row.get("label") or key)
+            count = row.get("count")
+            pct = row.get("pct")
+            pct_txt = f"{pct:.1f}%" if isinstance(pct, (int, float)) else ""
+            tbl.add_row(label, str(count), pct_txt)
+
     # ── % above MAs ─────────────────────────────────────────────────────────
     ma_data = data.get("above_ma", {})
     if ma_data:
@@ -768,7 +792,7 @@ def render_trace_tables(trace: list[dict], plan: dict | None = None) -> None:
             fn(result)
             rendered.add(tool)
         except Exception:
-            pass  # never crash the main loop due to a render failure
+            logger.debug("render_trace_tables: renderer for %s raised", tool, exc_info=True)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

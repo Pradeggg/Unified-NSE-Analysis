@@ -191,6 +191,91 @@ class OnDemandStockDataTests(unittest.TestCase):
         self.assertLessEqual(abs(sector["avg_rs_pct"]), 100)
         self.assertLessEqual(abs(breadth["avg_rs_pct"]), 100)
 
+    def test_market_breadth_returns_rs_percentiles_and_distribution(self):
+        breadth_source_rows = [
+            ("AAA", 1.0, 2.0, -10.0),
+            ("BBB", 1.0, 2.0, 0.0),
+            ("CCC", -1.0, -2.0, 20.0),
+            ("DDD", -1.0, -2.0, 50.0),
+            ("EEE", 0.0, 0.0, 100.0),
+        ]
+        breadth_rows = [("STAGE_1", 1), ("STAGE_2", 2), ("STAGE_3", 1), ("STAGE_4", 1)]
+
+        with patch("terminal.tools._latest_snapshot_date", return_value="2026-05-08"), patch(
+            "terminal.tools._pg_fetchall",
+            side_effect=[breadth_source_rows, breadth_rows],
+        ):
+            breadth = get_market_breadth()
+
+        self.assertEqual(breadth["rs_percentiles"]["p25"], 0.0)
+        self.assertEqual(breadth["rs_percentiles"]["p50"], 20.0)
+        self.assertEqual(breadth["rs_percentiles"]["p75"], 50.0)
+        self.assertEqual(breadth["rs_distribution"]["negative"]["count"], 1)
+        self.assertEqual(breadth["rs_distribution"]["strong_50_plus"]["count"], 2)
+
+    def test_market_breadth_can_scope_to_index_constituents(self):
+        index_rows = [
+            ("AAA", 1.0, 2.0, -10.0, "STAGE_1"),
+            ("BBB", 0.5, 1.0, 20.0, "STAGE_2"),
+            ("CCC", -1.0, -2.0, 50.0, "STAGE_4"),
+        ]
+
+        with patch("terminal.tools._latest_snapshot_date", return_value="2026-05-08"), patch(
+            "terminal.tools._pg_fetchall",
+            side_effect=[
+                [(5,)],
+                index_rows,
+            ],
+        ):
+            breadth = get_market_breadth(index="NIFTY500")
+
+        self.assertEqual(breadth["scope"], "index")
+        self.assertEqual(breadth["index"], "NIFTY 500")
+        self.assertEqual(breadth["composition_count"], 5)
+        self.assertEqual(breadth["matched_count"], 3)
+        self.assertEqual(breadth["total_stocks"], 3)
+        self.assertEqual(breadth["advances"], 2)
+        self.assertEqual(breadth["declines"], 1)
+        self.assertEqual(breadth["stage_distribution"]["STAGE_2"], 1)
+        self.assertIn("constituent_score_coverage:3/5", breadth["warnings"])
+
+    def test_market_breadth_index_scope_reports_missing_constituents(self):
+        with patch("terminal.tools._latest_snapshot_date", return_value="2026-05-08"), patch(
+            "terminal.tools._pg_fetchall",
+            return_value=[(0,)],
+        ):
+            breadth = get_market_breadth(index="NIFTY BANK")
+
+        self.assertEqual(breadth["index"], "NIFTY BANK")
+        self.assertIn("Index constituents unavailable", breadth["error"])
+        self.assertIn("ref.index_compositions", breadth["missing_evidence"])
+
+    def test_nifty500_analysis_routes_breadth_to_nifty500_scope(self):
+        routed = _keyword_intent("NIFTY 500 analysis")
+
+        self.assertEqual(routed["intent"], "index_status")
+        self.assertIn(("get_index_snapshot", {"index_name": "NIFTY 500"}), routed["plan"])
+        self.assertIn(("get_market_breadth", {"index": "NIFTY 500"}), routed["plan"])
+        self.assertIn(
+            ("get_top_gainers_losers", {"index": "NIFTY 500", "top_n": 10, "direction": "both"}),
+            routed["plan"],
+        )
+
+    def test_compact_nifty500_look_query_routes_to_index_scope(self):
+        routed = _keyword_intent("how does NIFTY500 look like")
+
+        self.assertEqual(routed["intent"], "index_status")
+        self.assertIn(("get_index_snapshot", {"index_name": "NIFTY 500"}), routed["plan"])
+        self.assertIn(("get_market_breadth", {"index": "NIFTY 500"}), routed["plan"])
+        self.assertNotIn(("resolve_symbol", {"query": "NIFTY500"}), routed["plan"])
+
+    def test_nifty200_analysis_routes_breadth_to_nifty200_scope(self):
+        routed = _keyword_intent("analyse NIFTY 200 breadth")
+
+        self.assertEqual(routed["intent"], "index_status")
+        self.assertIn(("get_index_snapshot", {"index_name": "NIFTY 200"}), routed["plan"])
+        self.assertIn(("get_market_breadth", {"index": "NIFTY 200"}), routed["plan"])
+
 
 if __name__ == "__main__":
     unittest.main()

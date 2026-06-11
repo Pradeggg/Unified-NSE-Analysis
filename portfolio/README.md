@@ -67,6 +67,23 @@ The CLI writes these files below the selected `--output-dir`:
   `build_run_manifest`, including run ID, strategy/data counts, git commit when
   available, stable checksums, and paths for replay artifacts.
 
+For `strategy-lab`, the CLI also writes a daily paper portfolio package:
+
+- `reports/strategy_leaderboard.csv`: ranked comparison of built-in strategies.
+- `reports/strategy_comparison_summary.json`: full strategy-lab run summary,
+  including selected paper strategy and artifact paths.
+- `reports/paper_portfolio_report.md`: current paper portfolio P&L, holdings,
+  risk levels, recent trades, and agent audit summary.
+- `paper/portfolio_state.json`: selected strategy, account, latest NAV,
+  current holdings, daily P&L, and unrealized P&L.
+- `paper/positions.csv`: current paper holdings with mark-to-market P&L,
+  ATR-derived stop/target levels, stage, RSI, and relative strength.
+- `paper/daily_pnl.csv`: daily NAV, P&L, returns, drawdown, cash, and exposure.
+- `paper/trades.csv`: replayed EOD signal fills with notional, fees, slippage,
+  and cash effect.
+- `paper/agent_actions.jsonl`: append-only audit rows for the strategy
+  selection, portfolio manager, trading, monitoring, and report agents.
+
 ## Components
 
 - Strategy schema/compiler: validates strategy JSON against a static grammar,
@@ -88,13 +105,16 @@ The CLI writes these files below the selected `--output-dir`:
   `market.equity_eod`, joins historical stages from `scores.stage_snapshots`,
   runs each built-in strategy independently, compares to `Nifty 500`, and writes
   a leaderboard with return, drawdown, profit factor, expectancy, turnover, and
-  cost drag.
+  cost drag. It then selects the top ranked active strategy and publishes a
+  paper-only daily portfolio package with holdings, P&L, trade log, risk levels,
+  and agent action logs.
 
 ## Current Limits And Backlog
 
 - `replay` still uses fixture/default data by default; real EOD NSE data is
   available through the `strategy-lab` command.
-- LLM strategy proposer agents and monitoring agents are not part of PT-0.
+- LLM strategy proposer agents are not part of PT-0; the current agent actions
+  are deterministic audit records around the paper-only engine.
 - There is no live trading or broker integration. Keep the engine paper-only
   unless a later design explicitly adds a broker path.
 - Later PT-1+ backlog work is expected to add LLM proposal validation, portfolio

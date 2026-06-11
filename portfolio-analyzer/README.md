@@ -7,7 +7,8 @@ LLM + rules-based AI agent for portfolio analysis: ingest CDSL/NSDL and PnL repo
 - **CAS / CDSL report:** PDF (e.g. `NSDLe-CAS_*.pdf`) or CSV export of current holdings. If the CAS PDF is **password-protected**, set `CAS_PDF_PASSWORD` in the environment so Phase 0 can extract holdings; otherwise export holdings to `holdings_export.csv` manually.
 - **PnL report:** CSV (e.g. `*_EQProfitLossDetails.csv`) with equity profit/loss by trade.
 
-Place inputs in `portfolio-analyzer/` or set paths in `config.py`.
+Place inputs in `portfolio-analyzer/`, set paths in `config.py`, or use `run_portfolio.py`
+to pass a friend's files without editing config.
 
 ## Phases (step-by-step)
 
@@ -32,17 +33,46 @@ See **PORTFOLIO_ANALYZER_DESIGN.md** for full architecture, risk metrics, scenar
 ```bash
 # From repo root
 cd "Unified-NSE-Analysis"
-python portfolio-analyzer/phase0_ingest.py   # Ingest PnL (and optional holdings)
-python portfolio-analyzer/phase1_pnl_summary.py
+python3 portfolio-analyzer/phase0_ingest.py   # Ingest PnL (and optional holdings)
 # ... then phase2–6 or run full pipeline via agent
 ```
+
+## Run another portfolio
+
+Use `run_portfolio.py` for friends or alternate accounts. Each run writes to a
+separate folder under `portfolio-analyzer/runs/<name>/`, so it will not overwrite
+your existing `portfolio-analyzer/output/` report.
+
+```bash
+python3 portfolio-analyzer/run_portfolio.py \
+  --name friend_amit \
+  --pnl ~/Downloads/friend_EQProfitLossDetails.csv \
+  --cas ~/Downloads/friend_CAS.pdf
+```
+
+If the CAS PDF is hard to parse, provide a manual holdings CSV instead:
+
+```bash
+python3 portfolio-analyzer/run_portfolio.py \
+  --name friend_amit \
+  --holdings ~/Downloads/friend_holdings.csv \
+  --no-sentiment \
+  --llm-mapping
+```
+
+`--no-sentiment` skips web/LLM sentiment for a faster local-only report.
+`--pnl` is optional for holdings-only files; if omitted, realized P&L sections
+are generated as empty/zero and the report focuses on current holdings.
+`--llm-mapping` reads `OPENAI_API_KEY` from `.env` and uses GPT-4o only for
+unresolved/ambiguous broker-symbol mappings; accepted model mappings are
+recorded in `holdings.csv` with method, score, matched name, and rationale.
 
 ## Agent (interactive)
 
 Requires Ollama (e.g. `ollama pull granite4`) or OpenAI-compatible API. Agent can run phases, **run market sentiment** (search + LLM), and **web search** for one-off lookups.
 
 ```bash
-python portfolio-analyzer/agent.py
+python3 portfolio-analyzer/agent.py
 # Then: "Run full pipeline", "Run Phase 0 and 1", "Run Phase 7 risk", "Run market sentiment", "Web search Nifty outlook India 2026", "List outputs", etc.
 ```
 

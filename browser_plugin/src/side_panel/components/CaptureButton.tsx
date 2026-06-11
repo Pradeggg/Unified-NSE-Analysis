@@ -6,29 +6,56 @@
 interface CaptureButtonProps {
   disabled: boolean;
   capturing: boolean;
+  analysing: boolean;
   capturedAt: string | null;
-  onCapture: () => void;
+  onCapture: (mode?: "visible" | "area") => void;
 }
 
 export function CaptureButton({
-  disabled, capturing, capturedAt, onCapture,
+  disabled, capturing, analysing, capturedAt, onCapture,
 }: CaptureButtonProps) {
-  const label = capturing ? "Capturing…" : "📷  Capture Chart";
-  const sub = capturedAt
-    ? `Last capture: ${new Date(capturedAt).toLocaleTimeString("en-IN")}`
-    : "No capture yet — analysis requires a capture first";
+  const active = capturing || analysing;
+  const status = capturing
+    ? "Capturing visible chart"
+    : analysing
+      ? "Reading candles, indicators, and levels"
+      : capturedAt
+        ? `Captured ${new Date(capturedAt).toLocaleTimeString("en-IN")}`
+        : "Ready to capture the visible chart";
+  const buttonLabel = capturedAt ? "Recapture Chart" : "Capture Chart";
 
   return (
     <div className="capture-section">
+      <div className={`capture-card ${active ? "capture-card--active" : ""} ${capturedAt ? "capture-card--done" : ""}`}>
+        <div className="capture-preview" aria-hidden="true">
+          <span className="capture-preview-bar capture-preview-bar--top" />
+          <span className="capture-preview-candle capture-preview-candle--one" />
+          <span className="capture-preview-candle capture-preview-candle--two" />
+          <span className="capture-preview-candle capture-preview-candle--three" />
+          <span className="capture-preview-level" />
+          {active && <span className="capture-scanline" />}
+        </div>
+        <div className="capture-copy">
+          <span className="capture-title">Screenshot capture</span>
+          <span className="capture-status">{status}</span>
+        </div>
+      </div>
       <button
         className="capture-btn"
-        onClick={onCapture}
-        disabled={disabled || capturing}
+        onClick={() => onCapture("visible")}
+        disabled={disabled || active}
         aria-label="Capture visible chart for analysis"
       >
-        {label}
+        {capturing ? "Capturing..." : analysing ? "Analyzing..." : buttonLabel}
       </button>
-      <p className="capture-hint">{sub}</p>
+      <button
+        className="capture-area-btn"
+        onClick={() => onCapture("area")}
+        disabled={disabled || active}
+        aria-label="Select chart area for analysis"
+      >
+        Select Area
+      </button>
     </div>
   );
 }

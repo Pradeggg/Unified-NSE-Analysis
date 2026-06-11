@@ -443,6 +443,94 @@ def _fallback_subject_body(report_name: str, report_text: str, reason: str = "")
     return subject, body
 
 
+def _top_picks_explainer_html() -> str:
+    """Deterministic explainer appended to Top Picks emails.
+
+    The LLM can summarize this away when the report is attached. Keep this
+    block deterministic so recipients always see the selection logic in the
+    email body, not only inside the attachment.
+    """
+    return textwrap.dedent("""
+        <div style="font-family:Arial,Helvetica,sans-serif;border:1px solid #dbeafe;
+                    border-left:4px solid #2563eb;background:#f8fbff;
+                    padding:14px 16px;margin:16px 0;border-radius:8px;color:#1f2937;">
+          <h3 style="margin:0 0 8px;font-size:16px;color:#1e3a8a;">
+            How the Top Picks are identified
+          </h3>
+          <p style="margin:0 0 10px;font-size:13px;line-height:1.55;">
+            The Top Picks list is a research shortlist built from multiple independent confirmations,
+            not a single buy signal. The ranking looks for stocks where market structure, sector
+            leadership, price action, strategy evidence, fundamentals, and risk/reward point in the
+            same direction.
+          </p>
+          <table cellpadding="0" cellspacing="0" border="0" width="100%"
+                 style="border-collapse:collapse;font-size:13px;line-height:1.5;">
+            <tr>
+              <td style="padding:6px 8px;border-top:1px solid #e5e7eb;width:34%;font-weight:bold;color:#334155;">
+                Sector rotation
+              </td>
+              <td style="padding:6px 8px;border-top:1px solid #e5e7eb;color:#334155;">
+                Preference goes to strong stocks inside leading sectors, not isolated one-day movers.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:6px 8px;border-top:1px solid #e5e7eb;font-weight:bold;color:#334155;">
+                Weinstein Stage 2 / VCP
+              </td>
+              <td style="padding:6px 8px;border-top:1px solid #e5e7eb;color:#334155;">
+                Stage 2 means an advancing uptrend after a base; VCP means volatility has contracted
+                before a potential breakout.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:6px 8px;border-top:1px solid #e5e7eb;font-weight:bold;color:#334155;">
+                Portfolio Strategy Lab
+              </td>
+              <td style="padding:6px 8px;border-top:1px solid #e5e7eb;color:#334155;">
+                Extra weight is given when the best-ranked paper strategy marks the stock as an open
+                position or next BUY.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:6px 8px;border-top:1px solid #e5e7eb;font-weight:bold;color:#334155;">
+                Risk and quality checks
+              </td>
+              <td style="padding:6px 8px;border-top:1px solid #e5e7eb;color:#334155;">
+                The final rank considers relative strength, trend quality, targets, stop-loss,
+                reward-to-risk, leverage, profitability, cash-flow quality, and valuation.
+              </td>
+            </tr>
+          </table>
+          <h3 style="margin:14px 0 8px;font-size:15px;color:#1e3a8a;">
+            Weinstein stage framework
+          </h3>
+          <ul style="margin:0 0 10px;padding-left:18px;font-size:13px;line-height:1.55;color:#334155;">
+            <li><b>Stage 1 - Base / Accumulation:</b> sideways action after a decline; watchlist phase.</li>
+            <li><b>Stage 2 - Advancing / Uptrend:</b> breakout above the base with rising averages and improving relative strength; preferred long-only buying zone.</li>
+            <li><b>Stage 3 - Top / Distribution:</b> volatility near highs and fading momentum; caution phase.</li>
+            <li><b>Stage 4 - Decline / Downtrend:</b> price below key averages with lower highs/lows; usually avoided by long-only systems.</li>
+          </ul>
+          <p style="margin:0;font-size:12px;line-height:1.5;color:#64748b;">
+            A high-ranked pick is a research shortlist candidate, not direct investment advice.
+            Use the attached report for the full chart, fundamentals, targets, stops, and risk details.
+          </p>
+        </div>
+    """).strip()
+
+
+def _is_top_picks_key(report_key: str) -> bool:
+    return report_key.lower() in {
+        "top_picks", "top-picks", "picks", "investment-picks", "top_picks_report"
+    }
+
+
+def _ensure_top_picks_body_explainer(html_body: str) -> str:
+    marker = "How the Top Picks are identified"
+    if marker.lower() in (html_body or "").lower():
+        return html_body
+    return (html_body or "") + _top_picks_explainer_html()
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # HTML envelope
 # ─────────────────────────────────────────────────────────────────────────────
@@ -597,6 +685,8 @@ def run_email_command(text: str, agent: Any) -> dict:
             mode=cmd.mode,
             note=cmd.note,
         )
+    if _is_top_picks_key(cmd.report_arg):
+        body_html = _ensure_top_picks_body_explainer(body_html)
     if cmd.subject:
         subject = cmd.subject[:160]
     full_body = _wrap_envelope(body_html, cmd.report_path, cmd.mode)
@@ -765,8 +855,8 @@ def send_report_email(
     report_text = extract_report_text(report_path)
     # PG 2026-05-31: top_picks-specific guidance so the LLM email body
     # leads with the picks, sector tilt, risk, and 2M/4M/6M targets.
-    if report_key.lower() in {"top_picks", "top-picks", "picks",
-                              "investment-picks", "top_picks_report"} and not note:
+    is_top_picks = _is_top_picks_key(report_key)
+    if is_top_picks and not note:
         note = (
             "This is the daily Top Investment Picks Analysis. The email body must: "
             "(a) open with a 1-line market read and the snapshot date, "
@@ -788,6 +878,8 @@ def send_report_email(
         subj_gen, body_html = _llm_generate(
             agent_shim.backend, report_path.name, report_text, mode=mode, note=note
         )
+    if is_top_picks:
+        body_html = _ensure_top_picks_body_explainer(body_html)
     final_subject = (subject[:160] if subject else subj_gen)
     full_body = _wrap_envelope(body_html, report_path, mode)
 

@@ -7,6 +7,7 @@ from unittest.mock import patch
 import terminal.data_readiness as data_readiness
 from terminal.data_readiness import (
     append_readiness_metadata,
+    DataReadinessStatus,
     execute_refresh_plan,
     handle_data_readiness_command,
     inspect_data_readiness,
@@ -129,6 +130,39 @@ class DataReadinessTests(unittest.TestCase):
         self.assertTrue(status.needs_refresh)
         self.assertEqual(plan.action, "run_refresh")
         self.assertIn("daily_refresh.py", " ".join(plan.command))
+
+    def test_postgres_connection_error_plans_local_start_before_full_refresh(self):
+        status = DataReadinessStatus(
+            db_path=Path("PostgreSQL:scores.stage_snapshots"),
+            status="missing",
+            blockers=(
+                'postgres_error:connection to server on socket "/tmp/.s.PGSQL.5432" failed',
+            ),
+            needs_refresh=True,
+        )
+
+        plan = plan_refresh(status, project_root=Path("/tmp/project"))
+
+        self.assertEqual(plan.action, "start_postgres")
+        self.assertIn("postgres/start_pg.sh", " ".join(str(part) for part in plan.command))
+        self.assertNotIn("daily_refresh.py", " ".join(str(part) for part in plan.command))
+
+    def test_render_readiness_panel_does_not_claim_required_tables_ready_on_pg_error(self):
+        status = DataReadinessStatus(
+            db_path=Path("PostgreSQL:scores.stage_snapshots"),
+            status="missing",
+            blockers=("postgres_error:connection failed",),
+            needs_refresh=True,
+        )
+
+        with patch(
+            "terminal.postgres_tools.get_postgres_health",
+            return_value={"status": "error", "missing_tables": []},
+        ):
+            panel = render_readiness_panel(status, plan_refresh(status, project_root=Path("/tmp/project")))
+
+        self.assertIn("PostgreSQL: error · schema unavailable", panel)
+        self.assertNotIn("required tables ready", panel)
 
     def test_stale_db_plans_refresh(self):
         with tempfile.TemporaryDirectory() as td:

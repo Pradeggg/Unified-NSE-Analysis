@@ -140,17 +140,135 @@ def parse_pnl_csv(path: Path) -> tuple[pd.DataFrame, dict]:
     return df, meta
 
 
+def _clean_numeric_series(series: pd.Series) -> pd.Series:
+    cleaned = (
+        series.astype(str)
+        .str.strip()
+        .str.replace(",", "", regex=False)
+        .str.replace(r"^\((.*)\)$", r"-\1", regex=True)
+        .str.replace(r"^\+\s*", "", regex=True)
+        .str.replace(r"^-\s+", "-", regex=True)
+    )
+    return pd.to_numeric(cleaned, errors="coerce")
+
+
 def load_holdings_csv(path: Path) -> pd.DataFrame | None:
     """Load holdings from a CSV (Symbol, ISIN, Quantity, etc.). Returns None if file missing or empty."""
     if not path.exists():
         return None
     df = pd.read_csv(path)
-    # Normalize column names
-    cols = {c.lower().strip(): c for c in df.columns}
-    if "symbol" not in cols and "stock symbol" in [c.lower() for c in df.columns]:
-        df = df.rename(columns={c: "symbol" for c in df.columns if "symbol" in c.lower()})
     if df.empty:
         return None
+    df = df.dropna(axis=1, how="all")
+
+    normalized: dict[str, str] = {}
+    for c in df.columns:
+        key = str(c).lower().strip()
+        key = re.sub(r"\s+", " ", key)
+        if key in ("symbol", "stock symbol", "scrip", "scrip code"):
+            normalized[c] = "symbol"
+        elif key in ("isin", "isin code"):
+            normalized[c] = "isin"
+        elif key in ("qty", "quantity", "qty."):
+            normalized[c] = "quantity"
+        elif key in ("value_rs", "value", "market value", "value at market price", "amount"):
+            normalized[c] = "value_rs"
+        elif key in ("current market price", "current price", "market price", "ltp"):
+            normalized[c] = "current_price"
+        elif key in ("average cost price", "average price", "avg cost", "avg price"):
+            normalized[c] = "average_cost_price"
+        elif key == "company name":
+            normalized[c] = "company_name"
+
+    df = df.rename(columns=normalized)
+    if "symbol" in df.columns:
+        df["symbol"] = df["symbol"].astype(str).str.strip().str.upper()
+        df["broker_symbol"] = df["symbol"]
+    if "isin" in df.columns:
+        df["isin"] = df["isin"].astype(str).str.strip().str.upper()
+    for col in ("quantity", "value_rs", "current_price", "average_cost_price"):
+        if col in df.columns:
+            df[col] = _clean_numeric_series(df[col])
+    if "value_rs" not in df.columns and {"quantity", "current_price"}.issubset(df.columns):
+        df["value_rs"] = df["quantity"].fillna(0) * df["current_price"].fillna(0)
+    if "quantity" in df.columns:
+        df = df[df["quantity"].fillna(0) > 0]
+    if df.empty:
+        return None
+    if "symbol" in df.columns:
+        try:
+            from portfolio_symbol_mapper import resolve_symbol
+
+            mapped_symbols = []
+            methods = []
+            scores = []
+            matched_names = []
+            for _, row in df.iterrows():
+                match = resolve_symbol(
+                    broker_symbol=row.get("broker_symbol") or row.get("symbol"),
+                    company_name=row.get("company_name") or "",
+                )
+                mapped_symbols.append(match.symbol)
+                methods.append(match.method)
+                scores.append(round(match.score, 4))
+                matched_names.append(match.matched_name)
+            df["symbol"] = mapped_symbols
+            df["symbol_mapping_method"] = methods
+            df["symbol_mapping_score"] = scores
+            df["symbol_mapping_name"] = matched_names
+        except Exception:
+            df["symbol_mapping_method"] = "not_attempted"
+            df["symbol_mapping_score"] = 0.0
+            df["symbol_mapping_name"] = ""
+    return df
+
+
+def apply_llm_symbol_mapping(
+    holdings_df: pd.DataFrame,
+    *,
+    model: str = "gpt-4o",
+) -> pd.DataFrame:
+    """Use GPT-4o to adjudicate rows not confidently mapped by local rules."""
+    if holdings_df is None or holdings_df.empty or "symbol_mapping_method" not in holdings_df.columns:
+        return holdings_df
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+    except Exception:
+        pass
+    try:
+        from openai import OpenAI
+        from portfolio_symbol_mapper import resolve_symbol_with_llm
+    except Exception:
+        holdings_df["llm_mapping_status"] = "unavailable"
+        return holdings_df
+
+    client = OpenAI()
+    df = holdings_df.copy()
+    statuses = []
+    rationales = []
+    for idx, row in df.iterrows():
+        method = str(row.get("symbol_mapping_method") or "")
+        if method not in {"unmapped", "ambiguous"}:
+            statuses.append("not_needed")
+            rationales.append("")
+            continue
+        match = resolve_symbol_with_llm(
+            broker_symbol=row.get("broker_symbol") or row.get("symbol"),
+            company_name=row.get("company_name") or "",
+            client=client,
+            model=model,
+        )
+        statuses.append(match.method)
+        rationales.append(match.rationale)
+        if match.method == "llm":
+            df.at[idx, "symbol"] = match.symbol
+            df.at[idx, "symbol_mapping_method"] = "llm"
+            df.at[idx, "symbol_mapping_score"] = match.score
+            df.at[idx, "symbol_mapping_name"] = match.matched_name
+    df["llm_mapping_status"] = statuses
+    df["llm_mapping_rationale"] = rationales
     return df
 
 
@@ -228,10 +346,16 @@ def extract_holdings_from_cas_pdf(pdf_path: Path, password: str | None = None) -
         return None
 
 
+_DEFAULT = object()
+
+
 def run_phase0(
-    pnl_csv: Path | None = None,
+    pnl_csv: Path | None | object = _DEFAULT,
     holdings_csv: Path | None = None,
     cas_pdf: Path | None = None,
+    require_pnl: bool = True,
+    use_llm_mapping: bool = False,
+    llm_mapping_model: str = "gpt-4o",
 ) -> tuple[pd.DataFrame, pd.DataFrame | None, dict]:
     """
     Run Phase 0 ingest.
@@ -240,11 +364,27 @@ def run_phase0(
     - cas_pdf: optional CAS PDF (parsing not implemented yet; use holdings_csv for now).
     Returns (closed_pnl_df, holdings_df_or_none, portfolio_summary).
     """
-    pnl_path = pnl_csv or PNL_CSV
-    if not pnl_path.exists():
+    pnl_path = PNL_CSV if pnl_csv is _DEFAULT else pnl_csv
+    closed_pnl_columns = [
+        "symbol",
+        "isin",
+        "qty",
+        "purchase_date",
+        "purchase_rate",
+        "purchase_value",
+        "sale_date",
+        "sale_rate",
+        "sale_value",
+        "pnl",
+        "tenure_bucket",
+    ]
+    if pnl_path is not None and Path(pnl_path).exists():
+        closed_pnl, meta = parse_pnl_csv(Path(pnl_path))
+    elif require_pnl:
         raise FileNotFoundError(f"PnL CSV not found: {pnl_path}")
-
-    closed_pnl, meta = parse_pnl_csv(pnl_path)
+    else:
+        closed_pnl = pd.DataFrame(columns=closed_pnl_columns)
+        meta = {"account_id": "", "account_name": "", "report_type": "Holdings only"}
     OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
 
     # Closed PnL output
@@ -269,6 +409,8 @@ def run_phase0(
     if holdings_path.exists():
         holdings_df = load_holdings_csv(holdings_path)
         if holdings_df is not None and not holdings_df.empty:
+            if use_llm_mapping:
+                holdings_df = apply_llm_symbol_mapping(holdings_df, model=llm_mapping_model)
             holdings_df.to_csv(HOLDINGS_CSV_OUT, index=False)
             summary["holdings_count"] = len(holdings_df)
             summary["holdings_source"] = "holdings_export.csv"
@@ -284,6 +426,8 @@ def run_phase0(
             pdf_password = __import__("os").environ.get("CAS_PDF_PASSWORD")
             holdings_df = extract_holdings_from_cas_pdf(Path(pdf_path), password=pdf_password)
             if holdings_df is not None and not holdings_df.empty:
+                if use_llm_mapping:
+                    holdings_df = apply_llm_symbol_mapping(holdings_df, model=llm_mapping_model)
                 holdings_df.to_csv(HOLDINGS_CSV_OUT, index=False)
                 summary["holdings_count"] = len(holdings_df)
                 summary["holdings_source"] = "CAS PDF"

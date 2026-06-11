@@ -1,7 +1,7 @@
 // ChatPanel — conversational interface bound to the active chart capture context.
 
 import { useState, useRef, useEffect } from "react";
-import type { ChatTurn, AnalysisResult } from "../../types";
+import type { ChatTurn, AnalysisResult, Exchange, Timeframe } from "../../types";
 import { ResultCard } from "./ResultCard";
 
 interface ChatPanelProps {
@@ -9,19 +9,29 @@ interface ChatPanelProps {
   captureId: string | null;
   /** The initial analysis auto-fired after capture (shown as first assistant turn) */
   initialAnalysis?: string;
+  symbol: string;
+  exchange: Exchange;
+  timeframe: Timeframe;
   onSend: (question: string) => Promise<AnalysisResult | null>;
 }
 
 const SUGGESTED: string[] = [
-  "What is the intraday setup?",
-  "Where is the stop loss?",
-  "Give targets if resistance breaks",
-  "Simulate bear case",
-  "Is there EMA compression?",
-  "What does RSI say?",
+  "Intraday long/short setup",
+  "Support, resistance, invalidation",
+  "Targets with R:R",
+  "Volume and RSI read",
+  "Bull case vs bear case",
+  "What would make this trade invalid?",
 ];
 
-export function ChatPanel({ captureId, initialAnalysis, onSend }: ChatPanelProps) {
+export function ChatPanel({
+  captureId,
+  initialAnalysis,
+  symbol,
+  exchange,
+  timeframe,
+  onSend,
+}: ChatPanelProps) {
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -86,14 +96,14 @@ export function ChatPanel({ captureId, initialAnalysis, onSend }: ChatPanelProps
 
       {locked && (
         <div className="chat-locked">
-          <p>📷 Capture a chart first to enable analysis</p>
+          <p>Capture a chart first to enable analysis</p>
         </div>
       )}
 
       <div className="chat-history" aria-live="polite">
         {turns.length === 0 && !locked && (
           <div className="chat-suggestions">
-            <p className="panel-note">Suggested questions:</p>
+            <p className="panel-note">Ask Agent Adda:</p>
             {SUGGESTED.map((q) => (
               <button
                 key={q}
@@ -115,9 +125,9 @@ export function ChatPanel({ captureId, initialAnalysis, onSend }: ChatPanelProps
               <ResultCard
                 result={{
                   capture_id: captureId ?? "",
-                  symbol: "",
-                  exchange: "NSE",
-                  timeframe: "5m",
+                  symbol,
+                  exchange,
+                  timeframe,
                   answer: turn.content,
                   key_levels: {
                     support: null, resistance: null, ema20: null,
@@ -152,7 +162,7 @@ export function ChatPanel({ captureId, initialAnalysis, onSend }: ChatPanelProps
         <input
           className="chat-input"
           type="text"
-          placeholder={locked ? "Capture a chart first…" : "Ask about this chart…"}
+          placeholder={locked ? "Capture a chart first..." : "Ask support, targets, stop, volume, RSI..."}
           value={input}
           disabled={locked || loading}
           onChange={(e) => setInput(e.target.value)}

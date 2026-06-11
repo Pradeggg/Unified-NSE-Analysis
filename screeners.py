@@ -13,6 +13,8 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
+from price_adjustments import adjust_price_history_for_splits
+
 
 # ---------------------------------------------------------------------------
 # Stage definitions
@@ -143,7 +145,7 @@ def enrich_with_stage(
     hist_all["TIMESTAMP"] = pd.to_datetime(hist_all["TIMESTAMP"])
 
     hist_groups = {
-        sym: grp.sort_values("TIMESTAMP")
+        sym: adjust_price_history_for_splits(grp.sort_values("TIMESTAMP"))
         for sym, grp in hist_all.groupby("SYMBOL", sort=False)
     }
 

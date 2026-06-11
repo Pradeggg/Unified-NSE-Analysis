@@ -210,6 +210,13 @@ def _load_stage_snapshots(conn: Any, *, lookback_date: str, end_date: str | None
 
 def _load_vcp_picks(conn: Any, *, lookback_date: str, end_date: str | None, symbols: list[str]) -> pd.DataFrame:
     end_clause = "AND snapshot_date <= %(end_date)s" if end_date else ""
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT to_regclass('scores.stage2_vcp_picks')")
+            if cur.fetchone()[0] is None:
+                return pd.DataFrame()
+    except Exception:
+        return pd.DataFrame()
     return pd.read_sql_query(
         f"""
         SELECT

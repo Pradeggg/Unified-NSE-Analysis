@@ -45,6 +45,23 @@ run_case() {
     pass=$((pass + 1))
 }
 
+run_pytest_case() {
+    local name="$1"
+    local log="$LOG_DIR/${name// /_}.log"
+    printf "── %-55s " "$name"
+    AGENT_ADDA_SKILL_STORE=1 "$PY" -m pytest tests/test_skill_store_e2e.py -q \
+        > "$log" 2>&1 || true
+
+    if grep -qE "failed|ERROR|Traceback" "$log"; then
+        printf "FAIL  (skill-store pytest failed)\n"
+        echo "    log: $log"
+        fail=$((fail + 1))
+        return
+    fi
+    printf "PASS\n"
+    pass=$((pass + 1))
+}
+
 echo "Agent Adda — user-flow smoke ($(date '+%Y-%m-%d %H:%M:%S'))"
 echo
 
@@ -85,6 +102,10 @@ run_case "collective reference resolution"          \
     "top gainers ; fundamentals for the above"      \
     ""                                              \
     "THE%20ABOVE|company/THE ABOVE"
+
+if [[ "${AGENT_ADDA_SKILL_STORE:-0}" =~ ^(1|true|TRUE|yes|YES|on|ON)$ ]]; then
+    run_pytest_case "skill store e2e assessment traces"
+fi
 
 echo
 echo "─────────────────────────────────────────────────────────────"

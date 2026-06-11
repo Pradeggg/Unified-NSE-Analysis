@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import patch
 
 from terminal.agent import Agent, SYSTEM_PROMPT, _keyword_intent, _required_tools_for_query, _split_compound_query
+from terminal.renderers.narrator import NARRATION_INTENTS
 from terminal.situation_assessment import TurnContext
 from terminal.tools import compare_stocks
 from terminal.deliberation import build_hypotheses, build_plan, evaluate_evidence, render_final_answer
@@ -289,6 +290,185 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertIn("TOP STOCK MOVERS", result["answer"])
         self.assertIn("AAA +5.20%", result["answer"])
         self.assertNotIn("INDIN", result["answer"].upper())
+
+    def test_market_breadth_question_gets_direct_breadth_verdict(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {
+                    "tool": "get_live_market_overview",
+                    "args": {},
+                    "result": {
+                        "source": "NSE live API",
+                        "as_of": "2026-06-08 09:30:00",
+                        "indices": {
+                            "NIFTY 50": {"last": 25100.0, "pct_change": 0.1},
+                        },
+                        "adv_dec": {"advances": 1101, "declines": 1317},
+                        "top_sectors": [{"name": "NIFTY PSU BANK", "pct_change": 1.2}, {"name": "NIFTY PHARMA", "pct_change": 0.8}],
+                    },
+                },
+                {
+                    "tool": "get_market_breadth",
+                    "args": {},
+                    "result": {
+                        "snapshot_date": "2026-06-05",
+                        "total_stocks": 2457,
+                        "advances": 1101,
+                        "declines": 1317,
+                        "ad_ratio": 0.84,
+                        "avg_rs_pct": -0.4,
+                        "rs_percentiles": {"p10": -12.0, "p25": -4.0, "p50": 8.0, "p75": 35.0, "p90": 72.0},
+                        "rs_distribution": {
+                            "negative": {"label": "RS < 0", "count": 620, "pct": 25.2},
+                            "neutral_0_25": {"label": "RS 0-25", "count": 840, "pct": 34.2},
+                            "positive_25_50": {"label": "RS 25-50", "count": 540, "pct": 22.0},
+                            "strong_50_plus": {"label": "RS >= 50", "count": 457, "pct": 18.6},
+                        },
+                        "stage_distribution": {
+                            "STAGE_1": 600,
+                            "STAGE_2": 344,
+                            "STAGE_3": 899,
+                            "STAGE_4": 614,
+                        },
+                    },
+                },
+            ]
+
+            result = agent.query("how is the market breadth")
+
+        self.assertIn(result["intent"], ("market_situation", "market_situation_assessment", "market_overview"))
+        self.assertIn("▶ BREADTH VERDICT", result["answer"])
+        self.assertIn("Market breadth is weak/negative", result["answer"])
+        self.assertIn("1101 advances vs 1317 declines", result["answer"])
+        self.assertIn("A/D ratio is 0.84", result["answer"])
+        self.assertIn("Stage 2 uptrends are 14%", result["answer"])
+        self.assertIn("Stage 4 downtrends are 25%", result["answer"])
+        self.assertIn("▶ RS DISTRIBUTION", result["answer"])
+        self.assertIn("p50 8.0%", result["answer"])
+        self.assertIn("RS >= 50: 457", result["answer"])
+        self.assertIn("NIFTY PSU BANK", result["answer"])
+        self.assertIn("NIFTY PHARMA", result["answer"])
+
+    def test_market_situation_intents_are_eligible_for_llm_narration(self):
+        self.assertIn("market_situation_assessment", NARRATION_INTENTS)
+        self.assertIn("market_overview", NARRATION_INTENTS)
+        self.assertIn("market_situation", NARRATION_INTENTS)
+
+    def test_market_analysis_with_swing_candidates_routes_to_market_swing_plan(self):
+        examples = [
+            "last 3 months market analysis and swing candidates",
+            "swing trades opportunities",
+            "swing trade opportunities",
+            "swing trading opportunities",
+            "swing opportunities",
+        ]
+
+        for query in examples:
+            with self.subTest(query=query):
+                routed = _keyword_intent(query, data_mode="historical")
+
+                self.assertEqual(routed["intent"], "market_swing_candidates")
+                self.assertEqual(
+                    routed["plan"],
+                    [
+                        ("get_index_snapshot", {"index_name": "NIFTY 50"}),
+                        ("get_index_snapshot", {"index_name": "NIFTY MIDCAP 100"}),
+                        ("get_market_breadth", {}),
+                        ("run_quality_breakout_screener", {"top_n": 15, "mode": "balanced"}),
+                    ],
+                )
+                self.assertNotIn("resolve_symbol", str(routed))
+                self.assertNotIn("'and'", str(routed).lower())
+                self.assertNotIn("TRADES", str(routed))
+                self.assertNotIn("OPPORTUNITIES", str(routed))
+
+    def test_agent_market_swing_candidates_renders_market_and_candidate_evidence(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {
+                    "tool": "get_index_snapshot",
+                    "args": {"index_name": "NIFTY 50"},
+                    "result": {
+                        "index": "NIFTY 50",
+                        "as_of": "2026-06-05",
+                        "close": 25100.0,
+                        "chg_pct": 0.45,
+                        "trend_10d": {"chg_pct": 2.1, "up_days": 7, "closes": [1, 2]},
+                    },
+                },
+                {
+                    "tool": "get_index_snapshot",
+                    "args": {"index_name": "NIFTY MIDCAP 100"},
+                    "result": {
+                        "index": "NIFTY MIDCAP 100",
+                        "as_of": "2026-06-05",
+                        "close": 58000.0,
+                        "chg_pct": 0.8,
+                        "trend_10d": {"chg_pct": 3.4, "up_days": 8, "closes": [1, 2]},
+                    },
+                },
+                {
+                    "tool": "get_market_breadth",
+                    "args": {},
+                    "result": {
+                        "snapshot_date": "2026-06-05",
+                        "advances": 900,
+                        "declines": 500,
+                        "ad_ratio": 1.8,
+                        "avg_rs_pct": 6.1,
+                        "stage_distribution": {"STAGE_2": 640},
+                    },
+                },
+                {
+                    "tool": "run_quality_breakout_screener",
+                    "args": {"top_n": 15, "mode": "balanced"},
+                    "result": {
+                        "screen_type": "quality_breakouts",
+                        "snapshot_date": "2026-06-05",
+                        "mode": "balanced",
+                        "source_counts": {"new_highs": 20, "momentum_52w": 15, "tight_range": 8, "breakouts": 5},
+                        "merged_count": 35,
+                        "passed_count": 2,
+                        "count": 2,
+                        "results": [
+                            {
+                                "symbol": "AAA",
+                                "setup_tags": ["Breakout"],
+                                "stage": "STAGE_2",
+                                "trading_signal": "BUY",
+                                "rs": 42.0,
+                                "rsi": 63.0,
+                                "enhanced_fund_score": 78.0,
+                                "investment_score": 81.0,
+                                "composite_score": 88.5,
+                                "sector": "Capital Goods",
+                                "reason_tags": ["stage 2", "quality"],
+                                "risk_flags": [],
+                            }
+                        ],
+                        "tradingview_symbols": ["NSE:AAA"],
+                    },
+                },
+            ]
+
+            result = agent.query("last 3 months market analysis and swing candidates")
+
+        execute_plan.assert_called_once()
+        self.assertEqual(result["intent"], "market_swing_candidates")
+        self.assertIn("MARKET + SWING CANDIDATES", result["answer"])
+        self.assertIn("NIFTY 50", result["answer"])
+        self.assertIn("NIFTY MIDCAP 100", result["answer"])
+        self.assertIn("QUALITY BREAKOUTS", result["answer"])
+        self.assertIn("NSE:AAA", result["answer"])
+        self.assertNotIn("AND (AND)", result["answer"])
 
     def test_contextual_stage2_last_30_question_answers_from_prior_turn(self):
         agent = Agent()
@@ -910,6 +1090,63 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertIn(("resolve_symbol", {"query": "TATASTEEL"}), routed["plan"])
         self.assertIn(("run_forensic_analysis", {"symbol": "TATASTEEL"}), routed["plan"])
 
+    def test_forensic_screen_my_portfolio_typo_routes_to_portfolio_tool_not_screen_symbol(self):
+        for query in ("forensic screen my portfolio", "forensic screen my porfolio"):
+            with self.subTest(query=query):
+                routed = _keyword_intent(query)
+
+                self.assertEqual(routed["intent"], "portfolio_forensic_review")
+                self.assertEqual(routed["plan"], [("screen_portfolio_forensic_watchlist", {})])
+                self.assertNotIn("'SCREEN'", str(routed).upper())
+                self.assertNotIn("resolve_symbol", str(routed))
+
+    def test_agent_forensic_screen_my_portfolio_renders_portfolio_watchlist(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {
+                    "tool": "screen_portfolio_forensic_watchlist",
+                    "args": {},
+                    "result": {
+                        "portfolio_source": "portfolio-analyzer/output/holdings.csv",
+                        "symbols": ["ALKEM", "RELIANCE"],
+                        "count": 2,
+                        "high_risk": ["ALKEM"],
+                        "moderate_risk": [],
+                        "low_risk": ["RELIANCE"],
+                        "results": [
+                            {
+                                "symbol": "ALKEM",
+                                "overall_risk": "high",
+                                "risk_score": 80,
+                                "beneish_score": -1.2,
+                                "piotroski_score": 4,
+                                "altman_score": 1.0,
+                            },
+                            {
+                                "symbol": "RELIANCE",
+                                "overall_risk": "low",
+                                "risk_score": 20,
+                                "beneish_score": -2.8,
+                                "piotroski_score": 8,
+                                "altman_score": 3.2,
+                            },
+                        ],
+                    },
+                }
+            ]
+
+            result = agent.query("forensic screen my porfolio")
+
+        self.assertEqual(result["intent"], "portfolio_forensic_review")
+        self.assertIn("PORTFOLIO FORENSIC", result["answer"])
+        self.assertIn("ALKEM", result["answer"])
+        self.assertIn("RELIANCE", result["answer"])
+        self.assertNotIn("SCREEN — FORENSIC", result["answer"])
+
     def test_agent_forensic_prompt_renders_three_scores_without_validation_failure(self):
         agent = Agent()
         agent.backend = object()
@@ -976,10 +1213,25 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
 
         self.assertEqual(routed["intent"], "stock_brief")
         self.assertEqual(routed["plan"][0], ("resolve_symbol", {"query": "TATASTEEL"}))
+        self.assertIn(("get_cached_financials", {"symbol": "TATASTEEL"}), routed["plan"])
         self.assertIn(("scrape_screener_in", {"symbol": "TATASTEEL"}), routed["plan"])
+        self.assertIn(("get_latest_results", {"symbol": "TATASTEEL"}), routed["plan"])
         self.assertIn(("get_technical_setup", {"symbol": "TATASTEEL"}), routed["plan"])
+        planned_tools = [name for name, _args in routed["plan"]]
+        self.assertLess(planned_tools.index("get_cached_financials"), planned_tools.index("scrape_screener_in"))
+        self.assertLess(planned_tools.index("scrape_screener_in"), planned_tools.index("get_latest_results"))
         self.assertNotIn("'DETAILED'", str(routed).upper())
         self.assertNotIn("'TATA'", str(routed).upper())
+
+    def test_deep_stock_analysis_uses_pg_screener_then_latest_results_fallback(self):
+        routed = _keyword_intent("perform a deep analysis of chennai petroleum")
+
+        self.assertEqual(routed["intent"], "stock_brief")
+        planned_tools = [name for name, _args in routed["plan"]]
+        for tool in ("get_cached_financials", "scrape_screener_in", "get_latest_results"):
+            self.assertIn(tool, planned_tools)
+        self.assertLess(planned_tools.index("get_cached_financials"), planned_tools.index("scrape_screener_in"))
+        self.assertLess(planned_tools.index("scrape_screener_in"), planned_tools.index("get_latest_results"))
 
     def test_earnings_playbook_routes_to_explicit_symbol_not_earnings_label(self):
         routed = _keyword_intent(
@@ -1673,7 +1925,7 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertNotIn("Requested symbol(s): SAKAR, ADX, MA", result["answer"])
         self.assertIn("SAKAR", result["answer"])
 
-    def test_bare_symbol_route_runs_full_stock_brief_plan(self):
+    def test_bare_symbol_route_runs_quick_analysis_plan(self):
         agent = Agent()
         agent.backend = object()
         agent.backend_name = "TestBackend"
@@ -1681,25 +1933,19 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         with patch("terminal.agent._execute_plan") as execute_plan:
             execute_plan.return_value = [
                 {"tool": "resolve_symbol", "args": {"query": "PERSISTENT"}, "result": {"symbol": "PERSISTENT"}},
-                {"tool": "scrape_screener_in", "args": {"symbol": "PERSISTENT"}, "result": {"symbol": "PERSISTENT"}},
-                {"tool": "get_symbol_snapshot", "args": {"symbol": "PERSISTENT"}, "result": {"symbol": "PERSISTENT", "price": 100}},
-                {"tool": "get_technical_setup", "args": {"symbol": "PERSISTENT"}, "result": {"symbol": "PERSISTENT", "rsi": 55}},
-                {"tool": "get_sector_context", "args": {"sector_or_symbol": "PERSISTENT"}, "result": {"symbol": "PERSISTENT"}},
+                {"tool": "get_symbol_quick_analysis", "args": {"symbol": "PERSISTENT"}, "result": {"symbol": "PERSISTENT", "price": 100}},
             ]
             result = agent.query("PERSISTENT")
 
         planned = execute_plan.call_args.args[0]
         self.assertEqual(
-            [name for name, _args in planned[:5]],
+            [name for name, _args in planned],
             [
                 "resolve_symbol",
-                "scrape_screener_in",
-                "get_symbol_snapshot",
-                "get_technical_setup",
-                "get_sector_context",
+                "get_symbol_quick_analysis",
             ],
         )
-        self.assertEqual(result["intent"], "stock_brief")
+        self.assertEqual(result["intent"], "symbol_quick_analysis")
         self.assertNotIn("REQUIRED TOOL VALIDATION FAILED", result["answer"])
 
     def test_entity_topic_technical_route_runs_stock_brief_required_tools(self):
@@ -1806,7 +2052,68 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
 
         self.assertEqual(routed["intent"], "stock_results")
         self.assertEqual(routed["plan"][0], ("resolve_symbol", {"query": "Delhivery"}))
-        self.assertEqual(routed["plan"][1], ("get_latest_results", {"symbol": "DELHIVERY"}))
+        self.assertEqual(routed["plan"][1], ("get_cached_financials", {"symbol": "DELHIVERY"}))
+        self.assertEqual(routed["plan"][2], ("scrape_screener_in", {"symbol": "DELHIVERY"}))
+        self.assertEqual(routed["plan"][3], ("get_latest_results", {"symbol": "DELHIVERY"}))
+
+    def test_latest_quarterly_results_for_symbol_routes_full_evidence_chain(self):
+        from terminal.agent import _keyword_intent, _required_tools_for_query
+
+        query = "latest quarterly results for reliance"
+        routed = _keyword_intent(query)
+
+        self.assertEqual(routed["intent"], "stock_results")
+        self.assertEqual(routed["plan"], [
+            ("resolve_symbol", {"query": "reliance"}),
+            ("get_cached_financials", {"symbol": "RELIANCE"}),
+            ("scrape_screener_in", {"symbol": "RELIANCE"}),
+            ("get_latest_results", {"symbol": "RELIANCE"}),
+        ])
+        required = _required_tools_for_query(routed["intent"], query)
+        self.assertLess(
+            routed["plan"].index(("get_cached_financials", {"symbol": "RELIANCE"})),
+            routed["plan"].index(("scrape_screener_in", {"symbol": "RELIANCE"})),
+        )
+        self.assertLess(
+            routed["plan"].index(("scrape_screener_in", {"symbol": "RELIANCE"})),
+            routed["plan"].index(("get_latest_results", {"symbol": "RELIANCE"})),
+        )
+        self.assertTrue(set(required).issubset({name for name, _args in routed["plan"]}))
+
+    def test_larsen_and_toubro_deep_analysis_routes_to_lt_not_larsen(self):
+        from terminal.agent import _keyword_intent
+
+        routed = _keyword_intent("perform a deep analysis of larsen and toubro")
+
+        self.assertEqual(routed["intent"], "stock_brief")
+        self.assertIn(("resolve_symbol", {"query": "LT"}), routed["plan"])
+        self.assertIn(("get_cached_financials", {"symbol": "LT"}), routed["plan"])
+        self.assertIn(("scrape_screener_in", {"symbol": "LT"}), routed["plan"])
+        self.assertIn(("get_latest_results", {"symbol": "LT"}), routed["plan"])
+
+    def test_sbi_deep_analysis_routes_to_sbin_not_sbi(self):
+        from terminal.agent import _keyword_intent
+
+        routed = _keyword_intent("perform a deep analysis of sbi")
+
+        self.assertEqual(routed["intent"], "stock_brief")
+        self.assertIn(("resolve_symbol", {"query": "SBIN"}), routed["plan"])
+        self.assertIn(("get_cached_financials", {"symbol": "SBIN"}), routed["plan"])
+        self.assertIn(("scrape_screener_in", {"symbol": "SBIN"}), routed["plan"])
+        self.assertIn(("get_latest_results", {"symbol": "SBIN"}), routed["plan"])
+
+    def test_llm_deep_analysis_supplements_missing_latest_results_chain(self):
+        from terminal.agent import _missing_fundamental_chain_plan
+
+        tool_results = [
+            {"tool": "resolve_symbol", "args": {"query": "sun pharma"}, "result": {"symbol": "SUNPHARMA"}},
+            {"tool": "get_cached_financials", "args": {"symbol": "SUNPHARMA"}, "result": {"symbol": "SUNPHARMA"}},
+            {"tool": "scrape_screener_in", "args": {"symbol": "SUNPHARMA"}, "result": {"symbol": "SUNPHARMA"}},
+        ]
+
+        plan = _missing_fundamental_chain_plan(tool_results, "perform a deep analysis of sun pharma")
+
+        self.assertEqual(plan, [("get_latest_results", {"symbol": "SUNPHARMA"})])
 
     def test_results_in_last_two_weeks_routes_to_results_feed_not_symbol_in(self):
         from terminal.agent import _keyword_intent
@@ -1878,6 +2185,46 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertEqual(routed["intent"], "entity_topic_command")
         self.assertEqual(routed["plan"], [("deep_search", {"symbol": "SCHAEFFLER", "context": "results"})])
         self.assertNotIn("USE", str(routed))
+
+    def test_company_identity_instruction_does_not_split_or_route_keep_as_symbol(self):
+        prompt = (
+            "Resolve KIMS to its company identity, aliases, sector, industry, "
+            "and official website. Keep the answer evidence-first."
+        )
+
+        self.assertEqual(_split_compound_query(prompt), [prompt])
+        routed = _keyword_intent(prompt)
+
+        self.assertEqual(routed["intent"], "company_identity")
+        self.assertEqual(routed["plan"][0], ("resolve_symbol", {"query": "KIMS"}))
+        self.assertTrue(any(tool == "get_sector_context" for tool, _ in routed["plan"]))
+        self.assertNotIn("KEEP", str(routed["plan"]))
+
+    def test_company_identity_instruction_runs_once_for_requested_symbol(self):
+        prompt = (
+            "Resolve KIMS to its company identity, aliases, sector, industry, "
+            "and official website. Keep the answer evidence-first."
+        )
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {"tool": "resolve_symbol", "args": {"query": "KIMS"}, "result": {"symbol": "KIMS"}},
+                {"tool": "get_symbol_snapshot", "args": {"symbol": "KIMS"}, "result": {"symbol": "KIMS"}},
+                {"tool": "get_sector_context", "args": {"sector_or_symbol": "KIMS"}, "result": {"symbol": "KIMS"}},
+            ]
+            result = agent.query(prompt)
+
+        execute_plan.assert_called_once_with([
+            ("resolve_symbol", {"query": "KIMS"}),
+            ("get_symbol_snapshot", {"symbol": "KIMS"}),
+            ("get_sector_context", {"sector_or_symbol": "KIMS"}),
+        ])
+        self.assertEqual(result["intent"], "company_identity")
+        self.assertNotIn("Part 2", result["answer"])
+        self.assertNotIn("KEEPLEARN", result["answer"])
 
     def test_agent_generated_deep_search_prompt_runs_as_single_deep_search(self):
         agent = Agent()

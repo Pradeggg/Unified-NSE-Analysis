@@ -14,6 +14,22 @@ from .test_runner import run_card_python_tool_tests
 Reviewer = Callable[[dict, list[str]], ReviewDecision]
 Healer = Callable[[dict, list[str]], dict]
 
+IDENTITY_KEYS = (
+    "id",
+    "version",
+    "domain",
+    "title",
+    "description",
+    "input_patterns",
+    "tags",
+    "evidence_required",
+    "output_contract",
+    "validation_rules",
+    "generation_model",
+    "created_by",
+    "created_at",
+)
+
 
 @dataclass(frozen=True)
 class PipelineResult:
@@ -32,6 +48,42 @@ def _collect_findings(card: dict, catalog: SchemaCatalog) -> list[str]:
     if not python_findings:
         findings.extend(run_card_python_tool_tests(card))
     return sorted(dict.fromkeys(findings))
+
+
+def _missing_value(value: object) -> bool:
+    return value in (None, "", [], {})
+
+
+def _merge_healed_card(original: dict, healed: dict) -> tuple[dict, list[str]]:
+    merged = dict(original)
+    merged.update(healed)
+    findings: list[str] = []
+    for key in IDENTITY_KEYS:
+        if _missing_value(merged.get(key)) and not _missing_value(original.get(key)):
+            merged[key] = original.get(key)
+            findings.append(f"healer omitted {key}; preserved original value")
+    return merged, findings
+
+
+def _failed_result(
+    card: dict,
+    *,
+    attempts: int,
+    findings: list[str],
+    history: list[dict],
+    status: str,
+    rationale: str,
+) -> PipelineResult:
+    failed = dict(card)
+    failed["status"] = "test_failed"
+    failed["validation_errors"] = list(findings)
+    failed["review"] = {
+        "status": status,
+        "findings": list(findings),
+        "rationale": rationale,
+        "attempts": attempts,
+    }
+    return PipelineResult(card=failed, attempts=attempts, findings=list(findings), history=history)
 
 
 def run_review_heal_pipeline(
@@ -72,23 +124,42 @@ def run_review_heal_pipeline(
             return PipelineResult(card=accepted, attempts=attempt, findings=[], history=history)
 
         if decision.status == "reject" or healer is None or attempt >= max_attempts:
-            failed = dict(current)
-            failed["status"] = "test_failed"
-            failed["validation_errors"] = list(decision.findings or findings)
-            failed["review"] = {
-                "status": decision.status,
-                "findings": list(decision.findings or findings),
-                "rationale": decision.rationale,
-                "attempts": attempt,
-            }
-            return PipelineResult(
-                card=failed,
+            return _failed_result(
+                current,
                 attempts=attempt,
                 findings=list(decision.findings or findings),
                 history=history,
+                status=decision.status,
+                rationale=decision.rationale,
             )
 
-        current = healer(current, list(decision.findings or findings))
+        try:
+            healed = healer(current, list(decision.findings or findings))
+        except Exception as exc:
+            healing_findings = list(decision.findings or findings)
+            healing_findings.append(f"healer failed: {type(exc).__name__}: {exc}")
+            return _failed_result(
+                current,
+                attempts=attempt,
+                findings=healing_findings,
+                history=history,
+                status="healer_error",
+                rationale=decision.rationale,
+            )
+        if not isinstance(healed, dict):
+            healing_findings = list(decision.findings or findings)
+            healing_findings.append(f"healer returned {type(healed).__name__}; expected object")
+            return _failed_result(
+                current,
+                attempts=attempt,
+                findings=healing_findings,
+                history=history,
+                status="healer_error",
+                rationale=decision.rationale,
+            )
+        current, merge_findings = _merge_healed_card(current, healed)
+        if merge_findings:
+            history[-1]["findings"] = list(history[-1]["findings"]) + merge_findings
         current["status"] = "generated"
 
     failed = dict(current)

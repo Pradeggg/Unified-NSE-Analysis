@@ -1,0 +1,842 @@
+{
+  "symbol": "GENSOL",
+  "portfolio": {
+    "symbol": "GENSOL",
+    "inputs": "GENSOL ENGINEERING LTD",
+    "company_name": "GENSOL",
+    "sector": "—",
+    "mcap": "—",
+    "price": "24.92",
+    "stage": "STAGE_1",
+    "signal": "HOLD",
+    "trend": "MIXED",
+    "portfolio_score": "45.2",
+    "investment_score": "45.0",
+    "technical_score": "45.0",
+    "enhanced_fund_score": "",
+    "relative_strength": "19.23",
+    "chg_1d": "",
+    "chg_1w": "19.87",
+    "chg_1m": "19.23",
+    "rsi_snapshot": "77.4",
+    "rsi_tech": "77.4",
+    "adx": "69.1",
+    "macd": "bullish",
+    "supertrend": "SELL",
+    "above_sma20": "True",
+    "above_sma50": "True",
+    "above_sma200": "False",
+    "pct_from_52h": "-64.5",
+    "52w_high": "70.2",
+    "52w_low": "18.16",
+    "rating": "HOLD / WATCH",
+    "snapshot_error": "",
+    "tech_error": ""
+  },
+  "collected_at": "2026-06-10T23:33:24",
+  "source_trail": [
+    "get_symbol_snapshot",
+    "get_technical_setup",
+    "scrape_screener_in",
+    "explain_intraday_setup"
+  ],
+  "errors": [],
+  "snapshot": {
+    "data_source": "PostgreSQL scores.stage_snapshots",
+    "company_name": "GENSOL",
+    "stage": "STAGE_1",
+    "stage_score": 0.32,
+    "investment_score": 45.0,
+    "price": 24.92,
+    "rsi": 77.4,
+    "relative_strength": 19.23,
+    "change_1d_pct": 0.0,
+    "change_1w_pct": 19.87,
+    "change_1m_pct": 19.23,
+    "market_cap_cat": null,
+    "sector": null,
+    "trading_signal": "HOLD",
+    "trend_signal": "MIXED",
+    "supertrend_state": "BEARISH",
+    "supertrend_value": null,
+    "technical_score": 45.0,
+    "fundamental_score": null,
+    "narrative": "GENSOL was backfilled on demand from EOD price history and NSE live metadata. Fundamental/CANSLIM/Minervini fields were not found in the DB and were not inferred.",
+    "stance": "TECHNICAL_ONLY",
+    "can_slim_score": null,
+    "minervini_score": null,
+    "enhanced_fund_score": null,
+    "earnings_quality": null,
+    "sales_growth": null,
+    "financial_strength": null,
+    "institutional_backing": null,
+    "symbol": "GENSOL",
+    "snapshot_date": "2026-06-10",
+    "rs_pct": 19.23,
+    "missing_evidence": [],
+    "missing_optional_scores": [
+      "fundamental_score",
+      "can_slim_score",
+      "minervini_score"
+    ],
+    "evidence_coverage": "complete"
+  },
+  "technical": {
+    "symbol": "GENSOL",
+    "price": 24.92,
+    "open": 24.92,
+    "high": 24.92,
+    "low": 24.92,
+    "chg_pct": 0.0,
+    "rsi": 77.4,
+    "adx": 69.1,
+    "macd": "bullish",
+    "supertrend": "SELL",
+    "sma20": 20.75,
+    "sma50": 21.67,
+    "sma200": 28.48,
+    "above_sma20": true,
+    "above_sma50": true,
+    "above_sma200": false,
+    "52w_high": 70.2,
+    "52w_low": 18.16,
+    "pct_from_52h": -64.5,
+    "vol_last": 0,
+    "vol_avg_20d": 84724,
+    "vol_ratio": null,
+    "technical_score": 45,
+    "score_method": "derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX",
+    "data_bars": 274,
+    "as_of": "2026-06-09",
+    "data_source": "PostgreSQL on-demand EOD",
+    "postgres_persist": null
+  },
+  "fundamentals": {
+    "symbol": "GENSOL",
+    "source_url": "https://www.screener.in/company/GENSOL/consolidated/",
+    "nse_url": "https://www.nseindia.com/get-quotes/equity?symbol=GENSOL",
+    "bse_url": "https://www.bseindia.com/stock-share-price/gensol-engineering-ltd/GENSOL/542851/",
+    "bse_scrip": "542851",
+    "ratios": {
+      "Market Cap": "95.8",
+      "Current Price": "24.9",
+      "High / Low": "54.2",
+      "Stock P/E": "0.93",
+      "Book Value": "155",
+      "Dividend Yield": "0.00",
+      "ROCE": "14.3",
+      "ROE": "22.4",
+      "Face Value": "10.0"
+    },
+    "pros": [
+      "Stock is trading at 0.16 times its book value",
+      "Company is expected to give good quarter",
+      "Company has delivered good profit growth of 55.3% CAGR over last 5 years"
+    ],
+    "cons": [
+      "Though the company is reporting repeated profits, it is not paying out dividend",
+      "Company has low interest coverage ratio.",
+      "Promoter holding has decreased over last quarter: -26.8%",
+      "Promoter holding is low: 35.9%",
+      "Promoters have pledged 95.1% of their holding."
+    ],
+    "quarterly": {
+      "Sales+": [
+        "305",
+        "220",
+        "399",
+        "362",
+        "346",
+        "345"
+      ],
+      "Expenses+": [
+        "258",
+        "157",
+        "320",
+        "287",
+        "240",
+        "275"
+      ],
+      "Operating Profit": [
+        "47",
+        "63",
+        "79",
+        "75",
+        "107",
+        "69"
+      ],
+      "OPM %": [
+        "15%",
+        "29%",
+        "20%",
+        "21%",
+        "31%",
+        "20%"
+      ],
+      "Other Income+": [
+        "0",
+        "7",
+        "1",
+        "1",
+        "0",
+        "1"
+      ],
+      "Interest": [
+        "15",
+        "32",
+        "27",
+        "36",
+        "76",
+        "47"
+      ],
+      "Depreciation": [
+        "0",
+        "20",
+        "24",
+        "2",
+        "6",
+        "7"
+      ],
+      "Profit before tax": [
+        "32",
+        "17",
+        "29",
+        "38",
+        "25",
+        "16"
+      ],
+      "Tax %": [
+        "44%",
+        "31%",
+        "31%",
+        "31%",
+        "8%",
+        "-12%"
+      ],
+      "Net Profit+": [
+        "18",
+        "12",
+        "20",
+        "27",
+        "23",
+        "18"
+      ],
+      "EPS in Rs": [
+        "4.83",
+        "3.37",
+        "6.41",
+        "8.45",
+        "7.73",
+        "4.45"
+      ],
+      "Raw PDF": [
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "_headers": [
+        "Sep 2023",
+        "Dec 2023",
+        "Mar 2024",
+        "Jun 2024",
+        "Sep 2024",
+        "Dec 2024"
+      ]
+    },
+    "annual_pl": {
+      "Sales+": [
+        "64",
+        "160",
+        "398",
+        "963",
+        "1,452"
+      ],
+      "Expenses+": [
+        "58",
+        "141",
+        "320",
+        "733",
+        "1,122"
+      ],
+      "Operating Profit": [
+        "6",
+        "19",
+        "78",
+        "230",
+        "330"
+      ],
+      "OPM %": [
+        "10%",
+        "12%",
+        "20%",
+        "24%",
+        "23%"
+      ],
+      "Other Income+": [
+        "1",
+        "2",
+        "5",
+        "33",
+        "4"
+      ],
+      "Interest": [
+        "2",
+        "6",
+        "24",
+        "110",
+        "186"
+      ],
+      "Depreciation": [
+        "1",
+        "1",
+        "25",
+        "74",
+        "39"
+      ],
+      "Profit before tax": [
+        "4",
+        "14",
+        "33",
+        "78",
+        "108"
+      ],
+      "Tax %": [
+        "15%",
+        "23%",
+        "30%",
+        "31%",
+        ""
+      ],
+      "Net Profit+": [
+        "3",
+        "11",
+        "23",
+        "53",
+        "87"
+      ],
+      "EPS in Rs": [
+        "0.97",
+        "3.38",
+        "6.37",
+        "15.72",
+        "27.04"
+      ],
+      "Dividend Payout %": [
+        "0%",
+        "0%",
+        "0%",
+        "0%",
+        ""
+      ],
+      "_headers": [
+        "Mar 2021",
+        "Mar 2022",
+        "Mar 2023",
+        "Mar 2024",
+        "TTM"
+      ]
+    },
+    "balance_sheet": {
+      "Equity Capital": [
+        "8",
+        "11",
+        "12",
+        "38",
+        "38"
+      ],
+      "Reserves": [
+        "28",
+        "36",
+        "195",
+        "288",
+        "551"
+      ],
+      "Borrowings+": [
+        "11",
+        "82",
+        "598",
+        "1,510",
+        "1,372"
+      ],
+      "Other Liabilities+": [
+        "23",
+        "79",
+        "261",
+        "489",
+        "591"
+      ],
+      "Total Liabilities": [
+        "70",
+        "208",
+        "1,066",
+        "2,324",
+        "2,552"
+      ],
+      "Fixed Assets+": [
+        "7",
+        "55",
+        "293",
+        "723",
+        "257"
+      ],
+      "CWIP": [
+        "0",
+        "0",
+        "41",
+        "88",
+        "171"
+      ],
+      "Investments": [
+        "0",
+        "0",
+        "7",
+        "7",
+        "7"
+      ],
+      "Other Assets+": [
+        "63",
+        "152",
+        "725",
+        "1,506",
+        "2,117"
+      ],
+      "Total Assets": [
+        "70",
+        "208",
+        "1,066",
+        "2,324",
+        "2,552"
+      ],
+      "_headers": [
+        "Mar 2021",
+        "Mar 2022",
+        "Mar 2023",
+        "Mar 2024",
+        "Sep 2024"
+      ]
+    },
+    "cash_flow": {
+      "Cash from Operating Activity+": [
+        "-18",
+        "6",
+        "-15",
+        "115",
+        "-98"
+      ],
+      "Cash from Investing Activity+": [
+        "-0",
+        "-1",
+        "-52",
+        "-706",
+        "-668"
+      ],
+      "Cash from Financing Activity+": [
+        "20",
+        "-4",
+        "67",
+        "709",
+        "859"
+      ],
+      "Net Cash Flow": [
+        "2",
+        "1",
+        "-1",
+        "118",
+        "93"
+      ],
+      "Free Cash Flow": [
+        "-18",
+        "6",
+        "-65",
+        "-324",
+        "-577"
+      ],
+      "CFO/OP": [
+        "-416%",
+        "100%",
+        "-77%",
+        "151%",
+        "-41%"
+      ],
+      "_headers": [
+        "Mar 2020",
+        "Mar 2021",
+        "Mar 2022",
+        "Mar 2023",
+        "Mar 2024"
+      ]
+    },
+    "peers": [],
+    "shareholding": {
+      "_quarters": [
+        "Jun 2022",
+        "Sep 2022",
+        "Dec 2022",
+        "Mar 2023",
+        "Jun 2023",
+        "Sep 2023",
+        "Dec 2023",
+        "Mar 2024",
+        "Jun 2024",
+        "Sep 2024",
+        "Dec 2024",
+        "Mar 2025"
+      ],
+      "Promoters": "35.88%",
+      "Promoters_trend": [
+        "71.34%",
+        "71.36%",
+        "64.67%",
+        "64.67%",
+        "64.67%",
+        "64.67%",
+        "62.60%",
+        "62.63%",
+        "62.77%",
+        "62.59%",
+        "62.66%",
+        "35.88%"
+      ],
+      "FIIs": "4.88%",
+      "FIIs_trend": [
+        "0.00%",
+        "0.84%",
+        "1.84%",
+        "1.83%",
+        "1.94%",
+        "2.57%",
+        "2.94%",
+        "2.39%",
+        "1.98%",
+        "2.30%",
+        "0.63%",
+        "4.88%"
+      ],
+      "DIIs": "0.14%",
+      "DIIs_trend": [
+        "0.00%",
+        "0.47%",
+        "0.42%",
+        "0.66%",
+        "0.66%",
+        "0.75%",
+        "0.84%",
+        "0.09%",
+        "0.00%",
+        "0.00%",
+        "0.00%",
+        "0.14%"
+      ],
+      "Government": "1.35%",
+      "Government_trend": [
+        "0.00%",
+        "0.00%",
+        "0.00%",
+        "0.00%",
+        "0.00%",
+        "0.00%",
+        "0.00%",
+        "0.00%",
+        "0.00%",
+        "0.00%",
+        "1.37%",
+        "1.35%"
+      ],
+      "Public": "57.75%",
+      "Public_trend": [
+        "28.66%",
+        "27.32%",
+        "33.07%",
+        "32.85%",
+        "32.72%",
+        "32.01%",
+        "33.62%",
+        "34.88%",
+        "35.25%",
+        "35.13%",
+        "35.34%",
+        "57.75%"
+      ]
+    },
+    "announcements": [
+      {
+        "title": "All",
+        "url": "https://www.bseindia.com/stock-share-price/gensol-engineering-ltd/GENSOL/542851/corp-announcements/"
+      },
+      {
+        "title": "Announcement under Regulation 30 (LODR)-Monitoring Agency Report15 May - Crisil issued a qualified Q4 FY26 monitoring re",
+        "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=b4267d42-4dfd-4aab-981f-f5b87e9235c7.pdf"
+      },
+      {
+        "title": "Intimation Under Regulation 30 Of SEBI (LODR) Regulations, 201513 May - Gensol appointed Jatin Gupta & Associates as Sec",
+        "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=5ee186a1-804e-488c-ac9d-7743141fac68.pdf"
+      },
+      {
+        "title": "Corporate Insolvency Resolution Process (CIRP)-Appointment of Interim Resolution Professional (IRP)23 Jul 2025 - IREDA f",
+        "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=eeade11a-10de-4697-80b1-62bcd0609898.pdf"
+      },
+      {
+        "title": "Corporate Insolvency Resolution Process (CIRP)-Admission of application by Tribunal23 Jul 2025 - IREDA files insolvency ",
+        "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=6d0eca27-2d74-4937-8f11-57bf52e71cf1.pdf"
+      },
+      {
+        "title": "Disclosures under Reg. 29(2) of SEBI (SAST) Regulations, 201123 Jun 2025",
+        "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=4B0E18E2_9CC1_4CA6_B3AF_1F5A3F0884B5_121411.pdf"
+      }
+    ],
+    "annual_reports": [
+      {
+        "label": "[1]",
+        "url": "https://www.bseindia.com/bseplus/AnnualReport/542851/72038542851.pdf#page=98"
+      },
+      {
+        "label": "Financial Year 2022from bse",
+        "url": "https://www.bseindia.com/bseplus/AnnualReport/542851/76332542851.pdf"
+      },
+      {
+        "label": "Financial Year 2021from bse",
+        "url": "https://www.bseindia.com/bseplus/AnnualReport/542851/72038542851.pdf"
+      },
+      {
+        "label": "Financial Year 2020from bse",
+        "url": "https://www.bseindia.com/bseplus/AnnualReport/542851/67259542851.pdf"
+      }
+    ],
+    "concalls": [
+      {
+        "period": "Feb 2025",
+        "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=5b3f2404-b5ad-4e48-a5e5-196990f51bbe.pdf",
+        "transcript_label": "Feb 2025 Earnings Call Transcript",
+        "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=60e3cef5-3c6e-4b43-afb2-5702807869ed.pdf",
+        "recording_url": "https://drive.google.com/file/d/1_uFgdseEutvvEC1R8yCNPl0AT7iNEn-0/view",
+        "ai_summary_title": "Concall Summary - Feb 2025"
+      },
+      {
+        "period": "Nov 2024",
+        "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=5f719914-e90d-43c2-a76a-ebda5cfaa749.pdf",
+        "transcript_label": "Nov 2024 Earnings Call Transcript",
+        "ppt_url": "https://gel.gensol.in/assets/uploads/investors_pdf/1730095971_new_sigend_investor_meet_presenatation_submission_27102024.pdf",
+        "recording_url": "https://drive.google.com/file/d/1uEY3iNxSjBA2MWntd9ccoKsrwuykSipc/view",
+        "ai_summary_title": "Concall Summary - Nov 2024"
+      },
+      {
+        "period": "Aug 2024",
+        "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=f78e3721-9dbe-4cb7-aede-ef9e96c8e79f.pdf",
+        "transcript_label": "Aug 2024 Earnings Call Transcript",
+        "recording_url": "https://www.youtube.com/watch?v=Fhu7n6Zz_jU",
+        "ai_summary_title": "Concall Summary - Aug 2024"
+      },
+      {
+        "period": "Jun 2024",
+        "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=d18c729b-c534-4998-b116-8de2c5d72070.pdf",
+        "transcript_label": "Jun 2024 Earnings Call Transcript",
+        "recording_url": "https://drive.google.com/file/d/19ShFw2-wrQkVgRR7-WCFNhl1hUEPV8BN/view",
+        "ai_summary_title": "Concall Summary - Jun 2024"
+      },
+      {
+        "period": "May 2024",
+        "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=c0bdf63a-56b1-4ddf-9da0-c09f6e022069.pdf",
+        "recording_url": "https://drive.google.com/file/d/19ShFw2-wrQkVgRR7-WCFNhl1hUEPV8BN/view",
+        "ai_summary_title": "Concall Summary - May 2024"
+      },
+      {
+        "period": "Jan 2024",
+        "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=cdf4bb5a-8c40-49e2-9dfd-dfb894d87ce4.pdf",
+        "transcript_label": "Jan 2024 Earnings Call Transcript",
+        "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=5eddf463-5a6c-4ab1-aa9b-018eccc6157d.pdf",
+        "ai_summary_title": "Concall Summary - Jan 2024"
+      },
+      {
+        "period": "Jul 2023",
+        "ppt_url": "https://gensol.in/assets/uploads/downloads-profile/gensol_group_profile.pdf"
+      },
+      {
+        "period": "Oct 2022",
+        "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=9fe1a51c-426c-4b12-958b-176883040c5e.pdf"
+      }
+    ],
+    "concalls_link": "https://www.screener.in/company/GENSOL/#concalls",
+    "note": "Found 8 concall entries. Transcript PDFs are directly accessible. AI summaries on screener.in require login. Full concall list: https://www.screener.in/company/GENSOL/#concalls"
+  },
+  "trade_setup": {
+    "symbol": "GENSOL",
+    "timeframe": "15m",
+    "data_mode": "intraday",
+    "source": "PostgreSQL intraday.ohlcv_bars seeded from Yahoo Finance (yfinance)",
+    "latest_timestamp": "2026-06-08 15:15:00",
+    "latest_close": 24.92,
+    "setup_label": "LONG_SETUP",
+    "setup_side": "long",
+    "score": 85,
+    "indicators": {
+      "rsi": 83.3,
+      "macd": 0.1806,
+      "macd_signal": 0.2343,
+      "macd_hist": -0.0537,
+      "supertrend": 24.86,
+      "supertrend_dir": 1,
+      "ema9": 24.92,
+      "ema21": 24.8,
+      "ema50": 24.33,
+      "ema200": 23.38,
+      "bb_pct": 0.5,
+      "bb_width": 0.0,
+      "atr": 0.04,
+      "volume_ratio": 1.13
+    },
+    "signals": [
+      {
+        "strategy": "RSI Reversal",
+        "direction": "SELL",
+        "entry": 24.92,
+        "target": 24.84,
+        "stoploss": 24.98,
+        "rr": 1.33,
+        "strength": "Moderate (deeply overbought)",
+        "note": "RSI=83.3 — deeply overbought",
+        "indicator": {
+          "rsi": 83.3
+        },
+        "strategy_key": "rsi",
+        "setup_label": "SHORT_SETUP",
+        "copy_rule": "Research setup only; not a buy/sell recommendation."
+      },
+      {
+        "strategy": "Supertrend",
+        "direction": "BUY",
+        "entry": 24.92,
+        "target": 25.0,
+        "stoploss": 24.86,
+        "rr": 1.33,
+        "strength": "Moderate (in uptrend)",
+        "note": "Supertrend bullish — support at 24.86",
+        "indicator": {
+          "supertrend": 24.86,
+          "direction": "BULLISH"
+        },
+        "strategy_key": "supertrend",
+        "setup_label": "LONG_SETUP",
+        "copy_rule": "Research setup only; not a buy/sell recommendation."
+      },
+      {
+        "strategy": "Bollinger Squeeze",
+        "direction": "WATCH",
+        "entry": 24.92,
+        "target": null,
+        "stoploss": null,
+        "rr": null,
+        "strength": "Alert",
+        "note": "BB squeeze — volatility contraction, breakout pending. Width=0.0",
+        "indicator": {
+          "bb_pct": 0.5,
+          "bb_width": 0.0
+        },
+        "strategy_key": "bollinger",
+        "setup_label": "WATCH",
+        "copy_rule": "Research setup only; not a buy/sell recommendation."
+      },
+      {
+        "strategy": "VCP (Volatility Contraction Pattern)",
+        "direction": "BUY",
+        "entry": 25.17,
+        "target": 25.27,
+        "stoploss": 24.92,
+        "rr": 0.4,
+        "strength": "Moderate",
+        "note": "VCP detected — contracting range (0.0→0.0), volume declining, pivot at 24.92",
+        "indicator": {
+          "range_contraction": false,
+          "vol_declining": true,
+          "near_pivot": true,
+          "pivot_high": 24.92
+        },
+        "strategy_key": "vcp",
+        "setup_label": "LONG_SETUP",
+        "copy_rule": "Research setup only; not a buy/sell recommendation."
+      }
+    ],
+    "analyzers": {
+      "TrendAgent": [
+        "Supertrend is bullish",
+        "Price is above EMA21"
+      ],
+      "MomentumAgent": [
+        "MACD histogram is negative",
+        "RSI 83.3 is extended"
+      ],
+      "LevelsAgent": {
+        "support": [
+          24.92,
+          24.8
+        ],
+        "resistance": [],
+        "invalidation_level": 24.92,
+        "technical_target_zones": [
+          24.96
+        ]
+      },
+      "RiskAgent": [
+        "Technical setup only; no order placement or recommendation",
+        "Confirm freshness, liquidity, spreads, and market regime before using this for research"
+      ]
+    },
+    "levels": {
+      "symbol": "GENSOL",
+      "timeframe": "15m",
+      "data_mode": "intraday",
+      "source": "PostgreSQL intraday.ohlcv_bars",
+      "latest_timestamp": "2026-06-08 15:15:00",
+      "latest_close": 24.92,
+      "pivot": 24.92,
+      "supports": [
+        24.92,
+        24.8,
+        24.33,
+        23.38
+      ],
+      "resistances": [],
+      "ema_levels": {
+        "ema9": 24.92,
+        "ema21": 24.8,
+        "ema50": 24.33,
+        "ema200": 23.38
+      },
+      "pivot_levels": {
+        "PP": 24.92,
+        "R1": 24.92,
+        "R2": 24.92,
+        "R3": 24.92,
+        "S1": 24.92,
+        "S2": 24.92,
+        "S3": 24.92
+      },
+      "copy_rule": "Technical levels only. Not investment advice or a trade recommendation."
+    },
+    "invalidation_level": 24.92,
+    "technical_target_zones": [
+      24.96
+    ],
+    "position_sizing": {
+      "error": "Risk per share is effectively zero; cannot size position"
+    },
+    "risk_reward_frame": {},
+    "trade_plan": {
+      "direction": "LONG",
+      "entry_confirmations": [
+        "Price holds above ₹24.92 on retest",
+        "Supertrend confirms bullish",
+        "RSI 83 supports momentum (above 50)"
+      ],
+      "scale_out": [
+        "Book 50% at T1 (₹24.96), trail SL to entry for remainder",
+        "Trail remainder with Supertrend or EMA21"
+      ],
+      "invalidation_action": "Exit full position if price closes below ₹24.92. Do not average into a losing setup."
+    },
+    "disclaimer": "Research and learning only. Not investment advice. Not a recommendation to buy, sell, trade, copy, or replicate. Users are responsible for their own risk, compliance, and legal obligations. Agent Adda is not SEBI registered."
+  },
+  "verdict": "Neutral Watch"
+}

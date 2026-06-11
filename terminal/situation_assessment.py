@@ -806,6 +806,30 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
             "Do you want live quotes, last-30-minute momentum, 15m intraday setups, or news/catalysts for these?",
         )
 
+    if _asks_single_symbol_results_followup(q) and previous_context.symbols:
+        symbol = str(previous_context.symbols[0]).strip().upper()
+        if symbol:
+            return SituationAssessment(
+                applies=True,
+                decision="run_tool_plan",
+                confidence="high",
+                user_is_asking=f"Latest quarterly results analysis for {symbol}.",
+                context_found=_context_found(previous_context),
+                source_assessment=_source_assessment(previous_context),
+                resolved_entities=[symbol],
+                evidence_plan=["resolve_symbol", "get_latest_results"],
+                tool_plan=[
+                    ("resolve_symbol", {"query": symbol}),
+                    ("get_latest_results", {"symbol": symbol}),
+                ],
+                plan=[
+                    "Bind the results follow-up to the prior single-stock context.",
+                    "Resolve the prior symbol and fetch latest results evidence.",
+                    "Do not rerun the quick technical analysis loop.",
+                ],
+                synthesis_intent="stock_results",
+            )
+
     # PG-PLAN 2026-05-25: Collective NEWS-or-RESULTS follow-up — user
     # references the prior result list ("these top gainers", "the above
     # stocks", …) AND explicitly asks for news/announcements/earnings
@@ -1473,6 +1497,15 @@ _COLLECTIVE_FUNDAMENTAL_TERMS = (
     "valuation",
 )
 
+_SINGLE_SYMBOL_RESULTS_FOLLOWUP_TERMS = (
+    "latest results",
+    "quarterly results",
+    "quarterly result",
+    "results analysis",
+    "earnings analysis",
+    "financial results",
+)
+
 
 def _refers_to_prior_list(q: str) -> bool:
     return any(ref in q for ref in _PRIOR_LIST_REFERENCES)
@@ -1480,6 +1513,16 @@ def _refers_to_prior_list(q: str) -> bool:
 
 def _asks_collective_fundamentals(q: str) -> bool:
     return any(term in q for term in _COLLECTIVE_FUNDAMENTAL_TERMS)
+
+
+def _asks_single_symbol_results_followup(q: str) -> bool:
+    if not any(term in q for term in _SINGLE_SYMBOL_RESULTS_FOLLOWUP_TERMS):
+        return False
+    # Direct entity prompts should stay on the normal keyword route:
+    # "latest results for DMART" / "results of Delhivery".
+    if re.search(r"\b(?:for|of)\s+[a-z][a-z0-9&.-]{1,20}\b", q):
+        return False
+    return True
 
 
 # PG-PLAN 2026-05-25: True when the user explicitly asks for news/announcements/

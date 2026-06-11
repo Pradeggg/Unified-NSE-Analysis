@@ -2,6 +2,7 @@ import unittest
 from datetime import date, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 import pandas as pd
 
@@ -955,6 +956,39 @@ class SectorRotationReportTests(unittest.TestCase):
         self.assertFalse(view["metrics"].empty)
         self.assertEqual(view["missing_indices"], [])
         self.assertIn("Nifty 50 closed", view["narrative"])
+
+    def test_index_eod_postgres_loader_maps_tottrdqty_to_volume_column(self):
+        captured = {}
+
+        class FakeConnection:
+            def close(self):
+                pass
+
+        def fake_read_sql_query(query, conn):
+            captured["query"] = query
+            return pd.DataFrame(
+                [
+                    {
+                        "SYMBOL": "Nifty 50",
+                        "TIMESTAMP": "2026-06-04",
+                        "CLOSE": 23416.55,
+                        "TOTTRDQTY": 0,
+                    }
+                ]
+            )
+
+        with patch("psycopg2.connect", return_value=FakeConnection()), patch.object(
+            sector_rotation_report.pd,
+            "read_sql_query",
+            side_effect=fake_read_sql_query,
+        ):
+            df = sector_rotation_report.load_index_eod_from_postgres(
+                ["SYMBOL", "CLOSE", "TIMESTAMP", "TOTTRDQTY"]
+            )
+
+        self.assertIsNotNone(df)
+        self.assertIn('volume AS "TOTTRDQTY"', captured["query"])
+        self.assertNotIn("traded_qty", captured["query"])
 
     def test_report_deep_link_hash_overrides_saved_tab(self):
         self.assertIn(

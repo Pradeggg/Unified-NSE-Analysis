@@ -323,6 +323,12 @@ class TestNaturalLanguageFallthrough:
         d = UnifiedRouter().route("RELIANCE RSI", _pack())
         assert d.route_type == "fallback_llm"
 
+    def test_deep_analysis_of_stock_symbol_does_not_route_to_market_overview(self):
+        d = UnifiedRouter().route("deep analysis of bajajcon", _pack())
+        assert d.route_type == "fallback_llm"
+        assert d.reasoning_summary.selected_branch == "<none>"
+        assert "get_live_market_overview" not in [tool for tool, _ in d.tool_plan_tuples()]
+
     def test_tcs_moving_average_falls_to_llm(self):
         d = UnifiedRouter().route("TCS moving average", _pack())
         assert d.route_type == "fallback_llm"
@@ -434,7 +440,7 @@ class TestAgentFalsePositivesResolved:
         with patch("terminal.agent._execute_plan") as ep:
             ep.return_value = [
                 {"tool": "resolve_symbol", "args": {"query": "PERSISTENT"}, "result": {"symbol": "PERSISTENT"}},
-                {"tool": "get_symbol_snapshot", "args": {"symbol": "PERSISTENT"},
+                {"tool": "get_symbol_quick_analysis", "args": {"symbol": "PERSISTENT"},
                  "result": {"symbol": "PERSISTENT", "price": 6500, "stage": "STAGE_2"}},
             ]
             result = agent.query("PERSISTENT")
@@ -608,6 +614,9 @@ class TestEdgeCases:
         with patch("terminal.agent._execute_plan") as ep:
             ep.return_value = [
                 {"tool": "resolve_symbol", "args": {"query": ticker}, "result": {"symbol": ticker}},
+                {"tool": "get_symbol_quick_analysis", "args": {"symbol": ticker},
+                 "result": {"symbol": ticker, "price": 100, "stage": "STAGE_2",
+                            "trading_signal": "BUY", "relative_strength": 1.0, "sector": "Pharma"}},
                 {"tool": "get_symbol_snapshot", "args": {"symbol": ticker},
                  "result": {"symbol": ticker, "price": 100, "stage": "STAGE_2",
                             "trading_signal": "BUY", "relative_strength": 1.0, "sector": "Pharma"}},

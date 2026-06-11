@@ -165,6 +165,10 @@ _MARKET_PHRASES = (
     "institutional activity",
     "macro proxies",
     "macro signals",
+    "global risk",
+    "indian markets",
+    "global market impacting",
+    "global risk impact",
     # ── Screeners / scans ─────────────────────────────────────────────────────
     "screener",
     "scan nifty",

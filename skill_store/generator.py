@@ -298,7 +298,8 @@ def _generate_one_seed(
     elif review_heal:
         pipeline_result = run_review_heal_pipeline(card, healer=healer, schema_catalog=catalog)
         card = pipeline_result.card
-        errors.extend(f"{card['id']}: {err}" for err in pipeline_result.findings)
+        card_id = card.get("id") or seed.id
+        errors.extend(f"{card_id}: {err}" for err in pipeline_result.findings)
     return card, errors
 
 

@@ -316,11 +316,43 @@ def _cmd_strategy_lab(args: argparse.Namespace) -> int:
         _write_json(run_dir / METRICS_RELATIVE_PATH, metrics.as_dict())
         _write_json(run_dir / BENCHMARK_RELATIVE_PATH, benchmark.as_dict())
         _write_json(run_dir / "diagnostics/diagnostics.json", diagnostics.as_dict())
+        audit_path = run_dir / AUDIT_RELATIVE_PATH
+        if audit_path.exists():
+            audit_path.unlink()
         report_agent.write_markdown_report(
             run_dir / REPORT_RELATIVE_PATH,
             replay_result=result,
             metrics=metrics,
-            audit_log_path=run_dir / AUDIT_RELATIVE_PATH,
+            audit_log_path=audit_path,
+        )
+        audit = AuditLog(audit_path)
+        audit_timestamp = f"{state['summary']['last_timestamp']}T00:00:00"
+        audit.append(
+            timestamp=audit_timestamp,
+            date=state["summary"]["last_timestamp"],
+            agent="portfolio.cli",
+            action="strategy_lab_replay",
+            strategy_id=strategy_id,
+            reason="PostgreSQL strategy-lab replay completed",
+            payload={
+                "run_id": state["run_id"],
+                "state_path": str(run_dir / STATE_RELATIVE_PATH),
+                "metrics_path": str(run_dir / METRICS_RELATIVE_PATH),
+                "benchmark_path": str(run_dir / BENCHMARK_RELATIVE_PATH),
+                "diagnostics_path": str(run_dir / "diagnostics/diagnostics.json"),
+                "report_path": str(run_dir / REPORT_RELATIVE_PATH),
+                "fills": state["summary"]["fills"],
+                "open_positions": state["summary"]["open_positions"],
+            },
+        )
+        audit.append(
+            timestamp=audit_timestamp,
+            date=state["summary"]["last_timestamp"],
+            agent="report_agent",
+            action="write_report",
+            strategy_id=strategy_id,
+            reason="strategy-lab paper trading report generated",
+            payload={"report_path": str(run_dir / REPORT_RELATIVE_PATH)},
         )
         closed_trades = metrics.winning_trades + metrics.losing_trades + metrics.flat_trades
         win_rate_pct = round(metrics.winning_trades / closed_trades * 100.0, 4) if closed_trades else 0.0
@@ -367,6 +399,7 @@ def _cmd_strategy_lab(args: argparse.Namespace) -> int:
         "benchmark_id": args.benchmark_id,
         "data_quality": validation.as_dict(),
         "stage_counts": data["stage"].value_counts().to_dict() if "stage" in data.columns else {},
+        "fundamental_coverage": _fundamental_coverage(data),
         "leaderboard": leaderboard.to_dict(orient="records"),
     }
     summary["paper_portfolio"] = publish_daily_paper_portfolio(
@@ -427,6 +460,31 @@ def _strategy_lab_leaderboard(rows: list[dict[str, Any]]) -> pd.DataFrame:
     ).reset_index(drop=True)
     frame.insert(0, "rank", frame.index + 1)
     return frame.drop(columns=["active"])
+
+
+def _fundamental_coverage(data: pd.DataFrame) -> dict[str, Any]:
+    if data.empty:
+        return {
+            "rows": 0,
+            "rows_with_latest_result": 0,
+            "latest_result_coverage_pct": 0.0,
+            "symbols": 0,
+            "symbols_with_latest_result": 0,
+            "symbol_coverage_pct": 0.0,
+        }
+    age = pd.to_numeric(data.get("latest_result_age_days"), errors="coerce")
+    has_result = age.notna() & (age < 9999)
+    symbols = data["symbol"].astype(str).str.upper() if "symbol" in data.columns else pd.Series(dtype="object")
+    symbol_count = int(symbols.nunique()) if not symbols.empty else 0
+    symbol_with_result_count = int(symbols[has_result].nunique()) if symbol_count else 0
+    return {
+        "rows": int(len(data)),
+        "rows_with_latest_result": int(has_result.sum()),
+        "latest_result_coverage_pct": round(float(has_result.mean() * 100.0), 4) if len(data) else 0.0,
+        "symbols": symbol_count,
+        "symbols_with_latest_result": symbol_with_result_count,
+        "symbol_coverage_pct": round((symbol_with_result_count / symbol_count) * 100.0, 4) if symbol_count else 0.0,
+    }
 
 
 def _strategy_lab_state_payload(

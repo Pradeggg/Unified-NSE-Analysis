@@ -11,6 +11,7 @@ Report chain:
     → Stage 2 tracker
     → Top Investment Picks detailed report
     → personal portfolio EOD report
+    → swing trading playbook
 
 Usage:
   python daily_refresh.py               # full pipeline
@@ -262,6 +263,18 @@ def step_sector_rotation_report(dry_run: bool) -> bool:
     )
 
 
+def step_materialize_stage2_vcp_picks(dry_run: bool) -> bool:
+    """Persist Stage 2 VCP candidates into PG for strategy lab + reports."""
+    _section("STEP 2C — Materialize Stage 2 VCP Picks (PostgreSQL)")
+    if not _ensure_postgres_running(dry_run=dry_run):
+        return False
+    return _run(
+        "Materialize scores.stage2_vcp_picks",
+        [PYTHON, "scripts/materialize_stage2_vcp_picks.py", "--lookback-days", "365"],
+        dry_run=dry_run,
+    )
+
+
 def step_top_picks_report(dry_run: bool) -> bool:
     """Generate Top Investment Picks Analysis (merges sector rotation + stage-2 tracker)."""
     _section("STEP 5C — Top Investment Picks Detailed Report")
@@ -382,6 +395,25 @@ def step_portfolio_monitor(dry_run: bool, *, intraday: bool = False) -> bool:
     except Exception as exc:
         print(f"  portfolio monitor failed: {exc}")
         return False
+
+
+def step_swing_playbook(dry_run: bool) -> bool:
+    """Generate the swing trading playbook from fresh PostgreSQL/report context."""
+    _section("STEP 6B — Swing Trading Playbook")
+    return _run(
+        "Swing trading playbook report",
+        [
+            PYTHON,
+            "-c",
+            "from terminal.swing_playbook import generate_swing_playbook, parse_swing_playbook_args; "
+            "options=parse_swing_playbook_args('/swing-playbook --fresh'); "
+            "result=generate_swing_playbook(options=options); "
+            "print(result.html_path); "
+            "print(result.markdown_path); "
+            "raise SystemExit(0 if result.success else 1)",
+        ],
+        dry_run=dry_run,
+    )
 
 
 def step_cleanup_legacy_sqlite(dry_run: bool) -> bool:
@@ -571,6 +603,33 @@ def step_refresh_results_feed(
     return _run("Results-feed structured refresh", cmd, dry_run=dry_run)
 
 
+def step_analyze_daily_results(
+    dry_run: bool,
+    days_back: int = 1,
+    limit: int = 200,
+    skip_llm: bool = False,
+) -> bool:
+    """LLM-driven analysis of every company that filed today's results.
+
+    Reads the cache populated by ``step_refresh_results_feed``, builds an
+    evidence pack per symbol, calls the Research-Council LLM and persists
+    a structured analyst note into ``scores.results_analysis``. Per-stock
+    HTML reports are written under
+    ``reports/results_analysis/<YYYY>/<YYYYMMDD>/``.
+    """
+    _section(f"STEP 7c — Daily Results Analysis (last {days_back}d)")
+    if not _ensure_postgres_running(dry_run=dry_run):
+        return False
+    cmd = [
+        PYTHON, "-u", "-m", "scripts.analyze_daily_results",
+        "--days-back", str(days_back),
+        "--limit", str(limit),
+    ]
+    if skip_llm:
+        cmd.append("--skip-llm")
+    return _run("Daily results analysis (LLM)", cmd, dry_run=dry_run)
+
+
 def step_comprehensive_r_reports(dry_run: bool) -> bool:
     """Run R-based comprehensive reports: All Indexes + All Sectors HTML.
 
@@ -618,6 +677,12 @@ def main() -> int:
                         help="Skip fundamentals backfill even on its scheduled day")
     parser.add_argument("--skip-results-feed", action="store_true",
                         help="Skip daily results-feed cache refresh")
+    parser.add_argument("--skip-results-analysis", action="store_true",
+                        help="Skip the LLM-driven daily results analysis report")
+    parser.add_argument("--results-analysis-days-back", type=int, default=1,
+                        help="Analyser window in calendar days (default 1)")
+    parser.add_argument("--results-analysis-skip-llm", action="store_true",
+                        help="Run analyser with stub output (no LLM call)")
     parser.add_argument("--skip-portfolio-lab", action="store_true",
                         help="Skip historical stage backfill and portfolio strategy-lab report")
     parser.add_argument("--skip-report-validation", action="store_true",
@@ -704,6 +769,13 @@ def main() -> int:
         failed.append("Fundamentals pre-refresh")
         print("\n  ⚠️  Fundamentals pre-refresh failed — tracker snapshot may render NULL sub-scores")
 
+    # 2C. Persist VCP candidates before strategy lab. The portfolio lab's
+    # persisted_vcp_picks_v1 strategy and Top Picks report both consume this
+    # point-in-time table.
+    if not step_materialize_stage2_vcp_picks(args.dry_run):
+        failed.append("Stage 2 VCP pick materialization")
+        print("\n  ⚠️  VCP pick materialization failed — persisted VCP strategy may be empty")
+
     # 3. Portfolio strategy lab first. The Stage 2 tracker reads this artifact
     # to render the Best Strategy and VCP Strategy tabs.
     if not args.skip_portfolio_lab:
@@ -781,6 +853,10 @@ def main() -> int:
             print("  ⚠️  Portfolio EOD report QA failed (non-fatal)")
             failed.append("Report QA: portfolio EOD")
 
+    # 6B. Swing playbook uses fresh stage, sector, top-picks, and portfolio context.
+    if not step_swing_playbook(args.dry_run):
+        failed.append("Swing trading playbook")
+
     # 5C. Email Top Picks report (opens as Outlook draft; --email-send to send)
     if not args.skip_email:
         if not step_email_top_picks(args.dry_run, send=args.email_send):
@@ -803,6 +879,18 @@ def main() -> int:
         if not step_refresh_results_feed(args.dry_run):
             print("  ⚠️  Results-feed refresh had failures — see scores.financials_refresh_log")
             failed.append("Results-feed refresh")
+
+    # 7c. LLM-driven results analysis — runs after the cache refresh so
+    #     the evidence pack reads fresh PG rows. Skipped on --skip-results-analysis
+    #     or when the upstream feed step was skipped.
+    if not args.skip_results_analysis and not args.skip_results_feed:
+        if not step_analyze_daily_results(
+            args.dry_run,
+            days_back=args.results_analysis_days_back,
+            skip_llm=args.results_analysis_skip_llm,
+        ):
+            print("  ⚠️  Daily results analysis had failures — see scores.financials_refresh_log")
+            failed.append("Daily results analysis")
 
     # 7b. Weekly fundamentals backfill (default: Sundays only, or --fundamentals-backfill)
     run_fundamentals = (

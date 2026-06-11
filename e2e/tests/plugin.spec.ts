@@ -68,16 +68,15 @@ test("header is visible", async () => {
 });
 
 test("header shows BANKNIFTY as default symbol", async () => {
-  const symbolInput = panelPage.locator("input").first();
-  await expect(symbolInput).toHaveValue("BANKNIFTY");
+  await expect(panelPage.locator(".context-value")).toContainText("BANKNIFTY");
 });
 
 test("header shows NSE exchange", async () => {
-  await expect(panelPage.locator(".header")).toContainText("NSE");
+  await expect(panelPage.locator(".context-value")).toContainText("NSE");
 });
 
 test("header shows 5m timeframe", async () => {
-  await expect(panelPage.locator(".header")).toContainText("5m");
+  await expect(panelPage.locator(".context-value")).toContainText("5m");
 });
 
 test("header shows API status indicator", async () => {
@@ -103,9 +102,14 @@ test("capture button is visible", async () => {
   await expect(btn).toBeVisible();
 });
 
-test("capture button shows 📷 label", async () => {
+test("capture button shows capture action label", async () => {
   const btn = panelPage.locator(".capture-btn");
   await expect(btn).toContainText(/capture|📷/i);
+});
+
+test("select area capture control is visible", async () => {
+  await expect(panelPage.locator(".capture-area-btn")).toBeVisible();
+  await expect(panelPage.locator(".capture-area-btn")).toContainText(/select area/i);
 });
 
 // ── Chat panel locked state ───────────────────────────────────────────────────
@@ -126,16 +130,28 @@ test("chat locked message is shown before capture", async () => {
   await expect(panel).toContainText(/capture/i);
 });
 
-// ── Symbol input interaction ──────────────────────────────────────────────────
+// ── Chart context interaction ─────────────────────────────────────────────────
 
-test("symbol input accepts a new value", async () => {
+test("chart context editor is collapsed by default", async () => {
+  await expect(panelPage.locator(".chart-context")).toBeVisible();
+  await expect(panelPage.locator(".symbol-input")).toBeHidden();
+});
+
+test("chart context edit reveals controls and accepts a new value", async () => {
+  await panelPage.locator(".context-edit-btn").click();
+  await expect(panelPage.locator(".symbol-input")).toBeVisible();
+
   const input = panelPage.locator("input").first();
   await input.click({ clickCount: 3 });
   await input.fill("RELIANCE");
   await expect(input).toHaveValue("RELIANCE");
+  await expect(panelPage.locator(".context-value")).toContainText("RELIANCE");
+
   // Reset back to BANKNIFTY for subsequent tests.
   await input.click({ clickCount: 3 });
   await input.fill("BANKNIFTY");
+  await panelPage.locator(".context-edit-btn").click();
+  await expect(panelPage.locator(".symbol-input")).toBeHidden();
 });
 
 // ── Footer ────────────────────────────────────────────────────────────────────

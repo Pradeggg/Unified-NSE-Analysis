@@ -1628,16 +1628,21 @@
     },
     {
       "name": "get_market_breadth",
-      "description": "Get overall NSE market breadth: advance/decline, RS distribution, stage breakdown",
+      "description": "Get NSE breadth: advance/decline, RS distribution, and stage breakdown. Pass index='NIFTY 500' or another index when the user asks about a specific index; omit index only for whole scored-universe breadth.",
       "parameters": {
         "type": "object",
-        "properties": {},
+        "properties": {
+          "index": {
+            "type": "string",
+            "description": "Optional NSE index scope such as NIFTY 50, NIFTY 200, NIFTY 500, NIFTY MIDCAP 100, or NIFTY SMALLCAP 250."
+          }
+        },
         "required": []
       },
-      "signature": "() -> 'dict'",
+      "signature": "(index: 'str | None' = None) -> 'dict'",
       "return": "'dict'",
-      "doc_summary": "Compute market breadth: A/D ratio, %>200MA, sector overview.",
-      "source": "terminal/tools.py:2484"
+      "doc_summary": "Compute market breadth: A/D ratio, RS distribution, stage overview.",
+      "source": "terminal/tools.py:2496"
     },
     {
       "name": "get_most_active_stocks",

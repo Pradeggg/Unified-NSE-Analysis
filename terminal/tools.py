@@ -2016,17 +2016,35 @@ def _load_index_constituents_local(index_name: str) -> list[str]:
         return []
 
 
+def _load_index_constituents_pg(index_name: str) -> list[str]:
+    """Load index constituents from PostgreSQL ref.index_compositions."""
+    canonical = _normalize_index_name(index_name)
+    rows = _pg_fetchall(
+        """
+        SELECT DISTINCT UPPER(symbol)
+        FROM ref.index_compositions
+        WHERE UPPER(index_symbol)=UPPER(%s)
+        ORDER BY UPPER(symbol)
+        """,
+        (canonical,),
+    )
+    return [str(row[0]).strip().upper() for row in rows if row and row[0]]
+
+
 def _fetch_nse_index_constituents(index_name: str) -> list[str]:
     """Fetch live NSE constituents for an equity index.
 
-    The legacy ``equity-stockIndices?index=...`` endpoint that this used
-    to call was deprecated by NSE in 2024 and now returns 404 for every
-    index. The function therefore reads exclusively from the local
-    ``data/index_stock_mapping.csv`` bundled mapping. The 10-second
-    cookie-refreshed API attempt was removed because it could only ever
-    waste the request budget and slow the caller down.
+    PostgreSQL ``ref.index_compositions`` is the runtime source of truth.
+    The bundled CSV remains a fallback for environments where PostgreSQL is
+    unavailable or the ref schema has not been loaded.
     """
     canonical = _normalize_index_name(index_name)
+    try:
+        pg_symbols = _load_index_constituents_pg(canonical)
+        if pg_symbols:
+            return pg_symbols
+    except Exception:
+        pass
     return _load_index_constituents_local(canonical)
 
 
@@ -2048,21 +2066,31 @@ def get_long_term_growth_candidates(index_scope: str = "MIDCAP", top_n: int = 12
     warnings_list: list[str] = []
     source_indices: list[str] = []
 
+    used_pg_constituents = False
     for index_name in index_names:
         try:
-            fetched = _fetch_nse_index_constituents(index_name)
+            fetched = _load_index_constituents_pg(index_name)
+            if fetched:
+                used_pg_constituents = True
+            else:
+                fetched = _load_index_constituents_local(index_name)
             if fetched:
                 source_indices.append(index_name)
                 symbols.extend(fetched)
         except Exception as exc:
-            warnings_list.append(f"Could not fetch NSE constituents for {index_name}: {exc}")
+            warnings_list.append(f"Could not fetch PostgreSQL constituents for {index_name}: {exc}")
+            fetched = _load_index_constituents_local(index_name)
+            if fetched:
+                source_indices.append(index_name)
+                symbols.extend(fetched)
 
     symbols = list(dict.fromkeys(symbols))
     if not symbols:
         return {
-            "error": f"No live NSE constituents available for {index_scope}",
+            "error": f"No PostgreSQL index constituents available for {index_scope}",
             "index_scope": index_scope,
             "indices": index_names,
+            "missing_evidence": ["ref.index_compositions"],
             "warnings": warnings_list,
         }
 
@@ -2077,16 +2105,27 @@ def get_long_term_growth_candidates(index_scope: str = "MIDCAP", top_n: int = 12
                    investment_score, technical_score, enhanced_fund_score,
                    financial_strength, sales_growth, earnings_quality,
                    can_slim_score, relative_strength, change_1m_pct,
-                   rsi, trading_signal
+                   rsi, trading_signal,
+                   (
+                     COALESCE(technical_score, 0) * 0.30 +
+                     COALESCE(enhanced_fund_score, 0) * 0.30 +
+                     COALESCE(investment_score, 0) * 0.20 +
+                     COALESCE(financial_strength, 0) * 0.10 +
+                     LEAST(GREATEST(COALESCE(relative_strength, 0), 0), 100) * 0.10 +
+                     CASE
+                       WHEN stage='STAGE_2' THEN 8
+                       WHEN stage='STAGE_1' THEN 2
+                       WHEN stage='STAGE_4' THEN -12
+                       ELSE 0
+                     END
+                   ) AS combined_score
             FROM scores.stage_snapshots
             WHERE snapshot_date=(SELECT MAX(snapshot_date) FROM scores.stage_snapshots)
               AND UPPER(symbol) IN ({placeholders})
             ORDER BY
-              COALESCE(enhanced_fund_score, 0) DESC NULLS LAST,
-              COALESCE(financial_strength, 0) DESC NULLS LAST,
-              COALESCE(sales_growth, 0) DESC NULLS LAST,
-              COALESCE(investment_score, 0) DESC NULLS LAST,
-              COALESCE(relative_strength, 0) DESC NULLS LAST
+              combined_score DESC NULLS LAST,
+              COALESCE(technical_score, 0) DESC NULLS LAST,
+              COALESCE(enhanced_fund_score, 0) DESC NULLS LAST
             LIMIT %s
             """,
             [*symbols, limit],
@@ -2105,7 +2144,7 @@ def get_long_term_growth_candidates(index_scope: str = "MIDCAP", top_n: int = 12
         "investment_score", "technical_score", "enhanced_fund_score",
         "financial_strength", "sales_growth", "earnings_quality",
         "can_slim_score", "relative_strength", "change_1m_pct",
-        "rsi", "trading_signal",
+        "rsi", "trading_signal", "combined_score",
     ]
     candidates: list[dict] = []
     for row in rows:
@@ -2114,7 +2153,7 @@ def get_long_term_growth_candidates(index_scope: str = "MIDCAP", top_n: int = 12
         for key in (
             "price", "investment_score", "technical_score", "enhanced_fund_score",
             "financial_strength", "sales_growth", "earnings_quality", "can_slim_score",
-            "change_1m_pct", "rsi",
+            "change_1m_pct", "rsi", "combined_score",
         ):
             item[key] = _safe_float(item.get(key), 2)
         candidates.append(item)
@@ -2153,7 +2192,11 @@ def get_long_term_growth_candidates(index_scope: str = "MIDCAP", top_n: int = 12
         "candidates": candidates,
         "research_items": research_items,
         "warnings": warnings_list,
-        "source_trail": ["NSE live index constituents", "PostgreSQL scores.stage_snapshots", *(["screener.in"] if include_research else [])],
+        "source_trail": [
+            "PostgreSQL ref.index_compositions" if used_pg_constituents else "local index constituent CSV",
+            "PostgreSQL scores.stage_snapshots",
+            *(["screener.in"] if include_research else []),
+        ],
     }
 
 
@@ -2941,10 +2984,10 @@ def get_intraday_bars(
     try:
         df = _pg_read_df(
             """
-            SELECT timestamp, open, high, low, close, volume
+            SELECT DISTINCT ON (timestamp) timestamp, open, high, low, close, volume
             FROM intraday.ohlcv_bars
             WHERE UPPER(symbol)=%s AND timeframe=%s
-            ORDER BY timestamp DESC
+            ORDER BY timestamp DESC, captured_at DESC
             LIMIT %s
             """,
             (sym, timeframe, lookback),
@@ -2962,6 +3005,58 @@ def get_intraday_bars(
                 }
                 for _, row in df.iterrows()
             ]
+
+            # Staleness refresh: if latest bar is 10–360 min behind current IST,
+            # fetch fresh candles from yfinance and upsert so DB stays live.
+            try:
+                latest_ist = pd.to_datetime(bars[-1]["timestamp"])  # naive IST value
+                now_ist = pd.Timestamp.now(tz=IST_TZ).tz_localize(None)
+                age_min = (now_ist - latest_ist).total_seconds() / 60
+                if 10 < age_min < 360:
+                    yf_df_fresh = get_intraday_candles(sym, timeframe)
+                    if not yf_df_fresh.empty:
+                        fresh_bars = [
+                            {
+                                "timestamp": _fmt_bar_timestamp(idx),
+                                "open": row["Open"],
+                                "high": row["High"],
+                                "low": row["Low"],
+                                "close": row["Close"],
+                                "volume": row["Volume"],
+                            }
+                            for idx, row in yf_df_fresh.iterrows()
+                        ]
+                        persist_intraday_bars(
+                            sym, fresh_bars, timeframe=timeframe,
+                            source="Yahoo Finance (yfinance)",  # same source → ON CONFLICT DO UPDATE
+                        )
+                        # Re-read updated data from DB
+                        df2 = _pg_read_df(
+                            """
+                            SELECT DISTINCT ON (timestamp) timestamp, open, high, low, close, volume
+                            FROM intraday.ohlcv_bars
+                            WHERE UPPER(symbol)=%s AND timeframe=%s
+                            ORDER BY timestamp DESC, captured_at DESC
+                            LIMIT %s
+                            """,
+                            (sym, timeframe, lookback),
+                        )
+                        if not df2.empty:
+                            df2 = df2.sort_values("timestamp")
+                            bars = [
+                                {
+                                    "timestamp": _fmt_bar_timestamp(row["timestamp"]),
+                                    "open": round(float(row["open"]), 2),
+                                    "high": round(float(row["high"]), 2),
+                                    "low": round(float(row["low"]), 2),
+                                    "close": round(float(row["close"]), 2),
+                                    "volume": int(row["volume"]) if pd.notna(row["volume"]) else None,
+                                }
+                                for _, row in df2.iterrows()
+                            ]
+            except Exception:
+                pass  # staleness refresh failed — return cached DB data
+
             return {
                 "symbol": sym,
                 "timeframe": timeframe,

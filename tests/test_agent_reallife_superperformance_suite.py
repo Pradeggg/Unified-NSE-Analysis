@@ -41,7 +41,13 @@ def test_real_life_prompt_routing_matrix_covers_core_workflows():
             "midcap long-term growth research",
             "research on long term growth potential stocks in MIDCAP indices, perform a deep research",
             "long_term_growth_research",
-            [("get_long_term_growth_candidates", {"index_scope": "MIDCAP", "top_n": 12, "include_research": True}), ("get_market_breadth", {})],
+            [("get_long_term_growth_candidates", {"index_scope": "MIDCAP", "top_n": 12, "include_research": True}), ("get_market_breadth", {"index": "NIFTY MIDCAP 150"})],
+        ),
+        (
+            "smallcap index technical fundamental picks",
+            "best technical and fundamental stocks to pick from NIFTY SMALLCAP INDEX",
+            "long_term_growth_research",
+            [("get_long_term_growth_candidates", {"index_scope": "SMALLCAP", "top_n": 12, "include_research": True}), ("get_market_breadth", {"index": "NIFTY SMALLCAP 250"})],
         ),
         (
             "latest results feed",
@@ -99,6 +105,19 @@ def test_real_life_stock_analysis_renders_technical_fundamental_and_sector_evide
         execute_plan.return_value = [
             {"tool": "resolve_symbol", "args": {"query": "RELIANCE"}, "result": {"symbol": "RELIANCE"}},
             {
+                "tool": "get_cached_financials",
+                "args": {"symbol": "RELIANCE"},
+                "result": {
+                    "symbol": "RELIANCE",
+                    "status": "ok",
+                    "source": "postgres",
+                    "annual": [
+                        {"period": "Mar 2025", "revenue": "9,00,000", "pat": "70,000"},
+                        {"period": "Mar 2026", "revenue": "10,00,000", "pat": "78,000"},
+                    ],
+                },
+            },
+            {
                 "tool": "scrape_screener_in",
                 "args": {"symbol": "RELIANCE"},
                 "result": {
@@ -110,6 +129,16 @@ def test_real_life_stock_analysis_renders_technical_fundamental_and_sector_evide
                         "Sales": ["2,40,000", "2,50,000"],
                         "Net Profit": ["18,000", "19,000"],
                     },
+                },
+            },
+            {
+                "tool": "get_latest_results",
+                "args": {"symbol": "RELIANCE"},
+                "result": {
+                    "symbol": "RELIANCE",
+                    "status": "ok",
+                    "period": "latest",
+                    "facts": {"revenue": {"value": "2,50,000", "period": "Mar 2026"}},
                 },
             },
             {
@@ -251,6 +280,10 @@ def test_real_life_midcap_growth_research_renders_candidate_evidence_not_movers(
     assert execute_plan.call_args.args[0][0] == (
         "get_long_term_growth_candidates",
         {"index_scope": "MIDCAP", "top_n": 12, "include_research": True},
+    )
+    assert execute_plan.call_args.args[0][1] == (
+        "get_market_breadth",
+        {"index": "NIFTY MIDCAP 150"},
     )
     assert "LONG-TERM GROWTH RESEARCH" in result["answer"]
     assert "KAYNES" in result["answer"]

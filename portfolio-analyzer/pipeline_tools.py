@@ -19,11 +19,19 @@ def _output_dir() -> Path:
     return OUTPUT_DIR
 
 
-def run_phase0() -> str:
+def run_phase0(
+    require_pnl: bool = True,
+    use_llm_mapping: bool = False,
+    llm_mapping_model: str = "gpt-4o",
+) -> str:
     """Run Phase 0: Ingest PnL CSV (and optional holdings) → holdings.csv, closed_pnl.csv, portfolio_summary.json."""
     try:
         from phase0_ingest import run_phase0 as _run
-        closed, holdings, summary = _run()
+        closed, holdings, summary = _run(
+            require_pnl=require_pnl,
+            use_llm_mapping=use_llm_mapping,
+            llm_mapping_model=llm_mapping_model,
+        )
         return f"Phase 0 done. Closed PnL: {len(closed)} rows. Holdings: {len(holdings) if holdings is not None else 0}. Total realized PnL: Rs {summary.get('total_realized_pnl')}. Outputs: holdings.csv, closed_pnl.csv, portfolio_summary.json"
     except Exception as e:
         return f"Phase 0 failed: {e!s}"

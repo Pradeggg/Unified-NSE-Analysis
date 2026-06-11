@@ -33,11 +33,64 @@ def macro_proxy_signals(**kwargs: Any) -> dict:
 
 
 def sector_rs_ranking(**kwargs: Any) -> dict:
-    return {"ok": True, "tool": "sector.rs_ranking", "status": "adapter_pending", "args": kwargs}
+    """Return sector RS ranking from scores.sector_top_stocks."""
+    import os
+    dsn = os.environ.get("AGENT_ADDA_PG_DSN") or os.environ.get("PG_DSN") or "dbname=nse_market user=nse_admin host=/tmp"
+    try:
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+        from decimal import Decimal
+        conn = psycopg2.connect(dsn)
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                WITH stats AS (
+                    SELECT sector_name,
+                           ROUND(AVG(sector_strength)::numeric, 2)   AS sector_strength,
+                           ROUND(AVG(relative_strength)::numeric, 2) AS avg_rs,
+                           ROUND(AVG(change_1m_pct)::numeric, 2)     AS rs_1m,
+                           COUNT(DISTINCT symbol)                     AS total_stocks,
+                           MAX(score_date)                            AS score_date
+                    FROM scores.sector_top_stocks
+                    WHERE score_date = (SELECT MAX(score_date) FROM scores.sector_top_stocks)
+                    GROUP BY sector_name
+                )
+                SELECT * FROM stats ORDER BY rs_1m DESC NULLS LAST
+            """)
+            rows = [
+                {k: float(v) if isinstance(v, Decimal) else (v.isoformat() if hasattr(v, "isoformat") else v)
+                 for k, v in dict(r).items()}
+                for r in cur.fetchall()
+            ]
+        conn.close()
+        return {"ok": True, "tool": "sector.rs_ranking", "rows": rows, "count": len(rows)}
+    except Exception as exc:
+        return {"ok": False, "tool": "sector.rs_ranking", "error": str(exc)}
 
 
 def sector_breadth_health(**kwargs: Any) -> dict:
-    return {"ok": True, "tool": "sector.breadth_health", "status": "adapter_pending", "args": kwargs}
+    """Return per-sector Stage 2 breadth from scores.stage_snapshots."""
+    import os
+    dsn = os.environ.get("AGENT_ADDA_PG_DSN") or os.environ.get("PG_DSN") or "dbname=nse_market user=nse_admin host=/tmp"
+    try:
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+        conn = psycopg2.connect(dsn)
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT sector,
+                       COUNT(*)                                           AS total,
+                       COUNT(*) FILTER (WHERE stage = 'STAGE_2')          AS stage2,
+                       COUNT(*) FILTER (WHERE trading_signal IN ('BUY','STRONG_BUY')) AS buy_signals,
+                       ROUND(COUNT(*) FILTER (WHERE stage = 'STAGE_2') * 100.0 / NULLIF(COUNT(*),0), 1) AS stage2_pct
+                FROM scores.stage_snapshots
+                WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)
+                GROUP BY sector ORDER BY stage2_pct DESC NULLS LAST
+            """)
+            rows = [dict(r) for r in cur.fetchall()]
+        conn.close()
+        return {"ok": True, "tool": "sector.breadth_health", "rows": rows, "count": len(rows)}
+    except Exception as exc:
+        return {"ok": False, "tool": "sector.breadth_health", "error": str(exc)}
 
 
 def sector_top_stocks(**kwargs: Any) -> dict:

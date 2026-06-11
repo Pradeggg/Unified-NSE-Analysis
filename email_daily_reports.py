@@ -299,8 +299,8 @@ def fetch_regime(d: date) -> Optional[dict]:
 # Attachment discovery
 # ─────────────────────────────────────────────────────────────────────────────
 
-def locate_attachments(d: date) -> tuple[Path, Path]:
-    """Find today's sector rotation HTML and Stage 2 tracker HTML."""
+def locate_attachments(d: date) -> tuple[Path, Path, Path]:
+    """Find today's sector rotation HTML, Stage 2 tracker HTML, and TradingView watchlist."""
     sector = SECTOR_LATEST_HTML
     if not sector.exists():
         # Fallback to dated file
@@ -312,7 +312,12 @@ def locate_attachments(d: date) -> tuple[Path, Path]:
         candidates = sorted(STAGE2_DIR.glob("stage2_tracker_*.html"), reverse=True)
         if candidates:
             stage2 = candidates[0]
-    return sector, stage2
+    tradingview = REPORTS_DIR / "latest" / "stage2_buy_tradingview.txt"
+    if not tradingview.exists():
+        candidates = sorted(STAGE2_DIR.glob("stage2_buy_tradingview_*.txt"), reverse=True)
+        if candidates:
+            tradingview = candidates[0]
+    return sector, stage2, tradingview
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -709,6 +714,7 @@ def compose_via_outlook(
     html_body: str,
     sector_attachment: Path,
     stage2_attachment: Path,
+    tradingview_attachment: Path | None,
     to_recipients: list[tuple[str, str]],
     bcc_recipients: list[tuple[str, str]],
     send_immediately: bool = False,
@@ -727,6 +733,13 @@ def compose_via_outlook(
     body_path_str = str(body_path).replace('"', '\\"')
     sector_str    = str(sector_attachment).replace('"', '\\"')
     stage2_str    = str(stage2_attachment).replace('"', '\\"')
+    tradingview_block = ""
+    if tradingview_attachment and tradingview_attachment.exists():
+        tv_str = str(tradingview_attachment).replace('"', '\\"')
+        tradingview_block = (
+            f'set tradingviewPath to POSIX file "{tv_str}"\n'
+            '    make new attachment at newMsg with properties {file:tradingviewPath}'
+        )
 
     script = f'''
 set htmlBody to (do shell script "cat " & quoted form of "{body_path_str}")
@@ -740,6 +753,7 @@ tell application "Microsoft Outlook"
 {bcc_block}
     make new attachment at newMsg with properties {{file:sectorPath}}
     make new attachment at newMsg with properties {{file:stage2Path}}
+    {tradingview_block}
     {final_action}
 end tell
 '''
@@ -826,7 +840,7 @@ def main() -> int:
         print(html_body)
         return 0
 
-    sector_path, stage2_path = locate_attachments(snap_date)
+    sector_path, stage2_path, tradingview_path = locate_attachments(snap_date)
     if not sector_path.exists():
         print(f"❌ Sector rotation HTML not found: {sector_path}", file=sys.stderr)
         return 2
@@ -836,6 +850,10 @@ def main() -> int:
 
     print(f"   Attaching: {sector_path.name} ({sector_path.stat().st_size//1024} KB)")
     print(f"   Attaching: {stage2_path.name} ({stage2_path.stat().st_size//1024} KB)")
+    if tradingview_path.exists():
+        print(f"   Attaching: {tradingview_path.name} ({tradingview_path.stat().st_size//1024} KB)")
+    else:
+        print(f"   TradingView watchlist not found, skipping attachment: {tradingview_path}")
 
     to_list  = [(addr.split('@')[0], addr) for addr in args.to]  if args.to  else TO_RECIPIENTS
     bcc_list = [(addr.split('@')[0], addr) for addr in args.bcc] if args.bcc else BCC_RECIPIENTS
@@ -850,6 +868,7 @@ def main() -> int:
         html_body=html_body,
         sector_attachment=sector_path,
         stage2_attachment=stage2_path,
+        tradingview_attachment=tradingview_path if tradingview_path.exists() else None,
         to_recipients=to_list,
         bcc_recipients=bcc_list,
         send_immediately=args.send,

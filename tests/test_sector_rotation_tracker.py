@@ -6,16 +6,168 @@ import pandas as pd
 from sector_rotation_tracker import (
     _apply_latest_history_prices,
     _backfill_snapshot_dates,
+    _tradingview_symbols,
+    _stage2_rs_trading_signal,
     _history_as_of,
     _latest_eod_close_date,
     _load_fundamental_score_lookup,
+    _vcp_pick_pg_rows,
     _should_skip_unknown_snapshot_overwrite,
     _text_or_none,
+    backfill_vcp_picks_to_pg,
     build_html_report,
+    write_tradingview_watchlist,
 )
 
 
 class SectorRotationTrackerTests(unittest.TestCase):
+    def test_stage2_rs_trading_signal_weights_relative_strength(self):
+        strong_rs = {
+            "stage": "STAGE_2",
+            "technical_score": 72,
+            "relative_strength": 42,
+            "minervini_score": 18,
+            "enhanced_fund_score": 74,
+            "trend_signal": "STRONG_BULLISH",
+            "trading_signal": "HOLD",
+        }
+        weak_rs = {
+            **strong_rs,
+            "relative_strength": -18,
+        }
+
+        self.assertEqual(_stage2_rs_trading_signal(strong_rs), "STRONG_BUY")
+        self.assertEqual(_stage2_rs_trading_signal(weak_rs), "HOLD")
+
+    def test_tradingview_symbols_are_nse_prefixed_and_deduplicated(self):
+        rows = [
+            {"symbol": "reliance"},
+            {"symbol": "RELIANCE"},
+            {"symbol": "TCS.NS"},
+            {"symbol": ""},
+            {"symbol": None},
+        ]
+
+        self.assertEqual(_tradingview_symbols(rows), ["NSE:RELIANCE", "NSE:TCS"])
+
+    def test_write_tradingview_watchlist_uses_all_stage2_buy_signals_with_good_fundamentals(self):
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dated, latest = write_tradingview_watchlist(
+                {
+                    "snap_date": "2026-05-29",
+                    "vcp_breakout_picks": [
+                        {"symbol": "VCPONLY", "trading_signal": "HOLD", "enhanced_fund_score": 75},
+                        {"symbol": "LOWFUNDVCP", "trading_signal": "HOLD", "enhanced_fund_score": 50},
+                        {"symbol": "RELIANCE", "trading_signal": "BUY", "enhanced_fund_score": 65},
+                    ],
+                    "stage2_now": [
+                        {"symbol": "RELIANCE", "trading_signal": "BUY", "enhanced_fund_score": 65},
+                        {"symbol": "TCS", "trading_signal": "STRONG_BUY", "enhanced_fund_score": 72},
+                        {"symbol": "INFY", "trading_signal": "HOLD", "enhanced_fund_score": 80},
+                        {"symbol": "WIPRO", "trading_signal": "BUY", "enhanced_fund_score": 64.9},
+                        {"symbol": "HDFCBANK", "trading_signal": "BUY", "fundamental_score": 70},
+                        {"symbol": "SBIN", "trading_signal": "BUY", "enhanced_fund_score": 0},
+                    ],
+                },
+                reports_dir=root / "reports" / "sector_rotation",
+                latest_dir=root / "reports" / "latest",
+            )
+
+            self.assertEqual(dated.name, "stage2_buy_tradingview_2026-05-29.txt")
+            self.assertEqual(
+                dated.read_text(encoding="utf-8"),
+                "NSE:RELIANCE,NSE:TCS,NSE:HDFCBANK,NSE:VCPONLY\n",
+            )
+            self.assertEqual(latest.name, "stage2_buy_tradingview.txt")
+            self.assertEqual(latest.read_text(encoding="utf-8"), dated.read_text(encoding="utf-8"))
+
+    def test_vcp_pick_pg_rows_capture_rank_scores_and_fundamentals(self):
+        rows = _vcp_pick_pg_rows(
+            {
+                "snap_date": "2026-05-29",
+                "vcp_breakout_picks": [
+                    {
+                        "symbol": "bbb",
+                        "company_name": "Beta Ltd",
+                        "sector": "Capital Goods",
+                        "price": 100,
+                        "live_price": 101,
+                        "price_date": "2026-05-29",
+                        "change_1d_pct": 2.0,
+                        "change_1w_pct": 1.0,
+                        "rsi": 58,
+                        "relative_strength": 1.1,
+                        "trading_signal": "HOLD",
+                        "trend_signal": "STRONG_BULLISH",
+                        "supertrend_state": "BULLISH",
+                        "investment_score": 68,
+                        "enhanced_fund_score": 72,
+                        "earnings_quality": 74,
+                        "sales_growth": 70,
+                        "financial_strength": 66,
+                        "vcp_score": 82,
+                        "vcp_breakout_pct": 2.5,
+                        "vcp_contraction_pct": 1.2,
+                        "stance": "BULLISH",
+                        "narrative": "VCP setup with strong fundamentals.",
+                    }
+                ],
+            }
+        )
+
+        self.assertEqual(len(rows), 1)
+        row = rows[0]
+        self.assertEqual(row["snapshot_date"], "2026-05-29")
+        self.assertEqual(row["rank"], 1)
+        self.assertEqual(row["symbol"], "BBB")
+        self.assertEqual(row["vcp_score"], 82.0)
+        self.assertEqual(row["enhanced_fund_score"], 72.0)
+        self.assertEqual(row["earnings_quality"], 74.0)
+        self.assertEqual(row["vcp_breakout_pct"], 2.5)
+        self.assertEqual(row["vcp_contraction_pct"], 1.2)
+        self.assertEqual(row["narrative"], "VCP setup with strong fundamentals.")
+
+    def test_backfill_vcp_picks_to_pg_computes_each_snapshot(self):
+        from unittest.mock import patch
+
+        stage2 = pd.DataFrame(
+            [
+                {
+                    "snapshot_date": "2026-05-29",
+                    "symbol": "AAA",
+                    "stage": "STAGE_2",
+                    "price": 100,
+                    "change_1d_pct": 2.5,
+                    "change_1w_pct": 1.2,
+                    "rsi": 58,
+                    "relative_strength": 1.1,
+                    "trend_signal": "STRONG_BULLISH",
+                    "supertrend_state": "BULLISH",
+                    "investment_score": 70,
+                }
+            ]
+        )
+        reports = []
+
+        with (
+            patch("sector_rotation_tracker._pg_query") as mock_query,
+            patch("sector_rotation_tracker._pg_stage_snapshots", return_value=stage2),
+            patch("sector_rotation_tracker.write_vcp_picks_to_pg") as mock_write,
+        ):
+            mock_query.return_value = pd.DataFrame({"snapshot_date": ["2026-05-29"]})
+            mock_write.side_effect = lambda report: reports.append(report) or len(report["vcp_breakout_picks"])
+
+            saved = backfill_vcp_picks_to_pg(start_date="2026-01-01")
+
+        self.assertEqual(saved, 1)
+        self.assertEqual(reports[0]["snap_date"], "2026-05-29")
+        self.assertEqual(reports[0]["vcp_breakout_picks"][0]["symbol"], "AAA")
+        self.assertGreater(reports[0]["vcp_breakout_picks"][0]["vcp_score"], 0)
+
     def test_latest_eod_close_date_uses_price_history_timestamp(self):
         hist = pd.DataFrame(
             {
@@ -82,6 +234,10 @@ class SectorRotationTrackerTests(unittest.TestCase):
                     }
                 ],
                 "top_picks": [],
+                "tradingview_watchlist": {
+                    "latest_path": "reports/latest/stage2_buy_tradingview.txt",
+                    "count": 1,
+                },
             }
         )
 
@@ -92,6 +248,116 @@ class SectorRotationTrackerTests(unittest.TestCase):
         self.assertIn("2026-05-06", html)
         self.assertNotIn(">nan<", html)
         self.assertNotIn("sb-num\">nan", html)
+        self.assertIn("TradingView Upload", html)
+        self.assertIn("stage2_buy_tradingview.txt", html)
+
+    def test_stage2_table_sorting_handles_currency_and_detail_rows(self):
+        html = build_html_report(
+            {
+                "snap_date": "2026-06-02",
+                "prev_date": None,
+                "week_snap": None,
+                "summary": {"stage_counts": {"STAGE_1": 0, "STAGE_2": 2, "STAGE_3": 0, "STAGE_4": 0}},
+                "snapshot_history": [],
+                "stage2_now": [
+                    {
+                        "symbol": "BETA",
+                        "company_name": "Beta Ltd",
+                        "stage": "STAGE_2",
+                        "price": 1239.20,
+                        "live_price": 1239.20,
+                        "investment_score": 50.0,
+                        "technical_score": 60.0,
+                        "rsi": 55.0,
+                        "trading_signal": "HOLD",
+                        "narrative": "Beta narrative",
+                    },
+                    {
+                        "symbol": "ALPHA",
+                        "company_name": "Alpha Ltd",
+                        "stage": "STAGE_2",
+                        "price": 950.0,
+                        "live_price": 950.0,
+                        "investment_score": 40.0,
+                        "technical_score": 50.0,
+                        "rsi": 45.0,
+                        "trading_signal": "BUY",
+                        "narrative": "Alpha narrative",
+                    },
+                ],
+                "top_picks": [],
+            }
+        )
+
+        self.assertIn("data-detail-id", html)
+        self.assertIn("masterRows", html)
+        self.assertIn("tbody.appendChild(detail)", html)
+        self.assertIn("₹,%▲▼,", html)
+
+    def test_top_picks_section_shows_tradingview_link_and_vcp_fundamentals(self):
+        html = build_html_report(
+            {
+                "snap_date": "2026-05-29",
+                "prev_date": None,
+                "week_snap": None,
+                "summary": {"stage_counts": {"STAGE_1": 0, "STAGE_2": 1, "STAGE_3": 0, "STAGE_4": 0}},
+                "snapshot_history": [],
+                "stage2_now": [],
+                "top_picks": [
+                    {
+                        "symbol": "AAA",
+                        "company_name": "Alpha Ltd",
+                        "sector": "Industrials",
+                        "investment_score": 70,
+                        "technical_score": 75,
+                        "rsi": 60,
+                        "stance": "BULLISH",
+                    }
+                ],
+                "vcp_breakout_picks": [
+                    {
+                        "symbol": "BBB",
+                        "company_name": "Beta Ltd",
+                        "sector": "Capital Goods",
+                        "price": 100,
+                        "vcp_breakout_pct": 2.5,
+                        "vcp_contraction_pct": 1.2,
+                        "rsi": 58,
+                        "relative_strength": 1.1,
+                        "investment_score": 68,
+                        "vcp_score": 82,
+                        "enhanced_fund_score": 72,
+                        "earnings_quality": 74,
+                        "sales_growth": 70,
+                        "financial_strength": 66,
+                    }
+                ],
+                "tradingview_watchlist": {
+                    "latest_path": "reports/latest/stage2_buy_tradingview.txt",
+                    "count": 1,
+                },
+            }
+        )
+
+        top_idx = html.index("Top Investment Picks")
+        link_idx = html.index("stage2_buy_tradingview.txt", top_idx)
+        self.assertGreater(link_idx, top_idx)
+        vcp_idx = html.index('id="t-vcp"')
+        vcp_end = html.index('id="t-help"', vcp_idx)
+        vcp_html = html[vcp_idx:vcp_end]
+        self.assertIn("Enh Fund<span", vcp_html)
+        self.assertIn("Earnings<span", vcp_html)
+        self.assertIn("Sales<span", vcp_html)
+        self.assertIn("Fin Strength<span", vcp_html)
+        self.assertIn('<span class="sb-num">72</span>', vcp_html)
+        self.assertIn('<span class="sb-num">74</span>', vcp_html)
+        self.assertIn("VCP Score", vcp_html)
+        self.assertIn("toggleCol", vcp_html)
+        self.assertIn("exportCSV", vcp_html)
+        self.assertIn("sortTbl", vcp_html)
+        self.assertIn('id="vcp-bt"', vcp_html)
+        self.assertIn("sortTbl('vcp-bt',0)", vcp_html)
+        self.assertIn('id="vcp-bt-body"', vcp_html)
 
     def test_fundamental_score_lookup_fills_missing_pg_subscores_from_csv(self):
         import tempfile

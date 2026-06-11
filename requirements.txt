@@ -45,6 +45,7 @@ python-dotenv>=1.0.0
 # Anthropic Claude API for LLM-based narratives in sector rotation reports
 # Set ANTHROPIC_API_KEY in .env to enable; falls back to rule-based narratives if missing
 openai>=1.0.0
+sentence-transformers>=3.0.0
 
 # Web search (working-sector): DuckDuckGo (default), Google, Yahoo
 ddgs>=9.0.0

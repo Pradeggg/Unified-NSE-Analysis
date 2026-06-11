@@ -139,7 +139,7 @@ _BROKER_TO_NSE: dict[str, str] = {
     "SKYGOL": "SKYGOLD",      "SOLIN":  "SOLARINDS",   "SOMCER": "SOMANYCERA",
     "STABAN": "SBIN",         "SUNF":   "SUNFLAG",     "SUNIRO": "SUNFLAGIRON",
     "SUNPHA": "SUNPHARMA",    "SUPLIF": "SUPRIYA",     "TATCO":  "TATACOFFEE",
-    "TATCOV": "TATAMOTORS",   "TATELX": "TATAELXSI",   "TATMOT": "TATAMTRDVR",
+    "TATCOV": "TMCV",         "TATELX": "TATAELXSI",   "TATMOT": "TMPV",
     "TATNID": "TATANIFTYDIGITAL","TATPOW":"TATAPOWER",  "TATSPO": "TATASTEEL",
     "TATSTE": "TATASTEEL",    "TCS":    "TCS",          "TDPSYS": "TDPOWERSYS",
     "TECMAH": "TECHM",        "TIMGRO": "TIMEXIND",    "TITIND": "TITAN",
@@ -509,6 +509,18 @@ def _find_match(broker: str, company: str, records: dict, db_norm: dict) -> Opti
     return None
 
 
+def _is_exact_symbol_match(broker: str, row: Optional[dict]) -> bool:
+    """True when a DB row represents the same holding symbol, not a fuzzy proxy."""
+    if not row:
+        return False
+    db_symbol = str(row.get("symbol") or "").strip().upper()
+    if not db_symbol:
+        return False
+    mapped = str(_BROKER_TO_NSE.get(broker, broker) or "").strip().upper()
+    broker = str(broker or "").strip().upper()
+    return db_symbol in {mapped, broker}
+
+
 # ── Strategy evaluators ───────────────────────────────────────────────────────
 
 def _strat_momentum(d: Optional[dict]) -> tuple[Optional[str], str]:
@@ -819,7 +831,7 @@ def _analyse_portfolio(
             nse_sym = _BROKER_TO_NSE.get(s["broker"])
             live_p = live_prices.get(nse_sym) or live_prices.get(s["broker"])
             if live_p and live_p > 0:
-                if d and d.get("price") and float(d["price"]) > 0:
+                if _is_exact_symbol_match(s["broker"], d) and d and d.get("price") and float(d["price"]) > 0:
                     prev_close = float(d["price"])
                     day_chg_pct = (live_p / prev_close - 1) * 100
                 live_cmp = live_p
@@ -929,7 +941,6 @@ _YF_TICKER_OVERRIDES: dict[str, str] = {
     "TIMEXIND":        "TIMEX",        # Timex Group India
     "SHAILYENG":       "SHAILY",       # Shaily Engineering
     "MAITHANALLOYS":   "MAITHANALL",   # Maithan Alloys
-    "PREMIEREXP":      "PREMIER",      # Premier Explosives (note: low liquidity)
     "SUNFLAGIRON":     "SUNFLAG",      # Sunflag Iron & Steel
     "KECIN":           "KERNEX",       # Kernex Microsystems
     "INDGLY":          "INDIAGLYCO",   # India Glycols
@@ -960,7 +971,7 @@ _YF_SKIP: frozenset[str] = frozenset({
     # Stocks confirmed not available on yfinance (use DB snapshot fallback)
     "TATAMTRDVR", "PONDYOX", "INDMED", "UJJIVANFIN", "HBLPOWER",
     "USHAMARTIN", "APOLLOMICRO", "DHAMPURBIO", "ROSSELTECHSYS",
-    "GUJAMBEXPORTS", "GYFTR",
+    "GUJAMBEXPORTS", "GYFTR", "PREMIEREXP",
 })
 
 
@@ -1195,6 +1206,47 @@ def _esc(value) -> str:
     return html.escape("" if value is None else str(value))
 
 
+def _llm_stock_views_path() -> Path:
+    return EOD_REPORT.parent / "llm_stock_views.json"
+
+
+def _load_llm_stock_view_lookup(path: Optional[Path] = None) -> dict[str, dict]:
+    """Load optional AI stock verdicts written by portfolio-analyzer."""
+    view_path = path or _llm_stock_views_path()
+    try:
+        payload = json.loads(Path(view_path).read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    views = payload.get("views") if isinstance(payload, dict) else []
+    if not isinstance(views, list):
+        return {}
+    out: dict[str, dict] = {}
+    for row in views:
+        if not isinstance(row, dict):
+            continue
+        symbol = str(row.get("symbol") or "").strip().upper()
+        if symbol:
+            out[symbol] = row
+    return out
+
+
+def _llm_view_for_row(r: dict, lookup: dict[str, dict]) -> dict:
+    broker = str(r.get("broker") or "").strip().upper()
+    nse = str(((r.get("db") or {}).get("symbol")) or _BROKER_TO_NSE.get(broker) or broker).strip().upper()
+    return lookup.get(nse) or lookup.get(broker) or {}
+
+
+def _llm_verdict_badge(verdict: str | None) -> str:
+    label = str(verdict or "N/A").strip().upper() or "N/A"
+    colors = {
+        "MUST BUY": ("#dcfce7", "#166534"),
+        "HOLD": ("#fef3c7", "#92400e"),
+        "MUST SELL": ("#fee2e2", "#991b1b"),
+    }
+    bg, fg = colors.get(label, ("#f1f5f9", "#475569"))
+    return f'<span style="background:{bg};color:{fg};padding:2px 7px;border-radius:4px;font-size:11px;font-weight:900">{_esc(label)}</span>'
+
+
 def _money(value: float, *, scale: float = 1.0, suffix: str = "") -> str:
     try:
         v = float(value or 0.0) / scale
@@ -1228,6 +1280,48 @@ def _tooltip_attrs(items: dict[str, object]) -> str:
         safe_key = "".join(ch for ch in str(key).lower() if ch.isalnum() or ch == "-")
         attrs.append(f' data-tooltip-{safe_key}="{_esc(value)}"')
     return "".join(attrs)
+
+
+_TATA_MOTORS_DEMERGER_BROKERS = {"TATCOV", "TATMOT", "TMCV", "TMPV"}
+
+
+def _apply_corporate_action_adjustments(results: list[dict]) -> None:
+    """Annotate rows whose broker P&L needs corporate-action-aware alerting."""
+    for r in results:
+        cost = float(r.get("value_cost") or 0.0)
+        economic_pnl = float(r.get("upnl") or 0.0) + float(r.get("rpnl") or 0.0)
+        r["economic_pnl"] = economic_pnl
+        r["economic_pnl_pct"] = (economic_pnl / cost * 100.0) if cost else 0.0
+        r["alert_pnl_pct"] = float(r.get("upnl_pct") or 0.0)
+
+    tata_rows = [
+        r for r in results
+        if str(r.get("broker") or "").upper() in _TATA_MOTORS_DEMERGER_BROKERS
+    ]
+    if len(tata_rows) < 2:
+        return
+
+    total_cost = sum(float(r.get("value_cost") or 0.0) for r in tata_rows)
+    total_value = sum(float(r.get("value_mkt") or 0.0) for r in tata_rows)
+    total_upnl = sum(float(r.get("upnl") or 0.0) for r in tata_rows)
+    total_rpnl = sum(float(r.get("rpnl") or 0.0) for r in tata_rows)
+    total_pnl = total_upnl + total_rpnl
+    if not total_cost:
+        return
+
+    group_unrealized_pct = (total_value / total_cost - 1.0) * 100.0
+    group_total_pct = total_pnl / total_cost * 100.0
+    note = (
+        "Tata Motors demerger adjusted: TATMOT/TMPV and TATCOV/TMCV "
+        f"combined; total P&L {_money(total_pnl)} ({group_total_pct:+.1f}%)."
+    )
+    for r in tata_rows:
+        r["corporate_action_group"] = "Tata Motors demerger"
+        r["corporate_action_note"] = note
+        r["economic_pnl"] = total_pnl
+        r["economic_pnl_pct"] = group_total_pct
+        r["corporate_action_unrealized_pct"] = group_unrealized_pct
+        r["alert_pnl_pct"] = group_total_pct
 
 
 _HTML_HEAD = """\
@@ -1824,6 +1918,22 @@ def _write_intraday_html(
         return "".join(parts)
 
     heatmap_stages = ["STAGE_1", "STAGE_2", "STAGE_3", "STAGE_4", "N/A"]
+    heatmap_buckets: dict[tuple[str, str], dict[str, float]] = {
+        (sig, stage): {"count": 0.0, "inv_total": 0.0}
+        for sig in signals
+        for stage in heatmap_stages
+    }
+    for r in results:
+        sig = str(r.get("composite") or "HOLD")
+        if sig not in signals:
+            sig = "HOLD"
+        stage = str(r.get("stage") or "N/A")
+        if stage not in heatmap_stages:
+            stage = "N/A"
+        bucket = heatmap_buckets[(sig, stage)]
+        bucket["count"] += 1
+        bucket["inv_total"] += float(r.get("inv_score") or 0)
+
     heatmap_html = '<div id="portfolioHeatmap" class="heatmap" aria-label="Signal by stage heatmap">'
     heatmap_html += '<div class="head">Signal</div>' + "".join(
         f'<div class="head">{_esc(s.replace("STAGE_", "S"))}</div>' for s in heatmap_stages
@@ -1831,9 +1941,13 @@ def _write_intraday_html(
     for sig in signals:
         heatmap_html += f'<div class="row-lbl">{_esc(sig)}</div>'
         for stage in heatmap_stages:
+            bucket = heatmap_buckets[(sig, stage)]
+            count = int(bucket["count"])
+            avg = bucket["inv_total"] / count if count else 0
             heatmap_html += (
                 f'<div class="heat-cell" data-signal="{_esc(sig)}" data-stage="{_esc(stage)}">'
-                '<span class="count">0</span><span class="avg">Inv --</span></div>'
+                f'<span class="count">{count}</span>'
+                f'<span class="avg">{"Inv " + format(avg, ".0f") if count else "Inv --"}</span></div>'
             )
     heatmap_html += "</div>"
 
@@ -2803,6 +2917,7 @@ def _build_paper_trading_section() -> str:
 def _write_eod_html(results: list[dict], snap_date: str, *, transactions: list[dict] | None = None) -> None:
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     transactions = transactions or []
+    _apply_corporate_action_adjustments(results)
 
     total_cost = sum(r["value_cost"] for r in results)
     total_mkt  = sum(r["value_mkt"]  for r in results)
@@ -2828,6 +2943,7 @@ def _write_eod_html(results: list[dict], snap_date: str, *, transactions: list[d
         cats[k].sort(key=lambda x: -(x["inv_score"] or 0))
     cats["SELL"].sort(key=lambda x: (x["upnl_pct"] or 0))
     cats["HOLD"].sort(key=lambda x: -(x["inv_score"] or 0))
+    llm_views = _load_llm_stock_view_lookup()
 
     # KPIs
     def _mover_kpi(row: Optional[dict]) -> tuple[str, str]:
@@ -2900,7 +3016,7 @@ def _write_eod_html(results: list[dict], snap_date: str, *, transactions: list[d
         tech = _num(r.get("tech_score"))
         inv = _num(r.get("inv_score"))
         rs_n500 = _num(r.get("rs_nifty500"))
-        pnl_pct = _num(r.get("upnl_pct"))
+        pnl_pct = _num(r.get("alert_pnl_pct"), _num(r.get("upnl_pct")))
         composite = r.get("composite") or "HOLD"
         coverage = r.get("coverage") or "full"
         if composite == "SELL" or stage == "STAGE_4" or supertrend == "BEARISH" or pnl_pct <= -20 or tech < 35:
@@ -2983,6 +3099,52 @@ def _write_eod_html(results: list[dict], snap_date: str, *, transactions: list[d
     </div>
     """
 
+    def _llm_zone_html() -> str:
+        if not llm_views:
+            return ""
+        buckets = {"MUST SELL": [], "MUST BUY": [], "HOLD": []}
+        for r in results:
+            view = _llm_view_for_row(r, llm_views)
+            verdict = str(view.get("final_verdict") or "").upper()
+            if verdict in buckets:
+                buckets[verdict].append((r, view))
+        configs = {
+            "MUST SELL": ("#991b1b", "Names where the AI view sees decisive risk"),
+            "MUST BUY": ("#166534", "Names where the AI view sees strong add/buy quality"),
+            "HOLD": ("#92400e", "Mixed or wait-for-confirmation names"),
+        }
+        cards = []
+        for label, (color, subtitle) in configs.items():
+            rows = sorted(
+                buckets.get(label, []),
+                key=lambda item: -_num((item[1] or {}).get("confidence")),
+            )[:8]
+            if rows:
+                items = "".join(
+                    f'<div class="alert-item"><b>{_esc(r["broker"])}</b>'
+                    f'<span>{_esc("; ".join((view.get("key_reasons") or [])[:2]) or f"confidence {_num(view.get("confidence")):.2f}")}</span></div>'
+                    for r, view in rows
+                )
+            else:
+                items = '<div class="alert-item"><b>None</b><span>No names currently classified here</span></div>'
+            cards.append(
+                f'<div class="alert-card">'
+                f'<h3 style="color:{color}">AI {label} <span style="color:#94a3b8;font-weight:700">({len(buckets.get(label, []))})</span></h3>'
+                f'<div style="font-size:11px;color:#64748b;margin-bottom:8px">{_esc(subtitle)}</div>'
+                f'<div class="alert-list">{items}</div></div>'
+            )
+        return f"""
+    <div class="section">
+      <div class="sec-hdr" style="background:#312e81">
+        <span class="title">AI Verdict Zone</span>
+        <span class="meta">AI short-term and long-term second opinion; deterministic signals remain visible below</span>
+      </div>
+      <div style="background:#fff;border:1px solid #e5e7eb;border-top:0;border-radius:0 0 8px 8px;padding:14px">
+        <div class="alert-grid">{''.join(cards)}</div>
+      </div>
+    </div>
+    """
+
     def _kv_rows(rows: list[tuple[str, object]]) -> str:
         return "".join(f"<tr><th>{_esc(k)}</th><td>{_esc(v)}</td></tr>" for k, v in rows)
 
@@ -2994,6 +3156,7 @@ def _write_eod_html(results: list[dict], snap_date: str, *, transactions: list[d
 
     def _stock_detail_row(r: dict, detail_id: str, colspan: int = 16) -> str:
         alert, alert_reason = _primary_alert(r)
+        llm_view = _llm_view_for_row(r, llm_views)
         fd = r.get("fund_det") or {}
         derived = r.get("derived_fund") or {}
         portfolio_rows = [
@@ -3004,6 +3167,10 @@ def _write_eod_html(results: list[dict], snap_date: str, *, transactions: list[d
             ("Market value", f"₹{r['value_mkt']:,.0f}"),
             ("Realized P&L", _money(r["rpnl"])),
             ("Unrealized P&L", f"{_money(r['upnl'])} ({r['upnl_pct']:+.2f}%)"),
+            *(
+                [("Corporate action adjusted P&L", f"{_money(r.get('economic_pnl'))} ({_num(r.get('economic_pnl_pct')):+.2f}%)")]
+                if r.get("corporate_action_group") else []
+            ),
             ("Composite signal", r.get("composite") or "N/A"),
         ]
         technical_rows = [
@@ -3023,6 +3190,14 @@ def _write_eod_html(results: list[dict], snap_date: str, *, transactions: list[d
             ("Financial strength", f"{_num((r.get('db') or {}).get('fin_str')):.0f}" if r.get("db") else "N/A"),
             ("Institutional backing", f"{_num((r.get('db') or {}).get('inst_back')):.0f}" if r.get("db") else "N/A"),
             ("Derived notes", derived.get("notes") or "N/A"),
+        ]
+        llm_rows = [
+            ("Final verdict", llm_view.get("final_verdict") or "N/A"),
+            ("Short-term view", llm_view.get("short_term_view") or "N/A"),
+            ("Long-term view", llm_view.get("long_term_view") or "N/A"),
+            ("Confidence", f"{_num(llm_view.get('confidence')):.2f}" if llm_view else "N/A"),
+            ("Reasons", "; ".join((llm_view.get("key_reasons") or [])[:4]) if llm_view else "N/A"),
+            ("Risks", "; ".join((llm_view.get("risks_to_view") or [])[:4]) if llm_view else "N/A"),
         ]
         fund_notes = " · ".join(
             str(fd.get(k) or "")
@@ -3074,11 +3249,13 @@ def _write_eod_html(results: list[dict], snap_date: str, *, transactions: list[d
                 <div class="detail-card"><h4>Technical Details</h4><table>{_kv_rows(technical_rows)}</table></div>
                 <div class="detail-card"><h4>Fundamental Details</h4><table>{_kv_rows(fundamental_rows)}</table></div>
                 <div class="detail-card"><h4>Strategy Votes</h4><table>{_strategy_vote_rows(r)}</table></div>
+                {f'<div class="detail-card"><h4>AI Stock View</h4><table>{_kv_rows(llm_rows)}</table></div>' if llm_view else ''}
                 {vp_html}
                 {pat_html}
               </div>
               {f'<div class="detail-note"><strong>Narrative:</strong> {_esc(narrative)}</div>' if narrative else ''}
               {f'<div class="detail-note"><strong>Fund details:</strong> {_esc(fund_notes)}</div>' if fund_notes else ''}
+              {f'<div class="detail-note"><strong>Corporate action:</strong> {_esc(r.get("corporate_action_note"))}</div>' if r.get("corporate_action_note") else ''}
             </td>
           </tr>
         """
@@ -3093,6 +3270,7 @@ def _write_eod_html(results: list[dict], snap_date: str, *, transactions: list[d
             tpnl = r["upnl"] + r["rpnl"]
             tpnl_c = "#16a34a" if tpnl >= 0 else "#dc2626"
             alert, alert_reason = _primary_alert(r)
+            llm_view = _llm_view_for_row(r, llm_views)
             detail_id = f"pos-{idx}-{re.sub(r'[^A-Za-z0-9_-]+', '', str(r['broker']))}"
             rows.append(f"""
               <tr class="portfolio-position-row" data-detail-id="{_esc(detail_id)}">
@@ -3109,14 +3287,15 @@ def _write_eod_html(results: list[dict], snap_date: str, *, transactions: list[d
                 <td style="text-align:right;color:{tpnl_c};font-weight:700">{_money(tpnl)}</td>
                 <td style="text-align:right">{weight:.1f}%</td>
                 <td title="{_esc(alert_reason)}">{_alert_badge(alert)}</td>
+                <td title="{_esc('; '.join((llm_view.get('key_reasons') or [])[:3]))}">{_llm_verdict_badge(llm_view.get('final_verdict') if llm_view else None)}</td>
                 <td style="text-align:right">{_fmt_rs_nifty500(r.get('rs_nifty500'))}</td>
                 <td>{_sig_badge(r['composite'])}</td>
                 <td>{_stage_badge(r['stage'])}</td>
                 <td>{_esc((r.get('sector') or 'N/A')[:24])}</td>
               </tr>
-              {_stock_detail_row(r, detail_id, colspan=17)}
+              {_stock_detail_row(r, detail_id, colspan=18)}
             """)
-        return "".join(rows) or "<tr><td colspan='16' style='color:#9ca3af'>No open positions found</td></tr>"
+        return "".join(rows) or "<tr><td colspan='18' style='color:#9ca3af'>No open positions found</td></tr>"
 
     def _realized_rows() -> str:
         realized = sorted([r for r in results if abs(r["rpnl"]) > 0.001], key=lambda r: r["rpnl"])
@@ -3193,7 +3372,7 @@ def _write_eod_html(results: list[dict], snap_date: str, *, transactions: list[d
           <thead><tr>
             <th>Symbol</th><th>Company</th><th>Qty</th><th>Avg Cost</th><th>CMP</th>
             <th>Cost</th><th>Market Value</th><th>Unrealized ₹</th><th>Unrealized %</th>
-            <th>Realized ₹</th><th>Total P&amp;L</th><th>Weight</th><th>Alert</th><th>RS vs N500</th><th>Signal</th><th>Stage</th><th>Sector</th>
+            <th>Realized ₹</th><th>Total P&amp;L</th><th>Weight</th><th>Alert</th><th>AI View</th><th>RS vs N500</th><th>Signal</th><th>Stage</th><th>Sector</th>
           </tr></thead>
           <tbody>{_ledger_rows()}</tbody>
         </table>
@@ -3652,6 +3831,7 @@ function collapseAllSectors() {
     </div>
     <div class="kpi-grid">{kpi_html}</div>
     {_alert_zone_html()}
+    {_llm_zone_html()}
     {portfolio_status_html}
     {positions_html}
     {realized_html}

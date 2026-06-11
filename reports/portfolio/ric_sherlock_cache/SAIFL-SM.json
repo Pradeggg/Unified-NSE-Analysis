@@ -1,0 +1,322 @@
+{
+  "symbol": "SAIFL-SM",
+  "portfolio": {
+    "symbol": "SAIFL-SM",
+    "inputs": "SAMEERA AGRO AND INFRA L",
+    "company_name": "SAIFL-SM",
+    "sector": "—",
+    "mcap": "—",
+    "price": "5.05",
+    "stage": "UNKNOWN",
+    "signal": "HOLD",
+    "trend": "MIXED",
+    "portfolio_score": "4.9",
+    "investment_score": "0.0",
+    "technical_score": "",
+    "enhanced_fund_score": "",
+    "relative_strength": "",
+    "chg_1d": "",
+    "chg_1w": "",
+    "chg_1m": "",
+    "rsi_snapshot": "nan",
+    "rsi_tech": "nan",
+    "adx": "0.0",
+    "macd": "N/A",
+    "supertrend": "—",
+    "above_sma20": "",
+    "above_sma50": "",
+    "above_sma200": "",
+    "pct_from_52h": "-2.9",
+    "52w_high": "5.2",
+    "52w_low": "5.05",
+    "rating": "AVOID / REVIEW EXIT",
+    "snapshot_error": "",
+    "tech_error": ""
+  },
+  "collected_at": "2026-06-10T23:33:44",
+  "source_trail": [
+    "get_symbol_snapshot",
+    "get_technical_setup",
+    "scrape_screener_in",
+    "explain_intraday_setup"
+  ],
+  "errors": [],
+  "snapshot": {
+    "data_source": "PostgreSQL scores.stage_snapshots",
+    "company_name": "SAIFL-SM",
+    "stage": "UNKNOWN",
+    "stage_score": 0.0,
+    "investment_score": 0.0,
+    "price": 5.05,
+    "rsi": NaN,
+    "relative_strength": null,
+    "change_1d_pct": 0.0,
+    "change_1w_pct": null,
+    "change_1m_pct": null,
+    "market_cap_cat": null,
+    "sector": null,
+    "trading_signal": "HOLD",
+    "trend_signal": "MIXED",
+    "supertrend_state": null,
+    "supertrend_value": null,
+    "technical_score": 0.0,
+    "fundamental_score": null,
+    "narrative": "SAIFL-SM was backfilled on demand from EOD price history and NSE live metadata. Fundamental/CANSLIM/Minervini fields were not found in the DB and were not inferred.",
+    "stance": "TECHNICAL_ONLY",
+    "can_slim_score": null,
+    "minervini_score": null,
+    "enhanced_fund_score": null,
+    "earnings_quality": null,
+    "sales_growth": null,
+    "financial_strength": null,
+    "institutional_backing": null,
+    "symbol": "SAIFL-SM",
+    "snapshot_date": "2026-06-10",
+    "missing_evidence": [
+      "relative_strength"
+    ],
+    "missing_optional_scores": [
+      "fundamental_score",
+      "can_slim_score",
+      "minervini_score"
+    ],
+    "evidence_coverage": "partial"
+  },
+  "technical": {
+    "symbol": "SAIFL-SM",
+    "price": 5.05,
+    "open": 5.15,
+    "high": 5.2,
+    "low": 5.05,
+    "chg_pct": 0.0,
+    "rsi": null,
+    "adx": 0.0,
+    "macd": "N/A",
+    "supertrend": null,
+    "sma20": null,
+    "sma50": null,
+    "sma200": null,
+    "above_sma20": null,
+    "above_sma50": null,
+    "above_sma200": null,
+    "52w_high": 5.2,
+    "52w_low": 5.05,
+    "pct_from_52h": -2.9,
+    "vol_last": 320000,
+    "vol_avg_20d": 320000,
+    "vol_ratio": 1.0,
+    "technical_score": 0,
+    "score_method": "derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX",
+    "data_bars": 1,
+    "as_of": "2026-06-10",
+    "data_source": "PostgreSQL on-demand EOD",
+    "postgres_persist": null
+  },
+  "fundamentals": {
+    "symbol": "SAIFL-SM",
+    "error": "404 Client Error: Not Found for url: https://www.screener.in/company/SAIFL-SM/",
+    "source_url": "https://www.screener.in/company/SAIFL-SM/"
+  },
+  "trade_setup": {
+    "symbol": "SAIFL-SM",
+    "timeframe": "15m",
+    "data_mode": "intraday",
+    "source": "PostgreSQL intraday.ohlcv_bars seeded from Yahoo Finance (yfinance)",
+    "latest_timestamp": "2026-06-10 15:15:00",
+    "latest_close": 5.05,
+    "setup_label": "SHORT_SETUP",
+    "setup_side": "short",
+    "score": 50,
+    "indicators": {
+      "rsi": 41.9,
+      "macd": -0.0142,
+      "macd_signal": -0.0095,
+      "macd_hist": -0.0047,
+      "supertrend": 5.11,
+      "supertrend_dir": 1,
+      "ema9": 5.09,
+      "ema21": 5.1,
+      "ema50": 5.12,
+      "ema200": 5.12,
+      "bb_pct": 0.09,
+      "bb_width": 0.0313,
+      "atr": 0.04,
+      "volume_ratio": 1.48
+    },
+    "signals": [
+      {
+        "strategy": "Supertrend",
+        "direction": "BUY",
+        "entry": 5.05,
+        "target": 5.13,
+        "stoploss": 4.99,
+        "rr": 1.33,
+        "strength": "Moderate (in uptrend)",
+        "note": "Supertrend bullish — support at 5.11",
+        "indicator": {
+          "supertrend": 5.11,
+          "direction": "BULLISH"
+        },
+        "strategy_key": "supertrend",
+        "setup_label": "LONG_SETUP",
+        "copy_rule": "Research setup only; not a buy/sell recommendation."
+      },
+      {
+        "strategy": "VWAP Loss",
+        "direction": "SELL",
+        "entry": 5.05,
+        "target": 4.93,
+        "stoploss": 5.11,
+        "rr": 2.0,
+        "strength": "Strong",
+        "note": "Price lost VWAP proxy 5.09, RSI=41.9",
+        "indicator": {
+          "vwap_proxy": 5.09,
+          "rsi": 41.9
+        },
+        "strategy_key": "vwap",
+        "setup_label": "SHORT_SETUP",
+        "copy_rule": "Research setup only; not a buy/sell recommendation."
+      },
+      {
+        "strategy": "Multi-Confirm SELL",
+        "direction": "SELL",
+        "entry": 5.05,
+        "target": 4.84,
+        "stoploss": 5.12,
+        "rr": 3.0,
+        "strength": "High",
+        "note": "4/4 signals aligned bearish: MACD EMA RSI Vol",
+        "indicator": {
+          "macd_bear": true,
+          "ema_bear": true,
+          "rsi": 41.9,
+          "vol_above_avg": true
+        },
+        "strategy_key": "multi_confirm",
+        "setup_label": "SHORT_SETUP",
+        "copy_rule": "Research setup only; not a buy/sell recommendation."
+      }
+    ],
+    "analyzers": {
+      "TrendAgent": [
+        "Supertrend is bullish",
+        "At least one indicator strategy triggered a long-side setup"
+      ],
+      "MomentumAgent": [
+        "MACD histogram is negative"
+      ],
+      "LevelsAgent": {
+        "support": [
+          5.0
+        ],
+        "resistance": [
+          5.09,
+          5.1
+        ],
+        "invalidation_level": 5.09,
+        "technical_target_zones": [
+          5.0
+        ]
+      },
+      "RiskAgent": [
+        "Technical setup only; no order placement or recommendation",
+        "Confirm freshness, liquidity, spreads, and market regime before using this for research"
+      ]
+    },
+    "levels": {
+      "symbol": "SAIFL-SM",
+      "timeframe": "15m",
+      "data_mode": "intraday",
+      "source": "PostgreSQL intraday.ohlcv_bars",
+      "latest_timestamp": "2026-06-10 15:15:00",
+      "latest_close": 5.05,
+      "pivot": 5.1,
+      "supports": [
+        5.0
+      ],
+      "resistances": [
+        5.09,
+        5.1,
+        5.12,
+        5.15
+      ],
+      "ema_levels": {
+        "ema9": 5.09,
+        "ema21": 5.1,
+        "ema50": 5.12,
+        "ema200": 5.12
+      },
+      "pivot_levels": {
+        "PP": 5.1,
+        "R1": 5.1,
+        "R2": 5.1,
+        "R3": 5.1,
+        "S1": 5.1,
+        "S2": 5.1,
+        "S3": 5.1
+      },
+      "copy_rule": "Technical levels only. Not investment advice or a trade recommendation."
+    },
+    "invalidation_level": 5.09,
+    "technical_target_zones": [
+      5.0
+    ],
+    "position_sizing": {
+      "risk_per_trade": 5000.0,
+      "risk_per_share": 0.04,
+      "lot_size": null,
+      "cash": {
+        "shares": 124999,
+        "capital_required": 631244.95
+      },
+      "futures": null,
+      "options_note": "Not an F&O symbol; options/futures not available."
+    },
+    "risk_reward_frame": {
+      "risk_per_share": 0.04,
+      "rupee_risk": 4999.96,
+      "t1_rr": 1.25,
+      "t1_rupee_reward": 6249.95
+    },
+    "trade_plan": {
+      "direction": "SHORT",
+      "entry_confirmations": [
+        "Price stays below ₹5.09 on retest",
+        "RSI 42 confirms weakness (below 50)",
+        "MACD histogram aligned with direction"
+      ],
+      "scale_out": [
+        "Book 50% at T1 (₹5.00), trail SL to entry for remainder",
+        "Trail remainder with Supertrend or EMA21"
+      ],
+      "invalidation_action": "Exit full position if price closes above ₹5.09. Do not average into a losing setup."
+    },
+    "disclaimer": "Research and learning only. Not investment advice. Not a recommendation to buy, sell, trade, copy, or replicate. Users are responsible for their own risk, compliance, and legal obligations. Agent Adda is not SEBI registered."
+  },
+  "verdict": "Cautious / Review",
+  "cached_financials": {
+    "symbol": "SAIFL-SM",
+    "data_source": "PostgreSQL financial statement cache",
+    "pg_sources": [
+      "scores.quarterly_results",
+      "scores.annual_results",
+      "scores.balance_sheet",
+      "scores.cash_flow"
+    ],
+    "quarterly": [],
+    "annual": [],
+    "balance_sheet": [],
+    "cash_flow": [],
+    "section_counts": {
+      "quarterly": 0,
+      "annual": 0,
+      "balance_sheet": 0,
+      "cash_flow": 0
+    },
+    "error": "No cached PostgreSQL financial statement rows found for SAIFL-SM",
+    "missing_evidence": [
+      "cached_financials"
+    ]
+  }
+}

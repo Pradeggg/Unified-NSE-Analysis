@@ -77,13 +77,28 @@ user query
 | Operations | logs, feedback, maintenance commands | All lanes |
 | Learning Loop | daily capture, workflow chains, 14-day pattern mining, proposals | After telemetry; before release gate |
 
+## Current Checkpoint
+
+As of 2026-06-06:
+
+- Product contract has been reviewed and accepted for V1: PostgreSQL + pgvector persistence, runtime retrieval behind a feature flag, generated cards quarantined until validation/promotion, and V1 domains covering market analysis, stock research, screening, portfolio review, report QA, data quality, and event analysis.
+- Offline generation tooling exists in `skill_store/` rather than the originally proposed `terminal/skills/generator.py` path.
+- Stored 1,000-card corpus:
+  - `skill_store/stored/20260606_1000_gpt4o_healed/skill_cards.jsonl`
+  - `801 validated`, `199 test_failed`
+- Stored 2,000-card schema-fixed corpus:
+  - `skill_store/stored/20260606_2000_gpt4o_schema_fixed/skill_cards.jsonl`
+  - `962 validated`, `528 review_pending`, `510 test_failed`
+- The generator prompt is schema-aware: approved tables, column details, primary keys, latest-date columns, common filters, canonical join rules, and global PostgreSQL rules are included.
+- Next implementation priority is the runtime foundation: PostgreSQL schema, skill-card contracts, SQL safety, repository, retrieval, reranking, reviewer, and feature-flagged integration.
+
 ---
 
 ## Epic AA-SKILLSTORE-0: Product Contract And Design Control
 
 ### AA-SKILLSTORE-0.1 Finalize Skill Store Product Contract
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** Product/spec assistant  
 **Files:**
@@ -130,13 +145,18 @@ PY
 
 Expected: no unfinished markers.
 
+**Completion Notes:**
+- Verified no unfinished markers in the design or backlog.
+- V1 scope confirmed through implementation discussion and generation work.
+- Runtime remains feature-flagged and generated cards remain quarantined until validation/promotion.
+
 ---
 
 ## Epic AA-SKILLSTORE-1: PostgreSQL And pgvector Foundation
 
 ### AA-SKILLSTORE-1.1 Add Agent Skills Schema Migration
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** PostgreSQL assistant  
 **Dependencies:** AA-SKILLSTORE-0.1  
@@ -182,9 +202,16 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_skill_store_schema.py -q
 ```
 
+**Completion Notes:**
+- Added `CREATE EXTENSION IF NOT EXISTS vector`.
+- Added `agent_skills` schema and required tables.
+- Added lifecycle status constraints, `(id, version)` uniqueness, embedding model/dimension fields, and ANN vector index.
+- Verified with:
+  ` .venv/bin/python -m pytest tests/test_skill_store_schema.py tests/test_skill_store_generation.py -q`
+
 ### AA-SKILLSTORE-1.2 Add Skill Store Repository Layer
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** Persistence assistant  
 **Dependencies:** AA-SKILLSTORE-1.1  
@@ -216,13 +243,23 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_skill_store_repo.py -q
 ```
 
+**Completion Notes:**
+- Added `terminal/skills/store_repo.py` with `SkillStoreRepository`.
+- Implemented card upsert/fetch, runtime-eligible listing, embedding upsert, retrieval logging, execution logging, and feedback persistence.
+- Card upsert now persists approved SQL templates into `agent_skills.skill_sql_templates`.
+- Embedding persistence enforces the schema-backed 384-dimensional vector contract.
+- Repository uses parameterized SQL and returns dictionaries/ids, not pandas objects.
+- Runtime listing is restricted to `validated` and `production`.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_skill_store_repo.py tests/test_skill_store_schema.py -q`
+
 ---
 
 ## Epic AA-SKILLSTORE-2: Skill Card Contracts
 
 ### AA-SKILLSTORE-2.1 Add Skill Card Dataclasses
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** Contracts assistant  
 **Dependencies:** AA-SKILLSTORE-0.1  
@@ -256,9 +293,17 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_skill_store_contracts.py -q
 ```
 
+**Completion Notes:**
+- Added `terminal/skills/store_schema.py` with skill-card contract dataclasses.
+- Added serialization helpers `skill_card_to_dict` and `skill_card_from_dict`.
+- Added explicit contract validation and runtime eligibility helpers.
+- Runtime eligibility is restricted to `validated` and `production`.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_skill_store_contracts.py tests/test_skill_store_repo.py tests/test_skill_store_schema.py -q`
+
 ### AA-SKILLSTORE-2.2 Add JSON Schema Export For Skill Cards
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P1  
 **Suggested owner:** Contracts assistant  
 **Dependencies:** AA-SKILLSTORE-2.1  
@@ -290,7 +335,7 @@ Expected: no unfinished markers.
 
 ### AA-SKILLSTORE-3.1 Add Read-Only SQL Template Validator
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** SQL safety assistant  
 **Dependencies:** AA-SKILLSTORE-2.1  
@@ -321,9 +366,17 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_skill_sql_safety.py -q
 ```
 
+**Completion Notes:**
+- Added `terminal/skills/sql_safety.py` with structured `SQLSafetyResult`.
+- Added static checks for SELECT/WITH-only templates, DDL/DML keywords, semicolon-chained statements, `pg_sleep`, and Python string-format markers.
+- Added guardrails for PostgreSQL write/lock variants such as `SELECT INTO`, `FOR UPDATE`, `FOR SHARE`, and `LOCK`.
+- Added required-parameter validation and optional expected-column validation.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_skill_sql_safety.py tests/test_skill_store_contracts.py tests/test_skill_store_repo.py tests/test_skill_store_schema.py -q`
+
 ### AA-SKILLSTORE-3.2 Add Approved SQL Template Runner
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** Execution assistant  
 **Dependencies:** AA-SKILLSTORE-1.2, AA-SKILLSTORE-3.1  
@@ -355,13 +408,22 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_skill_sql_runner.py -q
 ```
 
+**Completion Notes:**
+- Added `terminal/skills/sql_runner.py` with `run_skill_sql_template`.
+- Added `SkillSQLRunResult` with JSON-serializable rows, columns, row count, as-of date, and warnings.
+- Runner loads approved templates from the skill-store repository, revalidates SQL safety, starts a read-only transaction, sets statement timeout, and wraps queries with an enforced row limit.
+- Runner caps template row limits with a hard maximum before execution.
+- Added repository lookup for latest/versioned SQL templates.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_skill_sql_runner.py tests/test_skill_store_repo.py tests/test_skill_sql_safety.py tests/test_skill_store_contracts.py tests/test_skill_store_schema.py -q`
+
 ---
 
 ## Epic AA-SKILLSTORE-4: Embeddings And Retrieval
 
 ### AA-SKILLSTORE-4.1 Add Embedding Text Builder
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** Retrieval assistant  
 **Dependencies:** AA-SKILLSTORE-2.1  
@@ -393,9 +455,17 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_skill_embedding_text.py -q
 ```
 
+**Completion Notes:**
+- Added `terminal/skills/embedding_text.py` with deterministic `build_skill_embedding_text`.
+- Embedding text includes title, domain, description, input patterns, tags, intent tags, evidence tables, freshness constraints, and output contract.
+- Full SQL text is excluded by default and included only when explicitly requested.
+- Output is whitespace-normalized and deterministic for stable embeddings.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_skill_embedding_text.py tests/test_skill_store_contracts.py -q`
+
 ### AA-SKILLSTORE-4.2 Add Embedding Provider Abstraction
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P1  
 **Suggested owner:** Retrieval assistant  
 **Dependencies:** AA-SKILLSTORE-4.1  
@@ -406,13 +476,13 @@ Expected: no unfinished markers.
 **Work:**
 - [ ] Add interface `embed_texts(texts, model)`.
 - [ ] Add deterministic fake provider for tests.
-- [ ] Add OpenAI provider behind environment configuration.
+- [ ] Add SentenceTransformer provider with local MiniLM model.
 - [ ] Record model name and dimension.
 - [ ] Fail gracefully when no provider is configured.
 
 **Acceptance Criteria:**
 - Tests use fake provider only.
-- OpenAI provider is optional.
+- SentenceTransformer provider fails gracefully when the dependency is missing.
 - Dimension mismatch fails before DB insert.
 
 **Verification:**
@@ -421,9 +491,17 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_skill_embedding_provider.py -q
 ```
 
+**Completion Notes:**
+- Added `terminal/skills/embedding_provider.py` with `EmbeddingResult`, deterministic fake provider, and lazy SentenceTransformer provider.
+- Default embedding model is `sentence-transformers/all-MiniLM-L6-v2`, with `SKILL_STORE_ST_MODEL` override support.
+- Embedding dimension is now `384` across provider, repository guard, and PostgreSQL `VECTOR(384)` schema.
+- Added `sentence-transformers>=3.0.0` to requirements.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_skill_embedding_provider.py tests/test_skill_store_repo.py tests/test_skill_store_schema.py -q`
+
 ### AA-SKILLSTORE-4.3 Add Skill Retriever
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** Retrieval assistant  
 **Dependencies:** AA-SKILLSTORE-1.2, AA-SKILLSTORE-4.2  
@@ -432,10 +510,10 @@ Expected: no unfinished markers.
 - Test: `tests/test_skill_retriever.py`
 
 **Work:**
-- [ ] Implement `retrieve_skill_candidates(query, top_n=30)`.
-- [ ] Search only `validated` and `production` cards by default.
-- [ ] Combine vector candidates with tag candidates.
-- [ ] Return candidate records with:
+- [x] Implement `retrieve_skill_candidates(query, top_n=30)`.
+- [x] Search only `validated` and `production` cards by default.
+- [x] Combine vector candidates with tag candidates.
+- [x] Return candidate records with:
   - skill id
   - version
   - vector score
@@ -443,7 +521,7 @@ Expected: no unfinished markers.
   - domain
   - status
   - matched tags
-- [ ] Log retrieval event.
+- [x] Log retrieval event.
 
 **Acceptance Criteria:**
 - Generated/test-failed cards are excluded.
@@ -456,13 +534,24 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_skill_retriever.py -q
 ```
 
+**Completion Notes:**
+- Added `terminal/skills/retriever.py` with `retrieve_skill_candidates(query, top_n=30)`.
+- Retrieval merges vector candidates from `agent_skills.skill_embeddings` with deterministic tag/input-pattern fallback candidates.
+- Runtime retrieval excludes non-runtime statuses and respects optional domain filtering across both vector and tag paths.
+- Retrieval logs are written through `agent_skills.skill_retrieval_logs`; the retriever does not select a final skill before the reviewer/reranker stage.
+- Extended `terminal/skills/store_repo.py` with vector candidate search over the existing `search_embedding_candidates` path.
+- Added `tests/test_skill_retriever.py` and repository coverage for vector candidate search.
+- Tightened fallback matching so generic words like `analysis` do not route quarterly-results prompts to market-analysis cards.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_skill_retriever.py tests/test_skill_store_repo.py tests/test_skill_embedding_provider.py tests/test_skill_store_schema.py -q`
+
 ---
 
 ## Epic AA-SKILLSTORE-5: Reranking And Reviewer
 
 ### AA-SKILLSTORE-5.1 Add Deterministic Reranker
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** Ranking assistant  
 **Dependencies:** AA-SKILLSTORE-4.3  
@@ -471,7 +560,7 @@ Expected: no unfinished markers.
 - Test: `tests/test_skill_reranker.py`
 
 **Work:**
-- [ ] Implement weighted score fusion over:
+- [x] Implement weighted score fusion over:
   - vector score
   - tag overlap
   - intent compatibility
@@ -479,9 +568,9 @@ Expected: no unfinished markers.
   - output contract match
   - runtime success rate
   - status boost
-- [ ] Implement reciprocal-rank fusion helper.
-- [ ] Add abstention threshold.
-- [ ] Return top 10 by default.
+- [x] Implement reciprocal-rank fusion helper.
+- [x] Add abstention threshold.
+- [x] Return top 10 by default.
 
 **Acceptance Criteria:**
 - Strong tag and intent match can outrank weak vector match.
@@ -494,9 +583,19 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_skill_reranker.py -q
 ```
 
+**Completion Notes:**
+- Added `terminal/skills/reranker.py` with deterministic weighted score fusion.
+- Reranking combines vector score, tag score, intent score, evidence availability, output-contract match, runtime success rate, reciprocal-rank fusion, and a modest production status boost.
+- Added `reciprocal_rank_fusion` helper and `SkillRerankResult` with abstention support.
+- Reranker returns top 10 by default and abstains when the best candidate is below threshold.
+- Added `tests/test_skill_reranker.py`.
+- Tuned default abstention threshold for tag-only retrieval smoke tests while preserving low-confidence abstention.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_skill_reranker.py tests/test_skill_retriever.py -q`
+
 ### AA-SKILLSTORE-5.2 Add Skill Reviewer
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** Reviewer assistant  
 **Dependencies:** AA-SKILLSTORE-5.1, AA-SKILLSTORE-3.1  
@@ -505,13 +604,13 @@ Expected: no unfinished markers.
 - Test: `tests/test_skill_reviewer.py`
 
 **Work:**
-- [ ] Implement reviewer decisions:
+- [x] Implement reviewer decisions:
   - `select`
   - `merge`
   - `ask_clarification`
   - `fallback_to_router`
   - `reject`
-- [ ] Check:
+- [x] Check:
   - skill answers user ask
   - required entities present or resolvable
   - required tools exist
@@ -519,7 +618,7 @@ Expected: no unfinished markers.
   - SQL templates safe
   - output contract sufficient
   - deterministic command not clearly better
-- [ ] Return structured reason and missing inputs.
+- [x] Return structured reason and missing inputs.
 
 **Acceptance Criteria:**
 - Reviewer rejects irrelevant high-vector candidate.
@@ -532,13 +631,20 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_skill_reviewer.py -q
 ```
 
+**Completion Notes:**
+- Added deterministic reviewer gate in `terminal/skills/reviewer.py`.
+- Supports `select`, `merge`, `ask_clarification`, `fallback_to_router`, and `reject`.
+- Reviewer checks runtime status, contract shape, relevance signals, required context, required tools/tables, output contract coverage, deterministic command precedence, validation errors, and SQL template safety.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_skill_reviewer.py tests/test_skill_reranker.py tests/test_skill_retriever.py tests/test_skill_sql_safety.py tests/test_skill_store_contracts.py -q`
+
 ---
 
 ## Epic AA-SKILLSTORE-6: Execution And Evidence Validation
 
 ### AA-SKILLSTORE-6.1 Add Skill Execution Planner
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** Execution assistant  
 **Dependencies:** AA-SKILLSTORE-5.2  
@@ -547,14 +653,14 @@ Expected: no unfinished markers.
 - Test: `tests/test_skill_execution_plan.py`
 
 **Work:**
-- [ ] Convert reviewer decision into executable steps.
-- [ ] Support step types:
+- [x] Convert reviewer decision into executable steps.
+- [x] Support step types:
   - `tool_call`
   - `sql_template`
   - `report_lookup`
-- [ ] Reject unknown step types.
-- [ ] Normalize params.
-- [ ] Preserve selected skill id and version.
+- [x] Reject unknown step types.
+- [x] Normalize params.
+- [x] Preserve selected skill id and version.
 
 **Acceptance Criteria:**
 - Valid reviewer decision becomes executable plan.
@@ -567,9 +673,16 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_skill_execution_plan.py -q
 ```
 
+**Completion Notes:**
+- Added `terminal/skills/execution_plan.py` with `SkillExecutionPlan`, `SkillExecutionStep`, and `build_skill_execution_plan`.
+- Planner accepts executable reviewer decisions only: `select` and `merge`.
+- Planner loads selected skill cards, converts tool, SQL, and report templates into typed execution steps, binds required params, and fails closed for unknown tools, SQL templates, reports, or step types.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_skill_execution_plan.py tests/test_skill_reviewer.py tests/test_skill_sql_runner.py tests/test_skill_sql_safety.py tests/test_skill_store_contracts.py tests/test_skill_store_repo.py -q`
+
 ### AA-SKILLSTORE-6.2 Add Skill Evidence Validator
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** Evidence assistant  
 **Dependencies:** AA-SKILLSTORE-6.1  
@@ -578,7 +691,7 @@ Expected: no unfinished markers.
 - Test: `tests/test_skill_evidence_validator.py`
 
 **Work:**
-- [ ] Validate:
+- [x] Validate:
   - no future dates
   - required output keys present
   - required result sets non-empty unless optional
@@ -586,7 +699,7 @@ Expected: no unfinished markers.
   - row counts reasonable
   - candidate filters applied
   - missing evidence captured
-- [ ] Return `SkillEvidenceValidation` with pass/fail/warnings.
+- [x] Return `SkillEvidenceValidation` with pass/fail/warnings.
 
 **Acceptance Criteria:**
 - Missing required result set fails.
@@ -599,9 +712,16 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_skill_evidence_validator.py -q
 ```
 
+**Completion Notes:**
+- Added `terminal/skills/evidence_validator.py` with `SkillEvidenceValidation` and `validate_skill_evidence`.
+- Validator fails on missing required result sets, missing required output keys, future dates, required empty evidence, stale evidence when configured as strict, and missing candidate filters.
+- Validator warns on stale non-strict evidence, missing freshness, row-count mismatches, excessive row counts, and empty optional evidence such as VCP overlap.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_skill_evidence_validator.py tests/test_skill_execution_plan.py tests/test_skill_reviewer.py tests/test_skill_sql_runner.py tests/test_skill_sql_safety.py tests/test_skill_store_contracts.py tests/test_skill_store_repo.py -q`
+
 ### AA-SKILLSTORE-6.3 Add Skill Executor
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** Execution assistant  
 **Dependencies:** AA-SKILLSTORE-3.2, AA-SKILLSTORE-6.1, AA-SKILLSTORE-6.2  
@@ -610,14 +730,14 @@ Expected: no unfinished markers.
 - Test: `tests/test_skill_executor.py`
 
 **Work:**
-- [ ] Execute approved plan steps through:
+- [x] Execute approved plan steps through:
   - existing `terminal.tools.call_tool`
   - approved SQL template runner
   - report lookup helpers
-- [ ] Collect evidence payloads.
-- [ ] Run evidence validator.
-- [ ] Log execution event.
-- [ ] Return JSON-serializable execution result.
+- [x] Collect evidence payloads.
+- [x] Run evidence validator.
+- [x] Log execution event.
+- [x] Return JSON-serializable execution result.
 
 **Acceptance Criteria:**
 - Executor never calls unknown tools.
@@ -630,13 +750,22 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_skill_executor.py -q
 ```
 
+**Completion Notes:**
+- Added `terminal/skills/executor.py` with `SkillExecutionResult` and `execute_skill_plan`.
+- Executor runs only typed execution-plan steps: `tool_call`, `sql_template`, and `report_lookup`.
+- Runtime defaults use `terminal.tools.call_tool`, approved `run_skill_sql_template`, and report-context helpers; tests can inject fake callables.
+- Executor collects evidence by step name, runs `validate_skill_evidence`, logs execution when a repository is supplied, and returns a JSON-serializable result.
+- Executor fails closed for unknown tools, unknown step types, tool errors, SQL/report exceptions, and validation failures.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_skill_executor.py tests/test_skill_evidence_validator.py tests/test_skill_execution_plan.py tests/test_skill_reviewer.py tests/test_skill_sql_runner.py tests/test_skill_sql_safety.py tests/test_skill_store_contracts.py tests/test_skill_store_repo.py -q`
+
 ---
 
 ## Epic AA-SKILLSTORE-7: Seed Production Skills
 
 ### AA-SKILLSTORE-7.1 Seed 3M Market Rotation Swing Skill
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** Market workflow assistant  
 **Dependencies:** AA-SKILLSTORE-3.2, AA-SKILLSTORE-6.3  
@@ -645,20 +774,20 @@ Expected: no unfinished markers.
 - Create: `tests/test_seed_market_3m_rotation_swing.py`
 
 **Work:**
-- [ ] Create skill card for:
+- [x] Create skill card for:
   - 3-month index returns
   - stage distribution change
   - sector-level 3-month returns
   - liquid Stage 2 candidates
   - VCP overlap
-- [ ] Add SQL templates:
+- [x] Add SQL templates:
   - `index_returns_lookback`
   - `stage_distribution_change`
   - `sector_returns_lookback`
   - `stage2_liquid_candidates`
   - `vcp_latest_candidates`
-- [ ] Add validation rules.
-- [ ] Mark initial status `validated` only after tests pass.
+- [x] Add validation rules.
+- [x] Mark initial status `validated` only after tests pass.
 
 **Acceptance Criteria:**
 - SQL templates compile and pass safety validation.
@@ -671,9 +800,19 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_seed_market_3m_rotation_swing.py -q
 ```
 
+**Completion Notes:**
+- Added `terminal/skills/seed_cards/market_3m_rotation_swing_v1.yml`.
+- Seed card covers 3-month index returns, stage distribution change, sector-level returns, liquid Stage 2 candidates, and optional VCP overlap.
+- Added `tests/test_seed_market_3m_rotation_swing.py` for card contract, SQL safety, required template coverage, execution-plan outputs, and optional VCP evidence behavior.
+- Updated execution planning to preserve SQL-template metadata such as `optional` and `required_filters`.
+- Verified SQL templates with local PostgreSQL `EXPLAIN`.
+- Verified local PostgreSQL read-only smoke: all five evidence sets returned rows with latest available `as_of_date=2026-06-05`, and evidence validation passed.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_seed_market_3m_rotation_swing.py -q`
+
 ### AA-SKILLSTORE-7.2 Seed VCP Breakouts With Fundamentals Skill
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P1  
 **Suggested owner:** Screening workflow assistant  
 **Dependencies:** AA-SKILLSTORE-7.1  
@@ -682,19 +821,19 @@ Expected: no unfinished markers.
 - Test: `tests/test_seed_vcp_breakouts_with_fundamentals.py`
 
 **Work:**
-- [ ] Create skill card for user asks like:
+- [x] Create skill card for user asks like:
   - stocks creating new highs
   - VCP breakouts
   - breakouts with good fundamentals
   - TradingView watchlist candidates
-- [ ] Require:
+- [x] Require:
   - Stage 2
   - RS threshold
   - liquidity threshold
   - technical signal
   - investment/fundamental score
   - optional portfolio overlap
-- [ ] Output TradingView-ready symbols and evidence table.
+- [x] Output TradingView-ready symbols and evidence table.
 
 **Acceptance Criteria:**
 - Produces bounded candidate list.
@@ -707,9 +846,18 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_seed_vcp_breakouts_with_fundamentals.py -q
 ```
 
+**Completion Notes:**
+- Added `terminal/skills/seed_cards/vcp_breakouts_with_fundamentals_v1.yml`.
+- Seed card covers VCP breakout candidates from `scores.stage2_vcp_picks`, Stage 2 quality breakout/new-high candidates from `scores.stage_snapshots`, TradingView-ready symbol list, filter explanation, and optional portfolio overlap.
+- Added `tests/test_seed_vcp_breakouts_with_fundamentals.py` for card contract, SQL safety, bounded templates, execution-plan metadata, optional portfolio overlap, and synthesis guidance that prevents invented VCP labels.
+- Verified SQL templates with local PostgreSQL `EXPLAIN`.
+- Verified local PostgreSQL read-only smoke: VCP candidates, Stage 2 breakout candidates, TradingView list, and filter explanation returned evidence; optional portfolio overlap stayed empty with warnings only.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_seed_vcp_breakouts_with_fundamentals.py -q`
+
 ### AA-SKILLSTORE-7.3 Seed Portfolio Add/Trim Situation Skill
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P1  
 **Suggested owner:** Portfolio workflow assistant  
 **Dependencies:** AA-SKILLSTORE-7.1  
@@ -718,19 +866,19 @@ Expected: no unfinished markers.
 - Test: `tests/test_seed_portfolio_incremental_add_trim.py`
 
 **Work:**
-- [ ] Create skill card for portfolio-aware asks:
+- [x] Create skill card for portfolio-aware asks:
   - add incrementally
   - reduce exposure
   - sector concentration
   - stock position sizing
   - existing holdings plus target allocation
-- [ ] Require:
+- [x] Require:
   - current holdings
   - portfolio market value
   - sector exposure
   - signal/stage/investment score
   - risk constraints
-- [ ] Output:
+- [x] Output:
   - add candidates
   - trim candidates
   - hold candidates
@@ -748,13 +896,23 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_seed_portfolio_incremental_add_trim.py -q
 ```
 
+**Completion Notes:**
+- Added `terminal/skills/seed_cards/portfolio_incremental_add_trim_v1.yml`.
+- Seed card is portfolio-state-aware: it requires `portfolio.holdings`, joins current holdings to latest `scores.stage_snapshots`, computes market value, position weights, sector weights, and add/trim/hold buckets.
+- Added `tests/test_seed_portfolio_incremental_add_trim.py` for card contract, SQL safety, bounded templates, execution-plan metadata, current-holding filters, and guidance that rejects greenfield recommendations.
+- SQL templates cover current state, sector exposure warnings, add candidates, trim candidates, hold candidates, and target allocation caveats.
+- Verified SQL templates with local PostgreSQL `EXPLAIN`.
+- Local PostgreSQL read-only smoke found no rows in `portfolio.holdings`; evidence validation failed closed for missing portfolio-state outputs, which is expected for this skill when no holdings are loaded.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_seed_portfolio_incremental_add_trim.py -q`
+
 ---
 
 ## Epic AA-SKILLSTORE-8: Runtime Integration
 
 ### AA-SKILLSTORE-8.1 Add Skill Store Feature Flag
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** Runtime assistant  
 **Dependencies:** AA-SKILLSTORE-4.3  
@@ -764,10 +922,10 @@ Expected: no unfinished markers.
 - Test: `tests/test_skill_store_feature_flag.py`
 
 **Work:**
-- [ ] Add env flag `AGENT_ADDA_SKILL_STORE=0|1`.
-- [ ] Default runtime retrieval to disabled until benchmarks pass.
-- [ ] Add config helper `skill_store_enabled()`.
-- [ ] Ensure disabled flag has zero behavioral impact.
+- [x] Add env flag `AGENT_ADDA_SKILL_STORE=0|1`.
+- [x] Default runtime retrieval to disabled until benchmarks pass.
+- [x] Add config helper `skill_store_enabled()`.
+- [x] Ensure disabled flag has zero behavioral impact.
 
 **Acceptance Criteria:**
 - Disabled flag skips retrieval.
@@ -780,9 +938,17 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_skill_store_feature_flag.py tests/test_routing_smoke.py -q
 ```
 
+**Completion Notes:**
+- Added `terminal/skills/config.py` with `skill_store_enabled`, `skill_store_dry_run_enabled`, and `skill_store_config_snapshot`.
+- Runtime skill store defaults to disabled when `AGENT_ADDA_SKILL_STORE` is unset or falsey.
+- Added `_skill_store_runtime_enabled()` guard in `terminal/agent.py` without wiring retrieval into routing yet.
+- Verified disabled mode has no routing-smoke impact.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_skill_store_feature_flag.py tests/test_routing_smoke.py -q`
+
 ### AA-SKILLSTORE-8.2 Add `_stage_skill_store_assessment`
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** Runtime assistant  
 **Dependencies:** AA-SKILLSTORE-5.2, AA-SKILLSTORE-8.1  
@@ -792,16 +958,16 @@ Expected: no unfinished markers.
 - Test: `tests/test_skill_store_runtime_assessment.py`
 
 **Work:**
-- [ ] Add a pipeline stage after `_stage_entity_topic`.
-- [ ] Skip when:
+- [x] Add a pipeline stage after `_stage_entity_topic`.
+- [x] Skip when:
   - feature flag disabled
   - input starts with slash command
   - unified router already returned a result
   - deterministic keyword plan is high-confidence and direct
-- [ ] Retrieve, rerank, and review skills.
-- [ ] Return `None` on fallback.
-- [ ] Return clarification when reviewer asks.
-- [ ] Return plan preview in Plan mode.
+- [x] Retrieve, rerank, and review skills.
+- [x] Return `None` on fallback.
+- [x] Return clarification when reviewer asks.
+- [x] Return plan preview in Plan mode.
 
 **Acceptance Criteria:**
 - `/screen stage2` is not intercepted.
@@ -814,9 +980,20 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_skill_store_runtime_assessment.py -q
 ```
 
+**Completion Notes:**
+- Added `terminal/skills/runtime_assessment.py` with dry-run `stage_skill_store_assessment`.
+- Added `SkillStoreRuntimeAssessment` trace payload for selected/merged/clarification decisions.
+- Added `_stage_skill_store_assessment` wrapper in `terminal/agent.py`; this is still not inserted into live answer dispatch.
+- Runtime assessment skips when feature flag is disabled, input is a slash command, unified router already handled the query, or deterministic intent is high-confidence.
+- Pipeline performs retrieve, rerank, and review; reviewer reject/fallback returns `None`, clarification returns a structured clarification result.
+- Updated retriever to preserve row/card metadata so reviewer gates can inspect output contracts and validation rules.
+- Plan-mode preview is returned as structured `plan_preview`; AA-SKILLSTORE-8.3 will render it visibly.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_skill_store_runtime_assessment.py tests/test_skill_store_feature_flag.py tests/test_skill_retriever.py tests/test_skill_reranker.py tests/test_skill_reviewer.py tests/test_routing_smoke.py -q`
+
 ### AA-SKILLSTORE-8.3 Add Skill Store Visible Trace Renderer
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P1  
 **Suggested owner:** Renderer assistant  
 **Dependencies:** AA-SKILLSTORE-8.2  
@@ -825,14 +1002,14 @@ Expected: no unfinished markers.
 - Test: `tests/test_skill_store_renderer.py`
 
 **Work:**
-- [ ] Render compact block:
+- [x] Render compact block:
   - selected skill
   - why selected
   - evidence plan
   - validation status
   - missing evidence
-- [ ] Avoid private reasoning language.
-- [ ] Keep block short unless `/steps on` or verbose profile is active.
+- [x] Avoid private reasoning language.
+- [x] Keep block short unless `/steps on` or verbose profile is active.
 
 **Acceptance Criteria:**
 - Renderer shows operational trace, not chain-of-thought.
@@ -845,13 +1022,21 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_skill_store_renderer.py -q
 ```
 
+**Completion Notes:**
+- Added `terminal/renderers/skill_store.py` with `render_skill_store_trace`.
+- Renderer accepts `SkillStoreRuntimeAssessment` or dict payloads.
+- Shows decision, selected skill/version, confidence, reviewer reason, validation status, missing inputs, missing evidence, missing outputs, evidence plan, plan preview, and compact candidate list.
+- Avoids raw embedding/vector payloads and private reasoning language; expanded mode only adds operational candidate detail.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_skill_store_renderer.py -q`
+
 ---
 
 ## Epic AA-SKILLSTORE-9: Offline Scenario Generation
 
 ### AA-SKILLSTORE-9.1 Add Scenario Generator CLI
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P1  
 **Suggested owner:** Generation assistant  
 **Dependencies:** AA-SKILLSTORE-2.2  
@@ -861,16 +1046,16 @@ Expected: no unfinished markers.
 - Test: `tests/test_skill_scenario_generator.py`
 
 **Work:**
-- [ ] Generate candidate skill cards from seed domains.
-- [ ] Support modes:
+- [x] Generate candidate skill cards from seed domains.
+- [x] Support modes:
   - `--domain market_analysis`
   - `--domain screening`
   - `--domain portfolio_review`
   - `--count N`
   - `--dry-run`
-- [ ] Output JSONL/YAML files under `data/skill_store/generated/`.
-- [ ] Mark all generated cards as `generated`.
-- [ ] Do not insert directly as runtime eligible.
+- [x] Output JSONL/YAML files under `data/skill_store/generated/`.
+- [x] Mark all generated cards as `generated`.
+- [x] Do not insert directly as runtime eligible.
 
 **Acceptance Criteria:**
 - Dry-run produces valid schema payloads.
@@ -883,9 +1068,22 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_skill_scenario_generator.py -q
 ```
 
+**Implementation Notes:**
+- Implemented equivalent generation tooling under `skill_store/`:
+  - `skill_store/cli.py`
+  - `skill_store/generator.py`
+  - `skill_store/seeds.py`
+  - `skill_store/schema_catalog.py`
+- Supports dry-run, target count, batching, parallelism, model override, schema-aware prompts, JSONL/YAML output, and checkpoint files.
+- Added compatibility wrapper `terminal/skills/generator.py` with `generate_skill_scenarios`.
+- Added operator CLI `scripts/generate_skill_scenarios.py` with `--domain`, `--count`, `--target-count`, `--dry-run`, `--batch-size`, `--parallelism`, `--model`, and `--review-heal`.
+- Domain-scoped generation filters expanded seed variants while keeping cards untrusted/generated by default.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_skill_scenario_generator.py -q`
+
 ### AA-SKILLSTORE-9.2 Add Scenario Test And Repair Loop
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P1  
 **Suggested owner:** Generation assistant  
 **Dependencies:** AA-SKILLSTORE-9.1, AA-SKILLSTORE-6.3  
@@ -895,13 +1093,13 @@ Expected: no unfinished markers.
 - Test: `tests/test_skill_scenario_validation.py`
 
 **Work:**
-- [ ] Load generated skill cards.
-- [ ] Run schema validation.
-- [ ] Run SQL safety validation.
-- [ ] Run fixture execution where possible.
-- [ ] Mark failed cards `test_failed`.
-- [ ] Mark passed cards `review_pending`.
-- [ ] Produce a validation report.
+- [x] Load generated skill cards.
+- [x] Run schema validation.
+- [x] Run SQL safety validation.
+- [x] Run fixture execution where possible.
+- [x] Mark failed cards `test_failed`.
+- [x] Mark passed cards `review_pending`.
+- [x] Produce a validation report.
 
 **Acceptance Criteria:**
 - Corrupted generated card fails with reasons.
@@ -914,9 +1112,28 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_skill_scenario_validation.py -q
 ```
 
+**Implementation Notes:**
+- Implemented equivalent validation/healing components under `skill_store/`:
+  - `skill_store/schema_auditor.py`
+  - `skill_store/code_policy.py`
+  - `skill_store/test_runner.py`
+  - `skill_store/pipeline.py`
+  - `skill_store/reviewer.py`
+  - `skill_store/healer.py`
+  - `skill_store/healing_pass.py`
+- Generated and stored corpora:
+  - 1,000-card healed corpus in `skill_store/stored/20260606_1000_gpt4o_healed/`
+  - 2,000-card schema-fixed corpus in `skill_store/stored/20260606_2000_gpt4o_schema_fixed/`
+- Added `terminal/skills/scenario_validation.py` with `validate_skill_scenarios`.
+- Added `scripts/validate_skill_scenarios.py` for operator validation runs.
+- Validator writes reviewed JSONL plus markdown validation report with status counts and per-card findings.
+- Safe generated cards advance to `review_pending`; broken cards fail closed as `test_failed`.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_skill_scenario_validation.py -q`
+
 ### AA-SKILLSTORE-9.3 Add Promotion Command
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P1  
 **Suggested owner:** Operations assistant  
 **Dependencies:** AA-SKILLSTORE-9.2  
@@ -926,13 +1143,13 @@ Expected: no unfinished markers.
 - Test: `tests/test_skill_promotion.py`
 
 **Work:**
-- [ ] Add CLI:
+- [x] Add CLI:
   - `agent_adda skills list`
   - `agent_adda skills validate`
   - `agent_adda skills promote <skill_id>`
   - `agent_adda skills deprecate <skill_id>`
-- [ ] Require validation pass before promotion.
-- [ ] Log promotion decision.
+- [x] Require validation pass before promotion.
+- [x] Log promotion decision.
 
 **Acceptance Criteria:**
 - Cannot promote `generated` directly to `production`.
@@ -945,13 +1162,22 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_skill_promotion.py -q
 ```
 
+**Completion Notes:**
+- Added `terminal/skills/promote.py` with promotion, deprecation, listing, transition guards, and feedback logging.
+- Added `agent_adda skills` CLI branch with `list`, `validate`, `promote`, and `deprecate` subcommands.
+- Added `SkillStoreRepository.list_skill_cards` so operators can list non-runtime statuses such as `generated`, `test_failed`, and `review_pending`.
+- Promotion to `validated` requires `review_pending` plus review status `pass` and no validation errors.
+- Promotion to `production` requires the existing card to already be `validated`; generated cards cannot jump directly to production.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_skill_promotion.py -q`
+
 ---
 
 ## Epic AA-SKILLSTORE-10: Evaluation And Benchmarks
 
 ### AA-SKILLSTORE-10.1 Add Skill Retrieval Benchmark Set
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** Evaluation assistant  
 **Dependencies:** AA-SKILLSTORE-7.1  
@@ -960,15 +1186,15 @@ Expected: no unfinished markers.
 - Create: `tests/test_skill_store_benchmarks.py`
 
 **Work:**
-- [ ] Add at least 50 benchmark queries across:
+- [x] Add at least 50 benchmark queries across:
   - market analysis
   - swing screening
   - portfolio review
   - stock research
   - report QA
   - data debugging
-- [ ] Define expected skill ids or expected abstention.
-- [ ] Test retrieval + reranking + reviewer decision.
+- [x] Define expected skill ids or expected abstention.
+- [x] Test retrieval + reranking + reviewer decision.
 
 **Acceptance Criteria:**
 - 90% of benchmark queries select expected skill or correctly abstain.
@@ -981,9 +1207,17 @@ Expected: no unfinished markers.
 .venv/bin/python -m pytest tests/test_skill_store_benchmarks.py -q
 ```
 
+**Completion Notes:**
+- Added `tests/fixtures/skill_store_benchmark_queries.yml` with 54 benchmark queries across market analysis, swing screening, portfolio review, stock research, report QA, data debugging, and abstention cases.
+- Added `tests/test_skill_store_benchmarks.py` using a fake runtime repository plus generated/test_failed decoys.
+- Benchmark exercises retrieval, reranking, and reviewer decision end-to-end and enforces at least 90% expected selection/abstention accuracy.
+- Deterministic slash commands abstain before retrieval.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_skill_store_benchmarks.py -q`
+
 ### AA-SKILLSTORE-10.2 Add End-To-End Skill Store Smoke Tests
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** Evaluation assistant  
 **Dependencies:** AA-SKILLSTORE-8.2, AA-SKILLSTORE-10.1  
@@ -992,13 +1226,13 @@ Expected: no unfinished markers.
 - Create: `tests/test_skill_store_e2e.py`
 
 **Work:**
-- [ ] Add smoke cases:
+- [x] Add smoke cases:
   - 3M market analysis and swing candidates
   - VCP breakouts with good fundamentals
   - portfolio add/trim review
   - deterministic command bypass
-- [ ] Assert source trail and validation block appear.
-- [ ] Assert generated/test_failed cards are not used.
+- [x] Assert source trail and validation block appear.
+- [x] Assert generated/test_failed cards are not used.
 
 **Acceptance Criteria:**
 - E2E tests pass with skill store enabled.
@@ -1011,13 +1245,22 @@ AGENT_ADDA_SKILL_STORE=1 .venv/bin/python -m pytest tests/test_skill_store_e2e.p
 AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py -q
 ```
 
+**Completion Notes:**
+- Added `tests/test_skill_store_e2e.py` covering market 3M swing, VCP/fundamental breakouts, portfolio add/trim, and deterministic slash-command bypass.
+- E2E asserts rendered Skill Store trace includes source trail, validation block, evidence plan, and selected skill.
+- Added generated/test_failed decoys and asserted they are not selected.
+- Updated `terminal/renderers/skill_store.py` to show a compact operational source trail.
+- Updated `scripts/smoke_user_flows.sh` to run the focused skill-store E2E pytest when `AGENT_ADDA_SKILL_STORE=1`; disabled smoke behavior is unchanged.
+- Verified with:
+  `AGENT_ADDA_SKILL_STORE=1 .venv/bin/python -m pytest tests/test_skill_store_e2e.py -q`
+
 ---
 
 ## Epic AA-SKILLSTORE-11: Observability And Feedback
 
 ### AA-SKILLSTORE-11.1 Add Retrieval And Execution Logs
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P1  
 **Suggested owner:** Observability assistant  
 **Dependencies:** AA-SKILLSTORE-1.2, AA-SKILLSTORE-8.2  
@@ -1026,19 +1269,19 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 - Test: `tests/test_skill_store_telemetry.py`
 
 **Work:**
-- [ ] Log retrieval:
+- [x] Log retrieval:
   - query hash
   - normalized query
   - candidates
   - scores
   - reviewer decision
-- [ ] Log execution:
+- [x] Log execution:
   - selected skill
   - executed steps
   - validation status
   - final intent
   - elapsed time
-- [ ] Avoid storing sensitive raw text when a hash is sufficient.
+- [x] Avoid storing sensitive raw text when a hash is sufficient.
 
 **Acceptance Criteria:**
 - Telemetry is JSON-serializable.
@@ -1051,9 +1294,18 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 .venv/bin/python -m pytest tests/test_skill_store_telemetry.py -q
 ```
 
+**Completion Notes:**
+- Added `terminal/skills/telemetry.py` with safe retrieval/execution event builders, log helpers, query normalization, query hashing, payload sanitization, and failure-swallowing repository calls.
+- Runtime assessment now logs reviewer-aware retrieval telemetry after rerank/review instead of pre-review retrieval-only events.
+- Executor now builds execution telemetry through the shared helper, including final intent and sanitized step summaries.
+- Added `SkillStoreRepository.query_logs_by_skill` to retrieve retrieval/execution logs for a skill id.
+- Added `tests/test_skill_store_telemetry.py`.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_skill_store_telemetry.py tests/test_skill_store_repo.py tests/test_skill_store_runtime_assessment.py tests/test_skill_executor.py -q`
+
 ### AA-SKILLSTORE-11.2 Add User Feedback Capture
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P2  
 **Suggested owner:** Feedback assistant  
 **Dependencies:** AA-SKILLSTORE-11.1  
@@ -1062,14 +1314,14 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 - Test: `tests/test_skill_store_feedback.py`
 
 **Work:**
-- [ ] Add feedback API for:
+- [x] Add feedback API for:
   - useful
   - not useful
   - wrong skill
   - stale data
   - missing evidence
-- [ ] Store feedback linked to retrieval/execution id.
-- [ ] Feed aggregate feedback into reranker score.
+- [x] Store feedback linked to retrieval/execution id.
+- [x] Feed aggregate feedback into reranker score.
 
 **Acceptance Criteria:**
 - Feedback is persisted.
@@ -1082,13 +1334,23 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 .venv/bin/python -m pytest tests/test_skill_store_feedback.py -q
 ```
 
+**Completion Notes:**
+- Added `terminal/skills/feedback.py` with `capture_skill_feedback`, `get_skill_feedback_summary`, and `apply_feedback_to_candidates`.
+- Supported feedback categories: `useful`, `not_useful`, `wrong_skill`, `stale_data`, `missing_evidence`.
+- Feedback payload records positive/negative sentiment and links to retrieval/execution ids when supplied.
+- Feedback capture fails closed without breaking user response.
+- Added `SkillStoreRepository.get_feedback_summary` for aggregate success/failure rates by skill id.
+- `apply_feedback_to_candidates` stamps `runtime_success_rate` into candidate metadata, which the existing reranker already consumes.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_skill_store_feedback.py tests/test_skill_store_repo.py -q`
+
 ---
 
 ## Epic AA-SKILLSTORE-12: Usage-Driven Learning Loop
 
 ### AA-SKILLSTORE-12.1 Add Learning Schema And Repository
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** Learning persistence assistant  
 **Dependencies:** AA-SKILLSTORE-11.1  
@@ -1099,8 +1361,8 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 - Test: `tests/test_learning_repository.py`
 
 **Work:**
-- [ ] Add schema `agent_learning`.
-- [ ] Add tables:
+- [x] Add schema `agent_learning`.
+- [x] Add tables:
   - `agent_learning.interaction_events`
   - `agent_learning.workflow_chains`
   - `agent_learning.daily_summaries`
@@ -1109,7 +1371,7 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
   - `agent_learning.proposal_validation_runs`
   - `agent_learning.promotion_runs`
   - `agent_learning.learning_audits`
-- [ ] Add repository methods:
+- [x] Add repository methods:
   - `record_interaction_event(event)`
   - `record_workflow_chain(chain)`
   - `save_daily_summary(summary)`
@@ -1117,8 +1379,8 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
   - `save_proposal(proposal)`
   - `list_proposals(status=None)`
   - `record_promotion_run(run)`
-- [ ] Ensure event payloads are JSON-serializable.
-- [ ] Avoid storing credentials, secrets, or full raw tool payloads.
+- [x] Ensure event payloads are JSON-serializable.
+- [x] Avoid storing credentials, secrets, or full raw tool payloads.
 
 **Acceptance Criteria:**
 - Learning tables can be created on an empty DB.
@@ -1139,9 +1401,18 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 .venv/bin/python -m pytest tests/test_learning_repository.py -q
 ```
 
+**Completion Notes:**
+- Added `agent_learning` schema and eight learning-loop tables to `postgres/schema.sql`.
+- Added `terminal/learning/__init__.py`.
+- Added `terminal/learning/repository.py` with repository methods for interaction events, workflow chains, daily summaries, patterns, proposals, proposal listing, and promotion runs.
+- Proposal statuses are constrained in schema and repository validation.
+- Repository sanitizes sensitive keys and oversized raw payload fields before JSONB persistence.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_learning_repository.py -q`
+
 ### AA-SKILLSTORE-12.2 Capture Daily User Inputs And Actions
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** Learning capture assistant  
 **Dependencies:** AA-SKILLSTORE-12.1  
@@ -1152,7 +1423,7 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 - Test: `tests/test_learning_interaction_log.py`
 
 **Work:**
-- [ ] Create `InteractionEvent` model with:
+- [x] Create `InteractionEvent` model with:
   - timestamp
   - raw query
   - normalized query
@@ -1165,15 +1436,15 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
   - errors and missing evidence
   - clarification requested
   - user approval or correction markers
-- [ ] Record events after every meaningful terminal turn.
-- [ ] Record command actions such as:
+- [x] Record events after every meaningful terminal turn.
+- [x] Record command actions such as:
   - daily refresh
   - report open
   - report email
   - report validation
   - code/report fix
-- [ ] Redact or omit secrets and oversized payloads.
-- [ ] Make capture best-effort; logging failure must not break Agent Adda.
+- [x] Redact or omit secrets and oversized payloads.
+- [x] Make capture best-effort; logging failure must not break Agent Adda.
 
 **Acceptance Criteria:**
 - A normal query creates one interaction event.
@@ -1187,9 +1458,19 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 .venv/bin/python -m pytest tests/test_learning_interaction_log.py -q
 ```
 
+**Completion Notes:**
+- Added `terminal/learning/interaction_log.py` with `InteractionEvent`, `capture_interaction_event`, `build_agent_turn_event`, and `build_command_action_event`.
+- Added best-effort learning capture to `terminal.agent.Agent.query` after normal and compound query results.
+- Added `nse_agent._record_learning_action` and command-action classification for report email, report open, report validation, daily refresh, and code/report fix flows that bypass `Agent.query`.
+- Capture is disabled with `AGENT_ADDA_LEARNING_CAPTURE=0`.
+- Event payloads redact email recipients, credentials, email bodies, and oversized raw tool/html payloads.
+- Failed tool plans record error and missing-evidence context.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_learning_interaction_log.py tests/test_learning_repository.py -q`
+
 ### AA-SKILLSTORE-12.3 Detect Workflow Chains Across Turns
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P1  
 **Suggested owner:** Learning capture assistant  
 **Dependencies:** AA-SKILLSTORE-12.2  
@@ -1198,20 +1479,20 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 - Test: `tests/test_learning_workflow_chains.py`
 
 **Work:**
-- [ ] Group related events into chains using:
+- [x] Group related events into chains using:
   - session id
   - time proximity
   - repeated entities/reports
   - explicit follow-ups
   - artifact continuity
-- [ ] Detect first-class chain types:
+- [x] Detect first-class chain types:
   - `daily_refresh_report_review_email`
   - `report_debug_regenerate_validate`
   - `stock_research_deep_dive`
   - `portfolio_review_debug`
   - `scanner_to_watchlist`
   - `fallback_failure_recovery`
-- [ ] Store chain summary and event ids.
+- [x] Store chain summary and event ids.
 
 **Acceptance Criteria:**
 - Daily refresh -> open reports -> email top picks is captured as one chain.
@@ -1224,9 +1505,17 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 .venv/bin/python -m pytest tests/test_learning_workflow_chains.py -q
 ```
 
+**Completion Notes:**
+- Added `terminal/learning/workflow_chains.py` with deterministic chain detection and persistence helpers.
+- Detects daily refresh/report/email, report debug/fix/regenerate/validate, stock research deep dive, portfolio review debug, scanner-to-watchlist, and fallback failure recovery chains.
+- Uses time proximity, known intent/action sequences, shared artifacts, shared entities, and explicit follow-up markers.
+- Added `WorkflowChain.to_record()` for repository persistence via `record_workflow_chain`.
+- Verified with:
+  `.venv/bin/python -m pytest tests/test_learning_workflow_chains.py -q`
+
 ### AA-SKILLSTORE-12.4 Generate Daily Learning Summaries
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P1  
 **Suggested owner:** Learning summarizer assistant  
 **Dependencies:** AA-SKILLSTORE-12.3  
@@ -1236,10 +1525,10 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 - Test: `tests/test_learning_daily_summary.py`
 
 **Work:**
-- [ ] Add CLI:
+- [x] Add CLI:
   - `agent_adda learning summarize --date YYYY-MM-DD`
   - `agent_adda learning summarize --today`
-- [ ] Summarize:
+- [x] Summarize:
   - top intents
   - top entities
   - commands run
@@ -1248,8 +1537,15 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
   - failures
   - report issues
   - workflow chains
-- [ ] Store summary in `agent_learning.daily_summaries`.
-- [ ] Optionally write markdown under `reports/learning/daily/`.
+- [x] Store summary in `agent_learning.daily_summaries`.
+- [x] Optionally write markdown under `reports/learning/daily/`.
+
+**Completed 2026-06-07:**
+- Added `terminal/learning/daily_summary.py` with deterministic daily aggregation, save, and markdown writer.
+- Added `agent-adda learning summarize --date YYYY-MM-DD|--today` with optional `--write-md`.
+- Added repository date-window readers for interaction events and workflow chains.
+- Verification:
+  - `.venv/bin/python -m pytest tests/test_learning_daily_summary.py tests/test_learning_repository.py -q`
 
 **Acceptance Criteria:**
 - Summary is deterministic from logged events.
@@ -1264,7 +1560,7 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 
 ### AA-SKILLSTORE-12.5 Mine 14-Day Usage Patterns
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** Learning miner assistant  
 **Dependencies:** AA-SKILLSTORE-12.4  
@@ -1274,9 +1570,9 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 - Test: `tests/test_learning_pattern_miner.py`
 
 **Work:**
-- [ ] Add CLI:
+- [x] Add CLI:
   - `agent_adda learning analyze --window 14d`
-- [ ] Mine:
+- [x] Mine:
   - repeated user phrasings
   - recurring tool/report/action chains
   - repeated LLM fallback failures
@@ -1284,13 +1580,20 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
   - repeated manual fixes
   - repeated scanner/watchlist workflows
   - repeated portfolio review workflows
-- [ ] Score patterns by:
+- [x] Score patterns by:
   - frequency
   - recency
   - failure severity
   - manual effort saved
   - potential for deterministic automation
-- [ ] Store patterns in `agent_learning.patterns`.
+- [x] Store patterns in `agent_learning.patterns`.
+
+**Completed 2026-06-07:**
+- Added `terminal/learning/pattern_miner.py` with deterministic 14-day pattern mining and scoring.
+- Added `agent-adda learning analyze --window 14d` with optional `--end-date` and `--no-save`.
+- Mined recurring user phrasings, workflow chains, fallback failures, report issues, and manual fixes into proposal-ready pattern payloads.
+- Verification:
+  - `.venv/bin/python -m pytest tests/test_learning_pattern_miner.py -q`
 
 **Acceptance Criteria:**
 - Pattern miner identifies a recurring workflow from fixture events.
@@ -1305,7 +1608,7 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 
 ### AA-SKILLSTORE-12.6 Generate Route, Tool, Skill, And Validation Proposals
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** Learning proposal assistant  
 **Dependencies:** AA-SKILLSTORE-12.5, AA-SKILLSTORE-2.2  
@@ -1314,7 +1617,7 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 - Test: `tests/test_learning_proposal_generator.py`
 
 **Work:**
-- [ ] Convert mined patterns into proposal types:
+- [x] Convert mined patterns into proposal types:
   - `route_proposal`
   - `tool_proposal`
   - `skill_proposal`
@@ -1322,7 +1625,7 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
   - `report_validation_proposal`
   - `workflow_proposal`
   - `deprecation_proposal`
-- [ ] Include:
+- [x] Include:
   - observed pattern
   - evidence examples
   - proposed behavior
@@ -1331,8 +1634,16 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
   - expected tool calls
   - must-not-call rules
   - acceptance criteria
-- [ ] Mark proposals `proposed` by default.
-- [ ] Do not modify runtime routing or skill cards directly.
+- [x] Mark proposals `proposed` by default.
+- [x] Do not modify runtime routing or skill cards directly.
+
+**Completed 2026-06-07:**
+- Added `terminal/learning/proposal_generator.py` with deterministic proposal generation from mined patterns.
+- Added `agent-adda learning propose --status observed --limit N`.
+- Added repository pattern listing for mined pattern consumption.
+- Converts fallback failures, VCP/breakout asks, report issues, workflow chains, and repeated phrasing into implementation-ready proposals.
+- Verification:
+  - `.venv/bin/python -m pytest tests/test_learning_proposal_generator.py tests/test_learning_repository.py -q`
 
 **Acceptance Criteria:**
 - Repeated “latest quarterly results analysis” fallback failure becomes a route/tool proposal.
@@ -1347,7 +1658,7 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 
 ### AA-SKILLSTORE-12.7 Validate Learning Proposals Before Promotion
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** Learning validation assistant  
 **Dependencies:** AA-SKILLSTORE-12.6, AA-SKILLSTORE-9.2, AA-SKILLSTORE-10.1  
@@ -1356,15 +1667,23 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 - Test: `tests/test_learning_proposal_validator.py`
 
 **Work:**
-- [ ] Validate generated proposal test cases.
-- [ ] For skill proposals, convert to `review_pending` skill cards only after:
+- [x] Validate generated proposal test cases.
+- [x] For skill proposals, convert to `review_pending` skill cards only after:
   - schema validation
   - SQL safety validation
   - fixture execution
   - reviewer approval
-- [ ] For route/tool proposals, produce implementation-ready backlog snippets.
-- [ ] For deprecation proposals, require evidence of repeated failure or replacement.
-- [ ] Store validation runs.
+- [x] For route/tool proposals, produce implementation-ready backlog snippets.
+- [x] For deprecation proposals, require evidence of repeated failure or replacement.
+- [x] Store validation runs.
+
+**Completed 2026-06-07:**
+- Added `terminal/learning/proposal_validator.py` with proposal payload/test-case validation and type-specific gates.
+- Added `agent-adda learning validate-proposals --status proposed`.
+- Added repository support for proposal status updates and `agent_learning.proposal_validation_runs`.
+- Produces implementation-ready backlog snippets for route/tool/workflow/report/skill proposals.
+- Verification:
+  - `.venv/bin/python -m pytest tests/test_learning_proposal_validator.py tests/test_learning_repository.py -q`
 
 **Acceptance Criteria:**
 - Invalid proposal remains `test_failed`.
@@ -1379,7 +1698,7 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 
 ### AA-SKILLSTORE-12.8 Promote Validated Learning Proposals
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P1  
 **Suggested owner:** Learning promotion assistant  
 **Dependencies:** AA-SKILLSTORE-12.7, AA-SKILLSTORE-9.3  
@@ -1389,19 +1708,27 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 - Test: `tests/test_learning_promotion.py`
 
 **Work:**
-- [ ] Add CLI:
+- [x] Add CLI:
   - `agent_adda learning proposals`
   - `agent_adda learning show <proposal_id>`
   - `agent_adda learning promote <proposal_id>`
   - `agent_adda learning reject <proposal_id>`
-- [ ] Promotion behavior:
+- [x] Promotion behavior:
   - skill proposal -> calls skill promotion path
   - route/tool proposal -> creates backlog artifact, not runtime code
   - prompt proposal -> creates review-pending prompt artifact
   - report validation proposal -> creates validation-rule task
   - deprecation proposal -> marks target deprecated after approval
-- [ ] Require explicit approval for production status.
-- [ ] Record promotion runs.
+- [x] Require explicit approval for production status.
+- [x] Record promotion runs.
+
+**Completed 2026-06-07:**
+- Added `terminal/learning/promotion.py` with proposal listing, show, promote, and reject helpers.
+- Added `agent-adda learning proposals|show|promote|reject`.
+- Promotion writes typed backlog/review artifacts and records promotion runs; it does not mutate runtime code.
+- Production promotion requires explicit approval and review-pending source status.
+- Verification:
+  - `.venv/bin/python -m pytest tests/test_learning_promotion.py tests/test_learning_repository.py -q`
 
 **Acceptance Criteria:**
 - Proposal cannot jump from `proposed` to `production`.
@@ -1416,7 +1743,7 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 
 ### AA-SKILLSTORE-12.9 Add Fortnightly Learning Audit Report
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P1  
 **Suggested owner:** Learning audit assistant  
 **Dependencies:** AA-SKILLSTORE-12.8  
@@ -1426,10 +1753,10 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 - Test: `tests/test_learning_audit.py`
 
 **Work:**
-- [ ] Add CLI:
+- [x] Add CLI:
   - `agent_adda learning audit --window 14d`
-- [ ] Generate markdown report under `reports/learning/`.
-- [ ] Include:
+- [x] Generate markdown report under `reports/learning/`.
+- [x] Include:
   - top repeated workflows
   - recurring failures
   - generated proposals
@@ -1437,7 +1764,15 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
   - rejected proposals
   - stale/deprecated skills
   - recommended next backlog tasks
-- [ ] Store audit metadata in `agent_learning.learning_audits`.
+- [x] Store audit metadata in `agent_learning.learning_audits`.
+
+**Completed 2026-06-07:**
+- Added `terminal/learning/audit.py` with fortnightly markdown and HTML audit generation.
+- Added `agent-adda learning audit --window 14d`.
+- Audit links patterns, proposals, promotion runs, rejected items, and recommended coding-assistant tasks.
+- Added repository support for learning-audit persistence and promotion-run listing.
+- Verification:
+  - `.venv/bin/python -m pytest tests/test_learning_audit.py tests/test_learning_repository.py -q`
 
 **Acceptance Criteria:**
 - Audit links patterns to proposals.
@@ -1456,7 +1791,7 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 
 ### AA-SKILLSTORE-13.1 Add Skill Store Operator Docs
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P1  
 **Suggested owner:** Docs assistant  
 **Dependencies:** AA-SKILLSTORE-9.3, AA-SKILLSTORE-12.9  
@@ -1464,7 +1799,7 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 - Create: `docs/agent_adda_skill_store.md`
 
 **Work:**
-- [ ] Document:
+- [x] Document:
   - what the skill store is
   - runtime status lifecycle
   - how to generate scenarios
@@ -1475,7 +1810,7 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
   - how learning proposals are approved
   - how to inspect retrieval logs
   - safety guardrails
-- [ ] Add examples:
+- [x] Add examples:
   - 3M market analysis
   - VCP breakouts with fundamentals
   - portfolio add/trim
@@ -1490,9 +1825,12 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 rg -n "generated.*untrusted|validate|promote|deprecate|pgvector|learning analyze|proposal" docs/agent_adda_skill_store.md
 ```
 
+**Completion Notes:**
+- Added `docs/agent_adda_skill_store.md` with lifecycle, learning capture, proposal approval, retrieval logs, safety guardrails, examples, and runtime gate guidance.
+
 ### AA-SKILLSTORE-13.2 Add `/skills` Runtime Inspection Command
 
-**Status:** READY  
+**Status:** DONE  
 **Priority:** P2  
 **Suggested owner:** Command assistant  
 **Dependencies:** AA-SKILLSTORE-9.3  
@@ -1503,13 +1841,13 @@ rg -n "generated.*untrusted|validate|promote|deprecate|pgvector|learning analyze
 - Test: `tests/test_skill_store_commands.py`
 
 **Work:**
-- [ ] Add commands:
+- [x] Add commands:
   - `/skills`
   - `/skills search <query>`
   - `/skills show <skill_id>`
   - `/skills recent`
-- [ ] Render status counts and top matching skills.
-- [ ] Keep command read-only.
+- [x] Render status counts and top matching skills.
+- [x] Keep command read-only.
 
 **Acceptance Criteria:**
 - `/skills` lists status counts.
@@ -1522,13 +1860,16 @@ rg -n "generated.*untrusted|validate|promote|deprecate|pgvector|learning analyze
 .venv/bin/python -m pytest tests/test_skill_store_commands.py -q
 ```
 
+**Completion Notes:**
+- Added read-only `/skills`, `/skills search`, `/skills show`, and `/skills recent` handlers with help/autocomplete registration and focused tests.
+
 ---
 
 ## Epic AA-SKILLSTORE-14: Release Gates
 
 ### AA-SKILLSTORE-14.1 Runtime Enablement Gate
 
-**Status:** BLOCKED  
+**Status:** DONE  
 **Priority:** P0  
 **Suggested owner:** Release assistant  
 **Dependencies:** AA-SKILLSTORE-8.3, AA-SKILLSTORE-10.2, AA-SKILLSTORE-11.1, AA-SKILLSTORE-12.9  
@@ -1537,12 +1878,12 @@ rg -n "generated.*untrusted|validate|promote|deprecate|pgvector|learning analyze
 - Modify: release notes or docs
 
 **Work:**
-- [ ] Confirm benchmark pass rate.
-- [ ] Confirm deterministic routing smoke tests pass with skill store disabled and enabled.
-- [ ] Confirm unsafe SQL tests pass.
-- [ ] Confirm retrieval logs are written.
-- [ ] Confirm learning capture can be enabled without affecting answers.
-- [ ] Enable feature flag for local default only after user approval.
+- [x] Confirm benchmark pass rate.
+- [x] Confirm deterministic routing smoke tests pass with skill store disabled and enabled.
+- [x] Confirm unsafe SQL tests pass.
+- [x] Confirm retrieval logs are written.
+- [x] Confirm learning capture can be enabled without affecting answers.
+- [x] Enable feature flag for local default only after user approval.
 
 **Acceptance Criteria:**
 - No deterministic command regressions.
@@ -1555,6 +1896,11 @@ rg -n "generated.*untrusted|validate|promote|deprecate|pgvector|learning analyze
 AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py -q
 AGENT_ADDA_SKILL_STORE=1 .venv/bin/python -m pytest tests/test_skill_store_e2e.py tests/test_skill_store_benchmarks.py -q
 ```
+
+**Completion Notes:**
+- Added a read-only release-gate preflight helper and operator documentation.
+- After explicit approval on 2026-06-08, Skill Store runtime retrieval is enabled by default.
+- `AGENT_ADDA_SKILL_STORE=0` remains the process-level kill switch.
 
 ### AA-SKILLSTORE-14.2 Post-Release Audit
 

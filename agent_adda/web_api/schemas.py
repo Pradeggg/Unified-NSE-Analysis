@@ -1,13 +1,19 @@
 """Shared Pydantic schemas — mirrors browser_plugin/src/types.ts."""
 from __future__ import annotations
 from typing import Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 Exchange = Literal["NSE", "BSE"]
 Timeframe = Literal["1m","3m","5m","15m","30m","1h","4h","1D","1W","1M"]
 PatternStatus = Literal["confirmed","forming","none","engine_unavailable"]
 ConflictPolicy = Literal["prefer_pg","show_mismatch"]
+
+_TV_TF_MAP: dict[str, str] = {
+    "1": "1m", "3": "3m", "5": "5m", "15": "15m",
+    "30": "30m", "45": "30m", "60": "1h", "120": "1h",
+    "240": "4h", "D": "1D", "W": "1W", "M": "1M",
+}
 
 
 class KeyLevels(BaseModel):
@@ -47,6 +53,14 @@ class ChartCapturePayload(BaseModel):
     user_question: str
     pg_evidence: Optional[dict] = None
     conflict_policy: ConflictPolicy = "prefer_pg"
+
+    @field_validator("timeframe", mode="before")
+    @classmethod
+    def normalise_timeframe(cls, v: object) -> object:
+        """Accept raw TradingView timeframe codes (e.g. '1', '60', 'D')."""
+        if isinstance(v, str):
+            return _TV_TF_MAP.get(v.strip(), v)
+        return v
 
 
 class EvidenceTrail(BaseModel):

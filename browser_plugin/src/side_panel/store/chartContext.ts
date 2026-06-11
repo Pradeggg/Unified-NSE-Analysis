@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type {
   ActiveChartContext,
+  AnalysisResult,
   PatternFinding,
   KeyLevels,
   Exchange,
@@ -97,6 +98,23 @@ export function useChartContext() {
     );
   }, []);
 
+  // Apply the backend analysis result. The backend owns the durable capture_id
+  // used by follow-up questions, so keep side-panel state in sync with it.
+  const applyAnalysisResult = useCallback((result: AnalysisResult) => {
+    setCtx((prev) =>
+      prev
+        ? {
+            ...prev,
+            capture_id: result.capture_id,
+            computed_levels: result.key_levels,
+            pattern_findings: result.pattern_findings,
+            llm_conclusions: [...prev.llm_conclusions, result.answer],
+            pg_evidence_version: result.evidence_trail.as_of,
+          }
+        : prev
+    );
+  }, []);
+
   // Update pattern findings.
   const updatePatterns = useCallback((patterns: PatternFinding[]) => {
     setCtx((prev) =>
@@ -113,6 +131,7 @@ export function useChartContext() {
     createContext,
     updateLevels,
     addConclusion,
+    applyAnalysisResult,
     updatePatterns,
     resetContext,
   };

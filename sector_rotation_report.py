@@ -1337,7 +1337,7 @@ def load_index_eod_from_postgres(cols: list[str]) -> pd.DataFrame | None:
         "LOW": "low AS \"LOW\"",
         "CLOSE": "close AS \"CLOSE\"",
         "TIMESTAMP": "trade_date AS \"TIMESTAMP\"",
-        "TOTTRDQTY": "traded_qty AS \"TOTTRDQTY\"",
+        "TOTTRDQTY": "volume AS \"TOTTRDQTY\"",
         "HI_52_WK": "week52_high AS \"HI_52_WK\"",
         "LO_52_WK": "week52_low AS \"LO_52_WK\"",
     }

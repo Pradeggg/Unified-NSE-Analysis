@@ -111,6 +111,22 @@ class TerminalSymbolResolutionTests(unittest.TestCase):
         self.assertEqual(united_spirits["symbol"], "UNITDSPR")
         live_session.assert_not_called()
 
+    def test_resolve_symbol_handles_portfolio_broker_alias_visret(self):
+        with patch("terminal.tools._get_live_session") as live_session:
+            result = resolve_symbol("VISRET")
+
+        self.assertEqual(result["symbol"], "V2RETAIL")
+        live_session.assert_not_called()
+
+    def test_resolve_symbol_handles_chennai_petroleum_aliases_locally(self):
+        with patch("terminal.tools._get_live_session") as live_session:
+            for query in ("Chennai Petroleum", "Chennai Petroleum Corporation", "CPCL", "CHENNPETRO"):
+                with self.subTest(query=query):
+                    result = resolve_symbol(query)
+                    self.assertEqual(result["symbol"], "CHENNPETRO")
+
+        live_session.assert_not_called()
+
     def test_resolve_symbol_projects_hybrid_confidence_fields(self):
         with patch(
             "terminal.tools._all_symbols_map",

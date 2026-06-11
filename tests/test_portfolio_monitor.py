@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 import sqlite3
 import tempfile
 from pathlib import Path
@@ -198,6 +199,33 @@ class TestLoadPortfolio:
         assert tata["upnl_pct"] == pytest.approx(100.0)
         assert tata["upnl"] == pytest.approx(10000.0)
 
+    def test_day_change_pct_from_broker_export(self, tmp_path):
+        csv_path = tmp_path / "port.csv"
+        _make_csv(_SAMPLE_ROWS, csv_path)
+        rows = pm._load_portfolio(csv_path)
+        tata = next(r for r in rows if r["broker"] == "TATSTE")
+        itc = next(r for r in rows if r["broker"] == "ITCHOT")
+        assert tata["day_chg_pct"] == pytest.approx(1.5)
+        assert itc["day_chg_pct"] == pytest.approx(-0.5)
+
+    def test_broker_metrics_match_screen_formula(self, tmp_path):
+        csv_path = tmp_path / "port.csv"
+        _make_csv(_SAMPLE_ROWS, csv_path)
+        rows = pm._load_portfolio(csv_path)
+        metrics = pm._portfolio_broker_metrics(rows)
+
+        assert metrics["total_cost"] == pytest.approx(55000.0)
+        assert metrics["current_value"] == pytest.approx(43500.0)
+        expected_day_gain = (
+            20000.0 - (20000.0 / 1.015)
+            + 7500.0 - (7500.0 / 0.995)
+            + 16000.0 - (16000.0 / 1.003)
+        )
+        assert metrics["day_gain"] == pytest.approx(expected_day_gain)
+        assert metrics["absolute_return_pct"] == pytest.approx((43500.0 / 55000.0 - 1) * 100)
+        assert metrics["max_gainer"]["broker"] == "TATSTE"
+        assert metrics["max_loser"]["broker"] == "ITCHOT"
+
     def test_negative_upnl_parsed_from_parens(self, tmp_path):
         csv_path = tmp_path / "port.csv"
         _make_csv(_SAMPLE_ROWS, csv_path)
@@ -319,6 +347,20 @@ class TestSymbolMatching:
             assert isinstance(broker, str) and broker
             assert isinstance(nse, str) and nse
 
+    def test_broker_map_fixes_known_portfolio_codes(self):
+        expected = {
+            "ACTCON": "ACE",
+            "ADOWEL": "ADOR",
+            "HINREC": "HIRECT",
+            "IDFC": "IDFCFIRSTB",
+            "NIVBUP": "NIVABUPA",
+            "RELNIP": "NAM-INDIA",
+            "SCHELE": "SCHNEIDER",
+            "SHRPIS": "SHRIPISTON",
+        }
+        for broker, symbol in expected.items():
+            assert pm._BROKER_TO_NSE[broker] == symbol
+
 
 # ── Strategy evaluators ────────────────────────────────────────────────────────
 
@@ -439,22 +481,46 @@ class TestStrategies:
         sig, _ = pm._strat_value(self._stock(-10.0), None)
         assert sig == "HOLD"
 
-    # RSI
-    def test_rsi_oversold_buy(self):
-        sig, _ = pm._strat_rsi({"rsi": 28.0, "trend_sig": "BULLISH"})
+    # VCP
+    def test_vcp_clean_setup_buy(self):
+        sig, reason = pm._strat_vcp({
+            "stage": "STAGE_2", "trend_sig": "STRONG_BULLISH",
+            "supertrend": "BULLISH", "minervini": 15.0, "tech_score": 59.0,
+        })
         assert sig == "BUY"
+        assert "VCP" in reason
 
-    def test_rsi_oversold_uptrend_buy(self):
-        sig, _ = pm._strat_rsi({"rsi": 32.0, "trend_sig": "STRONG_BULLISH"})
-        assert sig == "BUY"
+    def test_vcp_forming_setup_hold(self):
+        sig, reason = pm._strat_vcp({
+            "stage": "STAGE_2", "trend_sig": "STRONG_BULLISH",
+            "supertrend": "BULLISH", "minervini": 11.0, "tech_score": 52.0,
+        })
+        assert sig == "HOLD"
+        assert "forming" in reason.lower()
 
-    def test_rsi_overbought_sell(self):
-        sig, _ = pm._strat_rsi({"rsi": 85.0, "trend_sig": "BULLISH"})
+    def test_vcp_broken_setup_sell(self):
+        sig, reason = pm._strat_vcp({
+            "stage": "STAGE_4", "trend_sig": "BEARISH",
+            "supertrend": "BEARISH", "minervini": 7.0, "tech_score": 22.0,
+        })
         assert sig == "SELL"
+        assert "broken" in reason.lower()
 
-    def test_rsi_neutral(self):
-        sig, _ = pm._strat_rsi({"rsi": 55.0, "trend_sig": "BULLISH"})
-        assert sig is None
+    # RS vs NIFTY 500
+    def test_rs_nifty500_outperformance_buy(self):
+        sig, reason = pm._strat_rs_nifty500({"rel_str": 21.0})
+        assert sig == "BUY"
+        assert "outperforming" in reason.lower()
+
+    def test_rs_nifty500_neutral_hold(self):
+        sig, reason = pm._strat_rs_nifty500({"rel_str": 5.0})
+        assert sig == "HOLD"
+        assert "neutral" in reason.lower()
+
+    def test_rs_nifty500_underperformance_sell(self):
+        sig, reason = pm._strat_rs_nifty500({"rel_str": -12.0})
+        assert sig == "SELL"
+        assert "underperforming" in reason.lower()
 
 
 # ── Composite signal ───────────────────────────────────────────────────────────
@@ -525,8 +591,10 @@ class TestRunIntradayView:
         with patch.object(pm, "INTRADAY_REPORT", tmp_path / "intraday.html"), \
              patch.object(pm, "EOD_REPORT",      tmp_path / "eod.html"):
             out = pm.run_intraday_view(live=False, csv_path=csv_path, db_path=db_path)
-        assert "Invested" in out
-        assert "Total P&L" in out
+        assert "Amount Invested" in out
+        assert "Current Value" in out
+        assert "Day's Gain" in out
+        assert "Absolute Returns" in out
 
     def test_contains_signal_summary(self, tmp_path):
         csv_path, db_path = self._setup(tmp_path)
@@ -545,6 +613,113 @@ class TestRunIntradayView:
         content = html_out.read_text()
         assert "<html" in content
         assert "portfolio" in content.lower()
+
+    def test_intraday_html_has_search_filters_sort_and_visuals(self, tmp_path):
+        csv_path, db_path = self._setup(tmp_path)
+        html_out = tmp_path / "intraday.html"
+        with patch.object(pm, "INTRADAY_REPORT", html_out), \
+             patch.object(pm, "EOD_REPORT", tmp_path / "eod.html"), \
+             patch.object(pm, "_load_db_snapshot", return_value=({}, "N/A")), \
+             patch.object(pm, "_is_market_hours", return_value=False):
+            pm.run_intraday_view(live=False, csv_path=csv_path, db_path=db_path)
+
+        content = html_out.read_text()
+        assert 'id="holdingsSearch"' in content
+        assert 'id="signalFilter"' in content
+        assert 'id="stageFilter"' in content
+        assert 'id="sectorFilter"' in content
+        assert 'id="portfolioBubbleChart"' in content
+        assert 'id="portfolioHeatmap"' in content
+        assert 'data-sort-key="broker"' in content
+        assert "function applyPortfolioFilters" in content
+
+    def test_intraday_heatmap_is_populated_in_static_html(self, tmp_path):
+        csv_path, db_path = self._setup(tmp_path)
+        html_out = tmp_path / "intraday.html"
+        with patch.object(pm, "INTRADAY_REPORT", html_out), \
+             patch.object(pm, "EOD_REPORT", tmp_path / "eod.html"), \
+             patch.object(pm, "_load_db_snapshot", return_value=({}, "N/A")), \
+             patch.object(pm, "_is_market_hours", return_value=False):
+            pm.run_intraday_view(live=False, csv_path=csv_path, db_path=db_path)
+
+        content = html_out.read_text()
+        heat_counts = [
+            int(value)
+            for value in re.findall(
+                r'<div class="heat-cell"[^>]*><span class="count">(\d+)</span>',
+                content,
+            )
+        ]
+        assert len(heat_counts) == 20
+        assert sum(heat_counts) == len(_SAMPLE_ROWS)
+        assert re.search(r'<span class="avg">Inv (?!--)\d+</span>', content)
+
+    def test_intraday_html_uses_rs_vs_nifty500_not_rsi_column(self, tmp_path):
+        csv_path, db_path = self._setup(tmp_path)
+        html_out = tmp_path / "intraday.html"
+        with patch.object(pm, "INTRADAY_REPORT", html_out), \
+             patch.object(pm, "EOD_REPORT", tmp_path / "eod.html"), \
+             patch.object(pm, "_PG_DSN", "dbname=does_not_exist_zzz"), \
+             patch.object(pm, "_is_market_hours", return_value=False):
+            pm.run_intraday_view(live=False, csv_path=csv_path, db_path=db_path)
+
+        content = html_out.read_text()
+        assert "RS vs NIFTY 500" in content
+        assert 'data-sort-key="rs_nifty500"' in content
+        assert 'data-rs-nifty500="110.0000"' in content
+        assert 'row.getAttribute("data-" + attrKey)' in content
+        assert "VCP" in content
+        assert "RS vs NIFTY 500" in content
+        assert "RSI Strat." not in content
+        assert '<th class="sortable" data-sort-key="rsi">RSI</th>' not in content
+
+    def test_intraday_sort_tables_skip_generic_enhancer(self, tmp_path):
+        csv_path, db_path = self._setup(tmp_path)
+        html_out = tmp_path / "intraday.html"
+        with patch.object(pm, "INTRADAY_REPORT", html_out), \
+             patch.object(pm, "EOD_REPORT", tmp_path / "eod.html"), \
+             patch.object(pm, "_load_db_snapshot", return_value=({}, "N/A")), \
+             patch.object(pm, "_is_market_hours", return_value=False):
+            pm.run_intraday_view(live=False, csv_path=csv_path, db_path=db_path)
+
+        content = html_out.read_text()
+        assert 'data-no-enhance="1"' in content
+        assert 'if (table.dataset.noEnhance === "1") return;' in content
+
+    def test_intraday_html_top_movers_use_broker_day_change(self, tmp_path):
+        csv_path, db_path = self._setup(tmp_path)
+        html_out = tmp_path / "intraday.html"
+        with patch.object(pm, "INTRADAY_REPORT", html_out), \
+             patch.object(pm, "EOD_REPORT", tmp_path / "eod.html"), \
+             patch.object(pm, "_load_db_snapshot", return_value=({}, "N/A")), \
+             patch.object(pm, "_is_market_hours", return_value=False):
+            pm.run_intraday_view(live=False, csv_path=csv_path, db_path=db_path)
+
+        content = html_out.read_text()
+        assert "No data yet" not in content
+        assert "<strong>TATSTE</strong>" in content
+        assert "+1.5%" in content
+        assert "<strong>ITCHOT</strong>" in content
+        assert "-0.5%" in content
+
+    def test_intraday_html_has_alert_zone(self, tmp_path):
+        csv_path, db_path = self._setup(tmp_path)
+        html_out = tmp_path / "intraday.html"
+        with patch.object(pm, "INTRADAY_REPORT", html_out), \
+             patch.object(pm, "EOD_REPORT", tmp_path / "eod.html"), \
+             patch.object(pm, "_load_db_snapshot", return_value=({}, "N/A")), \
+             patch.object(pm, "_is_market_hours", return_value=False):
+            pm.run_intraday_view(live=False, csv_path=csv_path, db_path=db_path)
+
+        content = html_out.read_text()
+        assert 'id="alertZone"' in content
+        assert "Alert Zone" in content
+        assert "Sharp Movers" in content
+        assert "Risk Alerts" in content
+        assert "Watch Alerts" in content
+        assert "High-Value Moves" in content
+        assert 'data-alert-symbol="ITCHOT"' in content
+        assert "function focusHolding" in content
 
     def test_html_has_auto_refresh_during_market_hours(self, tmp_path):
         csv_path, db_path = self._setup(tmp_path)
@@ -580,6 +755,29 @@ class TestRunIntradayView:
         for row in table_rows:
             assert "SELL" in row
 
+    def test_filtered_intraday_view_keeps_full_canonical_html(self, tmp_path):
+        csv_path = tmp_path / "port.csv"
+        _make_csv(_SAMPLE_ROWS, csv_path)
+        html_out = tmp_path / "intraday.html"
+
+        with patch.object(pm, "INTRADAY_REPORT", html_out), \
+             patch.object(pm, "EOD_REPORT", tmp_path / "eod.html"), \
+             patch.object(pm, "_load_db_snapshot", return_value=({}, "N/A")), \
+             patch.object(pm, "_is_market_hours", return_value=False):
+            out = pm.run_intraday_view(
+                filter_signal="SELL", live=False, csv_path=csv_path
+            )
+
+        table_rows = [l for l in out.split("\n") if l.startswith("| **")]
+        assert len(table_rows) == 1
+        assert "ITCHOT" in table_rows[0]
+
+        content = html_out.read_text()
+        assert "3 holdings" in content
+        assert "<strong>TATSTE</strong>" in content
+        assert "<strong>ITCHOT</strong>" in content
+        assert "<strong>HDFBAN</strong>" in content
+
     def test_live_prices_overlaid_when_provided(self, tmp_path):
         csv_path, db_path = self._setup(tmp_path)
         fake_prices = {"TATASTEEL": 210.0}
@@ -590,6 +788,70 @@ class TestRunIntradayView:
             out = pm.run_intraday_view(live=True, csv_path=csv_path, db_path=db_path)
         # The live price for TATSTE/TATASTEEL should now show 210
         assert "210" in out
+
+    def test_live_day_change_does_not_compare_against_fuzzy_db_symbol(self, tmp_path):
+        csv_path = tmp_path / "port.csv"
+        _make_csv([
+            {
+                "Stock Symbol": "BAJHOL",
+                "Company Name": "BAJAJ HOLDINGS & INVESTMENT",
+                "ISIN Code": "INE118A01012",
+                "Qty": "4",
+                "Average Cost Price": "10581.58",
+                "Current Market Price": "10219.00",
+                "% Change over prev close": "- 0.5",
+                "Value At Cost": "42326.32",
+                "Value At Market Price": "40876.00",
+                "Realized Profit / Loss": "0",
+                "Unrealized Profit/Loss": "(1450.32)",
+                "Unrealized Profit/Loss %": "(3.43)",
+            }
+        ], csv_path)
+        wrong_fuzzy_db = {
+            "BAJFINANCE": {
+                "symbol": "BAJFINANCE",
+                "company_name": "Bajaj Finance Limited",
+                "stage": "STAGE_2",
+                "price": 874.40,
+                "live_price": None,
+                "tech_score": 70,
+                "rsi": 55,
+                "trade_sig": "BUY",
+                "trend_sig": "BULLISH",
+                "rel_str": 90,
+                "chg1d": -0.27,
+                "sector": "Finance",
+                "fund_score": 55,
+                "efund_score": 55,
+                "earn_qual": 55,
+                "sales_gr": 10,
+                "fin_str": 50,
+                "inst_back": 50,
+                "canslim": 12,
+                "minervini": 10,
+                "inv_score": 60,
+                "fund_det": None,
+                "narrative": "",
+                "supertrend": "",
+            }
+        }
+        html_out = tmp_path / "intraday.html"
+        with patch.object(pm, "INTRADAY_REPORT", html_out), \
+             patch.object(pm, "EOD_REPORT", tmp_path / "eod.html"), \
+             patch.object(pm, "_load_db_snapshot", return_value=(wrong_fuzzy_db, "2026-06-04")), \
+             patch.object(pm, "_fetch_live_prices_yf", return_value={"BAJAJHLDNG": 10319.0}), \
+             patch.object(pm, "_is_market_hours", return_value=True):
+            out = pm.run_intraday_view(live=True, csv_path=csv_path)
+
+        assert "-0.5%" in out
+        assert "+1080" not in out
+        content = html_out.read_text()
+        assert 'data-day="-0.5000"' in content
+        assert "+1080" not in content
+
+    def test_premier_explosives_is_not_fetched_as_premier(self):
+        assert pm._YF_TICKER_OVERRIDES.get("PREMIEREXP") != "PREMIER"
+        assert "PREMIEREXP" in pm._YF_SKIP
 
 
 # ── run_eod_report ────────────────────────────────────────────────────────────
@@ -611,11 +873,105 @@ class TestRunEodReport:
         assert result["success"] is True
         assert result["path"] == str(eod_out)
 
+    def test_tata_motors_demerger_broker_aliases_resolve_to_new_entities(self):
+        assert pm._BROKER_TO_NSE["TATCOV"] == "TMCV"
+        assert pm._BROKER_TO_NSE["TATMOT"] == "TMPV"
+        assert pm._BROKER_TO_NSE["TATCOV"] != "TATAMOTORS"
+
+    def test_tata_motors_demerger_adjusts_alert_pnl_to_combined_position(self):
+        rows = [
+            {
+                "broker": "TMCV",
+                "value_cost": 33282.35,
+                "value_mkt": 39804.0,
+                "upnl": 6521.65,
+                "upnl_pct": 19.59,
+                "rpnl": 0.0,
+            },
+            {
+                "broker": "TMPV",
+                "value_cost": 32683.0,
+                "value_mkt": 13692.0,
+                "upnl": -18991.0,
+                "upnl_pct": -58.11,
+                "rpnl": 43985.32,
+            },
+        ]
+
+        pm._apply_corporate_action_adjustments(rows)
+
+        expected_total_pct = 31515.97 / 65965.35 * 100.0
+        assert rows[1]["alert_pnl_pct"] == pytest.approx(expected_total_pct)
+        assert rows[1]["economic_pnl"] == pytest.approx(31515.97)
+        assert rows[1]["corporate_action_group"] == "Tata Motors demerger"
+
+    def test_llm_stock_view_lookup_and_badge(self, tmp_path):
+        path = tmp_path / "llm_stock_views.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "views": [
+                        {
+                            "symbol": "DMART",
+                            "final_verdict": "MUST BUY",
+                            "short_term_view": "MUST BUY",
+                            "long_term_view": "HOLD",
+                            "confidence": 0.82,
+                            "key_reasons": ["strong trend"],
+                            "risks_to_view": ["valuation"],
+                        }
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        lookup = pm._load_llm_stock_view_lookup(path)
+        view = pm._llm_view_for_row({"broker": "AVESUP", "db": {"symbol": "DMART"}}, lookup)
+
+        assert view["final_verdict"] == "MUST BUY"
+        assert "MUST BUY" in pm._llm_verdict_badge(view["final_verdict"])
+
+    def test_eod_report_labels_llm_surface_as_ai_view(self, tmp_path):
+        csv_path, db_path = self._setup(tmp_path)
+        eod_out = tmp_path / "eod.html"
+        (tmp_path / "llm_stock_views.json").write_text(
+            json.dumps(
+                {
+                    "views": [
+                        {
+                            "symbol": "TATSTE",
+                            "final_verdict": "MUST BUY",
+                            "short_term_view": "MUST BUY",
+                            "long_term_view": "HOLD",
+                            "confidence": 0.82,
+                            "key_reasons": ["strong trend"],
+                            "risks_to_view": ["valuation"],
+                        }
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with patch.object(pm, "EOD_REPORT", eod_out), \
+             patch.object(pm, "INTRADAY_REPORT", tmp_path / "intraday.html"):
+            pm.run_eod_report(csv_path=csv_path, db_path=db_path)
+
+        content = eod_out.read_text(encoding="utf-8")
+        assert "AI Verdict Zone" in content
+        assert "<th>AI View</th>" in content
+        assert "AI Stock View" in content
+        assert "AI MUST BUY" in content
+        assert "LLM View" not in content
+        assert "LLM Verdict Zone" not in content
+
     def test_html_file_written(self, tmp_path):
         csv_path, db_path = self._setup(tmp_path)
         eod_out = tmp_path / "eod.html"
         with patch.object(pm, "EOD_REPORT", eod_out), \
-             patch.object(pm, "INTRADAY_REPORT", tmp_path / "intraday.html"):
+             patch.object(pm, "INTRADAY_REPORT", tmp_path / "intraday.html"), \
+             patch.object(pm, "_PG_DSN", "dbname=does_not_exist_zzz"):
             pm.run_eod_report(csv_path=csv_path, db_path=db_path)
         assert eod_out.exists()
 
@@ -623,7 +979,8 @@ class TestRunEodReport:
         csv_path, db_path = self._setup(tmp_path)
         eod_out = tmp_path / "eod.html"
         with patch.object(pm, "EOD_REPORT", eod_out), \
-             patch.object(pm, "INTRADAY_REPORT", tmp_path / "intraday.html"):
+             patch.object(pm, "INTRADAY_REPORT", tmp_path / "intraday.html"), \
+             patch.object(pm, "_PG_DSN", "dbname=does_not_exist_zzz"):
             pm.run_eod_report(csv_path=csv_path, db_path=db_path)
         content = eod_out.read_text()
         for label in ("STRONG BUY", "BUY", "HOLD", "SELL"):
@@ -639,6 +996,121 @@ class TestRunEodReport:
         assert "Invested" in content
         assert "Market Value" in content
         assert "Sector" in content
+
+    def test_html_contains_first_class_portfolio_ledger_sections(self, tmp_path):
+        csv_path, db_path = self._setup(tmp_path)
+        eod_out = tmp_path / "eod.html"
+        with patch.object(pm, "EOD_REPORT", eod_out), \
+             patch.object(pm, "INTRADAY_REPORT", tmp_path / "intraday.html"), \
+             patch.object(pm, "_load_transactions", return_value=[{
+                 "symbol": "TATSTE",
+                 "purchase_date": "2025-01-01",
+                 "sale_date": "2025-06-01",
+                 "qty": 10.0,
+                 "purchase_rate": 100.0,
+                 "sale_rate": 120.0,
+                 "purchase_value": 1000.0,
+                 "sale_value": 1200.0,
+                 "pnl": 200.0,
+                 "pnl_pct": 20.0,
+                 "tenure_bucket": "STCG",
+             }]):
+            pm.run_eod_report(csv_path=csv_path, db_path=db_path)
+        content = eod_out.read_text()
+        assert "Daily Portfolio Ledger" in content
+        assert "Portfolio Status" in content
+        assert "Open Positions &amp; Unrealized P&amp;L" in content
+        assert "Realized P&amp;L by Current Holding" in content
+        assert "Closed Transactions Ledger" in content
+
+    def test_eod_report_uses_rs_vs_nifty500_in_visible_tables(self, tmp_path):
+        csv_path, db_path = self._setup(tmp_path)
+        eod_out = tmp_path / "eod.html"
+        with patch.object(pm, "EOD_REPORT", eod_out), \
+             patch.object(pm, "INTRADAY_REPORT", tmp_path / "intraday.html"), \
+             patch.object(pm, "_PG_DSN", "dbname=does_not_exist_zzz"):
+            pm.run_eod_report(csv_path=csv_path, db_path=db_path)
+
+        content = eod_out.read_text()
+        assert "RS vs NIFTY 500" in content
+        assert "<th>RS vs N500</th>" in content
+        assert "110.0" in content
+        assert "VCP" in content
+        assert "RS Strategy" in content
+        assert "RSI Strat." not in content
+        assert "<th>RSI</th>" not in content
+
+    def test_html_contains_alert_zone_and_clickable_stock_details(self, tmp_path):
+        csv_path, db_path = self._setup(tmp_path)
+        eod_out = tmp_path / "eod.html"
+        with patch.object(pm, "EOD_REPORT", eod_out), \
+             patch.object(pm, "INTRADAY_REPORT", tmp_path / "intraday.html"):
+            pm.run_eod_report(csv_path=csv_path, db_path=db_path)
+        content = eod_out.read_text()
+        assert "Portfolio Alert Zone" in content
+        assert "Exit / Reduce" in content
+        assert "Add / Accumulate" in content
+        assert 'class="portfolio-position-row"' in content
+        assert 'class="stock-detail-row"' in content
+        assert "Technical Details" in content
+        assert "Fundamental Details" in content
+
+    def test_eod_bubble_chart_has_rich_tooltips(self, tmp_path):
+        csv_path, db_path = self._setup(tmp_path)
+        eod_out = tmp_path / "eod.html"
+        with patch.object(pm, "EOD_REPORT", eod_out), \
+             patch.object(pm, "INTRADAY_REPORT", tmp_path / "intraday.html"):
+            pm.run_eod_report(csv_path=csv_path, db_path=db_path)
+
+        content = eod_out.read_text()
+        assert 'class="bubble-point"' in content
+        assert 'data-tooltip-title=' in content
+        assert 'data-tooltip-tech=' in content
+        assert 'data-tooltip-fund=' in content
+        assert 'data-tooltip-investment=' in content
+        assert 'data-tooltip-pnl=' in content
+        assert "function wireBubbleTooltips" in content
+        assert "Technical Score" in content
+        assert "Fundamental Score" in content
+        assert "P&amp;L" in content
+
+    def test_eod_report_omits_duplicated_legacy_views(self, tmp_path):
+        csv_path, db_path = self._setup(tmp_path)
+        eod_out = tmp_path / "eod.html"
+        with patch.object(pm, "EOD_REPORT", eod_out), \
+             patch.object(pm, "INTRADAY_REPORT", tmp_path / "intraday.html"):
+            pm.run_eod_report(csv_path=csv_path, db_path=db_path)
+
+        content = eod_out.read_text()
+        assert "Open Positions &amp; Unrealized P&amp;L" in content
+        assert "Portfolio Alert Zone" in content
+        assert "Sector Exposure" in content
+        assert "Top 5 Buy Opportunities" not in content
+        assert "Top 5 Sell Candidates" not in content
+        assert "Signal Summary" not in content
+        assert "All-Stock Heat Strip" not in content
+        assert '<span class="title">STRONG BUY' not in content
+        assert '<span class="title">BUY &nbsp;' not in content
+        assert '<span class="title">HOLD &nbsp;' not in content
+        assert '<span class="title">SELL &nbsp;' not in content
+
+    def test_eod_report_supplements_missing_stage_fund_details_from_pg_cache(self, tmp_path):
+        csv_path, db_path = self._setup(tmp_path)
+        eod_out = tmp_path / "eod.html"
+        with patch("terminal.portfolio_monitor._PG_DSN", "dbname=does_not_exist_zzz"):
+            records, snap_date = pm._load_db_snapshot(db_path)
+        with patch.object(pm, "EOD_REPORT", eod_out), \
+             patch.object(pm, "INTRADAY_REPORT", tmp_path / "intraday.html"), \
+             patch.object(pm, "_load_db_snapshot", return_value=(records, snap_date)), \
+             patch.object(pm, "_load_latest_fundamentals_lookup", return_value={
+                 "HDFCBANK": {
+                     "pnl_summary": "Sales: 100 Cr (YoY +10%)",
+                     "ratios_summary": "ROCE: 20; ROE: 15; P/E: 12",
+                 }
+             }):
+            pm.run_eod_report(csv_path=csv_path, db_path=db_path)
+        content = eod_out.read_text()
+        assert "Sales: 100 Cr" in content
 
     def test_html_contains_strategy_explanation(self, tmp_path):
         csv_path, db_path = self._setup(tmp_path)

@@ -160,13 +160,13 @@ class TestPreDispatchGuards:
 # ─── Layer 1: Command registry ───────────────────────────────────────────────
 
 class TestCommandRegistry:
-    """All 14 registered handlers match expected inputs in both modes."""
+    """All registered handlers match expected inputs in both modes."""
 
     EXPECTED_HANDLERS = [
-        "help", "commands", "scan", "strategy-council", "council",
+        "help", "commands", "interaction", "copilot-workflows", "scan", "quality-breakouts", "strategy-council", "council",
         "backtest", "data-coverage", "open-last-report", "visual-scan",
         "doctor", "mtf", "strength", "email", "my-portfolio",
-        "swing-playbook",
+        "swing-playbook", "diagnose", "report-diagnosis",
     ]
 
     def test_registry_has_all_expected_handlers(self, registry):
@@ -199,7 +199,10 @@ class TestCommandRegistry:
         test_inputs = {
             "help":             "/help",
             "commands":         "/commands",
+            "interaction":      "/style codex",
+            "copilot-workflows": "/status",
             "scan":             "/scan nifty",
+            "quality-breakouts": "/screen quality-breakouts",
             "strategy-council": "/strategy-council dmart",
             "council":          "/council today",
             "backtest":         "/backtest list",
@@ -211,6 +214,8 @@ class TestCommandRegistry:
             "email":            "/email sector --to a@b.com",
             "my-portfolio":     "/my-portfolio",
             "swing-playbook":    "/swing-playbook --portfolio",
+            "diagnose":          "/diagnose DMART eps",
+            "report-diagnosis":  "/report diagnosis DMART eps",
         }
         for name, query in test_inputs.items():
             h = handler_map[name]
@@ -246,6 +251,61 @@ class TestCommandRegistry:
 
         assert not h.match_fn("/swing-playbooker")
         assert not h.match_fn("/swing-playbook-extra")
+
+    def test_diagnose_handler_calls_skill_command(self, registry):
+        handler_map = {h.name: h for h in registry._handlers}
+        h = handler_map["diagnose"]
+
+        with patch("terminal.skills.commands.handle_diagnose_command", return_value="## Fundamental Driver Diagnosis\n\nShort Answer: ok") as handle, \
+             patch("nse_agent._print_user"), \
+             patch.object(nse_agent.console, "print") as printed:
+            handled = h.handler_fn("/diagnose DMART eps", agent=None, show_trace=False)
+
+        assert handled is True
+        handle.assert_called_once_with("/diagnose DMART eps")
+        assert printed.called
+
+    def test_diagnose_handler_rejects_prefix_typos(self, registry):
+        handler_map = {h.name: h for h in registry._handlers}
+        h = handler_map["diagnose"]
+
+        assert not h.match_fn("/diagnosee DMART eps")
+        assert not h.match_fn("/diagnostic DMART eps")
+
+    def test_report_diagnosis_handler_calls_preset_report(self, registry):
+        handler_map = {h.name: h for h in registry._handlers}
+        h = handler_map["report-diagnosis"]
+
+        fake = {
+            "success": True,
+            "path": "/tmp/fundamental_driver_diagnosis.html",
+            "latest_path": "/tmp/latest.html",
+            "note": "ok",
+        }
+        with patch("terminal.reports.generate_preset_report", return_value=fake) as generate, \
+             patch("nse_agent._print_user"), \
+             patch("nse_agent._open_report_path") as open_report, \
+             patch.object(nse_agent.console, "print") as printed:
+            handled = h.handler_fn("/report diagnosis DMART eps", agent=None, show_trace=False)
+
+        assert handled is True
+        generate.assert_called_once_with("diagnosis", "html", args=["DMART", "eps"])
+        open_report.assert_called_once_with("/tmp/fundamental_driver_diagnosis.html", nse_agent.console)
+        assert printed.called
+
+    def test_report_diagnosis_handler_parses_format(self, registry):
+        handler_map = {h.name: h for h in registry._handlers}
+        h = handler_map["report-diagnosis"]
+
+        fake = {"success": True, "path": "/tmp/fundamental_driver_diagnosis.md", "note": "ok"}
+        with patch("terminal.reports.generate_preset_report", return_value=fake) as generate, \
+             patch("nse_agent._print_user"), \
+             patch("nse_agent._open_report_path"), \
+             patch.object(nse_agent.console, "print"):
+            handled = h.handler_fn("/report diagnosis DMART eps md", agent=None, show_trace=False)
+
+        assert handled is True
+        generate.assert_called_once_with("diagnosis", "md", args=["DMART", "eps"])
 
     def test_registry_does_not_match_natural_language(self, registry):
         nl_queries = [
@@ -296,6 +356,11 @@ class TestSlashCommandsVisibility:
         cmds = {cmd for cmd, _ in slash_commands}
         assert "/report swing-playbook" in cmds
         assert "swing-playbook" in nse_agent._REPORT_PRESET_TYPES_FOR_TEST
+
+    def test_report_diagnosis_present_and_preset(self, slash_commands):
+        cmds = {cmd for cmd, _ in slash_commands}
+        assert "/report diagnosis DMART eps" in cmds
+        assert "diagnosis" in nse_agent._REPORT_PRESET_TYPES_FOR_TEST
 
     def test_portfolio_category_defined(self, cmd_categories):
         assert "/my-portfolio" in cmd_categories

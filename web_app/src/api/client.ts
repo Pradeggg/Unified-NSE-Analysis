@@ -77,12 +77,22 @@ export const api = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-    }).then((r) => r.json()),
+    }).then(async (r) => {
+      const text = await r.text();
+      if (!text) throw new Error(`API returned empty response (HTTP ${r.status}) — is the backend running?`);
+      try { return JSON.parse(text); }
+      catch { throw new Error(`API error (HTTP ${r.status}): ${text.slice(0, 200)}`); }
+    }),
 
   followUp: (captureId: string, question: string) =>
     fetch(BASE + "/analysis/followup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ capture_id: captureId, question }),
-    }).then((r) => r.json()),
+    }).then(async (r) => {
+      const text = await r.text();
+      if (!text) throw new Error(`API returned empty response (HTTP ${r.status}) — is the backend running?`);
+      try { return JSON.parse(text); }
+      catch { throw new Error(`API error (HTTP ${r.status}): ${text.slice(0, 200)}`); }
+    }),
 };

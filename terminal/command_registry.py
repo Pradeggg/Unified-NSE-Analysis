@@ -100,6 +100,17 @@ class CommandRegistry:
         """Names of all registered handlers in dispatch order."""
         return [h.name for h in self._handlers]
 
+    def snapshot(self) -> list[dict[str, object]]:
+        """Serializable inventory of registered handlers in dispatch order."""
+        return [
+            {
+                "name": h.name,
+                "modes": sorted(h.modes),
+                "description": h.description,
+            }
+            for h in self._handlers
+        ]
+
     def __len__(self) -> int:
         return len(self._handlers)
 

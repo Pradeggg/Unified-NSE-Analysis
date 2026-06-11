@@ -39,6 +39,10 @@ TECHNICAL_NON_SYMBOL_TERMS: frozenset[str] = frozenset(
         "OBV",
         "PE",
         "PB",
+        "PAT",
+        "PBT",
+        "OPM",
+        "NPM",
         "EPS",
         "ROE",
         "ROCE",
@@ -365,7 +369,7 @@ def _requested_symbol_tokens(text: str) -> list[str]:
     # not treated as user-requested tickers.
     scrubbed = _strip_index_phrases(text or "")
     for raw in re.findall(r"\b[A-Z][A-Z0-9&-]{1,12}\b", scrubbed):
-        token = raw.strip().upper()
+        token = raw.strip().upper().rstrip("-")
         if not re.fullmatch(r"[A-Z0-9&-]{2,12}", token):
             continue
         # Positive ground truth: anything in the real NSE symbol universe is

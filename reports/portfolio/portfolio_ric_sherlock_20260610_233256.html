@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Portfolio RIC Sherlock Report</title>
+<style>
+:root{--primary:#00897B;--primary-dark:#00695C;--bg:#e8f5f3;--surface:#fff;--text:#123b37;--muted:#607d78;--line:rgba(0,105,92,.18);--radius:8px}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:14px;line-height:1.55}
+.appbar{background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:white;padding:18px 24px;box-shadow:0 3px 10px rgba(0,0,0,.15)}
+.appbar h1{margin:0;font-size:22px;font-weight:700} .appbar .meta{font-size:12px;opacity:.9;margin-top:4px}
+.content{max-width:1440px;margin:0 auto;padding:22px}
+.disc{background:#fff7ed;color:#92400e;border-left:4px solid #d97706;padding:10px 14px;border-radius:var(--radius);margin-bottom:16px;font-size:12px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700} .value{font-size:26px;font-weight:800;color:var(--primary-dark);margin-top:2px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 16px} .chip{display:inline-block;background:white;border:1px solid var(--line);padding:5px 9px;border-radius:16px;color:#244b47;font-size:12px}
+h2{font-size:16px;color:var(--primary-dark);margin:22px 0 10px} h3{font-size:13px;color:var(--primary-dark);margin:0 0 8px}
+.tbl-wrap{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 1px 3px rgba(0,0,0,.06)}
+table{border-collapse:collapse;width:100%;font-size:12px} th{background:var(--primary);color:#fff;text-align:left;padding:9px 10px;white-space:nowrap} td{padding:8px 10px;border-bottom:1px solid #edf2f2;vertical-align:top} tbody tr:nth-child(even){background:rgba(0,137,123,.035)} .num{text-align:right;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap} .buy,.core{background:#dcfce7;color:#166534} .sell,.avoid{background:#fee2e2;color:#991b1b} .hold,.watch{background:#f1f5f9;color:#475569}
+.stock-detail{background:#fff;border:1px solid var(--line);border-radius:var(--radius);margin:8px 0;box-shadow:0 1px 3px rgba(0,0,0,.05)} .stock-detail summary{cursor:pointer;padding:12px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sym{font-weight:800;font-size:15px;color:#0f766e} .muted{color:var(--muted);font-size:12px}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;padding:0 14px 14px} section{border-top:1px solid #edf2f2;padding-top:12px} p{margin:4px 0 8px} ul{margin:6px 0 0 18px;padding:0} li{margin:2px 0} .cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 12px} input{padding:8px 10px;border:1px solid var(--line);border-radius:6px;min-width:260px}
+@media print{.toolbar,.disc{display:none} details{break-inside:avoid} details:not([open])>summary::after{content:' (details collapsed)';color:#777}}
+</style>
+</head>
+<body>
+<div class="appbar"><h1>Portfolio RIC Sherlock Report</h1><div class="meta">Generated 2026-06-10 23:32 IST · 2 resolved stocks · quote → technicals → fundamentals → catalysts → trade setup</div></div>
+<div class="content">
+<div class="disc">Research and learning only. This is not investment advice or a trade recommendation. Intraday levels can be stale outside market hours; validate liquidity, spreads, corporate actions, and latest prices independently.</div>
+<div class="metrics">
+  <div class="card"><div class="label">Stocks Analyzed</div><div class="value">2</div></div>
+  <div class="card"><div class="label">Stage 2</div><div class="value">2</div></div>
+  <div class="card"><div class="label">SELL Signals</div><div class="value">0</div></div>
+  <div class="card"><div class="label">Cautious / Review</div><div class="value">0</div></div>
+</div>
+<h2>Stage Distribution</h2><div class="chips"><span class="chip">STAGE_2: <b>2</b></span></div>
+<h2>Signal Distribution</h2><div class="chips"><span class="chip">BUY: <b>1</b></span><span class="chip">HOLD: <b>1</b></span></div>
+<h2>Sherlock Verdicts</h2><div class="chips"><span class="chip">Constructive Sherlock: <b>2</b></span></div>
+<h2>Portfolio Summary Table</h2>
+<div class="toolbar"><input id="q" placeholder="Filter symbol, sector, verdict..." oninput="filterRows(this.value)"></div>
+<div class="tbl-wrap"><table id="summary"><thead><tr><th>Symbol</th><th>Input</th><th>Sector</th><th>Stage</th><th>Signal</th><th class="num">Portfolio</th><th class="num">Tech</th><th class="num">Fund</th><th class="num">RS</th><th class="num">52W Dist</th><th>Verdict</th></tr></thead><tbody><tr><td><b>MANINDS</b></td><td>MAN INDUSTRIES (I) LTD.</td><td>Capital Goods &amp; Industrials</td><td>STAGE_2</td><td><span class="pill buy">BUY</span></td><td class="num">80.5</td><td class="num">60.7</td><td class="num">69.2</td><td class="num">47.4%</td><td class="num">-12.8%</td><td>Constructive Sherlock</td></tr>
+<tr><td><b>DATAPATTNS</b></td><td>DATA PATTERNS INDIA LTD</td><td>Defence &amp; Aerospace</td><td>STAGE_2</td><td><span class="pill hold">HOLD</span></td><td class="num">69.2</td><td class="num">68.0</td><td class="num">52.8</td><td class="num">29.9%</td><td class="num">-7.8%</td><td>Constructive Sherlock</td></tr></tbody></table></div>
+<h2>RIC Sherlock Detail By Stock</h2>
+
+<details class="stock-detail">
+  <summary>
+    <span class="sym">MANINDS</span>
+    <span class="muted">MAN INDUSTRIES (I) LTD.</span>
+    <span class="pill core">Constructive Sherlock</span>
+  </summary>
+  <div class="detail-grid">
+    <section>
+      <h3>Step 1 · Quote Snapshot</h3>
+      <p><b>Price:</b> ₹528.75
+      · <b>1D:</b> 1.9%
+      · <b>1W:</b> 6.6%
+      · <b>1M:</b> 1.5%</p>
+      <p><b>Sector:</b> Capital Goods &amp; Industrials
+      · <b>MCap:</b> MID_CAP</p>
+    </section>
+    <section>
+      <h3>Step 2 · Technical Setup</h3>
+      <p><b>Stage:</b> STAGE_2
+      · <b>Signal:</b> <span class="pill buy">BUY</span>
+      · <b>Trend:</b> BULLISH</p>
+      <p><b>Tech Score:</b> 60.7
+      · <b>RS:</b> 47.4%
+      · <b>RSI:</b> 51.9
+      · <b>ADX:</b> 30.1
+      · <b>MACD:</b> bearish</p>
+      <p><span class="pill sell">Below 20DMA</span><span class="pill buy">Above 50DMA</span><span class="pill buy">Above 200DMA</span></p>
+      <p><b>52W:</b> ₹258.05 – ₹606.40
+      · <b>Dist. from high:</b> -12.8%</p>
+    </section>
+    <section>
+      <h3>Step 3 · Fundamentals</h3>
+      <p><b>P/E:</b> 23.3
+      · <b>Book:</b> 278
+      · <b>ROCE:</b> 16.2
+      · <b>ROE:</b> 9.23
+      · <b>Fund Score:</b> 69.2</p>
+      <p><b>Annual Sales YoY:</b> 1.7%
+      · <b>Annual EPS YoY:</b> -3.9%
+      · <b>Quarter Sales QoQ:</b> 39.4%
+      · <b>Quarter EPS QoQ:</b> -7.6%</p>
+      <div class="cols"><div><b>Pros</b><ul><li>—</li></ul></div>
+      <div><b>Cons</b><ul><li>Though the company is reporting repeated profits, it is not paying out dividend</li><li>Company has a low return on equity of 9.17% over last 3 years.</li><li>Debtor days have increased from 79.3 to 103 days.</li></ul></div></div>
+    </section>
+    <section>
+      <h3>Step 4 · News & Catalysts</h3>
+      <ul><li>All</li><li>Rumour verification - Regulation 30(11)2d - Company denies any undisclosed material event behind recent share price and </li><li>Announcement under Regulation 30 (LODR)-Credit Rating2 Jun - CRISIL upgraded long-term rating to A+/Stable; short-term A</li></ul>
+    </section>
+    <section>
+      <h3>Step 5 · Trade Setup</h3>
+      <p><b>15m setup:</b> <span class="pill hold">SHORT_SETUP</span>
+      · <b>Score:</b> 10.0
+      · <b>Latest intraday close:</b> ₹564.05</p>
+      <p><b>Supports:</b> ₹561.35, ₹555.70, ₹546.35, ₹539.30</p>
+      <p><b>Resistances:</b> ₹569.71, ₹572.10, ₹578.11, ₹578.73</p>
+      <p><b>Invalidation:</b> ₹569.71</p>
+    </section>
+  </div>
+</details>
+
+
+<details class="stock-detail">
+  <summary>
+    <span class="sym">DATAPATTNS</span>
+    <span class="muted">DATA PATTERNS INDIA LTD</span>
+    <span class="pill core">Constructive Sherlock</span>
+  </summary>
+  <div class="detail-grid">
+    <section>
+      <h3>Step 1 · Quote Snapshot</h3>
+      <p><b>Price:</b> ₹4,354
+      · <b>1D:</b> -4.5%
+      · <b>1W:</b> 9.1%
+      · <b>1M:</b> 7.2%</p>
+      <p><b>Sector:</b> Defence &amp; Aerospace
+      · <b>MCap:</b> LARGE_CAP</p>
+    </section>
+    <section>
+      <h3>Step 2 · Technical Setup</h3>
+      <p><b>Stage:</b> STAGE_2
+      · <b>Signal:</b> <span class="pill hold">HOLD</span>
+      · <b>Trend:</b> STRONG_BULLISH</p>
+      <p><b>Tech Score:</b> 68.0
+      · <b>RS:</b> 29.9%
+      · <b>RSI:</b> 59.3
+      · <b>ADX:</b> 25.4
+      · <b>MACD:</b> bullish</p>
+      <p><span class="pill buy">Above 20DMA</span><span class="pill buy">Above 50DMA</span><span class="pill buy">Above 200DMA</span></p>
+      <p><b>52W:</b> ₹2,121 – ₹4,722
+      · <b>Dist. from high:</b> -7.8%</p>
+    </section>
+    <section>
+      <h3>Step 3 · Fundamentals</h3>
+      <p><b>P/E:</b> 90.10
+      · <b>Book:</b> ₹309.99
+      · <b>ROCE:</b> —
+      · <b>ROE:</b> 16.73%
+      · <b>Fund Score:</b> 52.8</p>
+      <p><b>Annual Sales YoY:</b> —
+      · <b>Annual EPS YoY:</b> —
+      · <b>Quarter Sales QoQ:</b> —
+      · <b>Quarter EPS QoQ:</b> —</p>
+      <div class="cols"><div><b>Pros</b><ul><li>—</li></ul></div>
+      <div><b>Cons</b><ul><li>—</li></ul></div></div>
+    </section>
+    <section>
+      <h3>Step 4 · News & Catalysts</h3>
+      <ul><li>All</li><li>Compliances-Reg.24(A)-Annual Secretarial Compliance22 May - Filed Annual Secretarial Compliance Report for FY ended Marc</li><li>Announcement under Regulation 30 (LODR)-Earnings Call Transcript22 May - The Transcript of the Earnings Conference Call </li></ul>
+    </section>
+    <section>
+      <h3>Step 5 · Trade Setup</h3>
+      <p><b>15m setup:</b> <span class="pill hold">LONG_SETUP</span>
+      · <b>Score:</b> 100.0
+      · <b>Latest intraday close:</b> ₹3,995</p>
+      <p><b>Supports:</b> ₹3,940, ₹3,930, ₹3,918, ₹3,912</p>
+      <p><b>Resistances:</b> ₹4,006, ₹4,009</p>
+      <p><b>Invalidation:</b> ₹3,940</p>
+    </section>
+  </div>
+</details>
+
+</div>
+<script>
+function filterRows(q){
+  q=(q||'').toLowerCase();
+  document.querySelectorAll('#summary tbody tr').forEach(function(tr){tr.style.display=tr.innerText.toLowerCase().includes(q)?'':'none';});
+  document.querySelectorAll('.stock-detail').forEach(function(d){d.style.display=d.innerText.toLowerCase().includes(q)?'':'none';});
+}
+</script>
+</body>
+</html>

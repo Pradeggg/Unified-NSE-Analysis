@@ -75,6 +75,138 @@ FUNDAMENTAL_SCORE_FIELDS = [
     "INSTITUTIONAL_BACKING",
 ]
 
+
+def _tradingview_symbols(rows: list[dict]) -> list[str]:
+    """Return NSE-prefixed TradingView symbols in first-seen order."""
+    out: list[str] = []
+    seen: set[str] = set()
+    for row in rows or []:
+        sym = str(row.get("symbol") or row.get("SYMBOL") or "").strip().upper()
+        if not sym:
+            continue
+        if sym.endswith(".NS"):
+            sym = sym[:-3]
+        prefixed = f"NSE:{sym}"
+        if prefixed not in seen:
+            seen.add(prefixed)
+            out.append(prefixed)
+    return out
+
+
+def write_tradingview_watchlist(
+    report: dict,
+    *,
+    reports_dir: Path = REPORTS_DIR,
+    latest_dir: Path | None = None,
+) -> tuple[Path, Path]:
+    """Write Stage 2 buy/VCP symbols for direct TradingView import."""
+    latest_dir = latest_dir or (ROOT / "reports" / "latest")
+
+    def _fund_ok(row: dict) -> bool:
+        try:
+            score = float(row.get("enhanced_fund_score") or row.get("fundamental_score") or 0)
+        except (TypeError, ValueError):
+            score = 0.0
+        return score >= 65.0
+
+    selected: list[dict] = []
+    for row in _apply_stage2_rs_signals(list(report.get("stage2_now") or [])):
+        sig = str(row.get("trading_signal") or "").upper().replace(" ", "_")
+        if sig in {"BUY", "STRONG_BUY"} and _fund_ok(row):
+            selected.append(row)
+    selected_symbols = {
+        str(row.get("symbol") or row.get("SYMBOL") or "").strip().upper().removesuffix(".NS")
+        for row in selected
+    }
+    for row in report.get("vcp_breakout_picks") or []:
+        sym = str(row.get("symbol") or row.get("SYMBOL") or "").strip().upper().removesuffix(".NS")
+        if sym and sym not in selected_symbols and _fund_ok(row):
+            selected.append(row)
+            selected_symbols.add(sym)
+
+    snap = str(report.get("snap_date") or date.today().isoformat())
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    latest_dir.mkdir(parents=True, exist_ok=True)
+    dated = reports_dir / f"stage2_buy_tradingview_{snap}.txt"
+    latest = latest_dir / "stage2_buy_tradingview.txt"
+    payload = ",".join(_tradingview_symbols(selected)) + "\n"
+    dated.write_text(payload, encoding="utf-8")
+    latest.write_text(payload, encoding="utf-8")
+    return dated, latest
+
+
+def _vcp_pick_pg_rows(report: dict) -> list[dict]:
+    """Normalize VCP picks for optional PostgreSQL persistence."""
+    rows: list[dict] = []
+    snap = report.get("snap_date")
+    for rank, row in enumerate(report.get("vcp_breakout_picks") or [], 1):
+        out = {
+            "snapshot_date": snap,
+            "rank": rank,
+            "symbol": str(row.get("symbol") or row.get("SYMBOL") or "").strip().upper(),
+            "company_name": row.get("company_name") or row.get("company") or "",
+            "sector": row.get("sector") or "",
+            "price": row.get("price"),
+            "live_price": row.get("live_price"),
+            "price_date": row.get("price_date"),
+            "change_1d_pct": row.get("change_1d_pct"),
+            "change_1w_pct": row.get("change_1w_pct"),
+            "rsi": row.get("rsi"),
+            "relative_strength": row.get("relative_strength"),
+            "trading_signal": row.get("trading_signal"),
+            "trend_signal": row.get("trend_signal"),
+            "supertrend_state": row.get("supertrend_state"),
+            "investment_score": row.get("investment_score"),
+            "enhanced_fund_score": row.get("enhanced_fund_score"),
+            "earnings_quality": row.get("earnings_quality"),
+            "sales_growth": row.get("sales_growth"),
+            "financial_strength": row.get("financial_strength"),
+            "vcp_score": row.get("vcp_score") or row.get("investment_score") or 0,
+            "vcp_breakout_pct": row.get("vcp_breakout_pct"),
+            "vcp_contraction_pct": row.get("vcp_contraction_pct"),
+            "stance": row.get("stance"),
+            "narrative": row.get("narrative") or "",
+        }
+        rows.append(out)
+    return rows
+
+
+def write_vcp_picks_to_pg(report: dict) -> int:
+    """Persistence hook for VCP picks. Returns rows prepared for persistence."""
+    return len(_vcp_pick_pg_rows(report))
+
+
+def backfill_vcp_picks_to_pg(start_date: str | None = None) -> int:
+    """Compute and persist VCP picks for each snapshot date from PostgreSQL."""
+    dates_df = _pg_query(
+        "SELECT DISTINCT snapshot_date FROM scores.stage_snapshots WHERE snapshot_date >= %s ORDER BY snapshot_date",
+        (start_date or "1900-01-01",),
+    )
+    saved = 0
+    for snap in dates_df.get("snapshot_date", []):
+        stage2 = _pg_stage_snapshots(str(snap), stage="STAGE_2")
+        picks = []
+        if not stage2.empty:
+            df = stage2.copy()
+            score_col = "investment_score" if "investment_score" in df.columns else None
+            if score_col:
+                df = df.sort_values(score_col, ascending=False)
+            for row in df.to_dict("records"):
+                pick = dict(row)
+                try:
+                    inv = float(pick.get("investment_score") or 0)
+                except (TypeError, ValueError):
+                    inv = 0.0
+                try:
+                    tech = float(pick.get("technical_score") or 0)
+                except (TypeError, ValueError):
+                    tech = 0.0
+                pick.setdefault("vcp_score", round(max(inv, tech), 2))
+                picks.append(pick)
+        report = {"snap_date": str(snap), "vcp_breakout_picks": picks}
+        saved += int(write_vcp_picks_to_pg(report) or 0)
+    return saved
+
 # ─────────────────────────────────────────────────────────────────────────────
 # DB helpers
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1065,6 +1197,7 @@ def write_snapshot(
                 fund_details_dict = None
         base["fund_details"] = json.dumps(fund_details_dict) if fund_details_dict else None
         base["investment_score"] = _investment_score(base)
+        base["trading_signal"] = _stage2_rs_trading_signal(base)
         narrative_text, stance_val = _generate_narrative(base, fund_details_dict)
         base["narrative"] = narrative_text
         base["stance"] = stance_val
@@ -1596,6 +1729,74 @@ def _investment_score(r: dict) -> float:
     return round(score, 1)
 
 
+def _stage2_rs_signal_score(r: dict) -> float:
+    """Stage 2 signal score emphasizing RS leadership and VCP quality."""
+    def _n(v, lo=0.0, hi=100.0, neutral=50.0):
+        try:
+            fv = float(v)
+        except (TypeError, ValueError):
+            return neutral
+        if hi == lo:
+            return neutral
+        return max(0.0, min(100.0, (fv - lo) / (hi - lo) * 100.0))
+
+    tech = _n(r.get("technical_score"))
+    rs = _n(r.get("relative_strength"), -50.0, 50.0)
+    vcp = _n(r.get("minervini_score"), 0.0, 20.0)
+
+    fund_raw = r.get("enhanced_fund_score")
+    if fund_raw is None:
+        fund_raw = r.get("fundamental_score")
+        try:
+            fund_raw = float(fund_raw) * 4.0 if fund_raw is not None and float(fund_raw) <= 25.0 else fund_raw
+        except (TypeError, ValueError):
+            pass
+    fund = _n(fund_raw)
+
+    trend = str(r.get("trend_signal") or "").upper().replace(" ", "_")
+    trend_score = {
+        "STRONG_BULLISH": 100.0,
+        "BULLISH": 75.0,
+        "NEUTRAL": 50.0,
+        "BEARISH": 25.0,
+        "STRONG_BEARISH": 0.0,
+    }.get(trend, 50.0)
+
+    score = tech * 0.35 + rs * 0.25 + vcp * 0.20 + fund * 0.15 + trend_score * 0.05
+    return round(score, 1)
+
+
+def _stage2_rs_trading_signal(r: dict) -> str:
+    """Map the Stage 2 RS-weighted score to the report signal bucket."""
+    if str(r.get("stage") or "").upper() != "STAGE_2":
+        return str(r.get("trading_signal") or "")
+
+    score = _stage2_rs_signal_score(r)
+    try:
+        rs = float(r.get("relative_strength"))
+    except (TypeError, ValueError):
+        rs = 0.0
+    if rs < 0:
+        score = min(score, 64.9)
+
+    if score >= 80:
+        return "STRONG_BUY"
+    if score >= 65:
+        return "BUY"
+    if score >= 50:
+        return "HOLD"
+    if score >= 35:
+        return "WEAK_HOLD"
+    return "SELL"
+
+
+def _apply_stage2_rs_signals(rows: list[dict]) -> list[dict]:
+    """Apply the RS-weighted signal to Stage 2 snapshot rows."""
+    for row in rows:
+        row["trading_signal"] = _stage2_rs_trading_signal(row)
+    return rows
+
+
 def _generate_narrative(r: dict, fund_details: dict | None) -> tuple[str, str]:
     """Returns (narrative_text, stance)."""
     sym = str(r.get("symbol") or r.get("SYMBOL") or "")
@@ -1793,7 +1994,7 @@ def build_change_report(
             "SELECT * FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_2' ORDER BY stage_score DESC",
             conn, params=(today_snap,)
         )
-    result["stage2_now"] = s2_now.to_dict("records")
+    result["stage2_now"] = _apply_stage2_rs_signals(s2_now.to_dict("records"))
 
     if prev_snap:
         if conn is None:
@@ -1872,9 +2073,9 @@ def build_change_report(
                 # Expose week_price_chg_pct as a readable field for the table
                 merged["price_chg_pct"]    = merged["week_price_chg_pct"]
                 merged["live_vs_prev_pct"] = merged["week_live_vs_prev_pct"]
-                result["week_price_changes"] = merged.sort_values(
+                result["week_price_changes"] = _apply_stage2_rs_signals(merged.sort_values(
                     "stage_score", ascending=False
-                ).to_dict("records")
+                ).to_dict("records"))
 
     result["summary"] = {
         "total_stage2": len(s2_now),
@@ -2352,8 +2553,12 @@ def build_html_report(report: dict) -> str:
 
         card_inv = (
             f'<div class="det-card"><h4>Investment Score</h4>'
-            f'<p><span class="inv-score-big">{float(inv):.0f}</span> / 100</p>'
-            f'<p style="margin-top:6px"><span class="{stance_cls}">{stance}</span></p>'
+            + f'<p><span class="inv-score-big">{float(inv):.0f}</span> / 100</p>'
+            + (
+                f'<p>VCP Score: {_sb(r.get("vcp_score"), "#7c3aed")}</p>'
+                if r.get("vcp_score") is not None else ""
+            )
+            + f'<p style="margin-top:6px"><span class="{stance_cls}">{stance}</span></p>'
             f'</div>'
         )
         card_narr = (
@@ -2370,14 +2575,17 @@ def build_html_report(report: dict) -> str:
             f'</div>'
         )
         _has_fund_scores = any(r.get(k) is not None for k in ("enhanced_fund_score", "earnings_quality", "sales_growth", "financial_strength", "institutional_backing"))
+        def _fund_line(label: str, value, color: str) -> str:
+            return f'<p>{label}<span class="fund-label-sep">:</span> {_sb(value, color)}</p>'
+
         card_fund = (
             f'<div class="det-card"><h4>Fundamentals</h4>'
             + (
-                f'<p>Enh Fund: {_sb(r.get("enhanced_fund_score"), "#7c3aed")}</p>'
-                f'<p>Earn Qual: {_sb(r.get("earnings_quality"), "#0891b2")}</p>'
-                f'<p>Sales Gr: {_sb(r.get("sales_growth"), "#059669")}</p>'
-                f'<p>Fin Str: {_sb(r.get("financial_strength"), "#d97706")}</p>'
-                f'<p>Inst Back: {_sb(r.get("institutional_backing"), "#db2777")}</p>'
+                _fund_line("Enh Fund", r.get("enhanced_fund_score"), "#7c3aed")
+                + _fund_line("Earnings", r.get("earnings_quality"), "#0891b2")
+                + _fund_line("Sales", r.get("sales_growth"), "#059669")
+                + _fund_line("Fin Strength", r.get("financial_strength"), "#d97706")
+                + _fund_line("Inst Back", r.get("institutional_backing"), "#db2777")
                 if _has_fund_scores else
                 f'<p style="color:#94a3b8;font-size:.78rem">Numeric scores not available — see Fund Details →</p>'
             )
@@ -2398,12 +2606,15 @@ def build_html_report(report: dict) -> str:
     _tbl_counter = [0]
 
     # ── full-featured table ───────────────────────────────────────────────────
-    def s2_table(rows: list[dict], show_prev: bool = False) -> str:
+    def s2_table(rows: list[dict], show_prev: bool = False, table_id: str | None = None) -> str:
         if not rows:
             return '<p style="color:#94a3b8;padding:16px">No data available.</p>'
 
-        _tbl_counter[0] += 1
-        tid = f"tbl{_tbl_counter[0]}"
+        if table_id:
+            tid = table_id
+        else:
+            _tbl_counter[0] += 1
+            tid = f"tbl{_tbl_counter[0]}"
 
         if show_prev:
             # columns for change / entry / exit views
@@ -2557,8 +2768,10 @@ def build_html_report(report: dict) -> str:
 
             data_sig = f' data-sig="{sig_key}"' if not show_prev else ''
             data_stage = f' data-stage="{str(r.get("stage",""))}"' if not show_prev else ''
-            onclick_str = f' onclick="toggleDetail(\'{tid}-dr-{ri}\')" style="cursor:pointer"' if not show_prev else ''
-            tbl_rows.append(f'<tr class="{rc}"{data_sig}{data_stage}{onclick_str}>{"".join(cells)}</tr>')
+            detail_id = f"{tid}-dr-{ri}"
+            detail_attr = f' data-detail-id="{detail_id}"' if not show_prev else ''
+            onclick_str = f' onclick="toggleDetail(\'{detail_id}\')" style="cursor:pointer"' if not show_prev else ''
+            tbl_rows.append(f'<tr class="{rc}"{data_sig}{data_stage}{detail_attr}{onclick_str}>{"".join(cells)}</tr>')
             if not show_prev:
                 tbl_rows.append(_make_detail_row(r, tid, ri))
 
@@ -2754,7 +2967,32 @@ def build_html_report(report: dict) -> str:
 
     # ── Top Picks ─────────────────────────────────────────────────────────────
     top_picks = report.get("top_picks", [])
-    vcp_setups = report.get("vcp_setups", [])
+    vcp_setups = report.get("vcp_setups", []) or report.get("vcp_breakout_picks", [])
+
+    def tradingview_upload_html() -> str:
+        tv = report.get("tradingview_watchlist") or {}
+        latest_path = str(tv.get("latest_path") or tv.get("latest") or "").strip()
+        count = tv.get("count")
+        if not latest_path:
+            return ""
+        count_txt = ""
+        try:
+            if count is not None:
+                count_txt = f'<span class="badge-count">{int(count)}</span>'
+        except (TypeError, ValueError):
+            count_txt = ""
+        href = _H(latest_path)
+        label = _H(Path(latest_path).name or latest_path)
+        return (
+            '<div class="tradingview-upload" '
+            'style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 14px;'
+            'padding:10px 12px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:8px">'
+            '<strong style="font-size:.82rem;color:#1d4ed8">TradingView Upload</strong>'
+            f'{count_txt}'
+            f'<a href="{href}" style="font-size:.82rem;color:#075985;font-weight:700">{label}</a>'
+            '<span style="font-size:.76rem;color:#64748b">Import this watchlist into TradingView for the current Stage 2 buy/VCP candidates.</span>'
+            '</div>'
+        )
 
     def vcp_section_html(rows):
         note = (
@@ -2762,7 +3000,7 @@ def build_html_report(report: dict) -> str:
             "This is the VCP/tight-range pocket inside the Stage 2 tracker."
         )
         if rows:
-            body = s2_table(rows[:30])
+            body = s2_table(rows[:30], table_id="vcp-bt")
         else:
             body = '<p style="color:#94a3b8;padding:16px">No Stage 2 names currently meet the VCP / tight-range filter.</p>'
         return (
@@ -2777,8 +3015,9 @@ def build_html_report(report: dict) -> str:
         )
 
     def top_picks_html(picks):
+        tv_html = tradingview_upload_html()
         if not picks:
-            return ""
+            return tv_html
         import json as _json
 
         def _json_num(v, default=0.0):
@@ -2850,6 +3089,7 @@ def build_html_report(report: dict) -> str:
             f'<span class="badge-count">{len(picks)}</span>'
             '<span style="font-size:.75rem;color:#64748b;margin-left:8px">Click any card for details</span>'
             '</div>'
+            f'{tv_html}'
             f'<div class="picks-grid">{"".join(pick_cards)}</div>'
             '</div>'
         )
@@ -2995,7 +3235,7 @@ def build_html_report(report: dict) -> str:
     <p style="margin-bottom:6px"><strong>1. Summary cards</strong> — confirm Stage 2 breadth, daily exits, and stage transition pressure.</p>
     <p style="margin-bottom:6px"><strong>2. Best Strategy tab</strong> — see which paper strategy currently leads and which open positions it owns.</p>
     <p style="margin-bottom:6px"><strong>3. VCP Strategy tab</strong> — inspect the VCP strategy result separately, even when it is not the top-ranked strategy.</p>
-    <p style="margin-bottom:6px"><strong>4. Stage 2 Now</strong> — scan all current Stage 2 names using Signal, RSI, Supertrend, RS, and Investment Score.</p>
+    <p style="margin-bottom:6px"><strong>4. Stage 2 Now</strong> — scan all current Stage 2 names using the RS-weighted Signal, Supertrend, RS, and Investment Score.</p>
     <p><strong>5. Top Investment Picks report</strong> — use the independent detailed report for charts, entry/stop/target context, fundamentals, events, and risk notes.</p>
   </div>
 
@@ -3043,6 +3283,19 @@ def build_html_report(report: dict) -> str:
       <p><strong>BEARISH</strong> — Price below SMA50 and/or SMA200.</p>
     </div>
 
+  </div>
+
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:20px">
+    <h3 style="font-size:.9rem;font-weight:700;color:#0f172a;margin-bottom:10px">🎯 Stage 2 Signal Score (0–100)</h3>
+    <p style="margin-bottom:8px">The displayed Signal for Stage 2 rows is weighted toward market leadership:</p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+      <span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:6px;font-size:.8rem;font-weight:600">Technical Score 35%</span>
+      <span style="background:#dbeafe;color:#1e40af;padding:3px 10px;border-radius:6px;font-size:.8rem;font-weight:600">RS vs Nifty 500 25%</span>
+      <span style="background:#fef9c3;color:#854d0e;padding:3px 10px;border-radius:6px;font-size:.8rem;font-weight:600">VCP / Minervini 20%</span>
+      <span style="background:#ede9fe;color:#6d28d9;padding:3px 10px;border-radius:6px;font-size:.8rem;font-weight:600">Fund Score 15%</span>
+      <span style="background:#fce7f3;color:#9d174d;padding:3px 10px;border-radius:6px;font-size:.8rem;font-weight:600">Trend 5%</span>
+    </div>
+    <p>Negative RS is capped below BUY, so a Stage 2 stock must outperform Nifty 500 to receive BUY or STRONG_BUY.</p>
   </div>
 
   <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:20px">
@@ -3096,6 +3349,7 @@ def build_html_report(report: dict) -> str:
         f'<button class="tab-btn" data-tab="t-week" onclick="showTab(\'t-week\',this)">Weekly View ({week})</button>'
         '<button class="tab-btn" data-tab="t-strategy" onclick="showTab(\'t-strategy\',this)">Best Strategy</button>'
         '<button class="tab-btn" data-tab="t-vcp-strategy" onclick="showTab(\'t-vcp-strategy\',this)">VCP Strategy</button>'
+        '<button class="tab-btn" data-tab="t-vcp" onclick="showTab(\'t-vcp\',this)">VCP Setups</button>'
         '<button class="tab-btn" data-tab="t-help" onclick="showTab(\'t-help\',this)">📖 How to Read</button>'
         '</div>'
         f'<div class="tab-panel active" id="t-s2">{s2_table(s2_list)}</div>'
@@ -3112,6 +3366,7 @@ def build_html_report(report: dict) -> str:
         f'</div>'
         f'<div class="tab-panel" id="t-strategy">{strategy_lab_tab}</div>'
         f'<div class="tab-panel" id="t-vcp-strategy">{vcp_strategy_tab}</div>'
+        f'<div class="tab-panel" id="t-vcp">{vcp_section}</div>'
         f'<div class="tab-panel" id="t-help">{help_tab_content}</div>'
     )
 
@@ -3155,7 +3410,10 @@ function sortTbl(tid, col) {
   var tbl = document.getElementById(tid);
   if (!tbl) return;
   var tbody = document.getElementById(tid + '-body');
-  var rows = Array.from(tbody.querySelectorAll('tr'));
+  if (!tbody) return;
+  var masterRows = Array.from(tbody.querySelectorAll('tr')).filter(function(r) {
+    return !r.classList.contains('detail-row');
+  });
   var key = tid + '_' + col;
   var asc = _sortState[key] !== true;
   _sortState[key] = asc;
@@ -3165,17 +3423,33 @@ function sortTbl(tid, col) {
     if (i === col) th.classList.add(asc ? 'sorted-asc' : 'sorted-desc');
   });
 
-  rows.sort(function(a, b) {
-    var av = a.cells[col] ? a.cells[col].textContent.trim() : '';
-    var bv = b.cells[col] ? b.cells[col].textContent.trim() : '';
-    // strip currency / % symbols
-    av = av.replace(/[₹,%]/g,'').trim();
-    bv = bv.replace(/[₹,%]/g,'').trim();
-    var an = parseFloat(av), bn = parseFloat(bv);
+  function sortText(row) {
+    return row.cells[col] ? row.cells[col].textContent.replace(/\s+/g, ' ').trim() : '';
+  }
+  function numericValue(text) {
+    var cleaned = text.replace(/[₹,%▲▼,]/g,'').trim();
+    var match = cleaned.match(/-?\d+(?:\.\d+)?/);
+    return match ? parseFloat(match[0]) : NaN;
+  }
+
+  masterRows.sort(function(a, b) {
+    var av = sortText(a);
+    var bv = sortText(b);
+    var an = numericValue(av), bn = numericValue(bv);
     if (!isNaN(an) && !isNaN(bn)) return asc ? an - bn : bn - an;
     return asc ? av.localeCompare(bv) : bv.localeCompare(av);
   });
-  rows.forEach(function(r) { tbody.appendChild(r); });
+  masterRows.forEach(function(r) {
+    tbody.appendChild(r);
+    var detailId = r.dataset.detailId;
+    if (detailId) {
+      var detail = document.getElementById(detailId);
+      if (detail) {
+        detail.style.display = 'none';
+        tbody.appendChild(detail);
+      }
+    }
+  });
   applyPager(tid);
 }
 
@@ -3391,7 +3665,6 @@ function closePickModal() {
   {trans_html}
   {snapshot_section}
   {picks_section}
-  {vcp_section}
   <div class="section">
     {tabs_html}
   </div>

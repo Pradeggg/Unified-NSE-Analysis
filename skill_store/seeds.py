@@ -256,6 +256,195 @@ def default_seed_briefs() -> list[SeedBrief]:
             evidence_tables=("report.enhanced_runs", "report.enhanced_filtered_stocks", "scores.stage_snapshots"),
             output_contract=("failure_mode", "source_trail", "route_fix", "tool_gap", "regression_tests"),
         ),
+        SeedBrief(
+            id="fundamental_roce_driver_diagnostics",
+            domain="fundamental_analysis",
+            title="ROCE Driver Diagnostics",
+            description="Explain why ROCE or capital efficiency is high, low, improving, or deteriorating using P&L, balance-sheet, cash-flow, and ratio evidence.",
+            input_patterns=(
+                "why is ROCE high for this company",
+                "explain ROCE drivers and whether high ROCE is sustainable",
+                "is return on capital improving because of margins asset turns or leverage",
+            ),
+            tags=("roce", "capital_efficiency", "fundamentals", "return_on_capital", "quality"),
+            evidence_tables=(
+                "scores.annual_results",
+                "scores.balance_sheet",
+                "scores.cash_flow",
+                "scores.results_analysis",
+                "scores.stage_snapshots",
+            ),
+            output_contract=(
+                "roce_context",
+                "margin_driver",
+                "capital_base_driver",
+                "cashflow_confirmation",
+                "sustainability_risks",
+                "evidence_gaps",
+            ),
+        ),
+        SeedBrief(
+            id="fundamental_eps_decline_explainer",
+            domain="fundamental_analysis",
+            title="EPS Decline Explainer",
+            description="Explain why EPS is falling by decomposing revenue, operating margin, other income, interest, depreciation, tax, PAT, and share-capital evidence.",
+            input_patterns=(
+                "why is EPS going down",
+                "explain EPS decline for company",
+                "is EPS falling due to margin interest depreciation tax or dilution",
+            ),
+            tags=("eps", "earnings", "profit_bridge", "fundamentals", "results_analysis"),
+            evidence_tables=(
+                "scores.quarterly_results",
+                "scores.annual_results",
+                "scores.results_analysis",
+                "scores.balance_sheet",
+                "scores.stage_snapshots",
+            ),
+            output_contract=(
+                "eps_trend",
+                "revenue_effect",
+                "margin_effect",
+                "below_operating_line_effect",
+                "dilution_or_equity_effect",
+                "watch_items",
+            ),
+        ),
+        SeedBrief(
+            id="fundamental_margin_bridge_review",
+            domain="fundamental_analysis",
+            title="Margin Bridge Review",
+            description="Build a margin bridge explaining OPM and PAT margin movement across quarters or years with source-trail and result-commentary context.",
+            input_patterns=(
+                "why did margins improve or fall",
+                "margin bridge for latest quarterly results",
+                "explain OPM PAT margin movement and operating leverage",
+            ),
+            tags=("margin_bridge", "opm", "pat_margin", "operating_leverage", "quarterly_results"),
+            evidence_tables=("scores.quarterly_results", "scores.annual_results", "scores.results_analysis"),
+            output_contract=("margin_trend", "gross_operating_proxy", "opm_bridge", "pat_bridge", "one_offs", "risks"),
+        ),
+        SeedBrief(
+            id="fundamental_cashflow_quality_review",
+            domain="fundamental_analysis",
+            title="Cash Flow Quality Review",
+            description="Compare PAT, EPS, operating cash flow, investing cash flow, financing cash flow, and net cash flow to assess earnings quality.",
+            input_patterns=(
+                "is profit backed by cash flow",
+                "cash flow quality review for company",
+                "PAT versus CFO and free cash flow analysis",
+            ),
+            tags=("cash_flow", "earnings_quality", "pat_vs_cfo", "free_cash_flow", "fundamentals"),
+            evidence_tables=(
+                "scores.annual_results",
+                "scores.cash_flow",
+                "scores.balance_sheet",
+                "scores.results_analysis",
+                "scores.stage_snapshots",
+            ),
+            output_contract=("profit_cash_reconciliation", "cfo_quality", "capex_or_investing_context", "financing_context", "red_flags"),
+        ),
+        SeedBrief(
+            id="fundamental_debt_interest_risk_review",
+            domain="fundamental_analysis",
+            title="Debt And Interest Risk Review",
+            description="Assess borrowings, net debt, interest expense, cash-flow support, and balance-sheet stress for a company.",
+            input_patterns=(
+                "is debt a risk for this company",
+                "debt interest burden analysis",
+                "is PAT falling because interest cost is rising",
+            ),
+            tags=("debt", "interest", "balance_sheet", "financial_strength", "risk"),
+            evidence_tables=(
+                "scores.annual_results",
+                "scores.balance_sheet",
+                "scores.cash_flow",
+                "scores.results_analysis",
+                "scores.stage_snapshots",
+            ),
+            output_contract=("debt_snapshot", "interest_burden", "cashflow_support", "balance_sheet_stress", "risk_verdict"),
+        ),
+        SeedBrief(
+            id="valuation_growth_quality_review",
+            domain="fundamental_analysis",
+            title="Valuation Growth Quality Review",
+            description="Assess valuation reasonableness using available market cap, price, EPS, growth, quality scores, and explicit valuation evidence gaps.",
+            input_patterns=(
+                "is valuation justified by growth quality",
+                "PE valuation versus earnings growth",
+                "is this expensive stock still worth tracking",
+            ),
+            tags=("valuation", "growth_quality", "pe", "earnings_growth", "fundamentals"),
+            evidence_tables=(
+                "market.equity_eod",
+                "scores.quarterly_results",
+                "scores.annual_results",
+                "scores.results_analysis",
+                "scores.stage_snapshots",
+            ),
+            output_contract=("valuation_proxy", "growth_context", "quality_context", "technical_context", "valuation_gaps", "watch_or_avoid"),
+        ),
+        SeedBrief(
+            id="fno_signal_confirmation_review",
+            domain="derivatives_analysis",
+            title="F&O Signal Confirmation Review",
+            description="Confirm or challenge equity setups using F&O PCR, OI change, buildup, max pain, and F&O signal context.",
+            input_patterns=(
+                "does F&O confirm this setup",
+                "FNO signal confirmation for stock",
+                "check PCR OI buildup and max pain before swing trade",
+            ),
+            tags=("fno", "options", "pcr", "open_interest", "buildup"),
+            evidence_tables=("derivatives.fno_signals", "scores.stage_snapshots", "market.equity_eod"),
+            output_contract=("fno_snapshot", "price_confirmation", "buildup_interpretation", "confirmation_or_conflict", "risk_notes"),
+        ),
+        SeedBrief(
+            id="index_sector_relative_strength_review",
+            domain="market_analysis",
+            title="Index Sector Relative Strength Review",
+            description="Compare NIFTY indices, sector breadth, relative strength, momentum, and stage participation to identify leadership and risk.",
+            input_patterns=(
+                "which indices and sectors are showing relative strength",
+                "NIFTY sector relative strength review",
+                "index leadership and sector breadth comparison",
+            ),
+            tags=("index", "sector_relative_strength", "breadth", "momentum", "market_regime"),
+            evidence_tables=("market.index_eod", "breadth.sector_daily", "breadth.ma_pct_above", "scores.stage_snapshots"),
+            output_contract=("index_leaders", "sector_breadth", "relative_strength_context", "stage_participation", "risk_flags"),
+        ),
+        SeedBrief(
+            id="strategy_lab_performance_diagnostics",
+            domain="strategy_evaluation",
+            title="Strategy Lab Performance Diagnostics",
+            description="Evaluate strategy or paper-trading outcomes using signal history, returns, hit target/stop evidence, setup class, and regime context.",
+            input_patterns=(
+                "strategy lab performance diagnostics",
+                "which strategy worked and failed",
+                "analyze win rate drawdown expectancy and signal outcomes",
+            ),
+            tags=("strategy_lab", "backtest", "expectancy", "win_rate", "drawdown"),
+            evidence_tables=("signals.signal_log", "scores.stage_snapshots", "market.equity_eod"),
+            output_contract=("strategy_summary", "win_loss_stats", "expectancy_proxy", "failure_modes", "improvement_actions"),
+        ),
+        SeedBrief(
+            id="swing_trade_playbook_setup_review",
+            domain="screening",
+            title="Swing Trade Playbook Setup Review",
+            description="Rank swing-trade setups with entry, stop, target, invalidation, liquidity, stage, VCP, RS, and optional F&O confirmation evidence.",
+            input_patterns=(
+                "build swing trading playbook candidates",
+                "rank swing setups with entry stop target",
+                "which stocks should we focus on for swing trading",
+            ),
+            tags=("swing_trading", "entry_stop_target", "stage_2", "vcp", "risk_reward"),
+            evidence_tables=(
+                "scores.stage2_vcp_picks",
+                "scores.stage_snapshots",
+                "market.equity_eod",
+                "derivatives.fno_signals",
+            ),
+            output_contract=("ranked_setups", "entry_plan", "stop_plan", "target_plan", "invalidation", "portfolio_notes"),
+        ),
     ]
 
 
@@ -334,3 +523,45 @@ def expanded_seed_briefs(target_count: int) -> list[SeedBrief]:
             )
         )
     return expanded
+
+
+def selected_seed_examples(seed_ids: list[str] | tuple[str, ...], examples_per_seed: int) -> list[SeedBrief]:
+    if examples_per_seed <= 0:
+        return []
+    base_by_id = {seed.id: seed for seed in default_seed_briefs()}
+    missing = [seed_id for seed_id in seed_ids if seed_id not in base_by_id]
+    if missing:
+        raise ValueError(f"unknown seed id(s): {', '.join(missing)}")
+
+    examples: list[SeedBrief] = []
+    for seed_id in seed_ids:
+        seed = base_by_id[seed_id]
+        for index in range(examples_per_seed):
+            intent = INTENT_VARIATIONS[index % len(INTENT_VARIATIONS)]
+            timeframe = TIMEFRAME_VARIATIONS[(index // len(INTENT_VARIATIONS)) % len(TIMEFRAME_VARIATIONS)]
+            style = STYLE_VARIATIONS[(index // (len(INTENT_VARIATIONS) * len(TIMEFRAME_VARIATIONS))) % len(STYLE_VARIATIONS)]
+            variant_no = index + 1
+            examples.append(
+                SeedBrief(
+                    id=f"{seed.id}_example_{variant_no:02d}",
+                    domain=seed.domain,
+                    title=f"{seed.title} Example {variant_no:02d}",
+                    description=(
+                        f"{seed.description} Example focus: {intent}; timeframe: {timeframe}; "
+                        f"response style: {style}."
+                    ),
+                    input_patterns=tuple(
+                        dict.fromkeys(
+                            (
+                                *seed.input_patterns,
+                                f"{intent} for {timeframe}: {seed.input_patterns[0]}",
+                                f"{seed.input_patterns[-1]} as {style}",
+                            )
+                        )
+                    ),
+                    tags=tuple(dict.fromkeys((*seed.tags, intent.replace(" ", "_"), timeframe.replace(" ", "_"), style.replace(" ", "_")))),
+                    evidence_tables=seed.evidence_tables,
+                    output_contract=seed.output_contract,
+                )
+            )
+    return examples

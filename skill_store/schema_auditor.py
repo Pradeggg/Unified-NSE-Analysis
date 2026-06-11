@@ -99,7 +99,8 @@ def _sql_templates(card: dict[str, Any]) -> list[str]:
 
 def _strip_parameters(sql: str) -> str:
     no_jinja = re.sub(r"\{\{[^}]+\}\}", " ", sql)
-    no_params = re.sub(r":[a-z_][a-z0-9_]*", " ", no_jinja, flags=re.I)
+    no_pyformat = re.sub(r"%\([a-z_][a-z0-9_]*\)s|%s", " ", no_jinja, flags=re.I)
+    no_params = re.sub(r":[a-z_][a-z0-9_]*", " ", no_pyformat, flags=re.I)
     return re.sub(r"'(?:''|[^'])*'", " ", no_params)
 
 
@@ -112,6 +113,17 @@ def _referenced_tables(sql: str, catalog: SchemaCatalog) -> set[str]:
         )
     )
     return {ref.lower() for ref in refs}
+
+
+def _unqualified_from_names(sql: str) -> set[str]:
+    return {
+        ref.lower()
+        for ref in re.findall(
+            r"\b(?:from|join)\s+([a-z_][a-z0-9_]*)(?!\.)\b",
+            sql,
+            flags=re.I,
+        )
+    }
 
 
 def _alias_map(sql: str, catalog: SchemaCatalog) -> dict[str, str]:
@@ -130,8 +142,9 @@ def _alias_map(sql: str, catalog: SchemaCatalog) -> dict[str, str]:
     return aliases
 
 
-def _candidate_unqualified_columns(sql: str, table_names: set[str]) -> set[str]:
+def _candidate_unqualified_columns(sql: str, table_names: set[str], aliases: set[str] | None = None) -> set[str]:
     columns: set[str] = set()
+    alias_names = aliases or set()
     for pattern in (
         r"\bselect\s+(.*?)\s+\bfrom\b",
         r"\bwhere\s+(.*?)(?:\border\s+by\b|\bgroup\s+by\b|\blimit\b|$)",
@@ -139,7 +152,7 @@ def _candidate_unqualified_columns(sql: str, table_names: set[str]) -> set[str]:
         for clause in re.findall(pattern, sql, flags=re.I | re.S):
             for token in re.findall(r"\b[a-z_][a-z0-9_]*\b", clause, flags=re.I):
                 lowered = token.lower()
-                if lowered not in _SQL_KEYWORDS and lowered not in table_names:
+                if lowered not in _SQL_KEYWORDS and lowered not in table_names and lowered not in alias_names:
                     columns.add(lowered)
     return columns
 
@@ -181,10 +194,10 @@ def audit_skill_card(card: dict[str, Any], catalog: SchemaCatalog) -> list[str]:
             if table_name and not catalog.has_column(table_name, column_l):
                 findings.append(f"{table_name}.{column_l} is not approved")
 
-        known_tables = {table.rsplit(".", 1)[-1] for table in tables}
+        known_tables = {table.rsplit(".", 1)[-1] for table in tables} | _unqualified_from_names(sql)
         if _is_simple_single_table_sql(sql) and len([table for table in tables if catalog.has_table(table)]) == 1:
             table_name = next(table for table in tables if catalog.has_table(table))
-            for column in _candidate_unqualified_columns(sql, known_tables):
+            for column in _candidate_unqualified_columns(sql, known_tables, set(aliases)):
                 if not catalog.has_column(table_name, column):
                     findings.append(f"{table_name}.{column} is not approved")
 

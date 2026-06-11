@@ -1,0 +1,1462 @@
+{
+  "symbol": "SIKA",
+  "portfolio": {
+    "symbol": "SIKA",
+    "inputs": "SIKA INTERPLANT SYSTEMS L",
+    "company_name": "SIKA",
+    "sector": "—",
+    "mcap": "—",
+    "price": "904.75",
+    "stage": "UNKNOWN",
+    "signal": "HOLD",
+    "trend": "MIXED",
+    "portfolio_score": "22.0",
+    "investment_score": "35.0",
+    "technical_score": "35.0",
+    "enhanced_fund_score": "",
+    "relative_strength": "-7.84",
+    "chg_1d": "-1.03",
+    "chg_1w": "0.13",
+    "chg_1m": "-7.84",
+    "rsi_snapshot": "48.8",
+    "rsi_tech": "48.8",
+    "adx": "21.4",
+    "macd": "bullish",
+    "supertrend": "SELL",
+    "above_sma20": "False",
+    "above_sma50": "",
+    "above_sma200": "",
+    "pct_from_52h": "-24.6",
+    "52w_high": "1199.8",
+    "52w_low": "870.1",
+    "rating": "HOLD / WATCH",
+    "snapshot_error": "",
+    "tech_error": ""
+  },
+  "collected_at": "2026-06-10T23:33:33",
+  "source_trail": [
+    "get_symbol_snapshot",
+    "get_technical_setup",
+    "scrape_screener_in",
+    "explain_intraday_setup",
+    "_load_price_history",
+    "_load_price_history",
+    "_load_price_history"
+  ],
+  "errors": [],
+  "snapshot": {
+    "data_source": "PostgreSQL scores.stage_snapshots",
+    "company_name": "SIKA",
+    "stage": "UNKNOWN",
+    "stage_score": 0.0,
+    "investment_score": 35.0,
+    "price": 904.75,
+    "rsi": 48.8,
+    "relative_strength": -7.84,
+    "change_1d_pct": -1.03,
+    "change_1w_pct": 0.13,
+    "change_1m_pct": -7.84,
+    "market_cap_cat": null,
+    "sector": null,
+    "trading_signal": "HOLD",
+    "trend_signal": "MIXED",
+    "supertrend_state": "BEARISH",
+    "supertrend_value": null,
+    "technical_score": 35.0,
+    "fundamental_score": null,
+    "narrative": "SIKA was backfilled on demand from EOD price history and NSE live metadata. Fundamental/CANSLIM/Minervini fields were not found in the DB and were not inferred.",
+    "stance": "TECHNICAL_ONLY",
+    "can_slim_score": null,
+    "minervini_score": null,
+    "enhanced_fund_score": null,
+    "earnings_quality": null,
+    "sales_growth": null,
+    "financial_strength": null,
+    "institutional_backing": null,
+    "symbol": "SIKA",
+    "snapshot_date": "2026-06-10",
+    "rs_pct": -7.84,
+    "missing_evidence": [],
+    "missing_optional_scores": [
+      "fundamental_score",
+      "can_slim_score",
+      "minervini_score"
+    ],
+    "evidence_coverage": "complete"
+  },
+  "technical": {
+    "symbol": "SIKA",
+    "price": 904.75,
+    "open": 914.2,
+    "high": 933.0,
+    "low": 901.0,
+    "chg_pct": -1.03,
+    "rsi": 48.8,
+    "adx": 21.4,
+    "macd": "bullish",
+    "supertrend": "SELL",
+    "sma20": 913.04,
+    "sma50": null,
+    "sma200": null,
+    "above_sma20": false,
+    "above_sma50": null,
+    "above_sma200": null,
+    "52w_high": 1199.8,
+    "52w_low": 870.1,
+    "pct_from_52h": -24.6,
+    "vol_last": 6496,
+    "vol_avg_20d": 16328,
+    "vol_ratio": 0.4,
+    "technical_score": 35,
+    "score_method": "derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX",
+    "data_bars": 36,
+    "as_of": "2026-06-10",
+    "data_source": "PostgreSQL market.equity_eod",
+    "postgres_persist": null
+  },
+  "fundamentals": {
+    "symbol": "SIKA",
+    "source_url": "https://www.screener.in/company/SIKA/consolidated/",
+    "nse_url": "https://www.nseindia.com/get-quotes/equity?symbol=SIKA",
+    "bse_url": "https://www.bseindia.com/stock-share-price/sika-interplant-systems-ltd/SIKA/523606/",
+    "bse_scrip": "523606",
+    "ratios": {
+      "Market Cap": "1,916",
+      "Current Price": "905",
+      "High / Low": "1,625",
+      "Stock P/E": "52.6",
+      "Book Value": "73.4",
+      "Dividend Yield": "0.27",
+      "ROCE": "35.2",
+      "ROE": "26.1",
+      "Face Value": "2.00"
+    },
+    "pros": [
+      "Company is almost debt free.",
+      "Company is expected to give good quarter",
+      "Company has delivered good profit growth of 25.6% CAGR over last 5 years",
+      "Company has been maintaining a healthy dividend payout of 20.8%",
+      "Debtor days have improved from 45.4 to 18.3 days.",
+      "Company's working capital requirements have reduced from 26.0 days to 12.6 days"
+    ],
+    "cons": [
+      "Stock is trading at 12.3 times its book value"
+    ],
+    "quarterly": {
+      "Sales+": [
+        "37.98",
+        "46.02",
+        "68.01",
+        "51.58",
+        "50.31",
+        "41.33"
+      ],
+      "Expenses+": [
+        "30.15",
+        "38.06",
+        "55.51",
+        "40.94",
+        "38.71",
+        "30.91"
+      ],
+      "Operating Profit": [
+        "7.83",
+        "7.96",
+        "12.50",
+        "10.64",
+        "11.60",
+        "10.42"
+      ],
+      "OPM %": [
+        "20.62%",
+        "17.30%",
+        "18.38%",
+        "20.63%",
+        "23.06%",
+        "25.21%"
+      ],
+      "Other Income+": [
+        "1.31",
+        "2.27",
+        "1.74",
+        "1.47",
+        "1.44",
+        "0.48"
+      ],
+      "Interest": [
+        "0.02",
+        "0.15",
+        "0.14",
+        "0.13",
+        "0.09",
+        "0.15"
+      ],
+      "Depreciation": [
+        "0.29",
+        "0.32",
+        "0.25",
+        "0.26",
+        "0.26",
+        "0.28"
+      ],
+      "Profit before tax": [
+        "8.83",
+        "9.76",
+        "13.85",
+        "11.72",
+        "12.69",
+        "10.47"
+      ],
+      "Tax %": [
+        "19.14%",
+        "19.06%",
+        "25.20%",
+        "23.81%",
+        "25.14%",
+        "25.31%"
+      ],
+      "Net Profit+": [
+        "7.14",
+        "7.91",
+        "10.35",
+        "8.94",
+        "9.49",
+        "7.83"
+      ],
+      "EPS in Rs": [
+        "3.37",
+        "3.73",
+        "4.88",
+        "4.22",
+        "4.48",
+        "3.69"
+      ],
+      "Raw PDF": [
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "_headers": [
+        "Dec 2024",
+        "Mar 2025",
+        "Jun 2025",
+        "Sep 2025",
+        "Dec 2025",
+        "Mar 2026"
+      ]
+    },
+    "annual_pl": {
+      "Sales+": [
+        "98",
+        "60",
+        "106",
+        "148",
+        "211"
+      ],
+      "Expenses+": [
+        "78",
+        "50",
+        "86",
+        "119",
+        "166"
+      ],
+      "Operating Profit": [
+        "20",
+        "10",
+        "20",
+        "29",
+        "45"
+      ],
+      "OPM %": [
+        "20%",
+        "17%",
+        "19%",
+        "20%",
+        "21%"
+      ],
+      "Other Income+": [
+        "3",
+        "3",
+        "7",
+        "6",
+        "5"
+      ],
+      "Interest": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "1"
+      ],
+      "Depreciation": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "Profit before tax": [
+        "22",
+        "12",
+        "25",
+        "33",
+        "49"
+      ],
+      "Tax %": [
+        "26%",
+        "28%",
+        "24%",
+        "23%",
+        "25%"
+      ],
+      "Net Profit+": [
+        "17",
+        "9",
+        "19",
+        "25",
+        "36"
+      ],
+      "EPS in Rs": [
+        "7.83",
+        "4.15",
+        "9.13",
+        "11.95",
+        "17.19"
+      ],
+      "Dividend Payout %": [
+        "10%",
+        "19%",
+        "22%",
+        "20%",
+        "20%"
+      ],
+      "_headers": [
+        "Mar 2022",
+        "Mar 2023",
+        "Mar 2024",
+        "Mar 2025",
+        "Mar 2026"
+      ]
+    },
+    "balance_sheet": {
+      "Equity Capital": [
+        "4",
+        "4",
+        "4",
+        "4",
+        "4"
+      ],
+      "Reserves": [
+        "74",
+        "81",
+        "99",
+        "120",
+        "151"
+      ],
+      "Borrowings+": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "Other Liabilities+": [
+        "20",
+        "18",
+        "19",
+        "29",
+        "20"
+      ],
+      "Total Liabilities": [
+        "98",
+        "103",
+        "122",
+        "153",
+        "175"
+      ],
+      "Fixed Assets+": [
+        "36",
+        "36",
+        "43",
+        "45",
+        "44"
+      ],
+      "CWIP": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "Investments": [
+        "9",
+        "20",
+        "30",
+        "38",
+        "82"
+      ],
+      "Other Assets+": [
+        "53",
+        "48",
+        "48",
+        "70",
+        "49"
+      ],
+      "Total Assets": [
+        "98",
+        "103",
+        "122",
+        "153",
+        "175"
+      ],
+      "_headers": [
+        "Mar 2022",
+        "Mar 2023",
+        "Mar 2024",
+        "Mar 2025",
+        "Mar 2026"
+      ]
+    },
+    "cash_flow": {
+      "Cash from Operating Activity+": [
+        "16",
+        "-3",
+        "20",
+        "8",
+        "47"
+      ],
+      "Cash from Investing Activity+": [
+        "-14",
+        "5",
+        "-18",
+        "-3",
+        "-40"
+      ],
+      "Cash from Financing Activity+": [
+        "-2",
+        "-2",
+        "-2",
+        "-4",
+        "-6"
+      ],
+      "Net Cash Flow": [
+        "0",
+        "-0",
+        "-0",
+        "0",
+        "1"
+      ],
+      "Free Cash Flow": [
+        "16",
+        "-4",
+        "13",
+        "5",
+        "46"
+      ],
+      "CFO/OP": [
+        "109%",
+        "1%",
+        "130%",
+        "55%",
+        "130%"
+      ],
+      "_headers": [
+        "Mar 2022",
+        "Mar 2023",
+        "Mar 2024",
+        "Mar 2025",
+        "Mar 2026"
+      ]
+    },
+    "peers": [],
+    "shareholding": {
+      "_quarters": [
+        "Jun 2023",
+        "Sep 2023",
+        "Dec 2023",
+        "Mar 2024",
+        "Jun 2024",
+        "Sep 2024",
+        "Dec 2024",
+        "Mar 2025",
+        "Jun 2025",
+        "Sep 2025",
+        "Dec 2025",
+        "Mar 2026"
+      ],
+      "Promoters": "71.72%",
+      "Promoters_trend": [
+        "71.72%",
+        "71.72%",
+        "71.72%",
+        "71.72%",
+        "71.72%",
+        "71.72%",
+        "71.72%",
+        "71.72%",
+        "71.72%",
+        "71.72%",
+        "71.72%",
+        "71.72%"
+      ],
+      "FIIs": "3.21%",
+      "FIIs_trend": [
+        "1.58%",
+        "2.42%",
+        "2.60%",
+        "2.64%",
+        "2.77%",
+        "2.77%",
+        "2.77%",
+        "3.11%",
+        "3.11%",
+        "3.14%",
+        "3.14%",
+        "3.21%"
+      ],
+      "DIIs": "0.04%",
+      "DIIs_trend": [
+        "0.00%",
+        "0.00%",
+        "0.00%",
+        "0.00%",
+        "0.00%",
+        "0.00%",
+        "0.00%",
+        "0.00%",
+        "0.01%",
+        "0.01%",
+        "0.04%",
+        "0.04%"
+      ],
+      "Public": "25.04%",
+      "Public_trend": [
+        "26.69%",
+        "25.85%",
+        "25.68%",
+        "25.64%",
+        "25.50%",
+        "25.51%",
+        "25.51%",
+        "25.15%",
+        "25.15%",
+        "25.13%",
+        "25.10%",
+        "25.04%"
+      ],
+      "No. of Shareholders": "25,730",
+      "No. of Shareholders_trend": [
+        "6,389",
+        "6,404",
+        "6,907",
+        "7,502",
+        "10,813",
+        "14,552",
+        "14,928",
+        "15,733",
+        "25,534",
+        "26,742",
+        "26,171",
+        "25,730"
+      ]
+    },
+    "announcements": [
+      {
+        "title": "All",
+        "url": "https://www.bseindia.com/stock-share-price/sika-interplant-systems-ltd/SIKA/523606/corp-announcements/"
+      },
+      {
+        "title": "Compliances-Certificate under Reg. 74 (5) of SEBI (DP) Regulations, 20185 Jun",
+        "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=0c4c6b2a-154b-43c3-8db3-d9b48c4dde7f.pdf"
+      },
+      {
+        "title": "Compliances-Reg.24(A)-Annual Secretarial Compliance29 May - Filed FY26 Annual Secretarial Compliance Report; no non-comp",
+        "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=bb602765-79c3-436b-ad10-afe49531e3bd.pdf"
+      },
+      {
+        "title": "Announcement under Regulation 30 (LODR)-Newspaper Publication15 May",
+        "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=f0e18a0d-226f-413d-b498-9be0fb998c02.pdf"
+      },
+      {
+        "title": "Announcement under Regulation 30 (LODR)-Newspaper Publication11 May",
+        "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=006a1ade-1240-48e6-91cd-8b03e9a77625.pdf"
+      },
+      {
+        "title": "Corporate Action For Fixing Record Date8 May",
+        "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=84a9dc3b-fdbf-4d95-af99-2b9bd169cb84.pdf"
+      }
+    ],
+    "annual_reports": [
+      {
+        "label": "Financial Year 2022from bse",
+        "url": "https://www.bseindia.com/bseplus/AnnualReport/523606/76042523606.pdf"
+      },
+      {
+        "label": "Financial Year 2021from bse",
+        "url": "https://www.bseindia.com/bseplus/AnnualReport/523606/72309523606.pdf"
+      },
+      {
+        "label": "Financial Year 2020from bse",
+        "url": "https://www.bseindia.com/bseplus/AnnualReport/523606/65754523606.pdf"
+      },
+      {
+        "label": "Financial Year 2019from bse",
+        "url": "https://www.bseindia.com/bseplus/AnnualReport/523606/5236060319.pdf"
+      },
+      {
+        "label": "Financial Year 2018from bse",
+        "url": "https://www.bseindia.com/bseplus/AnnualReport/523606/5236060318.pdf"
+      },
+      {
+        "label": "Financial Year 2017from bse",
+        "url": "https://www.bseindia.com/bseplus/AnnualReport/523606/5236060317.pdf"
+      }
+    ],
+    "concalls": [],
+    "concalls_link": "https://www.screener.in/company/SIKA/#concalls",
+    "note": "Found 0 concall entries. Transcript PDFs are directly accessible. AI summaries on screener.in require login. Full concall list: https://www.screener.in/company/SIKA/#concalls"
+  },
+  "trade_setup": {
+    "symbol": "SIKA",
+    "timeframe": "15m",
+    "data_mode": "intraday",
+    "source": "PostgreSQL intraday.ohlcv_bars seeded from Yahoo Finance (yfinance)",
+    "latest_timestamp": "2026-06-10 15:15:00",
+    "latest_close": 904.75,
+    "setup_label": "SHORT_SETUP",
+    "setup_side": "short",
+    "score": 50,
+    "indicators": {
+      "rsi": 40.1,
+      "macd": -2.7394,
+      "macd_signal": -1.6524,
+      "macd_hist": -1.087,
+      "supertrend": 918.46,
+      "supertrend_dir": 1,
+      "ema9": 907.85,
+      "ema21": 910.98,
+      "ema50": 913.47,
+      "ema200": 914.07,
+      "bb_pct": 0.12,
+      "bb_width": 0.0222,
+      "atr": 4.79,
+      "volume_ratio": 2.52
+    },
+    "signals": [
+      {
+        "strategy": "Supertrend",
+        "direction": "BUY",
+        "entry": 904.75,
+        "target": 914.32,
+        "stoploss": 897.57,
+        "rr": 1.33,
+        "strength": "Moderate (in uptrend)",
+        "note": "Supertrend bullish — support at 918.46",
+        "indicator": {
+          "supertrend": 918.46,
+          "direction": "BULLISH"
+        },
+        "strategy_key": "supertrend",
+        "setup_label": "LONG_SETUP",
+        "copy_rule": "Research setup only; not a buy/sell recommendation."
+      },
+      {
+        "strategy": "Bollinger Band Bounce",
+        "direction": "BUY",
+        "entry": 904.75,
+        "target": 912.46,
+        "stoploss": 900.9,
+        "rr": 2.0,
+        "strength": "Moderate",
+        "note": "BB lower-band bounce",
+        "indicator": {
+          "bb_pct": 0.12,
+          "bb_width": 0.0222,
+          "rsi": 40.1
+        },
+        "strategy_key": "bollinger",
+        "setup_label": "LONG_SETUP",
+        "copy_rule": "Research setup only; not a buy/sell recommendation."
+      },
+      {
+        "strategy": "Multi-Confirm SELL",
+        "direction": "SELL",
+        "entry": 904.75,
+        "target": 878.89,
+        "stoploss": 913.37,
+        "rr": 3.0,
+        "strength": "High",
+        "note": "4/4 signals aligned bearish: MACD EMA RSI Vol",
+        "indicator": {
+          "macd_bear": true,
+          "ema_bear": true,
+          "rsi": 40.1,
+          "vol_above_avg": true
+        },
+        "strategy_key": "multi_confirm",
+        "setup_label": "SHORT_SETUP",
+        "copy_rule": "Research setup only; not a buy/sell recommendation."
+      }
+    ],
+    "analyzers": {
+      "TrendAgent": [
+        "Supertrend is bullish",
+        "At least one indicator strategy triggered a long-side setup"
+      ],
+      "MomentumAgent": [
+        "MACD histogram is negative"
+      ],
+      "LevelsAgent": {
+        "support": [
+          902.95,
+          899.0
+        ],
+        "resistance": [
+          907.85,
+          908.9
+        ],
+        "invalidation_level": 907.85,
+        "technical_target_zones": [
+          902.95,
+          899.0
+        ]
+      },
+      "RiskAgent": [
+        "Technical setup only; no order placement or recommendation",
+        "Confirm freshness, liquidity, spreads, and market regime before using this for research"
+      ]
+    },
+    "levels": {
+      "symbol": "SIKA",
+      "timeframe": "15m",
+      "data_mode": "intraday",
+      "source": "PostgreSQL intraday.ohlcv_bars",
+      "latest_timestamp": "2026-06-10 15:15:00",
+      "latest_close": 904.75,
+      "pivot": 904.95,
+      "supports": [
+        902.95,
+        899.0,
+        897.0
+      ],
+      "resistances": [
+        907.85,
+        908.9,
+        910.9,
+        910.98
+      ],
+      "ema_levels": {
+        "ema9": 907.85,
+        "ema21": 910.98,
+        "ema50": 913.47,
+        "ema200": 914.07
+      },
+      "pivot_levels": {
+        "PP": 904.95,
+        "R1": 908.9,
+        "R2": 910.9,
+        "R3": 914.85,
+        "S1": 902.95,
+        "S2": 899.0,
+        "S3": 897.0
+      },
+      "copy_rule": "Technical levels only. Not investment advice or a trade recommendation."
+    },
+    "invalidation_level": 907.85,
+    "technical_target_zones": [
+      902.95,
+      899.0
+    ],
+    "position_sizing": {
+      "risk_per_trade": 5000.0,
+      "risk_per_share": 3.1,
+      "lot_size": null,
+      "cash": {
+        "shares": 1612,
+        "capital_required": 1458457.0
+      },
+      "futures": null,
+      "options_note": "Not an F&O symbol; options/futures not available."
+    },
+    "risk_reward_frame": {
+      "risk_per_share": 3.1,
+      "rupee_risk": 4997.2,
+      "t1_rr": 0.58,
+      "t1_rupee_reward": 2901.6,
+      "t2_rr": 1.85,
+      "t2_rupee_reward": 9269.0
+    },
+    "trade_plan": {
+      "direction": "SHORT",
+      "entry_confirmations": [
+        "Price stays below ₹907.85 on retest",
+        "RSI 40 confirms weakness (below 50)",
+        "MACD histogram aligned with direction"
+      ],
+      "scale_out": [
+        "Book 50% at T1 (₹902.95), trail SL to entry for remainder",
+        "Book remaining at T2 (₹899.00) or trail with Supertrend"
+      ],
+      "invalidation_action": "Exit full position if price closes above ₹907.85. Do not average into a losing setup."
+    },
+    "disclaimer": "Research and learning only. Not investment advice. Not a recommendation to buy, sell, trade, copy, or replicate. Users are responsible for their own risk, compliance, and legal obligations. Agent Adda is not SEBI registered."
+  },
+  "verdict": "Neutral Watch",
+  "chart_history": {
+    "symbol": "SIKA",
+    "source": "PostgreSQL market.equity_eod",
+    "bars": [
+      {
+        "d": "2026-04-20",
+        "o": 988.0,
+        "h": 988.0,
+        "l": 936.0,
+        "c": 958.85,
+        "v": 4393.0,
+        "s20": null,
+        "s50": null,
+        "s200": null,
+        "e20": 958.85,
+        "e50": 958.85,
+        "e200": 958.85,
+        "rsi": null,
+        "macd": 0.0,
+        "macds": 0.0,
+        "macdh": 0.0
+      },
+      {
+        "d": "2026-04-21",
+        "o": 948.0,
+        "h": 990.0,
+        "l": 948.0,
+        "c": 981.25,
+        "v": 8874.0,
+        "s20": null,
+        "s50": null,
+        "s200": null,
+        "e20": 960.9833333333333,
+        "e50": 959.728431372549,
+        "e200": 959.0728855721394,
+        "rsi": null,
+        "macd": 1.7868945868946184,
+        "macds": 0.3573789173789237,
+        "macdh": 1.4295156695156948
+      },
+      {
+        "d": "2026-04-22",
+        "o": 989.9,
+        "h": 1019.95,
+        "l": 978.0,
+        "c": 995.5,
+        "v": 23289.0,
+        "s20": null,
+        "s50": null,
+        "s200": null,
+        "e20": 964.270634920635,
+        "e50": 961.1312379853903,
+        "e200": 959.4353444221679,
+        "rsi": null,
+        "macd": 4.30327188902686,
+        "macds": 1.146557511708511,
+        "macdh": 3.156714377318349
+      },
+      {
+        "d": "2026-04-23",
+        "o": 980.55,
+        "h": 1015.0,
+        "l": 980.55,
+        "c": 998.7,
+        "v": 10962.0,
+        "s20": null,
+        "s50": null,
+        "s200": null,
+        "e20": 967.5496220710506,
+        "e50": 962.604522770277,
+        "e200": 959.8260375124946,
+        "rsi": null,
+        "macd": 6.481023087118842,
+        "macds": 2.213450626790577,
+        "macdh": 4.267572460328266
+      },
+      {
+        "d": "2026-04-24",
+        "o": 991.0,
+        "h": 1017.95,
+        "l": 972.35,
+        "c": 984.0,
+        "v": 15538.0,
+        "s20": null,
+        "s50": null,
+        "s200": null,
+        "e20": 969.1163247309506,
+        "e50": 963.4435610930112,
+        "e200": 960.0665744526689,
+        "rsi": null,
+        "macd": 6.940731027651054,
+        "macds": 3.158906706962673,
+        "macdh": 3.7818243206883815
+      },
+      {
+        "d": "2026-04-27",
+        "o": 1008.0,
+        "h": 1049.95,
+        "l": 985.05,
+        "c": 1030.7,
+        "v": 24556.0,
+        "s20": null,
+        "s50": null,
+        "s200": null,
+        "e20": 974.9814366613363,
+        "e50": 966.0810685011285,
+        "e200": 960.7693946073688,
+        "rsi": null,
+        "macd": 10.94716054199796,
+        "macds": 4.71655747396973,
+        "macdh": 6.23060306802823
+      },
+      {
+        "d": "2026-04-28",
+        "o": 1041.0,
+        "h": 1062.35,
+        "l": 1029.0,
+        "c": 1043.7,
+        "v": 27703.0,
+        "s20": null,
+        "s50": null,
+        "s200": null,
+        "e20": 981.526061741209,
+        "e50": 969.1249481677509,
+        "e200": 961.5945747605293,
+        "rsi": null,
+        "macd": 14.99838411543783,
+        "macds": 6.77292280226335,
+        "macdh": 8.22546131317448
+      },
+      {
+        "d": "2026-04-29",
+        "o": 1050.0,
+        "h": 1060.0,
+        "l": 1031.6,
+        "c": 1040.75,
+        "v": 29668.0,
+        "s20": null,
+        "s50": null,
+        "s200": null,
+        "e20": 987.1664368134748,
+        "e50": 971.9337737297999,
+        "e200": 962.3821909320664,
+        "rsi": null,
+        "macd": 17.76617028704527,
+        "macds": 8.971572299219735,
+        "macdh": 8.794597987825535
+      },
+      {
+        "d": "2026-04-30",
+        "o": 1055.7,
+        "h": 1058.85,
+        "l": 1000.0,
+        "c": 1025.7,
+        "v": 13388.0,
+        "s20": null,
+        "s50": null,
+        "s200": null,
+        "e20": 990.8362999740963,
+        "e50": 974.0422531913764,
+        "e200": 963.0122188829911,
+        "rsi": null,
+        "macd": 18.531630446714416,
+        "macds": 10.883583928718672,
+        "macdh": 7.648046517995745
+      },
+      {
+        "d": "2026-05-04",
+        "o": 1041.1,
+        "h": 1047.5,
+        "l": 1006.1,
+        "c": 1021.5,
+        "v": 13762.0,
+        "s20": null,
+        "s50": null,
+        "s200": null,
+        "e20": 993.7566523575157,
+        "e50": 975.9033413015185,
+        "e200": 963.5941868543047,
+        "rsi": null,
+        "macd": 18.585120538230512,
+        "macds": 12.42389125062104,
+        "macdh": 6.161229287609473
+      },
+      {
+        "d": "2026-05-05",
+        "o": 1006.2,
+        "h": 1057.7,
+        "l": 1006.2,
+        "c": 1051.6,
+        "v": 18703.0,
+        "s20": null,
+        "s50": null,
+        "s200": null,
+        "e20": 999.2655426091809,
+        "e50": 978.8718377210668,
+        "e200": 964.4698665870977,
+        "rsi": null,
+        "macd": 20.816372085279,
+        "macds": 14.102387417552633,
+        "macdh": 6.713984667726367
+      },
+      {
+        "d": "2026-05-06",
+        "o": 1051.9,
+        "h": 1093.1,
+        "l": 1043.4,
+        "c": 1072.4,
+        "v": 37257.0,
+        "s20": null,
+        "s50": null,
+        "s200": null,
+        "e20": 1006.2307290273542,
+        "e50": 982.5396087908289,
+        "e200": 965.543798262848,
+        "rsi": null,
+        "macd": 23.98653928498618,
+        "macds": 16.079217791039344,
+        "macdh": 7.907321493946835
+      },
+      {
+        "d": "2026-05-07",
+        "o": 1076.6,
+        "h": 1100.0,
+        "l": 1076.6,
+        "c": 1094.8,
+        "v": 18310.0,
+        "s20": null,
+        "s50": null,
+        "s200": null,
+        "e20": 1014.6658976914157,
+        "e50": 986.9419770735415,
+        "e200": 966.8299296234167,
+        "rsi": null,
+        "macd": 27.983832227378002,
+        "macds": 18.460140678307077,
+        "macdh": 9.523691549070925
+      },
+      {
+        "d": "2026-05-08",
+        "o": 1107.5,
+        "h": 1199.8,
+        "l": 1075.0,
+        "c": 1159.7,
+        "v": 76567.0,
+        "s20": null,
+        "s50": null,
+        "s200": null,
+        "e20": 1028.4786693398523,
+        "e50": 993.7168015020301,
+        "e200": 968.7490348012932,
+        "rsi": null,
+        "macd": 35.97391835344138,
+        "macds": 21.962896213333938,
+        "macdh": 14.011022140107439
+      },
+      {
+        "d": "2026-05-11",
+        "o": 1069.2,
+        "h": 1079.8,
+        "l": 962.3,
+        "c": 981.7,
+        "v": 146016.0,
+        "s20": null,
+        "s50": null,
+        "s200": null,
+        "e20": 1024.023557974152,
+        "e50": 993.2455543843034,
+        "e200": 968.8779001266535,
+        "rsi": 52.524025185021536,
+        "macd": 27.62456795815251,
+        "macds": 23.095230562297655,
+        "macdh": 4.529337395854856
+      },
+      {
+        "d": "2026-05-12",
+        "o": 999.9,
+        "h": 1005.0,
+        "l": 927.0,
+        "c": 932.0,
+        "v": 36131.0,
+        "s20": null,
+        "s50": null,
+        "s200": null,
+        "e20": 1015.2594095956614,
+        "e50": 990.8437679378602,
+        "e200": 968.5109558467863,
+        "rsi": 44.86925721429316,
+        "macd": 16.803571859756516,
+        "macds": 21.83689882178943,
+        "macdh": -5.033326962032913
+      },
+      {
+        "d": "2026-05-13",
+        "o": 935.0,
+        "h": 980.0,
+        "l": 935.0,
+        "c": 956.2,
+        "v": 25054.0,
+        "s20": null,
+        "s50": null,
+        "s200": null,
+        "e20": 1009.6347039198841,
+        "e50": 989.4851888030422,
+        "e200": 968.388458773684,
+        "rsi": 45.98897734231476,
+        "macd": 10.064574097654145,
+        "macds": 19.48243387696237,
+        "macdh": -9.417859779308227
+      },
+      {
+        "d": "2026-05-14",
+        "o": 964.8,
+        "h": 972.2,
+        "l": 934.1,
+        "c": 936.9,
+        "v": 10725.0,
+        "s20": null,
+        "s50": null,
+        "s200": null,
+        "e20": 1002.7075892608476,
+        "e50": 987.4230245362563,
+        "e200": 968.0751407759359,
+        "rsi": 43.89328063241107,
+        "macd": 3.130435405435378,
+        "macds": 16.212034182656975,
+        "macdh": -13.081598777221597
+      },
+      {
+        "d": "2026-05-15",
+        "o": 945.4,
+        "h": 945.4,
+        "l": 900.0,
+        "c": 915.9,
+        "v": 11666.0,
+        "s20": null,
+        "s50": null,
+        "s200": null,
+        "e20": 994.4401998074336,
+        "e50": 984.6182000446385,
+        "e200": 967.5559851463246,
+        "rsi": 43.35350380636346,
+        "macd": -4.013182491948896,
+        "macds": 12.166990847735802,
+        "macdh": -16.1801733396847
+      },
+      {
+        "d": "2026-05-18",
+        "o": 915.8,
+        "h": 915.8,
+        "l": 870.1,
+        "c": 889.2,
+        "v": 33901.0,
+        "s20": 1003.5525,
+        "s50": null,
+        "s200": null,
+        "e20": 984.4173236352971,
+        "e50": 980.8763098468095,
+        "e200": 966.7763236025801,
+        "rsi": 35.62868169815154,
+        "macd": -11.694214377455637,
+        "macds": 7.394749802697515,
+        "macdh": -19.08896418015315
+      },
+      {
+        "d": "2026-05-19",
+        "o": 882.1,
+        "h": 900.0,
+        "l": 882.1,
+        "c": 888.1,
+        "v": 10757.0,
+        "s20": 1000.0150000000001,
+        "s50": null,
+        "s200": null,
+        "e20": 975.2442451938402,
+        "e50": 977.2380231861503,
+        "e200": 965.9934746115097,
+        "rsi": 33.80516236469609,
+        "macd": -17.666598739292,
+        "macds": 2.3824800942996123,
+        "macdh": -20.04907883359161
+      },
+      {
+        "d": "2026-05-20",
+        "o": 880.1,
+        "h": 916.1,
+        "l": 872.4,
+        "c": 905.2,
+        "v": 14306.0,
+        "s20": 996.2125,
+        "s50": null,
+        "s200": null,
+        "e20": 968.5733646991888,
+        "e50": 974.4130026690464,
+        "e200": 965.3885644163703,
+        "rsi": 36.29562228288344,
+        "macd": -20.78038593173585,
+        "macds": -2.2500931109074807,
+        "macdh": -18.530292820828368
+      },
+      {
+        "d": "2026-05-21",
+        "o": 915.5,
+        "h": 938.3,
+        "l": 902.3,
+        "c": 918.9,
+        "v": 16813.0,
+        "s20": 992.3825,
+        "s50": null,
+        "s200": null,
+        "e20": 963.8425680611708,
+        "e50": 972.236022172221,
+        "e200": 964.9259916361079,
+        "rsi": 39.172749391727486,
+        "macd": -21.890271784143692,
+        "macds": -6.178128845554723,
+        "macdh": -15.712142938588968
+      },
+      {
+        "d": "2026-05-22",
+        "o": 929.7,
+        "h": 939.9,
+        "l": 906.7,
+        "c": 913.3,
+        "v": 8753.0,
+        "s20": 988.1125,
+        "s50": null,
+        "s200": null,
+        "e20": 959.0289901505831,
+        "e50": 969.9248056164477,
+        "e200": 964.4123001770422,
+        "rsi": 39.06186817630408,
+        "macd": -22.957102331937335,
+        "macds": -9.533923542831246,
+        "macdh": -13.423178789106089
+      },
+      {
+        "d": "2026-05-25",
+        "o": 915.2,
+        "h": 945.0,
+        "l": 904.1,
+        "c": 935.0,
+        "v": 21784.0,
+        "s20": 985.6625,
+        "s50": null,
+        "s200": null,
+        "e20": 956.7405148981467,
+        "e50": 968.5552053961949,
+        "e200": 964.1196404737881,
+        "rsi": 38.00904977375568,
+        "macd": -21.800264700357502,
+        "macds": -11.987191774336498,
+        "macdh": -9.813072926021004
+      },
+      {
+        "d": "2026-05-26",
+        "o": 925.6,
+        "h": 945.0,
+        "l": 925.6,
+        "c": 936.0,
+        "v": 11851.0,
+        "s20": 980.9275,
+        "s50": null,
+        "s200": null,
+        "e20": 954.7652277649898,
+        "e50": 967.2785306747755,
+        "e200": 963.8398430561385,
+        "rsi": 35.37735849056604,
+        "macd": -20.56570228586793,
+        "macds": -13.702893876642785,
+        "macdh": -6.862808409225144
+      },
+      {
+        "d": "2026-05-27",
+        "o": 940.0,
+        "h": 949.0,
+        "l": 912.3,
+        "c": 918.5,
+        "v": 11349.0,
+        "s20": 974.6674999999999,
+        "s50": null,
+        "s200": null,
+        "e20": 951.3113965492765,
+        "e50": 965.365647118902,
+        "e200": 963.388700339162,
+        "rsi": 30.89924160346696,
+        "macd": -20.76009694932054,
+        "macds": -15.114334491178337,
+        "macdh": -5.645762458142205
+      },
+      {
+        "d": "2026-05-29",
+        "o": 943.3,
+        "h": 943.3,
+        "l": 900.0,
+        "c": 910.7,
+        "v": 16307.0,
+        "s20": 968.165,
+        "s50": null,
+        "s200": null,
+        "e20": 947.4436444969645,
+        "e50": 963.2218962514941,
+        "e200": 962.8644346641455,
+        "rsi": 19.213649851632056,
+        "macd": -21.298040381378087,
+        "macds": -16.35107566921829,
+        "macdh": -4.946964712159797
+      },
+      {
+        "d": "2026-06-01",
+        "o": 915.2,
+        "h": 927.85,
+        "l": 871.35,
+        "c": 885.6,
+        "v": 25225.0,
+        "s20": 961.1599999999999,
+        "s50": null,
+        "s200": null,
+        "e20": 941.5537735924917,
+        "e50": 960.1779003200629,
+        "e200": 962.0956343192287,
+        "rsi": 30.89463220675944,
+        "macd": -23.479072524655294,
+        "macds": -17.77667504030569,
+        "macdh": -5.7023974843496035
+      },
+      {
+        "d": "2026-06-02",
+        "o": 895.0,
+        "h": 910.35,
+        "l": 880.0,
+        "c": 897.8,
+        "v": 17266.0,
+        "s20": 954.975,
+        "s50": null,
+        "s200": null,
+        "e20": 937.3867475360639,
+        "e50": 957.7317081506487,
+        "e200": 961.4558767638135,
+        "rsi": 42.009345794392516,
+        "macd": -23.94707124061722,
+        "macds": -19.010754280367998,
+        "macdh": -4.936316960249222
+      },
+      {
+        "d": "2026-06-03",
+        "o": 904.4,
+        "h": 908.0,
+        "l": 885.0,
+        "c": 903.6,
+        "v": 8307.0,
+        "s20": 947.575,
+        "s50": null,
+        "s200": null,
+        "e20": 934.1689620564388,
+        "e50": 955.6088960663096,
+        "e200": 960.8801963980045,
+        "rsi": 36.55419222903885,
+        "macd": -23.578157741833934,
+        "macds": -19.924234972661186,
+        "macdh": -3.6539227691727483
+      },
+      {
+        "d": "2026-06-04",
+        "o": 908.15,
+        "h": 914.95,
+        "l": 872.4,
+        "c": 884.1,
+        "v": 14767.0,
+        "s20": 938.1599999999999,
+        "s50": null,
+        "s200": null,
+        "e20": 929.4004894796351,
+        "e50": 952.8046256323368,
+        "e200": 960.1162143442931,
+        "rsi": 36.516853932584276,
+        "macd": -24.57598155057258,
+        "macds": -20.854584288243466,
+        "macdh": -3.7213972623291127
+      },
+      {
+        "d": "2026-06-05",
+        "o": 890.0,
+        "h": 940.95,
+        "l": 890.0,
+        "c": 931.5,
+        "v": 35911.0,
+        "s20": 929.9949999999999,
+        "s50": null,
+        "s200": null,
+        "e20": 929.600442862527,
+        "e50": 951.9691501173431,
+        "e200": 959.8314758931061,
+        "rsi": 53.51035103510352,
+        "macd": -21.29648759387976,
+        "macds": -20.942964949370726,
+        "macdh": -0.3535226445090345
+      },
+      {
+        "d": "2026-06-08",
+        "o": 929.0,
+        "h": 929.0,
+        "l": 899.1,
+        "c": 915.3,
+        "v": 14159.0,
+        "s20": 917.775,
+        "s50": null,
+        "s200": null,
+        "e20": 928.2384959232387,
+        "e50": 950.5311442303886,
+        "e200": 959.3883766304882,
+        "rsi": 56.16438356164382,
+        "macd": -19.776696173748633,
+        "macds": -20.70971119424631,
+        "macdh": 0.9330150204976775
+      },
+      {
+        "d": "2026-06-09",
+        "o": 915.3,
+        "h": 928.0,
+        "l": 900.0,
+        "c": 914.2,
+        "v": 11155.0,
+        "s20": 914.4,
+        "s50": null,
+        "s200": null,
+        "e20": 926.9014963115017,
+        "e50": 949.1063934762557,
+        "e200": 958.9387410421252,
+        "rsi": 56.164383561643845,
+        "macd": -18.448350232919438,
+        "macds": -20.257439001980938,
+        "macdh": 1.8090887690614998
+      },
+      {
+        "d": "2026-06-10",
+        "o": 914.2,
+        "h": 933.0,
+        "l": 901.0,
+        "c": 904.75,
+        "v": 6496.0,
+        "s20": 913.0375,
+        "s50": null,
+        "s200": null,
+        "e20": 924.7918299961206,
+        "e50": 947.3669270654221,
+        "e200": 958.3995495889698,
+        "rsi": 49.88973290860082,
+        "macd": -17.951231900555513,
+        "macds": -19.796197581695854,
+        "macdh": 1.8449656811403408
+      }
+    ]
+  }
+}
