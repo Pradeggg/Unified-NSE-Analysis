@@ -1,0 +1,14 @@
+{
+  "name": "agent-adda-e2e",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test":        "playwright test",
+    "test:api":    "playwright test --project=api",
+    "test:plugin": "playwright test --project=plugin",
+    "report":      "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
+  }
+}
