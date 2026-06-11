@@ -63,6 +63,10 @@ from .skills.executor import execute_skill_plan
 from .skills.runtime_assessment import stage_skill_store_assessment
 from .skills.store_repo import SkillStoreRepository, default_skill_store_dsn
 from .semantic_intent import classify_semantic_intent
+from .llm_situation_assessment import (
+    classify_llm_situation_assessment,
+    should_run_llm_situation_assessment,
+)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -755,7 +759,12 @@ class _OpenAIBackend:
             kwargs["tools"] = tools
             kwargs["tool_choice"] = "auto"
         if max_tokens is not None:
-            kwargs["max_tokens"] = max_tokens
+            # gpt-5.x / o-series models use max_completion_tokens; legacy models use max_tokens
+            _m = (self.model or "").lower()
+            if _m.startswith(("gpt-5", "o1", "o3", "o4")):
+                kwargs["max_completion_tokens"] = max_tokens
+            else:
+                kwargs["max_tokens"] = max_tokens
         resp = self.client.chat.completions.create(**kwargs)
         msg = resp.choices[0].message
         u = resp.usage or None
@@ -1043,6 +1052,22 @@ def _is_market_knowledge_query(query: str) -> bool:
         or ("position vs" in q and re.search(r"\b(ma|sma|ema)\b|20/50/200", q))
     ):
         return False
+    # Stock/company research prompts often contain educational metric words
+    # such as P/B, ROE, ROCE, or "vs peers". Those should stay on stock_brief
+    # evidence paths, not become generic market-knowledge explanations.
+    if any(term in q for term in (
+        "valuation deep dive",
+        "complete analysis",
+        "full fundamental analysis",
+        "complete fundamental",
+        "fundamental analysis of",
+        "screener.in fundamentals",
+        "technical stage",
+        "fii holding",
+        "key catalysts",
+        "npa trend",
+    )):
+        return False
     if q.startswith(("/learn", "/define")):
         return True
     if q.startswith("/compare"):
@@ -1209,6 +1234,58 @@ def _leading_company_phrase(raw_query: str) -> str:
         if len(words) >= 6:
             break
     return " ".join(words).strip() if len(words) >= 2 else ""
+
+
+def _stock_research_symbol_from_query(raw_query: str) -> str:
+    """Resolve the primary company in stock research prose.
+
+    This guards prompts like "HDFC Bank valuation deep dive" and
+    "SBI complete analysis" before generic comparison logic sees metric
+    fragments such as P/B, NIM, NPA, or "vs peers" and treats them as symbols.
+    """
+    phrase = _leading_company_phrase(raw_query or "")
+    tokens = phrase.split()
+    for size in range(min(len(tokens), 5), 0, -1):
+        candidate = " ".join(tokens[:size]).strip()
+        if not candidate:
+            continue
+        try:
+            resolved = resolve_symbol(candidate)
+            if _is_trusted_symbol_resolution(resolved):
+                return str(resolved["symbol"]).upper()
+        except Exception:
+            continue
+    # Fallback to explicit uppercase runs in the original query.
+    for token in re.findall(r"\b[A-Z][A-Z0-9&-]{1,12}\b", raw_query or ""):
+        raw = token.upper()
+        if raw in _SYMBOL_VALIDATION_SKIP or raw in TECHNICAL_NON_SYMBOL_TERMS:
+            continue
+        try:
+            resolved = resolve_symbol(raw)
+            if _is_trusted_symbol_resolution(resolved):
+                return str(resolved["symbol"]).upper()
+        except Exception:
+            continue
+    return ""
+
+
+def _looks_like_stock_research_prompt(q: str) -> bool:
+    return any(term in (q or "") for term in (
+        "complete analysis",
+        "deep dive",
+        "full analysis",
+        "full fundamental analysis",
+        "fundamental analysis of",
+        "valuation deep dive",
+        "screener.in fundamentals",
+        "technical stage",
+        "fii holding",
+        "holding changes",
+        "key catalysts",
+        "npa trend",
+        "concall transcript",
+        "management commentary",
+    ))
 
 
 def _symbol_phrase_after_preposition(raw_query: str) -> str:
@@ -2384,6 +2461,12 @@ def _split_compound_query(text: str) -> list[str]:
             "piotroski",
             "altman",
             "earnings manipulation",
+            "my portfolio",
+            "portfolio sector distribution",
+            "companies are announcing quarterly results",
+            "quarterly results this week",
+            "global markets overnight",
+            "asian, and european markets overnight",
         )
     ):
         return [raw]
@@ -2723,6 +2806,42 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
     if _contains_placeholder_symbol(routing_text):
         return {"intent": "placeholder_symbol_request", "plan": []}
 
+    ric_match = re.match(r"^\s*/ric\s+([a-z0-9-]+)(?:\s+(.+))?\s*$", routing_text, flags=re.IGNORECASE)
+    if ric_match:
+        ric_key = ric_match.group(1).lower()
+        ric_arg = (ric_match.group(2) or "").strip()
+        if ric_key == "index-pulse":
+            index_name = ric_arg or "NIFTY 50"
+            return {
+                "intent": "index_status",
+                "plan": [
+                    ("get_index_snapshot", {"index_name": index_name}),
+                    ("get_market_breadth", {"index": index_name}),
+                ],
+            }
+        if ric_key == "sector-xray":
+            return {
+                "intent": "sector_deep_dive",
+                "plan": [("get_sector_context", {"sector_or_symbol": ric_arg or "IT"})],
+            }
+        if ric_key == "breakout-hunter":
+            return {
+                "intent": "screener",
+                "plan": [("run_screener_query", {"screen_type": "breakouts"})],
+            }
+        symbol_arg = (re.split(r"[\s,]+", ric_arg.strip())[0] if ric_arg else "RELIANCE").upper()
+        if not re.fullmatch(r"[A-Z0-9&-]{2,20}", symbol_arg):
+            symbol_arg = "RELIANCE"
+        return {
+            "intent": "stock_brief",
+            "plan": _with_dynamic_stock_evidence([
+                ("resolve_symbol", {"query": symbol_arg}),
+                ("get_symbol_snapshot", {"symbol": symbol_arg}),
+                ("get_technical_setup", {"symbol": symbol_arg}),
+                ("get_sector_context", {"sector_or_symbol": symbol_arg}),
+            ], q, symbol_arg),
+        }
+
     stock_360_symbol = _stock_360_prompt_symbol(routing_text)
     if stock_360_symbol:
         return {
@@ -3059,11 +3178,31 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         "long term growth", "long-term growth", "growth potential", "compounder",
         "compounders", "quality growth", "deep research", "deep dive research",
     )
-    if any(term in q for term in growth_research_terms) and any(term in q for term in ("stock", "stocks", "index", "indices", "midcap", "smallcap")):
-        index_scope = "SMALLCAP" if "smallcap" in q or "small cap" in q else ("NIFTY 500" if "nifty 500" in q else "MIDCAP")
+    index_universe_pick_terms = (
+        any(term in q for term in ("best", "top", "pick", "picks", "shortlist", "select", "candidate", "candidates"))
+        and any(term in q for term in ("technical", "fundamental", "fundamentals", "quality", "score", "scores"))
+        and any(term in q for term in ("stock", "stocks", "names", "companies"))
+        and any(term in q for term in ("index", "indices", "nifty", "midcap", "smallcap"))
+    )
+    if (
+        any(term in q for term in growth_research_terms)
+        and any(term in q for term in ("stock", "stocks", "index", "indices", "midcap", "smallcap"))
+    ) or index_universe_pick_terms:
+        if "smallcap" in q or "small cap" in q:
+            index_scope = "SMALLCAP"
+            breadth_index = "NIFTY SMALLCAP 250"
+        elif "nifty 500" in q or "nifty500" in q:
+            index_scope = "NIFTY 500"
+            breadth_index = "NIFTY 500"
+        elif "nifty 50" in q or "nifty50" in q:
+            index_scope = "NIFTY 50"
+            breadth_index = "NIFTY 50"
+        else:
+            index_scope = "MIDCAP"
+            breadth_index = "NIFTY MIDCAP 150"
         return {"intent": "long_term_growth_research", "plan": [
             ("get_long_term_growth_candidates", {"index_scope": index_scope, "top_n": 12, "include_research": True}),
-            ("get_market_breadth", {}),
+            ("get_market_breadth", {"index": breadth_index}),
         ]}
 
     # Specific index query must be handled before generic market/breadth words;
@@ -3211,6 +3350,11 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
     ]
 
     portfolio_subject_terms = ("i own", "my portfolio", "my porfolio", "portfolio", "porfolio", "holdings", "holding")
+    portfolio_symbol_subject_terms = (
+        "i own", "i hold", "we own", "we hold",
+        "my portfolio", "my porfolio", "portfolio", "porfolio",
+        "my holdings", "our holdings", "holdings summary",
+    )
     portfolio_forensic_terms = (
         "forensic", "beneish", "piotroski", "petroski", "altman",
         "manipulation", "earnings quality", "financial health",
@@ -3230,6 +3374,18 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         sum(1 for term in ("canslim", "can slim", "rs", "relative strength", "fundamental", "piotroski", "petroski") if term in q) >= 2
         and any(w in q for w in ("strength", "strong", "which", "rank", "out of"))
     )
+    if _looks_like_stock_research_prompt(q):
+        research_symbol = _stock_research_symbol_from_query(routing_text)
+        if research_symbol:
+            plan = [
+                ("resolve_symbol", {"query": research_symbol}),
+                ("get_symbol_snapshot", {"symbol": research_symbol}),
+                ("get_technical_setup", {"symbol": research_symbol}),
+                ("get_sector_context", {"sector_or_symbol": research_symbol}),
+            ]
+            plan = _with_dynamic_stock_evidence(plan, q, research_symbol)
+            return {"intent": "stock_brief", "plan": plan}
+
     if (
         not is_single_stock_technical_setup
         and not is_strength_validation_query
@@ -3246,7 +3402,7 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
             "plan": [("compare_stocks", {"symbols": symbol_candidates[:5], "aspects": aspects})],
         }
 
-    if any(term in q for term in portfolio_subject_terms) and symbol_candidates:
+    if any(term in q for term in portfolio_symbol_subject_terms) and symbol_candidates:
         return {
             "intent": "portfolio_review",
             "plan": [("generate_portfolio_narratives", {"symbols": symbol_candidates[:10], "top_n": min(len(symbol_candidates), 10)})],
@@ -5032,6 +5188,24 @@ class Agent:
         # instead of letting VisualScanProvider preempt the report.
         if _stock_360_prompt_symbol(ctx.clean_input):
             return None
+        if any(term in ctx.clean_input.lower() for term in (
+            "my portfolio",
+            "my porfolio",
+            "portfolio sector",
+            "portfolio exposure",
+            "portfolio distribution",
+            "portfolio concentration",
+            "portfolio holdings",
+        )):
+            return None
+        qlow = ctx.clean_input.lower()
+        if _looks_like_stock_research_prompt(qlow) and _stock_research_symbol_from_query(ctx.clean_input):
+            return None
+        if "sector" in qlow and re.search(
+            r"\b(?:it|pharma|auto|fmcg|banking|bank|metal|metals|realty|real estate|energy|oil\s+(?:&|and)\s+gas|consumer discretionary|consumer durables)\b",
+            qlow,
+        ):
+            return None
         pack = self._build_context_pack()
         if pack is None:
             return None
@@ -5057,10 +5231,23 @@ class Agent:
         self, ctx: _PipelineCtx, entity_assessment=None
     ) -> dict | None:
         """Resolve entity-topic queries (e.g. 'RELIANCE technicals') deterministically."""
+        # Contextual follow-ups such as "open it" or "what about its EPS
+        # growth" must bind to the active turn context before entity-topic
+        # tries to resolve fragments like "open" or "its EPS growth" as
+        # stock symbols.
+        if needs_situation_assessment(ctx.clean_input) or (
+            self._last_turn_context is not None
+            and _is_implicit_results_followup(ctx.clean_input)
+        ) or should_run_llm_situation_assessment(ctx.clean_input, self._last_turn_context):
+            return None
         if entity_assessment is None:
             entity_assessment = assess_entity_topic_request(ctx.clean_input)
         if not (entity_assessment.applies and entity_assessment.decision == "route_with_entity_topic"):
             return None
+        return self._execute_entity_topic_assessment(ctx, entity_assessment)
+
+    def _execute_entity_topic_assessment(self, ctx: _PipelineCtx, entity_assessment) -> dict | None:
+        """Execute an entity/topic assessment as a situation-owned sub-route."""
         ctx.trace.append({"step": "entity_topic_assessment", "result": entity_assessment.__dict__})
         entity_plan = _entity_topic_execution_plan(entity_assessment)
         if not entity_plan:
@@ -5262,11 +5449,19 @@ class Agent:
         """Handle contextual follow-ups via situation assessment."""
         if _stock_360_prompt_symbol(ctx.clean_input):
             return None
+        entity_assessment = assess_entity_topic_request(ctx.clean_input)
         needs_context = needs_situation_assessment(ctx.clean_input)
+        if not needs_context and entity_assessment.applies:
+            needs_context = True
         if (
             not needs_context
             and self._last_turn_context is not None
             and _is_implicit_results_followup(ctx.clean_input)
+        ):
+            needs_context = True
+        if (
+            not needs_context
+            and should_run_llm_situation_assessment(ctx.clean_input, self._last_turn_context)
         ):
             needs_context = True
         if not needs_context:
@@ -5274,7 +5469,72 @@ class Agent:
         previous_context = self._last_turn_context or self._conversation_fallback_context(
             mode=ctx.mode, source_label=ctx.source_label,
         )
-        assessment = assess_followup(ctx.clean_input, previous_context)
+
+        if (
+            entity_assessment.applies
+            and entity_assessment.decision == "route_with_entity_topic"
+        ):
+            ctx.trace.append({
+                "step": "situation_assessment",
+                "result": {
+                    "applies": True,
+                    "decision": "route_with_entity_topic",
+                    "confidence": entity_assessment.confidence,
+                    "user_is_asking": entity_assessment.user_is_asking,
+                    "context_found": "Direct entity/topic command delegated by situation assessment.",
+                    "resolved_entities": [entity_assessment.canonical_symbol],
+                },
+            })
+            return self._execute_entity_topic_assessment(ctx, entity_assessment)
+        if (
+            entity_assessment.applies
+            and entity_assessment.decision == "ask_clarification"
+        ):
+            assessment = SituationAssessment(
+                applies=True,
+                decision="ask_clarification",
+                confidence=entity_assessment.confidence,
+                user_is_asking=entity_assessment.user_is_asking,
+                context_found="Direct entity/topic command is missing a stock or company.",
+                clarification_question="Which NSE symbol or company should I use?",
+                plan=entity_assessment.plan,
+            )
+            ctx.trace.append({"step": "situation_assessment", "result": assessment.__dict__})
+            fallback_context = previous_context or TurnContext(
+                user_input="", intent="unknown", mode=ctx.mode,
+                tools=[], source_label=ctx.source_label,
+            )
+            answer = render_context_answer(ctx.clean_input, assessment, fallback_context)
+            self._pending_clarification = assessment
+            self._remember_interaction(ctx.clean_input, answer, [])
+            return {
+                "answer": answer,
+                "trace": ctx.trace,
+                "backend": self.backend_name,
+                "intent": "situation_assessment",
+            }
+
+        llm_assessment = None
+        if should_run_llm_situation_assessment(ctx.clean_input, previous_context):
+            llm_assessment = classify_llm_situation_assessment(
+                ctx.clean_input,
+                previous_context,
+                self.backend,
+                data_mode=ctx.mode,
+                market_status={
+                    "status": getattr(ctx.market_status, "compact_label", ""),
+                    "clock": getattr(ctx.market_status, "clock_label", ""),
+                },
+            )
+            ctx.trace.append({
+                "step": "llm_situation_assessment",
+                "result": {
+                    "used": llm_assessment is not None,
+                    "decision": getattr(llm_assessment, "decision", ""),
+                    "confidence": getattr(llm_assessment, "confidence", ""),
+                },
+            })
+        assessment = llm_assessment or assess_followup(ctx.clean_input, previous_context)
         ctx.trace.append({"step": "situation_assessment", "result": assessment.__dict__})
 
         if assessment.applies and assessment.decision in {"answer_from_context", "ask_clarification"}:
@@ -5733,8 +5993,8 @@ class Agent:
         Pipeline (AA-AR-2):
           1. _stage_clarification_binding — match reply to pending structured clarification
           2. _stage_unified_router        — UnifiedRouter owns compound/entity/market routes
-          3. _stage_entity_topic          — deterministic entity-topic resolution
-          4. _stage_situation_assessment  — contextual follow-up assessment
+          3. _stage_entity_topic          — legacy fallback for deterministic entity-topic resolution
+          4. _stage_situation_assessment  — contextual follow-up + entity-topic orchestration
           5. _stage_skill_store           — validated skill retrieval/execution for open-ended asks
           6. _stage_semantic_intent       — LLM intent classification with fixed grounded plans
           7. _stage_keyword_and_llm       — keyword intent dispatch → LLM path → fallback
