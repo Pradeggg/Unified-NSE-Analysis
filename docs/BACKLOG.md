@@ -451,6 +451,53 @@ Source: end-to-end code review of `nse_agent.py` / `terminal/agent.py` Stages 0�
 | AA-AR-9 Verify Primary Symbol Extraction Path Applies Finance-Term Exclusions | ✅ DONE (audit) | P2 | `terminal/entity_resolution.py` | Code audit confirmed: `_requested_symbol_tokens()` at line 376 already applies `TECHNICAL_NON_SYMBOL_TERMS` (RSI, EBITDA, ATR, etc.) and `CONTEXT_NON_SYMBOL_TERMS` in the primary path. No code change required; primary path already correct. | Primary path confirmed correct via code audit; EBITDA/ROE/ATR/PE already excluded before `validate_requested_symbols` returns. |
 | AA-AR-10 Compound Query Context Isolation | ✅ DONE | P2 | `terminal/agent.py` | Snapshot `_pre_symbols = list(self._last_symbols)` and `_pre_context = self._last_turn_context` before compound loop. Restore both before each sub-query call so each sub-query sees pre-compound state for pronoun resolution and situation assessment. | Each sub-query in a compound prompt sees the pre-compound context snapshot; no context contamination across sub-queries. |
 | AA-AR-11 Replace `"Mode:"` Substring Search with Structured Flag | ✅ DONE | P2 | `terminal/agent.py` | `_llm_query()` returns `has_source_trail: bool` in result dict (True when `_Mode:` or `Mode: ` appears in last 300 chars). `_query_single` checks `result.get("has_source_trail", False)` instead of substring scan on last 600 chars. | `mode_suffix` never double-appended; responses >600 chars with early `Mode:` receive exactly one suffix append. |
+| AA-AR-12 Semantic Intent Owns NL Routing, Keyword Fallback Safe-Only | 🔜 READY | P0 | `terminal/agent.py`, `terminal/semantic_intent.py`, `terminal/skills/runtime_assessment.py`, `tests/test_terminal_agent_market_prompt.py`, `tests/test_semantic_intent.py`, `tests/test_skill_store_runtime_assessment.py` | Reorder the natural-language path so slash commands and explicit command dispatch stay first, then clarification/context/entity extraction, then semantic/LLM intent, then Skill Store retrieval using semantic intent + resolved entities. Remove `_keyword_intent()` from Skill Store suppression. Demote keyword routing to a safe-only fallback for high-confidence utility routes and forbid fuzzy stock resolution from arbitrary instruction words. This addresses the KIMS/company-xray failure class where generated instruction text like `Keep the answer evidence-first` was split and resolved as `KEEPLEARN`. | `Resolve KIMS ... Keep the answer evidence-first` runs once for KIMS and never introduces KEEP/KEEPLEARN; semantic intent is evaluated before keyword stock routing for NL prompts; Skill Store receives semantic intent/resolved entities instead of `_keyword_intent()`; keyword fallback cannot create stock plans from standalone instruction words; existing slash commands and deterministic market/screener commands remain stable. |
+| AA-AR-13 `nse_agent.py` Refactor Safety Harness | 🧩 PARTIAL (command inventory + registry snapshot test added) | P0 | `nse_agent.py`, `agent_adda/cli.py`, `tests/test_nse_agent_*.py`, `tests/test_terminal_agent_market_prompt.py`, `docs/refactor/nse_agent_command_inventory.md` | Before moving code, create a command and behavior inventory for the 10k+ line `nse_agent.py` surface. Capture slash commands, single-query routes, interactive-only state machines, startup readiness, report open/export flows, dashboard flows, monitor/scan flows, and known smoke commands. Added `CommandRegistry.snapshot()` and `tests/test_command_registry_inventory.py` to mechanically lock shared-registry coverage. Remaining work: expand smoke coverage for startup readiness, report open/export, dashboard, and paper-trading/backtest flows before large code moves. | Inventory exists with command owner/function mapping. Smoke tests cover representative stock, index, market breadth, `/help`, `/scan`, `/monitor`, `/dashboard`, report open/export, paper-trading/backtest, and startup-readiness paths. No production behavior changes in this row. |
+| AA-AR-14 Extract Terminal UI Rendering From `nse_agent.py` | 🧩 PARTIAL (link helpers extracted) | P0 | `nse_agent.py`, `terminal/ui/console.py`, `terminal/ui/markdown.py`, `terminal/ui/response.py`, `terminal/ui/links.py`, `tests/test_nse_agent_interaction_commands.py`, `tests/test_terminal_renderer_guards.py`, `tests/test_terminal_ui_links.py` | Move pure UI helpers out of `nse_agent.py`: Rich console setup, markdown/table rendering, linkification, response printing, footer/source-trail presentation, and terminal-safe formatting. First slice extracted Markdown/Rich link helpers to `terminal/ui/links.py`; `nse_agent.py` keeps compatibility aliases `_linkify_markdown` and `_text_with_links`. Remaining work: move Markdown subclass, Rich table rendering, `_print_response`, source/footer presentation, and console setup behind focused modules. | `nse_agent.py` no longer owns low-level response rendering. Existing response formatting, source trail, cost trail, links, and markdown tables render identically in snapshot/smoke tests. Compatibility imports remain until dependent tests are migrated. |
+| AA-AR-15 Extract Prompt Session, Completer, And Toolbar | 🔜 READY | P1 | `nse_agent.py`, `terminal/ui/prompt.py`, `terminal/ui/toolbar.py`, `tests/test_nse_agent_interaction_commands.py` | Move PromptToolkit session creation, `_AgentCompleter`, toolbar/status rendering, command autocomplete, and prompt styling into focused UI modules. The chat loop should receive a prompt/session abstraction instead of constructing prompt internals inline. | Interactive mode keeps the same prompt behavior, autocomplete options, toolbar state, and style/verbosity controls. Unit tests can exercise completer behavior without importing the full `nse_agent.py` runtime. |
+| AA-AR-16 Modular Slash Command Dispatcher | 🔜 READY | P0 | `nse_agent.py`, `terminal/command_registry.py`, `terminal/commands/dispatcher.py`, `terminal/commands/*.py`, `tests/test_nse_agent_interaction_commands.py`, `tests/test_nse_agent_monitor_scan.py` | Convert the remaining chat-loop slash-command branching into a registry-backed dispatcher. Start by wrapping existing handler functions, then move command families into `terminal/commands/`: help, report, scan, monitor, dashboard, backtest/paper-trading, refresh/load, RIC, style/verbosity, and open/export. Preserve interactive state machines such as pending email pipe explicitly. | Adding a slash command requires registering one `CommandSpec`, not editing a long `if/elif` chain. Existing command tests and interactive smoke commands pass. Unrecognized slash commands still fail gracefully with help-oriented output. |
+| AA-AR-17 Extract Market Dashboard Runtime | 🔜 READY | P1 | `nse_agent.py`, `terminal/dashboard/data.py`, `terminal/dashboard/render.py`, `terminal/dashboard/live.py`, `terminal/dashboard/html.py`, `tests/test_nse_agent_monitor_scan.py`, `tests/test_renderers.py` | Move market dashboard data fetch, dashboard renderers, HTML export, live refresh loop, and dashboard command glue into `terminal/dashboard/`. Keep dashboard command entrypoints thin and call module APIs from `nse_agent.py` until AA-AR-19. | `/dashboard` and related dashboard flows produce the same terminal/HTML output. Live dashboard refresh remains bounded and interruptible. Dashboard module can be tested without entering the main chat loop. |
+| AA-AR-18 Extract Report, Scan, Monitor, And RIC Workflow Modules | 🔜 READY | P1 | `nse_agent.py`, `terminal/commands/reports.py`, `terminal/commands/scan.py`, `terminal/commands/monitor.py`, `terminal/workflows/ric.py`, `tests/test_ric_company_xray.py`, `tests/test_nse_agent_monitor_scan.py` | Move large command families and workflow helpers out of `nse_agent.py` after dispatcher extraction is stable. Reports own latest-report lookup/open/export. Scan owns scan parsing and tool-call translation. Monitor owns monitor argument parsing, event rendering, and alert auto-display. RIC owns recipe execution and report printing. | Each workflow family has a focused module with tests. Existing public function names either remain as compatibility wrappers or tests are migrated intentionally. No loss of report context, monitor alerts, or RIC behavior. |
+| AA-AR-19 Thin `nse_agent.py` To Compatibility Entrypoint | 🔜 READY | P1 | `nse_agent.py`, `agent_adda/cli.py`, `agent_adda/app.py`, `tests/test_nse_agent_interaction_commands.py`, `tests/test_ric_company_xray.py` | After UI, prompt, command, dashboard, and workflow extraction, reduce `nse_agent.py` to a compatibility shim that imports and calls `agent_adda.cli.main`. Move app lifecycle, startup readiness, briefing, single-query execution, and chat loop orchestration into `agent_adda/app.py` / `agent_adda/cli.py`. | `python nse_agent.py ...` remains fully supported. `nse_agent.py` is under 200 lines. CLI entrypoints behave identically for interactive mode, `--query`, `--trace`, `--skip-readiness`, startup briefing, and mode/theme/scale flags. |
+| AA-AR-20 Split `terminal/agent.py` Pipeline Internals After CLI Refactor | 🔜 READY | P1 | `terminal/agent.py`, `terminal/pipeline/*.py`, `terminal/router/*`, `terminal/renderers/narrator.py`, `tests/test_terminal_agent_market_prompt.py`, `tests/test_semantic_intent.py`, `tests/test_skill_store_runtime_assessment.py` | Only after `nse_agent.py` is thin, split the agent runtime into focused pipeline modules: clarification binding, unified router execution, entity/topic assessment, situation assessment, Skill Store runtime assessment, semantic/LLM intent, keyword safe fallback, tool execution, and final synthesis. Keep the current named-stage behavior from AA-AR-2 as the migration spine. | `terminal/agent.py` no longer owns every pipeline concern directly. Stage order is explicit and testable. Semantic/LLM intent remains first-class before keyword fallback. Final synthesizer receives expanded query, context, structured render, and tool evidence consistently. |
+
+### Agent Adda Web Charting Workbench Backlog — 2026-06-11
+
+Goal: build a first-class browser application for NSE/BSE market analysis with native charting, technical indicators, symbol search, watchlists, and an LLM chart-reader that can analyze the visible chart/screenshot and produce intraday setups grounded in chart evidence. This is not an embedded TradingView widget; charts must be rendered by Agent Adda from local/PG/API evidence. A companion browser plugin is also in scope: the user opens TradingView or another chart page manually, then Agent Adda captures the visible chart with explicit user action and analyzes it using screenshot vision plus Agent Adda structured evidence. The chart intelligence layer also surfaces deterministic pattern detection from the K13 engine (head-and-shoulders, cup-and-handle, VCP, double top/bottom, flags) grounded by K15 backtest evidence.
+
+Design gate: WEB-1 architecture spec and WEB-16 API contract must both complete before implementation. Canonical spec path after approval: `docs/superpowers/specs/2026-06-11-agent-adda-web-charting-workbench-design.md`.
+
+**Implementation phases:**
+
+| Phase | Items | Gate |
+|-------|-------|------|
+| **Phase 0 — Design** | WEB-1, WEB-16 (API surface) | Both must be approved before Phase 1 |
+| **Phase 1 — Data + Evidence** | WEB-3, WEB-12 | PG API + capture contract define all downstream data contracts |
+| **Phase 2 — Core Chart** | WEB-2, WEB-4 | Chart surface + indicators; requires Phase 1 |
+| **Phase 3 — Intelligence** | WEB-6, WEB-13, WEB-17 | LLM reader, chart memory, pattern bridge; requires WEB-12 |
+| **Phase 4 — Plugin** | WEB-11, WEB-9 | Browser plugin + guardrails; requires WEB-6 + WEB-12 |
+| **Phase 5 — UX + Ops** | WEB-5, WEB-7, WEB-8, WEB-10 | Search, panels, export, QA harness |
+| **Phase 6 — Advanced** | WEB-14, WEB-15 | Scenario simulation + strategy playbook |
+
+| Item | Status | Priority | Files | Design / Implementation | Acceptance Criteria |
+|---|---|---|---|---|---|
+| AA-WEB-1 Product Design And Architecture Spec | 🔜 READY | P0 | `docs/superpowers/specs/2026-06-11-agent-adda-web-charting-workbench-design.md`, `docs/superpowers/plans/2026-06-11-agent-adda-web-charting-workbench.md` | Use the visual companion to choose the first-screen layout, app navigation, chart workspace density, indicator panel model, chatbot placement, and data/API architecture. Decide whether the first build is React/Vite + Python API, FastAPI/Jinja, or another repo-native stack. | Approved design captures user workflows, data sources, component boundaries, API contracts, failure states, model usage, and regression plan. |
+| AA-WEB-2 Native Candlestick Chart Workspace | 🔜 READY | P0 | Web app scaffold, chart components, chart data services, tests | Build a TradingView-like but non-TradingView charting surface with OHLC candles, volume, crosshair, zoom/pan, range selector, drawing/annotation layer, right-side price axis, and persistent workspace state. Reuse proven concepts from `top_picks_report.py` where practical while moving to a reusable browser runtime. | Daily and intraday charts render from Agent Adda data; crosshair/zoom/range controls work; chart remains responsive on desktop and mobile; no TradingView iframe/widget dependency. |
+| AA-WEB-3 PostgreSQL Market Data API | 🔜 READY | P0 | API service, PG repository layer, symbol/ohlcv endpoints, tests | Serve symbols, exchanges, OHLCV, index constituents, breadth, technical snapshots, and latest intraday/EOD bars from PostgreSQL first, with explicit stale/missing evidence responses. Support NSE and BSE symbol namespaces. | API returns bounded, typed JSON for symbol search and chart history; stale/missing data is visible to the UI; API tests cover valid symbols, aliases, unknown symbols, and unavailable PG. |
+| AA-WEB-4 Indicator Engine And Overlay Library | 🔜 READY | P0 | Indicator calculators, chart overlays, UI controls, tests | Add configurable EMA/SMA, RSI, MACD, Supertrend, VWAP, ATR, ADX, Bollinger Bands, volume profile, support/resistance, pivots, 52-week levels, Weinstein stage, VCP/compression markers, and high-volume flush detection. | Users can add/remove indicators without chart reload; indicator values match existing Agent Adda calculations within tolerance; overlays are readable and do not obscure candles. |
+| AA-WEB-5 Symbol Search, Watchlists, And Multi-Exchange Routing | 🔜 READY | P1 | Search UI, watchlist state, symbol resolver API, tests | Provide fast search for NSE/BSE symbols, aliases, company names, indices, sectors, and portfolio lists. Add watchlists, recent symbols, exchange chips, and disambiguation for collisions. | Search resolves common names and exact symbols; BSE/NSE collisions are explicit; watchlists persist locally and can open a chart in one click. |
+| AA-WEB-6 LLM Chart Reader And Technical Analysis Chatbot | 🔜 READY | P0 | Chart-analysis API, LLM prompt contract, screenshot/chart-state capture, chat UI, tests | First-class LLM workflow that reads the expanded user question, visible OHLCV/indicator state, selected symbol/timeframe, chart annotations, and a chart screenshot/image payload when available. It must support conversational technical-analysis turns: chart insights, support/resistance, targets, stop loss/invalidation, risk/reward, bull/bear scenarios, indicator interpretation, intraday setup, swing setup, and follow-up questions bound to the same captured chart. It must produce evidence-grounded insights such as flush timing, EMA compression, Supertrend flips, RSI recovery, distribution vs reversal, bull/bear levels, stops, and research-only caveats. | Chatbot cites visible chart facts and computed levels; unsupported claims are blocked; screenshot and structured chart-state paths both work; output includes key insights, support/resistance, target zones, stop/invalidation, risk/reward, bull/bear setup, and source/evidence trail. Follow-ups like "what is the stop loss?", "simulate the bear case", and "what changed since the last capture?" bind to the active chart context. |
+| AA-WEB-7 Workspace UX, Heat Maps, And Market Context Panels | 🔜 READY | P1 | Layout components, market panels, heat map views, responsive styles | Add market breadth, sector heat map, watchlist heat map, top movers, index/sector context, recent catalysts, and compact technical/fundamental summary panels around the chart without turning the app into a cluttered dashboard. | First screen is usable for chart analysis; panels can collapse; heat maps use clear color encoding and labels; mobile layout keeps the chart and chat usable. |
+| AA-WEB-8 Export, Report, And Terminal Bridge | 🔜 READY | P1 | Export service, report renderer bridge, terminal command links, tests | Allow exporting chart snapshots, LLM chart reads, and selected symbol setup into HTML/Markdown reports. Add links from Agent Adda terminal outputs to open a symbol in the web workbench. | Exported report includes chart, indicators, annotations, LLM setup, evidence trail, and timestamp; terminal can open a symbol/chart context in the web app. |
+| AA-WEB-9 Security, Cost, And Evidence Guardrails | 🔜 READY | P0 | API auth/local-only policy, model budget controls, evidence validator, tests | Keep the first version local-first. Add request limits, model/cost telemetry, prompt injection controls for chart annotations/news text, and evidence validation so the model cannot invent market facts. | LLM calls show token/cost metadata; chart analysis refuses missing data cleanly; user-supplied labels cannot override system/evidence instructions. |
+| AA-WEB-10 Browser Regression And Visual QA Harness | 🔜 READY | P0 | Frontend tests, Playwright/browser smoke, fixtures, screenshots | Add deterministic chart fixtures, API mocks, browser smoke flows, responsive screenshots, and visual checks for blank charts, clipped labels, broken search, and chat regression. | CI/local command validates chart render, search, indicator toggles, LLM fallback/error states, export, and desktop/mobile layouts. |
+| AA-WEB-11 Browser Plugin / Side Panel Companion | 🔜 READY | P0 | Browser extension package, side panel UI, content scripts, capture service, local API bridge, tests | Add a browser plugin where the user manually opens TradingView or any chart page, then invokes Agent Adda from a side panel or overlay. The plugin captures the visible tab/chart screenshot with user permission, collects optional page metadata such as URL/title/symbol/timeframe when available, and sends it to the local Agent Adda chart-analysis API. The agent must not navigate TradingView or bypass access controls. **⚠️ Captured-first enforcement is mandatory:** analysis cannot begin until the user explicitly triggers a screenshot capture from the plugin UI; background/automatic captures are prohibited; in-extension controls must prevent any page navigation by Agent Adda code. | On a user-opened TradingView chart, the plugin can capture the visible chart, attach symbol/timeframe metadata, call local Agent Adda, and render key insights/trade setup in the side panel. Captured-first: no analysis runs without user-triggered capture action. In-extension safeguards block Agent Adda from navigating the charted page. Missing or ambiguous symbol/timeframe triggers clarification instead of guessed analysis. |
+| AA-WEB-12 Chart Capture Evidence Contract | 🔜 READY | P0 | Shared capture schema, LLM prompt contract, evidence validator, fixtures, tests | Define the contract for screenshot-based analysis: `{image, source_url, page_title, user_symbol, exchange, timeframe, visible_indicators, user_question, pg_evidence, conflict_policy}`. Treat visual observations as observations, not facts, unless confirmed by structured Agent Adda evidence. If screenshot and PG data disagree, report the mismatch and prefer PG for numeric claims. | Regression tests prove screenshot-only output is caveated; screenshot + PG output uses exact structured levels; conflicting symbol/timeframe/data produces a visible evidence warning. |
+| AA-WEB-13 Conversational Chart Memory And Follow-Up Binding | 🔜 READY | P0 | Side panel chat state, local session store, active chart context, tests | Persist the active capture context in the browser side panel: screenshot id, symbol, exchange, timeframe, captured_at, visible indicators, computed levels, user drawings, LLM conclusions, and PG evidence version. Follow-up chat turns must bind to that active chart unless the user switches symbol/timeframe or recaptures. | "What is support?", "where is stop loss?", "give targets", "what if it breaks VWAP?", and "compare with previous capture" answer from the active chart context without re-resolving to the wrong symbol. Context reset/symbol switch is explicit. |
+| AA-WEB-14 Technical Scenario Simulation Engine | 🔜 READY | P1 | Scenario service, strategy simulator bridge, chart projections, tests | Add deterministic simulations for technical scenarios: breakout, failed breakout, breakdown, pullback-to-EMA, VWAP reclaim, Supertrend flip, gap-up/gap-down, ATR-based stop, trailing stop, and position sizing. The LLM can explain scenarios, but deterministic calculators own target/stop/risk/reward math. | User can ask "simulate bull and bear case", "what target if resistance breaks?", "where should stop trail?", and "risk 1% capital"; output includes assumptions, levels, R/R, invalidation, and clear research-only caveat. |
+| AA-WEB-15 Strategy Playbook And Backtest Bridge | 🔜 READY | P1 | Strategy templates, backtesting bridge, paper-trading bridge, report export, tests | Let the browser chat invoke approved Agent Adda strategy templates and existing paper/backtest infrastructure for chart-context workflows: Weinstein Stage 2, VCP breakout, pullback to 20/50 EMA, Supertrend trend-following, RSI recovery, Darvas box, and intraday ORB/VWAP setups. LLM proposes a strategy only as structured intent; deterministic backend validates and runs it. | User can ask "test this setup", "which strategy fits this chart?", "backtest similar breakouts", and "create a paper trade plan"; results include strategy assumptions, historical sample caveats, metrics, trade plan, and evidence trail. |
+| AA-WEB-16 Agent Adda Capability Inheritance Layer | 🔜 READY | P0 | `agent_adda/web_api/`, `terminal/agent.py`, `terminal/tools.py`, `terminal/entity_resolution.py`, `terminal/research_council/`, `portfolio/`, `backtesting/`, web/plugin clients, tests | **⚠️ Co-design gate: must be reviewed as part of WEB-1 architecture spec before any other implementation begins.** Web chat calling `terminal/agent.py` without a clean API contract risks accidental coupling and leaking internal routing state. The API surface (endpoints, contracts, auth, error envelope) must be defined in WEB-1 and ratified before WEB-2/3/6 start. Implementation: expose existing Agent Adda capabilities to the web app and browser plugin through stable local APIs instead of duplicating logic. Inherit symbol/entity resolution, situation assessment, semantic intent, Skill Store routing, PG evidence tools, technical setup, market breadth, sector context, Screener/fundamental evidence, Research Council, RIC Sherlock/company x-ray, paper trading, backtesting, report generation, email/export, source trail, cost telemetry, and evidence guardrails. The browser UI becomes a client of Agent Adda's intelligence contracts. | Browser chat can call the same grounded capabilities as terminal Agent Adda. Responses include source trail/cost/evidence status. Existing terminal behavior remains unchanged. Capability APIs are covered by contract tests so web/plugin changes cannot bypass grounding, symbol validation, or deterministic strategy execution. API surface was ratified in WEB-1 spec before implementation began. |
+| AA-WEB-17 Chart Pattern Intelligence Bridge | 🔜 READY | P1 | `backtesting/strategies/patterns.py`, `terminal/tools.py`, `agent_adda/web_api/patterns.py`, `terminal/renderers/chart_pattern.py`, tests | Connect the deterministic pattern engine from K13/K15 (head-and-shoulders, inverse H&S, cup-and-handle, double top/bottom, VCP, flags, triangles, pennants) to the web chatbot (WEB-6) and browser plugin (WEB-11). When the LLM chart reader processes a symbol/timeframe, the bridge queries the K13 pattern detector for confirmed or in-progress patterns on the same symbol and timeframe, and injects neckline/breakout levels, target, stop, historical win rate, average move, and sample size from K15 backtests into the LLM evidence payload. Visual-only pattern guesses from the screenshot are labeled as observations; only K13-confirmed patterns carry deterministic levels. | Chart reader output cites confirmed patterns from the K13 engine with neckline/target/stop levels and K15 backtest stats; visual-only observations are labeled as such without deterministic levels; K13 detectors are callable as Agent Adda tools via the web API; LLM cannot invent pattern levels not present in K13 output; missing K13 data surfaces as "pattern not confirmed by engine" rather than guessed levels. |
 
 ### Claude Code–Inspired Enhancement Backlog — 2026-05-25
 
@@ -3564,6 +3611,222 @@ def render_filing_report(analysis: dict, output_format: str = "html") -> Path:
 
 **Deferred until:**
 - Daily US/global layer is stable and useful.
+
+---
+
+## 7. AGENT ADDA INTERACTIVE MODE — BUG BACKLOG
+
+> **Audit date:** 2026-06-10
+> **Method:** Full interactive + single-query run across all slash commands and NLP prompts.
+> **Scope:** `nse_agent.py`, `terminal/agent.py`, `terminal/renderer.py`, `terminal/renderers/`, `terminal/router/`.
+
+Severity key: 🔴 HIGH (broken user-facing feature) · 🟡 MEDIUM (degraded output) · 🟢 LOW (cosmetic / defensive)
+
+---
+
+### AA-01 — `/h` Ambiguity: EOD vs Help Collision 🔴
+**Files:** `nse_agent.py:8094, 8116`
+
+**What exists:** `/h` is in both the `/eod` set (line 8094, checked first with `continue`) and the `/help` set (line 8116, unreachable dead code).
+
+**Bug:** Typing `/h` always switches to EOD mode. The help shortcut at line 8116 is dead code.
+
+**Fix:** Remove `/h` from the `("/eod", "/historical", "/h")` set at line 8094, or pick a non-conflicting short form for EOD (e.g. `/e`). Update the help text / toolbar to match.
+
+---
+
+### AA-02 — Comparison Rich Table Never Renders 🔴
+**Files:** `terminal/agent.py:5620`, `nse_agent.py:5517-5519`
+
+**What exists:** `_render_comparison_table(comp)` in `_print_response()` renders a full Rich side-by-side table when `result["comparison"]` is present. The LLM path (line 5857) sets this key from the `compare_stocks` trace.
+
+**Bug:** Comparison queries (`compare TCS vs INFY`) route to the deterministic `stock_comparison` intent path, which returns `{"answer", "trace", "backend", "intent"}` — no `"comparison"` key (line 5620). The rich table is never rendered.
+
+**Fix:** In the deterministic return at `agent.py:5620`, extract the `compare_stocks` result from `tool_results` and add it as `"comparison"`:
+```python
+_comp = next((t["result"] for t in tool_results if t["tool"] == "compare_stocks"
+              and isinstance(t.get("result"), dict) and t["result"].get("stock_details")), None)
+return {"answer": answer, "trace": ctx.trace, "backend": self.backend_name,
+        "intent": _intent, "comparison": _comp}
+```
+
+---
+
+### AA-03 — `get_portfolio_exposure` Data Ignored by Synthesis 🔴
+**Files:** `terminal/renderers/stock_brief.py:~245`, `terminal/agent.py:3260`
+
+**What exists:** `portfolio_review` intent calls `get_portfolio_exposure()` which returns `total_stocks`, `symbols`, `sector_counts`, `top_holdings`. `stock_brief.py` handles `generate_portfolio_narratives` and `screen_portfolio_forensic_watchlist` but has **no handler** for `get_portfolio_exposure` results.
+
+**Bug:** LLM synthesis receives no structured renderer output for the portfolio data, so it falls back to "no portfolio data available" even when 224 stocks are returned by the tool.
+
+**Fix:** Add a `get_portfolio_exposure` section in `stock_brief.py` renderer:
+- Show `total_stocks`, `sector_counts` (top 5), and `top_holdings` (top 10 by value).
+- Pass the rendered output to `build_final_answer` as `structured_output`.
+
+---
+
+### AA-04 — "Insider Trading Alerts" Misrouted as Stock Ticker 🔴
+**Files:** `terminal/agent.py:~569 (system prompt)`, router phrase-matching
+
+**What exists:** System prompt at line 569 documents `"insider trading / promoter buying / ..."` → `search_insider_trades(symbol)`. But a symbol is required for that routing path.
+
+**Bug:** `"insider trading alerts"` (no symbol) is not matched by any phrase → falls to stock-brief path → resolves "insider" as ticker `INSIDER` → all tools error.
+
+**Fix:** Add a no-symbol insider route: when "insider" or "insider alerts" or "insider trading" is detected without a specific stock symbol → call `get_insider_alerts()` (aggregate). Add phrase match in planner.
+
+---
+
+### AA-05 — `/scenario` and `/cycle` Fall-Through on Error / Missing Symbol 🔴
+**Files:** `nse_agent.py:10104-10106, 10111-10113`
+
+**What exists:** `/scenario SYMBOL` and `/cycle` are `elif` handlers in the main REPL loop. They assign `text = "..."` on success and continue to the LLM routing path.
+
+**Bug:** On failure (missing symbol or tool error), both handlers print an error but **do not `continue`**. The raw `/scenario` or `/cycle` slash text then falls into generic query routing, causing a secondary LLM call.
+
+**Fix:** Add `continue` to every failure branch in both handlers:
+```python
+# /scenario — missing symbol
+if not sym:
+    console.print("[bold red]  Usage: /scenario SYMBOL [price1 price2 ...][/bold red]")
+    continue   # ← add this
+
+# /cycle — tool error
+if cycle.get("error"):
+    console.print(f"[red]  ❌  {cycle['error']}[/red]")
+    continue   # ← add this
+```
+
+---
+
+### AA-06 — `/narrative` Rejects Valid NSE Tickers with Digits; Falls Through on Empty-Portfolio Error 🔴
+**Files:** `nse_agent.py:10171, 10180`
+
+**What exists:** `/narrative [SYM ...]` parses symbols via `if p.isalpha()`.
+
+**Bug 1:** Valid NSE tickers containing digits (`3MINDIA`, `20MICRONS`, `63MOONS`) or `&` are silently dropped — narrative is run against zero stocks.
+
+**Bug 2:** When portfolio is empty, `generate_portfolio_narratives()` returns `{"error": "..."}`. Error branch prints but does **not `continue`** — the error text is then routed as an LLM query.
+
+**Fix:**
+```python
+# Replace isalpha() with a looser NSE-symbol pattern
+syms = [p.upper() for p in parts[1:] if re.match(r'^[A-Z0-9&]{2,}$', p.upper())]
+# Add continue in error branch
+if narr.get("error"):
+    console.print(f"[red]  ❌  {narr['error']}[/red]")
+    continue
+```
+
+---
+
+### AA-07 — Global Queries Misrouted to Market-Situation Tooling 🔴
+**Files:** `terminal/router/providers.py` (`_MARKET_PHRASES`)
+
+**What exists:** `_MARKET_PHRASES` includes `"global risk"`, `"global market"`, `"global cues"`, routing those phrases to `MarketSituationProvider` which runs `get_live_market_overview + get_market_breadth + get_top_gainers_losers` (NSE-only).
+
+**Bug:** Queries like `"Global market assessment for India"` or `"global cues for NSE"` return Indian live breadth data instead of global indices assessment. The slash command `/global` works correctly but NLP queries do not.
+
+**Fix:** Add a precedence check in the planner: if query contains "global" + ("assessment" | "cues" | "readthrough" | "indices") and does NOT start with an Indian-market intent word → route to `global_market_assessment` intent before checking `_MARKET_PHRASES`.
+
+---
+
+### AA-08 — Final-Answer Synthesis Duplicates and Can Contradict Deterministic Body 🟡
+**Files:** `terminal/agent.py:~3894`
+
+**What exists:** `_synthesize_and_narrate` prepends an LLM `▶ ANSWER` block above the full deterministic renderer output: `f"▶ ANSWER\n{answer}\n\n{structured}"`.
+
+**Bug:** Many responses render the same data twice (screener rows, sector leaders, breadth). Worse, the LLM answer uses one data snapshot (live API, ~339A/408D) while the deterministic body uses another (DB universe, 770A/181D), contradicting each other in the same turn.
+
+**Fix:** Implement a de-duplication rule: if `structured` already contains a `▶ SCREENER`, `▶ LIVE MARKET`, or `▶ BREADTH VERDICT` block, strip those sections from the LLM answer before prepending. Also ensure both answer and body use the same breadth data source (prefer live over DB for live-mode queries).
+
+---
+
+### AA-09 — Spinner Output Pollutes Piped / Captured stdout 🟡
+**Files:** `nse_agent.py:7050-7055, 10696`
+
+**What exists:** `sys.stdout.write(f"\r  ⠋  Agent Adda is thinking…")` runs during spinner animation. Startup banner also uses `\r`.
+
+**Bug:** When stdout is piped (e.g. `nse_agent.py -q "..." | grep`) or captured (CI tests, `subprocess.run`), hundreds of carriage-return frames contaminate the output.
+
+**Fix:**
+```python
+# Guard spinner behind TTY check
+if sys.stdout.isatty():
+    sys.stdout.write(f"\r  {frame}  Agent Adda is thinking…  ")
+    sys.stdout.flush()
+```
+
+---
+
+### AA-10 — `render_mode="narrative_first"` Not Honored 🟡
+**Files:** `nse_agent.py:5513-5527`, `terminal/renderer.py:824`
+
+**What exists:** `plan["render_mode"]` is read and stored in `render_mode`. `renderer.py:824` defines `narrative_first_for_types` list. The render logic only checks for `"narrative_only"` and `"tables_only"`.
+
+**Bug:** `"narrative_first"` plan mode is silently ignored — tables always render before body. The `narrative_first_for_types` list in renderer.py is defined but referenced nowhere.
+
+**Fix:** Add an elif branch:
+```python
+if render_mode == "narrative_first":
+    # Print markdown body first
+    _print_md_with_rich_tables(display)
+    render_trace_tables(trace, plan=plan)
+```
+
+---
+
+### AA-11 — Render Plan Header Style Unused 🟡
+**Files:** `nse_agent.py:5503-5508`
+
+**What exists:** `header_style = plan.get("_header_style", "green dim")` at line 5503. `apply_render_plan(plan)` can return a style based on sentiment/alert level.
+
+**Bug:** `header_style` is assigned but never used. `console.rule(... style="green dim")` at line 5507 is hardcoded.
+
+**Fix:** Apply the plan-driven style: `console.rule(..., style=header_style)`.
+
+---
+
+### AA-12 — Plain-Brief Detection Leaks Raw `**SYM**` Markdown Markers 🟡
+**Files:** `nse_agent.py:5529-5542`
+
+**What exists:** `_emphasize_symbols_outside_code(display, bold_syms)` wraps matched symbols in `**SYM**`. Then `_is_plain_agent_brief(display)` may return `True`, causing `console.print(_text_with_links(display), style="white")` — a plain-text print that outputs literal `**GRWRHITECH**`.
+
+**Bug:** Symbol emphasis is only useful when the Markdown renderer processes it. If the plain-brief path fires after emphasis injection, the stars are printed literally.
+
+**Fix:** Move symbol emphasis injection inside the `has_markup` branch (i.e. only apply it when the Markdown renderer will handle it):
+```python
+if has_markup:
+    if bold_syms:
+        display = _emphasize_symbols_outside_code(display, bold_syms)
+    _print_md_with_rich_tables(display)
+```
+
+---
+
+### AA-13 — Renderer Exceptions Silently Swallowed 🟢
+**Files:** `terminal/renderer.py:790-795`
+
+**What exists:** `render_trace_tables()` wraps each per-tool renderer in a bare `except Exception: pass`.
+
+**Bug:** Any rendering failure is invisible to the user and to log monitoring. Broken renderers are undetectable in production.
+
+**Fix:**
+```python
+except Exception:
+    logger.debug("render_trace_tables: renderer for %s raised", tool, exc_info=True)
+    # optionally: console.print(f"[dim red]  ⚠ render error for {tool}[/dim red]")
+```
+
+---
+
+### AA-14 — FNO `get_strategy_recommendations` Always Returns 404 🟢
+**Files:** `terminal/tools.py` (`get_strategy_recommendations`)
+
+**What exists:** `get_strategy_recommendations` fetches `https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY` as part of its logic.
+
+**Bug:** This endpoint returns HTTP 404 in all tested runs, causing `get_strategy_recommendations: ERROR` to appear in every F&O strategy trace.
+
+**Fix:** Add a try/except fallback that returns a stub `{"strategy": "...", "conditions": "..."}` when the live options chain is unavailable, or switch to the correct NSE endpoint (`/api/optionChain?symbol=NIFTY`).
 
 ---
 
