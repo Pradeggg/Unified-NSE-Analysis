@@ -1,0 +1,44 @@
+/* Agent Adda Chart Workbench — base styles */
+:root {
+  --bg:        #0d1117;
+  --surface:   #161b22;
+  --border:    #30363d;
+  --text:      #e6edf3;
+  --muted:     #8b949e;
+  --accent:    #1f6feb;
+  --bullish:   #3fb950;
+  --bearish:   #f85149;
+  --warn:      #d29922;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace;
+  font-size: 13px;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+input, button, select {
+  font-family: inherit;
+  font-size: inherit;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  outline: none;
+}
+input:focus, button:focus { border-color: var(--accent); }
+button { cursor: pointer; }
+button:hover { background: #21262d; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.bullish { color: var(--bullish); }
+.bearish { color: var(--bearish); }
+.muted   { color: var(--muted); }

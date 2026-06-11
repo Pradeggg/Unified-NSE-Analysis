@@ -11,7 +11,7 @@ import os
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routes import analysis, chart, patterns, health
+from .routes import analysis, chart, patterns, health, symbols
 
 app = FastAPI(
     title="Agent Adda Web API",
@@ -33,7 +33,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(health.router, prefix="/api")
+app.include_router(health.router,   prefix="/api")
+app.include_router(symbols.router,  prefix="/api/symbols",  tags=["symbols"])
 app.include_router(chart.router,    prefix="/api/chart",    tags=["chart"])
 app.include_router(analysis.router, prefix="/api/analysis", tags=["analysis"])
 app.include_router(patterns.router, prefix="/api/patterns", tags=["patterns"])
