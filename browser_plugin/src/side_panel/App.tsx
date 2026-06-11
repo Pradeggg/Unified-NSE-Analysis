@@ -1,44 +1,32 @@
 import { useState, useEffect, useCallback } from "react";
-import { Header } from "./components/Header";
+import { Header }        from "./components/Header";
 import { CaptureButton } from "./components/CaptureButton";
-import { LevelsPanel } from "./components/LevelsPanel";
-import { PatternPanel } from "./components/PatternPanel";
-import { ChatPanel } from "./components/ChatPanel";
+import { ChatPanel }     from "./components/ChatPanel";
 import { useChartContext } from "./store/chartContext";
-import {
-  analyzeChart,
-  askFollowUp,
-  fetchKeyLevels,
-  fetchPatterns,
-  healthCheck,
-} from "./api/client";
+import { analyzeChart, askFollowUp, healthCheck } from "./api/client";
 import type { Exchange, Timeframe, AnalysisResult, PageMetadata } from "../types";
 import "./App.css";
 
 export function App() {
-  // ── State ─────────────────────────────────────────────────────────────
-  const [symbol, setSymbol] = useState("BANKNIFTY");
-  const [exchange, setExchange] = useState<Exchange>("NSE");
+  const [symbol, setSymbol]       = useState("BANKNIFTY");
+  const [exchange, setExchange]   = useState<Exchange>("NSE");
   const [timeframe, setTimeframe] = useState<Timeframe>("5m");
   const [apiReachable, setApiReachable] = useState(false);
   const [capturing, setCapturing] = useState(false);
+  const [analysing, setAnalysing] = useState(false);
 
-  const { ctx, loading, createContext, updateLevels, addConclusion, updatePatterns, resetContext } =
-    useChartContext();
+  const { ctx, loading, createContext, addConclusion, resetContext } = useChartContext();
 
-  // ── API health check ──────────────────────────────────────────────────
+  // ── API health ────────────────────────────────────────────────────────────
   useEffect(() => {
     let alive = true;
-    const check = async () => {
-      const ok = await healthCheck();
-      if (alive) setApiReachable(ok);
-    };
+    const check = async () => { const ok = await healthCheck(); if (alive) setApiReachable(ok); };
     check();
     const timer = setInterval(check, 15_000);
     return () => { alive = false; clearInterval(timer); };
   }, []);
 
-  // ── Listen for page metadata from content script ──────────────────────
+  // ── Content script → update symbol/TF from page ──────────────────────────
   useEffect(() => {
     function onMessage(msg: { type: string; payload?: PageMetadata }) {
       if (msg.type === "PAGE_METADATA" && msg.payload) {
@@ -52,89 +40,69 @@ export function App() {
     return () => chrome.runtime.onMessage.removeListener(onMessage);
   }, []);
 
-  // ── Reset context when symbol/exchange/timeframe changes ─────────────
+  // ── Reset context when symbol/TF changes ─────────────────────────────────
   useEffect(() => {
     if (ctx && (ctx.symbol !== symbol || ctx.exchange !== exchange || ctx.timeframe !== timeframe)) {
       resetContext();
     }
   }, [symbol, exchange, timeframe]);
 
-  // ── Screenshot capture (CAPTURED-FIRST) ──────────────────────────────
+  // ── Capture + auto-analyse ────────────────────────────────────────────────
   const handleCapture = useCallback(async () => {
-    if (capturing) return;
+    if (capturing || analysing) return;
     setCapturing(true);
     try {
-      // Get the active tab's screenshot.
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!tab?.id) throw new Error("No active tab");
 
+      // Screenshot the visible chart.
       const dataUrl: string = await new Promise((resolve, reject) => {
         chrome.tabs.captureVisibleTab(
           tab.windowId!,
           { format: "png" },
-          (url) => {
-            if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
-            else resolve(url);
-          }
+          (url) => chrome.runtime.lastError ? reject(chrome.runtime.lastError) : resolve(url)
         );
       });
 
       createContext(symbol, exchange, timeframe, dataUrl);
+      setCapturing(false);
+      setAnalysing(true);
 
-      // Fetch PG key levels and patterns in parallel.
-      const [levelsRes, patternsRes] = await Promise.all([
-        fetchKeyLevels(symbol, exchange, timeframe),
-        fetchPatterns(symbol, exchange, timeframe),
-      ]);
-      if (levelsRes.ok && levelsRes.data) updateLevels(levelsRes.data);
-      if (patternsRes.ok && patternsRes.data) updatePatterns(patternsRes.data.patterns);
-
-      // Run initial analysis - setQuestion triggers ChatPanel default prompt.
-      setSymbol(symbol);
+      // Auto-fire initial analysis immediately — image is the source of truth.
+      const res = await analyzeChart({
+        image: dataUrl,
+        source_url: tab.url ?? null,
+        page_title: tab.title ?? null,
+        user_symbol: symbol,
+        exchange,
+        timeframe,
+        visible_indicators: [],
+        user_question: "Analyze this chart and give me the full setup.",
+        conflict_policy: "prefer_pg",
+      });
+      if (res.ok && res.data) addConclusion(res.data.answer);
     } catch (err) {
-      console.error("Capture failed:", err);
+      console.error("Capture/analysis failed:", err);
     } finally {
       setCapturing(false);
+      setAnalysing(false);
     }
-  }, [capturing, symbol, exchange, timeframe, createContext, updateLevels, updatePatterns]);
+  }, [capturing, analysing, symbol, exchange, timeframe, createContext, addConclusion]);
 
-  // ── Send analysis / follow-up ─────────────────────────────────────────
+  // ── Follow-up send ────────────────────────────────────────────────────────
   const handleSend = useCallback(
     async (q: string): Promise<AnalysisResult | null> => {
       if (!ctx) return null;
-
-      if (ctx.llm_conclusions.length === 0) {
-        // First question — send full capture payload with screenshot.
-        const res = await analyzeChart({
-          image: ctx.screenshot_data_url,
-          source_url: null,
-          page_title: null,
-          user_symbol: symbol,
-          exchange,
-          timeframe,
-          visible_indicators: ctx.visible_indicators,
-          user_question: q,
-          conflict_policy: "prefer_pg",
-        });
-        if (res.ok && res.data) {
-          addConclusion(res.data.answer);
-          if (res.data.key_levels) updateLevels(res.data.key_levels);
-          if (res.data.pattern_findings?.length) updatePatterns(res.data.pattern_findings);
-        }
-        return res.data ?? null;
-      } else {
-        // Follow-up — bind to active capture context.
-        const res = await askFollowUp(ctx.capture_id, q);
-        if (res.ok && res.data) addConclusion(res.data.answer);
-        return res.data ?? null;
-      }
+      const res = await askFollowUp(ctx.capture_id, q);
+      if (res.ok && res.data) addConclusion(res.data.answer);
+      return res.data ?? null;
     },
-    [ctx, symbol, exchange, timeframe, addConclusion, updateLevels, updatePatterns]
+    [ctx, addConclusion]
   );
 
-  if (loading) {
-    return <div className="loading">Loading…</div>;
-  }
+  if (loading) return <div className="loading">Loading…</div>;
+
+  const busy = capturing || analysing;
 
   return (
     <div className="app">
@@ -143,42 +111,34 @@ export function App() {
         exchange={exchange}
         timeframe={timeframe}
         apiReachable={apiReachable}
-        onSymbolChange={(s) => setSymbol(s)}
-        onExchangeChange={(e) => setExchange(e)}
-        onTimeframeChange={(t) => setTimeframe(t)}
+        onSymbolChange={setSymbol}
+        onExchangeChange={setExchange}
+        onTimeframeChange={setTimeframe}
       />
 
       <main className="main">
         <CaptureButton
-          disabled={!apiReachable}
+          disabled={!apiReachable || busy}
           capturing={capturing}
           capturedAt={ctx?.captured_at ?? null}
           onCapture={handleCapture}
         />
 
-        {ctx && (
-          <>
-            <LevelsPanel
-              levels={ctx.computed_levels}
-              currentPrice={null}
-            />
-            <PatternPanel
-              patterns={ctx.pattern_findings}
-              symbol={symbol}
-              timeframe={timeframe}
-            />
-          </>
+        {analysing && (
+          <div className="analysing-banner">
+            🔍 Agent Adda is reading the chart…
+          </div>
         )}
 
+        {/* Chat panel — locked for follow-up until initial analysis has run */}
         <ChatPanel
-          captureId={ctx?.capture_id ?? null}
+          captureId={ctx?.llm_conclusions.length ? ctx.capture_id : null}
+          initialAnalysis={ctx?.llm_conclusions[0]}
           onSend={handleSend}
         />
       </main>
 
-      <footer className="footer">
-        Research only — not investment advice
-      </footer>
+      <footer className="footer">Research only — not investment advice</footer>
     </div>
   );
 }

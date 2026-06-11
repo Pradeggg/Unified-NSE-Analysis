@@ -5,8 +5,10 @@ import type { ChatTurn, AnalysisResult } from "../../types";
 import { ResultCard } from "./ResultCard";
 
 interface ChatPanelProps {
-  /** null = no active capture — analysis is blocked */
+  /** null = no active capture — follow-up is blocked */
   captureId: string | null;
+  /** The initial analysis auto-fired after capture (shown as first assistant turn) */
+  initialAnalysis?: string;
   onSend: (question: string) => Promise<AnalysisResult | null>;
 }
 
@@ -19,11 +21,33 @@ const SUGGESTED: string[] = [
   "What does RSI say?",
 ];
 
-export function ChatPanel({ captureId, onSend }: ChatPanelProps) {
+export function ChatPanel({ captureId, initialAnalysis, onSend }: ChatPanelProps) {
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const initialShown = useRef(false);
+
+  // Show auto-fired initial analysis as the first assistant turn.
+  useEffect(() => {
+    if (initialAnalysis && !initialShown.current) {
+      initialShown.current = true;
+      setTurns([{
+        id: "t_initial",
+        role: "assistant",
+        content: initialAnalysis,
+        timestamp: new Date().toISOString(),
+      }]);
+    }
+  }, [initialAnalysis]);
+
+  // Reset when capture changes.
+  useEffect(() => {
+    if (!captureId) {
+      setTurns([]);
+      initialShown.current = false;
+    }
+  }, [captureId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

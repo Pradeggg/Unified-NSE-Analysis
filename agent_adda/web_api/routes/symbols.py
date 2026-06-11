@@ -20,9 +20,24 @@ def _tools():
     return t
 
 
+def _normalise_candidates(result: dict) -> list[dict]:
+    """Normalise resolve_symbol candidates to [{symbol, name, score}] list."""
+    raw = result.get("candidates", [])
+    out = []
+    for c in raw:
+        if isinstance(c, dict):
+            out.append({"symbol": c.get("symbol", ""), "name": c.get("name", ""), "score": c.get("score", 0.5)})
+        elif isinstance(c, str):
+            # Single string candidate — use top-level score if available.
+            out.append({"symbol": c, "name": "", "score": result.get("score", 0.5)})
+    if not out and result.get("symbol"):
+        out.append({"symbol": result["symbol"], "name": result.get("name", ""), "score": result.get("score", 1.0)})
+    return out
+
+
 @router.get("/search")
 async def search_symbols(
-    q: str = Query(..., min_length=1, description="Symbol, partial name, or alias"),
+    q: str = Query(..., min_length=1),
     limit: int = Query(10, ge=1, le=50),
 ):
     """Resolve a query to matching NSE/BSE symbols."""
@@ -31,18 +46,14 @@ async def search_symbols(
         result = t.resolve_symbol(q.strip())
         if result.get("error"):
             return {"query": q, "results": [], "error": result["error"]}
-        # Normalise to a list of candidates.
-        candidates = result.get("candidates") or []
-        if not candidates and result.get("symbol"):
-            candidates = [{"symbol": result["symbol"], "name": result.get("name", ""), "score": 1.0}]
-        return {"query": q, "results": candidates[:limit]}
+        return {"query": q, "results": _normalise_candidates(result)[:limit]}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
 
 @router.get("/{symbol}")
 async def get_symbol_info(symbol: str):
-    """Return basic metadata for a symbol (sector, industry, market cap tier)."""
+    """Return basic metadata for a symbol."""
     t = _tools()
     sym = symbol.strip().upper()
     try:

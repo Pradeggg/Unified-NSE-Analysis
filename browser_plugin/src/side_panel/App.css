@@ -144,3 +144,21 @@ body {
 .result-cost { font-size: 10px; color: var(--text-dim); }
 .trail-toggle { background: none; border: none; color: var(--blue); font-size: 10px; cursor: pointer; font-family: inherit; }
 .trail { font-size: 10px; color: var(--text-dim); margin-top: 4px; display: flex; flex-direction: column; gap: 2px; }
+
+/* ── Analysing banner ──────────────────────────────────────────────── */
+.analysing-banner {
+  margin: 8px 0;
+  padding: 8px 12px;
+  background: rgba(31, 111, 235, 0.12);
+  border: 1px solid rgba(31, 111, 235, 0.3);
+  border-radius: 6px;
+  color: #58a6ff;
+  font-size: 12px;
+  text-align: center;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
