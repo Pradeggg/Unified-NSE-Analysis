@@ -25,36 +25,119 @@ function normalizeTVTimeframe(raw: string): Timeframe | null {
     // Already-normalised pass-throughs.
     "1m":  "1m",  "3m":  "3m",  "5m":  "5m",  "15m": "15m",
     "30m": "30m", "1h":  "1h",  "4h":  "4h",
+    // Daily aliases
+    "day": "1D",  "daily": "1D", "week": "1W", "month": "1M",
   };
   return MAP[raw.trim()] ?? null;
+}
+
+// Strip futures/options suffix: "TORNTPHARM1!" → "TORNTPHARM", "NIFTY50!" → "NIFTY50"
+function cleanSymbol(raw: string): string {
+  return raw.replace(/[!0-9]+$/, "").trim().toUpperCase();
+}
+
+// ── TradingView DOM-based extraction ─────────────────────────────────────
+
+function readTVSymbolFromDOM(): string | null {
+  // TradingView renders the active symbol in several places — try in priority order.
+  const selectors = [
+    // Chart header symbol text (various TV versions)
+    '[class*="symbolTitle"]',
+    '[class*="symbol-title"]',
+    '[class*="title-"]>[class*="symbol"]',
+    '.chart-header [class*="titleWrapper"] span',
+    // Legend title in pane
+    '[class*="pane-legend"] [class*="title"]',
+    '[class*="legendTitle"]',
+    // Data-attributes
+    '[data-symbol-short]',
+    '[data-name="legend-series-item"] [class*="title"]',
+  ];
+  for (const sel of selectors) {
+    const el = document.querySelector<HTMLElement>(sel);
+    const text = el?.getAttribute("data-symbol-short") || el?.textContent?.trim();
+    if (text && /^[A-Z0-9&!.]{2,30}$/.test(text.toUpperCase().split(" ")[0])) {
+      return cleanSymbol(text.split(" ")[0]);
+    }
+  }
+  return null;
+}
+
+function readTVTimeframeFromDOM(): Timeframe | null {
+  // Active timeframe button in the toolbar
+  const selectors = [
+    // Common pattern: active/selected state
+    'button[class*="isActive"][class*="interval"]',
+    'button[class*="interval"][class*="active"]',
+    '[class*="timeframes"] button[class*="active"]',
+    '[class*="timeframes"] button[aria-checked="true"]',
+    // Fallback: read from the chart legend subtitle
+    '[class*="pane-legend"] [class*="description"]',
+  ];
+  for (const sel of selectors) {
+    const el = document.querySelector<HTMLElement>(sel);
+    const text = el?.textContent?.trim();
+    if (text) {
+      const tf = normalizeTVTimeframe(text);
+      if (tf) return tf;
+    }
+  }
+  return null;
 }
 
 // ── Extractor registry per hostname ──────────────────────────────────────
 
 function extractTradingView(): Partial<PageMetadata> {
-  // URL pattern: tradingview.com/chart/XXXXX/?symbol=NSE:BANKNIFTY
+  // 1. URL query param: tradingview.com/chart/.../?symbol=NSE:BANKNIFTY
   const params = new URLSearchParams(window.location.search);
   const symParam = params.get("symbol");
   if (symParam) {
     const [exch, sym] = symParam.includes(":") ? symParam.split(":") : ["NSE", symParam];
     return {
-      symbol: sym ?? null,
+      symbol: cleanSymbol(sym ?? ""),
       exchange: (exch as Exchange) ?? "NSE",
       detected_from: "url",
     };
   }
 
-  // Fallback: read from page title e.g. "BANKNIFTY, 5 — TradingView"
-  const titleMatch = document.title.match(/^([A-Z0-9&]+),?\s*([\d]+[mhDWM]?)/);
-  if (titleMatch) {
-    return {
-      symbol: titleMatch[1],
-      timeframe: normalizeTVTimeframe(titleMatch[2]) ?? undefined,
-      detected_from: "title",
-    };
+  // 2. Page title — multiple TV formats:
+  //   "TORNTPHARM, D — TradingView"
+  //   "BANKNIFTY, 5 — TradingView"
+  //   "TORRENT PHARM FUTURES · 1D · NSE — TradingView"
+  //   "TORNTPHARM · D — TradingView"
+  const title = document.title;
+
+  // Pattern A: "SYMBOL, TF" (comma-separated)
+  const mA = title.match(/^([A-Z0-9&!.]+),\s*([A-Z0-9]+)/);
+  if (mA) {
+    const tf = normalizeTVTimeframe(mA[2]);
+    return { symbol: cleanSymbol(mA[1]), timeframe: tf ?? undefined, detected_from: "title" };
   }
 
-  // Fallback: look for data-symbol or data-ticker attributes (chart header)
+  // Pattern B: "SYMBOL · TF" or "SYMBOL • TF" (bullet/middot separator)
+  const mB = title.match(/^([A-Z0-9&!.\s]{2,25?})\s*[·•]\s*([A-Z0-9]+)/i);
+  if (mB) {
+    const rawSym = mB[1].trim().split(/\s+/).pop() ?? mB[1].trim();
+    const tf = normalizeTVTimeframe(mB[2]);
+    if (rawSym.length >= 2) {
+      return { symbol: cleanSymbol(rawSym), timeframe: tf ?? undefined, detected_from: "title" };
+    }
+  }
+
+  // Pattern C: match NSE:SYMBOL or BSE:SYMBOL anywhere in the title
+  const mC = title.match(/\b(NSE|BSE):([A-Z0-9&!]{2,20})\b/);
+  if (mC) {
+    return { exchange: mC[1] as Exchange, symbol: cleanSymbol(mC[2]), detected_from: "title" };
+  }
+
+  // 3. DOM — TradingView-specific elements
+  const domSym = readTVSymbolFromDOM();
+  const domTF  = readTVTimeframeFromDOM();
+  if (domSym) {
+    return { symbol: domSym, timeframe: domTF ?? undefined, detected_from: "dom" };
+  }
+
+  // 4. Generic fallback: data-symbol / data-ticker attributes
   const symbolEl = document.querySelector<HTMLElement>(
     "[data-symbol], [data-ticker], .chart-container [title]"
   );
@@ -62,7 +145,7 @@ function extractTradingView(): Partial<PageMetadata> {
     const raw = symbolEl.getAttribute("data-symbol") || symbolEl.getAttribute("data-ticker") || symbolEl.title;
     if (raw) {
       const [exch, sym] = raw.includes(":") ? raw.split(":") : ["NSE", raw];
-      return { symbol: sym, exchange: exch as Exchange, detected_from: "dom" };
+      return { symbol: cleanSymbol(sym), exchange: exch as Exchange, detected_from: "dom" };
     }
   }
 
@@ -76,7 +159,7 @@ function extractKite(): Partial<PageMetadata> {
   if (exchIdx !== -1 && parts[exchIdx + 1]) {
     return {
       exchange: parts[exchIdx] as Exchange,
-      symbol: parts[exchIdx + 1],
+      symbol: cleanSymbol(parts[exchIdx + 1]),
       detected_from: "url",
     };
   }
@@ -87,7 +170,7 @@ function extractGeneric(): Partial<PageMetadata> {
   // Generic fallback: try to find NSE/BSE symbol in title
   const match = document.title.match(/\b(NSE|BSE):([A-Z0-9&]{2,20})\b/);
   if (match) {
-    return { exchange: match[1] as Exchange, symbol: match[2], detected_from: "title" };
+    return { exchange: match[1] as Exchange, symbol: cleanSymbol(match[2]), detected_from: "title" };
   }
   return { detected_from: "none" };
 }
@@ -150,13 +233,32 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
 // Re-send on URL change (SPA navigation).
 let lastUrl = window.location.href;
+let lastTitle = document.title;
+
 const observer = new MutationObserver(() => {
-  if (window.location.href !== lastUrl) {
-    lastUrl = window.location.href;
-    setTimeout(sendMetadata, 500); // allow new page DOM to settle
+  const urlChanged   = window.location.href !== lastUrl;
+  const titleChanged = document.title !== lastTitle;
+  if (urlChanged || titleChanged) {
+    lastUrl   = window.location.href;
+    lastTitle = document.title;
+    // Delay slightly to let TradingView finish rendering the new symbol
+    setTimeout(sendMetadata, 300);
+    setTimeout(sendMetadata, 800); // second pass in case DOM settles later
   }
 });
+
+// Watch document.title changes (head > title) AND body for SPA navigation
+observer.observe(document.head, { childList: true, subtree: true });
 observer.observe(document.body, { childList: true, subtree: false });
+
+// Also poll every 3s during active session to catch missed SPA navigations
+setInterval(() => {
+  if (window.location.href !== lastUrl || document.title !== lastTitle) {
+    lastUrl   = window.location.href;
+    lastTitle = document.title;
+    sendMetadata();
+  }
+}, 3_000);
 
 // ── Interactive region selection ─────────────────────────────────────────
 
