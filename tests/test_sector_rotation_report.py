@@ -22,6 +22,7 @@ from sector_rotation_report import (
     rank_peak_resilience_stocks,
     rank_rotating_sectors,
     rank_stock_candidates,
+    render_markdown,
 )
 
 
@@ -306,6 +307,53 @@ class SectorRotationReportTests(unittest.TestCase):
         self.assertEqual(paths.latest_markdown.relative_to(root).as_posix(), "reports/latest/sector_rotation.md")
         self.assertEqual(paths.latest_html.relative_to(root).as_posix(), "reports/latest/sector_rotation.html")
         self.assertEqual(paths.latest_pdf.relative_to(root).as_posix(), "reports/latest/sector_rotation.pdf")
+
+    def test_markdown_uses_snapshot_date_and_names_cycle_adjusted_rotation_score(self):
+        sector_rank = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "NIFTY METAL",
+                    "SECTOR_NAME": "Metals & Mining",
+                    "CLOSE": 1000,
+                    "RET_5D": 1,
+                    "RET_1M": 5,
+                    "RET_3M": 8,
+                    "RET_6M": 10,
+                    "RS_1M": 2,
+                    "ROTATION_SCORE_BASE": 2.5,
+                    "CYCLE_ADJUSTMENT": 4,
+                    "ROTATION_SCORE": 6.5,
+                }
+            ]
+        )
+        candidates = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "WELCORP",
+                    "COMPANY_NAME": "Welspun Corp",
+                    "SECTOR_NAME": "Metals & Mining",
+                    "CURRENT_PRICE": 100,
+                    "TRADING_SIGNAL": "BUY",
+                    "SETUP_CLASS": "NEUTRAL",
+                    "ACTION_BUCKET": "WATCHLIST",
+                    "INVESTMENT_SCORE": 60,
+                    "TECHNICAL_SCORE": 58,
+                    "RELATIVE_STRENGTH": 67,
+                    "ENHANCED_FUND_SCORE": 49,
+                    "RSI": 58,
+                    "SUPERTREND_STATE": "BULLISH",
+                    "PATTERN": "TRENDING_OR_CHOPPY",
+                    "VOLUME_RATIO": 1,
+                    "SNAPSHOT_DATE": "2026-06-11",
+                }
+            ]
+        )
+
+        md = render_markdown(sector_rank, candidates, pd.DataFrame(), Path("PostgreSQL/scores.stage_snapshots"), pd.Timestamp("2026-06-11"))
+
+        self.assertIn("**Data as of:** 2026-06-11", md)
+        self.assertIn("Cycle-Adjusted Score", md)
+        self.assertIn("| 1 | NIFTY METAL | Metals & Mining | 1000.00 | 1.0% | 5.0% | 8.0% | 10.0% | 2.0% | 2.5 | 4.0 | 6.5 |", md)
 
     def test_log_signals_persists_insider_alert_context(self):
         candidates = pd.DataFrame(

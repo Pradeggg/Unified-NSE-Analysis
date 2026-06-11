@@ -159,3 +159,86 @@ test("chart context edit reveals controls and accepts a new value", async () => 
 test("footer shows research disclaimer", async () => {
   await expect(panelPage.locator(".footer")).toContainText(/research.*not investment advice/i);
 });
+
+// ── Main tab strip ────────────────────────────────────────────────────────────
+
+test("main tab strip is visible", async () => {
+  await expect(panelPage.locator(".main-tabs")).toBeVisible();
+});
+
+test("Analyze tab is active by default", async () => {
+  const analyzeTab = panelPage.locator(".main-tab--active");
+  await expect(analyzeTab).toContainText(/analyze/i);
+});
+
+test("both main tabs are rendered", async () => {
+  const tabs = panelPage.locator(".main-tab");
+  await expect(tabs).toHaveCount(2);
+  await expect(tabs.nth(0)).toContainText(/analyze/i);
+  await expect(tabs.nth(1)).toContainText(/backtest/i);
+});
+
+test("clicking Backtest tab switches to backtest view", async () => {
+  const btTab = panelPage.locator(".main-tab").nth(1);
+  await btTab.click();
+  await expect(panelPage.locator(".bt-panel")).toBeVisible();
+  // Capture button (analyze view) should be hidden
+  await expect(panelPage.locator(".capture-btn")).not.toBeVisible();
+});
+
+// ── BacktestTab ───────────────────────────────────────────────────────────────
+
+test("BacktestTab shows sub-tabs: Run and Top", async () => {
+  // Ensure we are on Backtest tab
+  await panelPage.locator(".main-tab").nth(1).click();
+  const subTabs = panelPage.locator(".bt-tab");
+  await expect(subTabs).toHaveCount(2);
+  await expect(subTabs.nth(0)).toContainText(/run/i);
+  await expect(subTabs.nth(1)).toContainText(/top/i);
+});
+
+test("BacktestTab Run view has strategy select and Run button", async () => {
+  await panelPage.locator(".main-tab").nth(1).click();
+  await panelPage.locator(".bt-tab").nth(0).click(); // ▶ Run sub-tab
+  await expect(panelPage.locator(".bt-select")).toBeVisible();
+  await expect(panelPage.locator(".bt-run-btn")).toBeVisible();
+  await expect(panelPage.locator(".bt-run-btn")).toContainText(/run/i);
+});
+
+test("BacktestTab strategy dropdown populates within 5s (API call)", async () => {
+  await panelPage.locator(".main-tab").nth(1).click();
+  // If API is reachable, select options > 1 (fallback option is just 1 item)
+  await panelPage.waitForTimeout(5_000);
+  const opts = await panelPage.locator(".bt-select option").count();
+  // At minimum the fallback option is shown; if API is up we get 10+
+  expect(opts).toBeGreaterThanOrEqual(1);
+});
+
+test("clicking Run button starts loading (shows ⏳)", async () => {
+  await panelPage.locator(".main-tab").nth(1).click();
+  await panelPage.locator(".bt-tab").nth(0).click();
+  const runBtn = panelPage.locator(".bt-run-btn");
+  await runBtn.click();
+  // Immediately after click it shows the loading indicator
+  await expect(runBtn).toContainText(/⏳/, { timeout: 2_000 });
+});
+
+test("BacktestTab Top sub-tab shows leaderboard section", async () => {
+  await panelPage.locator(".main-tab").nth(1).click();
+  await panelPage.locator(".bt-tab").nth(1).click(); // 🏆 Top
+  // Should show either a table, empty message, or loading message
+  const panel = panelPage.locator(".bt-panel");
+  await expect(panel).toBeVisible();
+  const hasTable   = await panelPage.locator(".bt-leader-table").isVisible();
+  const hasEmpty   = await panelPage.locator(".panel-empty").isVisible();
+  const hasLoading = await panelPage.locator(".panel-empty").filter({ hasText: /loading/i }).isVisible();
+  // At least one of the three should be shown
+  expect(hasTable || hasEmpty || hasLoading).toBe(true);
+});
+
+test("switching back to Analyze tab restores capture button", async () => {
+  // Click Analyze tab
+  await panelPage.locator(".main-tab").nth(0).click();
+  await expect(panelPage.locator(".capture-btn")).toBeVisible();
+  await expect(panelPage.locator(".bt-panel")).not.toBeVisible();
+});

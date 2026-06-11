@@ -796,17 +796,9 @@ def main() -> int:
                 print("  ⚠️  Portfolio strategy-lab report QA failed (non-fatal)")
                 failed.append("Report QA: portfolio strategy lab")
 
-    # 4A. Sector rotation report before Stage 2 tracker. This refreshes sector
-    # context and signal_log.csv for downstream report links and briefing.
-    if not step_sector_rotation_report(args.dry_run):
-        failed.append("Sector rotation report")
-    elif not args.skip_report_validation:
-        if not step_report_validation("sector_rotation", args.dry_run):
-            print("  ⚠️  Sector rotation report QA failed (non-fatal)")
-            failed.append("Report QA: sector rotation")
-
-    # 4B. Stage 2 tracker snapshot + HTML report. The HTML report consumes the
-    # freshly generated portfolio strategy-lab artifact.
+    # 4A. Stage 2 tracker snapshot first. The full PostgreSQL loader consumes
+    # this SQLite snapshot and makes it the canonical scores.stage_snapshots
+    # source for downstream reports.
     if not step_tracker_snapshot(
         args.dry_run,
         live_only=False,
@@ -819,6 +811,24 @@ def main() -> int:
         if not step_tracker_snapshot(args.dry_run, live_only=True):
             failed.append("Tracker snapshot")
 
+    # 4B. PostgreSQL load + screeners. This must run after the tracker snapshot
+    # and before sector rotation so the report reads the same canonical snapshot
+    # that remains in PostgreSQL at the end of the run.
+    if not step_postgres_load(args.dry_run):
+        print("  ⚠️  PostgreSQL load failed — screeners not updated")
+        failed.append("PostgreSQL screeners")
+
+    # 4C. Sector rotation report. This refreshes sector context and signal_log.csv
+    # for downstream report links and briefing after canonical snapshot load.
+    if not step_sector_rotation_report(args.dry_run):
+        failed.append("Sector rotation report")
+    elif not args.skip_report_validation:
+        if not step_report_validation("sector_rotation", args.dry_run):
+            print("  ⚠️  Sector rotation report QA failed (non-fatal)")
+            failed.append("Report QA: sector rotation")
+
+    # 4D. Stage 2 tracker HTML report. The HTML report consumes the freshly
+    # generated portfolio strategy-lab artifact and canonical PG snapshot.
     if not step_generate_report(args.dry_run):
         failed.append("Stage 2 tracker report")
     elif not args.skip_report_validation:
@@ -866,11 +876,6 @@ def main() -> int:
     # 6. Voice briefing — generates script from fresh signal_log.csv (fast, no LLM)
     if not step_voice_briefing(args.dry_run):
         failed.append("Voice briefing")
-
-    # 7. PostgreSQL load + run all 40 screeners
-    if not step_postgres_load(args.dry_run):
-        print("  ⚠️  PostgreSQL load failed — screeners not updated")
-        failed.append("PostgreSQL screeners")
 
     # 7a. Daily results-feed refresh — narrow, fast (only companies that
     #     filed results in the last 14d). Keeps the structured financials

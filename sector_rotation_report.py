@@ -1136,7 +1136,7 @@ def load_comprehensive_analysis() -> tuple[pd.DataFrame, Path]:
         fallback = load_fundamental_fallback()
         if fallback is not None:
             pg_df = merge_fundamental_scores(pg_df, fallback)
-        return pg_df, Path("PostgreSQL") / "scores.mv_latest_snapshot"
+        return pg_df, Path("PostgreSQL") / "scores.stage_snapshots"
 
     path = _latest_file("comprehensive_nse_enhanced_*.csv")
     df = pd.read_csv(path)
@@ -1185,6 +1185,8 @@ def load_comprehensive_analysis_from_postgres() -> pd.DataFrame | None:
                         FROM latest_idx, prev_idx
                     )
                     SELECT
+                        snapshot_date AS "SNAPSHOT_DATE",
+                        snapshot_date AS "ANALYSIS_DATE",
                         symbol AS "SYMBOL",
                         company_name AS "COMPANY_NAME",
                         market_cap_cat AS "MARKET_CAP_CATEGORY",
@@ -1208,7 +1210,8 @@ def load_comprehensive_analysis_from_postgres() -> pd.DataFrame | None:
                         earnings_quality AS "EARNINGS_QUALITY",
                         sales_growth AS "SALES_GROWTH",
                         financial_strength AS "FINANCIAL_STRENGTH",
-                        institutional_backing AS "INSTITUTIONAL_BACKING"
+                        institutional_backing AS "INSTITUTIONAL_BACKING",
+                        source_csv AS "SOURCE_CSV"
                     FROM scores.stage_snapshots
                     CROSS JOIN bench
                     WHERE snapshot_date = (SELECT snapshot_date FROM latest_snapshot)
@@ -1549,6 +1552,19 @@ def _fmt(value: object, suffix: str = "", digits: int = 1) -> str:
         return str(value)
 
 
+def _first_non_empty_value(df: pd.DataFrame, columns: list[str], default: str = "N/A") -> str:
+    for column in columns:
+        if column not in df.columns:
+            continue
+        values = df[column].dropna()
+        if values.empty:
+            continue
+        text = str(values.iloc[0]).strip()
+        if text and text.lower() not in {"nan", "nat", "none"}:
+            return text[:10] if re.match(r"^\d{4}-\d{2}-\d{2}", text) else text
+    return default
+
+
 # ===== MARKDOWN RENDERING =====
 
 def _asset_data_uri(path: Path) -> str:
@@ -1571,7 +1587,7 @@ def render_markdown(
     generated_at: datetime,
     narratives: dict | None = None,
 ) -> str:
-    analysis_date = candidates["ANALYSIS_DATE"].dropna().iloc[0] if "ANALYSIS_DATE" in candidates and candidates["ANALYSIS_DATE"].notna().any() else "N/A"
+    analysis_date = _first_non_empty_value(candidates, ["ANALYSIS_DATE", "SNAPSHOT_DATE", "PRICE_DATE", "DATE"])
     lines = [
         "# Sector Rotation Investment Report",
         "",
@@ -1604,17 +1620,33 @@ def render_markdown(
     lines += [
         "## 1. Sector Rotation",
         "",
-        "Current rotation is ranked using 1M return, 5D/1M/3M/6M relative strength versus Nifty 500, and short-term participation.",
+        "Current rotation is ranked using 1M return, 5D/1M/3M/6M relative strength versus Nifty 500, then adjusted for the detected economic-cycle phase when available.",
         "",
-        "| Rank | Index | Sector Lens | Close | 5D | 1M | 3M | 6M | RS 1M | Rotation Score |",
-        "|---:|---|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
+    has_cycle_score = {"ROTATION_SCORE_BASE", "CYCLE_ADJUSTMENT"}.issubset(sector_rank.columns)
+    if has_cycle_score:
+        lines += [
+            "| Rank | Index | Sector Lens | Close | 5D | 1M | 3M | 6M | RS 1M | Base Score | Cycle Adj | Cycle-Adjusted Score |",
+            "|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+        ]
+    else:
+        lines += [
+            "| Rank | Index | Sector Lens | Close | 5D | 1M | 3M | 6M | RS 1M | Rotation Score |",
+            "|---:|---|---|---:|---:|---:|---:|---:|---:|---:|",
+        ]
     for rank, (_, row) in enumerate(sector_rank.iterrows(), start=1):
-        lines.append(
+        common = (
             f"| {rank} | {row['SYMBOL']} | {row['SECTOR_NAME']} | {_fmt(row['CLOSE'], digits=2)} | "
             f"{_fmt(row['RET_5D'], '%')} | {_fmt(row['RET_1M'], '%')} | {_fmt(row['RET_3M'], '%')} | "
-            f"{_fmt(row['RET_6M'], '%')} | {_fmt(row['RS_1M'], '%')} | {_fmt(row['ROTATION_SCORE'])} |"
+            f"{_fmt(row['RET_6M'], '%')} | {_fmt(row['RS_1M'], '%')}"
         )
+        if has_cycle_score:
+            lines.append(
+                f"{common} | {_fmt(row.get('ROTATION_SCORE_BASE'))} | "
+                f"{_fmt(row.get('CYCLE_ADJUSTMENT'))} | {_fmt(row['ROTATION_SCORE'])} |"
+            )
+        else:
+            lines.append(f"{common} | {_fmt(row['ROTATION_SCORE'])} |")
 
     lines += [
         "",
@@ -1688,7 +1720,8 @@ def render_markdown(
     lines += [
         "## 5. Methodology",
         "",
-        "- **Sector rotation:** 0.35 x RS 1M + 0.25 x 1M return + 0.20 x RS 5D + 0.10 x RS 3M + 0.10 x RS 6M.",
+        "- **Sector rotation base score:** 0.35 x RS 1M + 0.25 x 1M return + 0.20 x RS 5D + 0.10 x RS 3M + 0.10 x RS 6M.",
+        "- **Cycle-adjusted score:** base sector rotation score plus the economic-cycle adjustment shown in the sector table, when cycle detection is available.",
         "- **Investment score:** 0.38 x technical + 0.27 x RS rank + 0.25 x enhanced fundamental + pattern, Supertrend, and signal bonuses.",
         "- **Supertrend:** ATR-based calculation using local NSE OHLC cache with period 10 and multiplier 3.",
         "- **Consolidation breakout:** latest close above prior 20-session resistance after a base width of 12% or less, with volume ratio threshold of 1.4x where volume is available.",
@@ -4209,10 +4242,11 @@ def render_html_interactive(
 ) -> str:
     sector_rank = dedupe_sector_rank_by_display_name(sector_rank)
     gen_date = generated_at.strftime("%Y-%m-%d")
-    data_date = (
-        candidates["ANALYSIS_DATE"].dropna().iloc[0]
-        if "ANALYSIS_DATE" in candidates.columns and candidates["ANALYSIS_DATE"].notna().any()
-        else gen_date
+    data_date = _first_non_empty_value(candidates, ["ANALYSIS_DATE", "SNAPSHOT_DATE", "PRICE_DATE", "DATE"], default=gen_date)
+    score_label = (
+        "Cycle-Adjusted Score"
+        if {"ROTATION_SCORE_BASE", "CYCLE_ADJUSTMENT"}.issubset(sector_rank.columns)
+        else "Rotation Score"
     )
     # Build regime banner HTML
     _regime_banner = ""
@@ -4327,7 +4361,7 @@ def render_html_interactive(
         f'<div class="metric-value">{n_buy}</div><div class="metric-sub">out of {n_candidates} candidates</div></div>'
         f'<div class="metric-card"><div class="metric-label">Leading Sector</div>'
         f'<div class="metric-value" style="font-size:1rem">{html_mod.escape(top_sector)}</div>'
-        f'<div class="metric-sub">Score {top_sector_score} · 1M {top_sector_1m}</div></div>'
+        f'<div class="metric-sub">{html_mod.escape(score_label)} {top_sector_score} · 1M {top_sector_1m}</div></div>'
         f'<div class="metric-card"><div class="metric-label">Sectors Rotating</div>'
         f'<div class="metric-value">{len(sector_rank)}</div><div class="metric-sub">above Nifty 500 baseline</div></div>'
         f'<div class="metric-card"><div class="metric-label">Data As Of</div>'
@@ -4357,7 +4391,7 @@ def render_html_interactive(
 
     chart_html = (
         f'<div class="chart-wrap">'
-        f'<div class="chart-title">Sector Rotation Score vs Nifty 500</div>'
+        f'<div class="chart-title">Sector {html_mod.escape(score_label)} vs Nifty 500</div>'
         f'<canvas id="rotChart" style="height:240px"></canvas>'
         f'</div>'
     )
@@ -4432,7 +4466,7 @@ def render_html_interactive(
         f'<div class="tbl-wrap"><table><thead><tr>'
         f'<th>#</th><th>Index</th><th>Sector</th><th class="num">Close</th>'
         f'<th class="num">5D</th><th class="num">1M</th><th class="num">3M</th><th class="num">6M</th>'
-        f'<th class="num">RS 1M</th><th>Score</th><th class="num">Macro</th><th>Season</th><th>Breadth</th>'
+        f'<th class="num">RS 1M</th><th>{html_mod.escape(score_label)}</th><th class="num">Macro</th><th>Season</th><th>Breadth</th>'
         f'</tr></thead><tbody>{rot_rows}</tbody></table></div>'
     )
 

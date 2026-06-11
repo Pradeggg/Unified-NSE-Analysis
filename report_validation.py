@@ -30,6 +30,11 @@ LATEST_DIR = REPORTS_DIR / "latest"
 VALIDATION_DIR = REPORTS_DIR / "report_validation"
 PYTHON = sys.executable
 DEFAULT_MODEL = os.environ.get("REPORT_VALIDATION_MODEL") or os.environ.get("OPENAI_MODEL") or "gpt-4o-mini"
+PG_DSN = (
+    os.environ.get("AGENT_ADDA_PG_DSN")
+    or os.environ.get("PG_DSN")
+    or "dbname=nse_market user=nse_admin host=/tmp"
+)
 
 
 def _load_dotenv(path: Path) -> None:
@@ -294,6 +299,127 @@ def _validate_top_picks(result: ValidationResult) -> None:
         ))
 
 
+def _num_from_report_cell(value: str) -> float | None:
+    text = re.sub(r"[%₹,x]", "", str(value or "")).strip()
+    if not text or text.upper() == "N/A":
+        return None
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
+def _parse_sector_rotation_candidate_rows(md_text: str) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    headers: list[str] = []
+    in_candidate_table = False
+    for raw in md_text.splitlines():
+        line = raw.strip()
+        if line.startswith("| Symbol | Company | Price | Signal | Setup | Action | Score | Tech | RS |"):
+            headers = [h.strip().upper() for h in line.strip("|").split("|")]
+            in_candidate_table = True
+            continue
+        if in_candidate_table and line.startswith("|---"):
+            continue
+        if in_candidate_table and not line.startswith("|"):
+            in_candidate_table = False
+            headers = []
+            continue
+        if not in_candidate_table:
+            continue
+        values = [v.strip() for v in line.strip("|").split("|")]
+        if len(values) != len(headers):
+            continue
+        row = dict(zip(headers, values))
+        symbol = re.sub(r"[*`]", "", row.get("SYMBOL", "")).strip().upper()
+        if not symbol or symbol == "SYMBOL":
+            continue
+        rows.append(
+            {
+                "SYMBOL": symbol,
+                "TECHNICAL_SCORE": _num_from_report_cell(row.get("TECH", "")),
+                "RELATIVE_STRENGTH": _num_from_report_cell(row.get("RS", "")),
+            }
+        )
+    return rows
+
+
+def _load_latest_stage_snapshot_for_validation(symbols: list[str]) -> Any:
+    clean_symbols = sorted({str(s).strip().upper() for s in symbols if str(s).strip()})
+    if not clean_symbols:
+        return None
+    try:
+        import pandas as pd
+        import psycopg2
+
+        with psycopg2.connect(PG_DSN) as conn:
+            return pd.read_sql_query(
+                """
+                WITH latest_snapshot AS (
+                    SELECT MAX(snapshot_date) AS snapshot_date FROM scores.stage_snapshots
+                )
+                SELECT
+                    symbol AS "SYMBOL",
+                    snapshot_date AS "SNAPSHOT_DATE",
+                    technical_score AS "TECHNICAL_SCORE",
+                    relative_strength AS "RELATIVE_STRENGTH"
+                FROM scores.stage_snapshots
+                WHERE snapshot_date = (SELECT snapshot_date FROM latest_snapshot)
+                  AND UPPER(symbol) = ANY(%s)
+                """,
+                conn,
+                params=(clean_symbols,),
+            )
+    except Exception:
+        return None
+
+
+def _validate_sector_rotation_report(result: ValidationResult) -> None:
+    md = LATEST_DIR / "sector_rotation.md"
+    if not md.exists():
+        return
+    text = _read_text(md)
+    if re.search(r"\*\*Data as of:\*\*\s*N/A", text):
+        result.findings.append(Finding(
+            "sector_rotation",
+            "high",
+            "Sector Rotation report does not show a concrete data-as-of date.",
+            "Data as of: N/A",
+            "pending",
+        ))
+    rendered_rows = _parse_sector_rotation_candidate_rows(text)
+    if not rendered_rows:
+        return
+    snapshot = _load_latest_stage_snapshot_for_validation([r["SYMBOL"] for r in rendered_rows])
+    if snapshot is None or getattr(snapshot, "empty", True):
+        return
+    snapshot = snapshot.copy()
+    snapshot["SYMBOL"] = snapshot["SYMBOL"].astype(str).str.upper()
+    latest = snapshot.drop_duplicates("SYMBOL", keep="last").set_index("SYMBOL")
+    mismatches: list[str] = []
+    for row in rendered_rows:
+        symbol = row["SYMBOL"]
+        if symbol not in latest.index:
+            continue
+        source = latest.loc[symbol]
+        for metric in ("TECHNICAL_SCORE", "RELATIVE_STRENGTH"):
+            rendered = row.get(metric)
+            expected = _num_from_report_cell(source.get(metric))
+            if rendered is None or expected is None:
+                continue
+            if abs(rendered - expected) > 0.15:
+                label = "Tech" if metric == "TECHNICAL_SCORE" else "RS"
+                mismatches.append(f"{symbol} {label}: report={rendered:.1f}, snapshot={expected:.1f}")
+    if mismatches:
+        result.findings.append(Finding(
+            "sector_rotation",
+            "high",
+            "Sector Rotation candidate metrics do not match the latest PostgreSQL stage snapshot.",
+            "; ".join(mismatches[:8]),
+            "pending",
+        ))
+
+
 def _run_fix(spec: ReportSpec, reason: str, result: ValidationResult, dry_run: bool) -> None:
     if not spec.fix_command:
         return
@@ -364,6 +490,8 @@ def _deterministic_validate(checkpoint: str, dry_run: bool) -> ValidationResult:
             _run_fix(spec, "high-severity artifact validation failure", result, dry_run)
     if "portfolio_eod" in report_keys:
         _validate_portfolio_report(result)
+    if "sector_rotation" in report_keys:
+        _validate_sector_rotation_report(result)
     if "top_picks" in report_keys:
         _validate_top_picks(result)
     return result

@@ -1,6 +1,7 @@
 import sys
 import tempfile
 import unittest
+from contextlib import ExitStack
 from pathlib import Path
 from unittest.mock import patch
 
@@ -238,25 +239,45 @@ class PostgresLoaderTests(unittest.TestCase):
 
             return inner
 
-        with patch.object(daily_refresh, "step_fetch_eod_data", record("fetch_eod")), \
-             patch.object(daily_refresh, "step_postgres_eod_load", record("postgres_eod")), \
-             patch.object(daily_refresh, "step_fetch_auxiliary", record("fetch_aux", {"F&O OI + PCR": True})), \
-             patch.object(daily_refresh, "step_fno_postgres_load", record("fno_postgres")), \
-             patch.object(daily_refresh, "step_comprehensive_analysis", record("analysis")), \
-             patch.object(daily_refresh, "step_tracker_snapshot", record("tracker")), \
-             patch.object(daily_refresh, "step_generate_report", record("html")), \
-             patch.object(daily_refresh, "step_sector_rotation_report", record("sector_report")), \
-             patch.object(daily_refresh, "step_voice_briefing", record("voice")), \
-             patch.object(daily_refresh, "step_postgres_load", record("postgres_full")), \
-             patch.object(daily_refresh, "step_refresh_results_feed", record("results_feed")), \
-             patch.object(daily_refresh, "datetime") as fake_datetime, \
-             patch.object(sys, "argv", ["daily_refresh.py"]):
+        patches = {
+            "step_fetch_eod_data": record("fetch_eod"),
+            "step_postgres_eod_load": record("postgres_eod"),
+            "step_fetch_auxiliary": record("fetch_aux", {"F&O OI + PCR": True}),
+            "step_fno_postgres_load": record("fno_postgres"),
+            "step_comprehensive_analysis": record("analysis"),
+            "step_fundamentals_refresh": record("fundamentals"),
+            "step_materialize_stage2_vcp_picks": record("materialize_vcp"),
+            "step_historical_stage_backfill": record("stage_backfill"),
+            "step_portfolio_strategy_lab": record("portfolio_lab"),
+            "step_tracker_snapshot": record("tracker"),
+            "step_generate_report": record("html"),
+            "step_sector_rotation_report": record("sector_report"),
+            "step_report_validation": record("qa"),
+            "step_refresh_top_picks_fundamentals": record("top_pick_fundamentals"),
+            "step_refresh_corporate_events": record("corporate_events"),
+            "step_top_picks_report": record("top_picks"),
+            "step_portfolio_monitor": record("portfolio_monitor"),
+            "step_swing_playbook": record("swing"),
+            "step_email_top_picks": record("email"),
+            "step_voice_briefing": record("voice"),
+            "step_postgres_load": record("postgres_full"),
+            "step_refresh_results_feed": record("results_feed"),
+            "step_analyze_daily_results": record("results_analysis"),
+            "step_cleanup_legacy_sqlite": record("cleanup"),
+        }
+        with ExitStack() as stack:
+            for attr, replacement in patches.items():
+                stack.enter_context(patch.object(daily_refresh, attr, replacement))
+            fake_datetime = stack.enter_context(patch.object(daily_refresh, "datetime"))
+            stack.enter_context(patch.object(sys, "argv", ["daily_refresh.py"]))
             fake_datetime.now.return_value.weekday.return_value = 0
             exit_code = daily_refresh.main()
 
         self.assertEqual(exit_code, 0)
         self.assertIn("fno_postgres", calls)
         self.assertLess(calls.index("fno_postgres"), calls.index("sector_report"))
+        self.assertLess(calls.index("tracker"), calls.index("postgres_full"))
+        self.assertLess(calls.index("postgres_full"), calls.index("sector_report"))
 
 
 if __name__ == "__main__":

@@ -32,6 +32,16 @@ export default defineConfig({
         ...devices["Desktop Chrome"],
       },
     },
+
+    /* ── Web app project: browser UI tests against Vite dev server ── */
+    {
+      name: "webapp",
+      testMatch: "**/webapp.spec.ts",
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: "http://localhost:5173",
+      },
+    },
   ],
 
   /* ── Start the FastAPI backend before all tests ───────────────────── */

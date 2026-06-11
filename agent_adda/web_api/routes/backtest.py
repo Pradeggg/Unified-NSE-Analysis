@@ -458,7 +458,10 @@ def get_leaderboard(
             r["run_at"] = r["run_at"].isoformat() if r.get("run_at") else None
         return {"leaderboard": rows, "count": len(rows)}
     except Exception as exc:
-        raise HTTPException(500, str(exc))
+        # PG unavailable — return empty leaderboard rather than 500
+        import logging
+        logging.getLogger(__name__).warning("leaderboard PG error: %s", exc)
+        return {"leaderboard": [], "count": 0, "pg_error": str(exc)}
 
 
 @router.get("/results/{run_id}")
@@ -530,4 +533,6 @@ def get_history(
             r["run_at"] = r["run_at"].isoformat() if r.get("run_at") else None
         return {"history": rows, "count": len(rows)}
     except Exception as exc:
-        raise HTTPException(500, str(exc))
+        import logging
+        logging.getLogger(__name__).warning("history PG error: %s", exc)
+        return {"history": [], "count": 0, "pg_error": str(exc)}
