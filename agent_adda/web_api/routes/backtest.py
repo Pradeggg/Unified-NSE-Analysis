@@ -53,7 +53,8 @@ def _options_score(m: dict, trades: int) -> float:
 
 
 def _persist_run(sym: str, req, strategy_name: str, bars_used: int,
-                 metrics: dict, trades: list, equity: list) -> int | None:
+                 metrics: dict, trades: list, equity: list,
+                 timeframe: str | None = None) -> int | None:
     """Insert run into backtesting.strategy_runs; return new row id."""
     try:
         # Cast all metric values to native Python types (psycopg2 rejects np.float64)
@@ -64,6 +65,7 @@ def _persist_run(sym: str, req, strategy_name: str, bars_used: int,
             try: return int(v)
             except: return None
 
+        tf_val = timeframe or req.timeframe
         score = _options_score(metrics, metrics.get("total_trades", 0))
         conn  = _pg()
         cur   = conn.cursor()
@@ -79,7 +81,7 @@ def _persist_run(sym: str, req, strategy_name: str, bars_used: int,
                     %s,%s,%s,%s,%s, %s,%s,%s, %s,%s)
             RETURNING id
         """, (
-            sym, req.timeframe, req.strategy, strategy_name,
+            sym, tf_val, req.strategy, strategy_name,
             _f(req.initial_capital), _f(req.risk_per_trade_pct), _i(req.max_holding_bars), _i(bars_used),
             _i(metrics["total_trades"]), _i(metrics["wins"]), _i(metrics["losses"]), _f(metrics["win_rate"]),
             _f(metrics["total_pnl"]), _f(metrics["return_pct"]), _f(metrics["avg_pnl"]),
@@ -327,6 +329,8 @@ async def run_backtest(req: BacktestRequest):
     """Run intraday backtest on historical OHLCV from PostgreSQL."""
     sym = req.symbol.strip().upper()
     strategy_id = req.strategy.strip().lower()
+    # Normalise timeframe: "1D" → "1d", "1H" → "1h" etc.
+    tf = req.timeframe.strip().lower() if req.timeframe[-1].isalpha() else req.timeframe.strip()
 
     if strategy_id not in _STRATEGY_IDS:
         raise HTTPException(400, f"Unknown strategy '{strategy_id}'. Valid: {sorted(_STRATEGY_IDS)}")
@@ -358,15 +362,15 @@ async def run_backtest(req: BacktestRequest):
 
     try:
         # Fetch OHLCV from DB — get max available bars
-        result = intraday.get_intraday_candles(sym, req.timeframe)
+        result = intraday.get_intraday_candles(sym, tf)
         if result is None or (hasattr(result, "empty") and result.empty):
             # Fall back via tools
             if _REPO_ROOT not in sys.path:
                 sys.path.insert(0, _REPO_ROOT)
             import terminal.tools as t
-            r = t.get_intraday_bars(sym, timeframe=req.timeframe, lookback=2000)
+            r = t.get_intraday_bars(sym, timeframe=tf, lookback=2000)
             if not r.get("bars"):
-                raise HTTPException(404, f"No {req.timeframe} bars for {sym}")
+                raise HTTPException(404, f"No {tf} bars for {sym}")
             import pandas as pd
             bars = r["bars"]
             df_raw = pd.DataFrame(bars)
@@ -379,7 +383,7 @@ async def run_backtest(req: BacktestRequest):
             df_raw = result
 
         if len(df_raw) < 20:
-            raise HTTPException(422, f"Not enough bars for {sym} {req.timeframe} (got {len(df_raw)})")
+            raise HTTPException(422, f"Not enough bars for {sym} {tf} (got {len(df_raw)})")
 
         # Attach timestamp column for the walker
         import pandas as pd
@@ -394,11 +398,11 @@ async def run_backtest(req: BacktestRequest):
         strategy_name = next(s["name"] for s in STRATEGIES if s["id"] == strategy_id)
 
         # Persist to PostgreSQL (fire-and-forget, never fail the request)
-        run_id = _persist_run(sym, req, strategy_name, len(df_raw), metrics, trades, equity)
+        run_id = _persist_run(sym, req, strategy_name, len(df_raw), metrics, trades, equity, timeframe=tf)
 
         return {
             "symbol":    sym,
-            "timeframe": req.timeframe,
+            "timeframe": tf,
             "strategy":  strategy_name,
             "bars_used": len(df_raw),
             "metrics":   metrics,

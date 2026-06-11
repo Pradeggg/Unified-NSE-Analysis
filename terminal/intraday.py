@@ -196,6 +196,8 @@ def get_intraday_candles(
     import yfinance as yf
 
     sym   = symbol.strip().upper()
+    # Normalise interval case: "1D" → "1d", "1H" → "1h" etc.
+    interval = interval.strip().lower() if interval and interval[-1].isalpha() else interval
 
     # yfinance has no 3m interval — synthesise from 1m
     if interval == "3m":
