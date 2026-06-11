@@ -1,0 +1,26 @@
+{
+  "name": "agent-adda-chart-intelligence",
+  "version": "0.1.0",
+  "description": "Agent Adda browser plugin — chart capture and technical analysis",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "tsc --noEmit && vite build && npm run copy-static",
+    "copy-static": "cp manifest.json dist/ && cp -r public/icons dist/icons",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.270",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.5.3",
+    "vite": "^5.3.1"
+  }
+}
+
