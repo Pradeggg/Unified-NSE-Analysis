@@ -95,6 +95,43 @@ def list_reports_for_fetch(
     ]
 
 
+def list_broker_research_facts(conn: Any, *, symbol: str) -> list[dict[str, Any]]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+                f.broker_report_id,
+                r.broker_code,
+                f.symbol,
+                r.report_title,
+                r.pdf_url,
+                f.fact_type,
+                f.fact_value,
+                f.page_number
+            FROM company_intel.broker_research_facts f
+            JOIN company_intel.broker_reports r
+              ON r.broker_report_id = f.broker_report_id
+            WHERE f.symbol = %s
+            ORDER BY r.broker_code, f.broker_report_id, f.fact_type, f.fact_id
+            """,
+            (symbol.strip().upper(),),
+        )
+        rows = cur.fetchall()
+    return [
+        {
+            "broker_report_id": row[0],
+            "broker_code": row[1],
+            "symbol": row[2],
+            "report_title": row[3],
+            "pdf_url": row[4],
+            "fact_type": row[5],
+            "fact_value": row[6],
+            "page_number": row[7],
+        }
+        for row in rows
+    ]
+
+
 def record_index_run(conn: Any, *, source_id: int | None) -> int:
     with conn.cursor() as cur:
         cur.execute(

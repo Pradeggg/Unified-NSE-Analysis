@@ -1048,6 +1048,12 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/broker-index BEL --broker icici", "Index one broker source for a symbol"),
     ("/broker-fetch",                    "Download and parse discovered broker research PDFs"),
     ("/broker-fetch BEL --limit 10",     "Fetch and parse discovered broker PDFs for a symbol"),
+    ("/broker-research",                 "Generate broker consensus research report from stored facts"),
+    ("/broker-research BEL",             "Publish broker consensus report for a symbol"),
+    ("/deep-research",                   "Alias: deep broker research report from stored public broker facts"),
+    ("/deep-research BEL --brokers public", "Publish deep broker research report for public broker facts"),
+    ("/report broker",                   "Render latest broker research report for a symbol"),
+    ("/report broker BEL html",          "Render broker research report for a symbol as HTML"),
     # ── Analyze / document commands ─────────────────────────────────────────
     ("/research RELIANCE",                "Comprehensive stock research report — overview, fundamentals, technicals, charts, narrative"),
     ("/research RELIANCE pdf",            "Comprehensive stock research report as PDF"),
@@ -7162,11 +7168,12 @@ def _build_command_registry():
         description="Data coverage report",
     ))
 
-    # /broker-sources, /broker-index, and /broker-fetch
+    # /broker-sources, /broker-index, /broker-fetch, /broker-research, and /deep-research
     def _h_broker_research(query, agent, show_trace):
         from broker_research.commands import (
             handle_broker_fetch_command,
             handle_broker_index_command,
+            handle_broker_research_command,
             handle_broker_sources_command,
         )
         _print_user(query)
@@ -7179,12 +7186,20 @@ def _build_command_registry():
             output = handle_broker_fetch_command(query)
             console.print(Markdown(_linkify_markdown(output)))
             return True
+        if q.startswith(("/broker-research", "/deep-research")):
+            output = handle_broker_research_command(query)
+            console.print(Markdown(_linkify_markdown(output)))
+            return True
+        if q.startswith("/report broker"):
+            output = handle_broker_research_command(query)
+            console.print(Markdown(_linkify_markdown(output)))
+            return True
         output = handle_broker_index_command(query)
         console.print(Markdown(_linkify_markdown(output)))
         return True
     registry.register(CommandHandler(
         name="broker-research",
-        match_fn=lambda q: q.startswith(("/broker-sources", "/broker-index", "/broker-fetch")),
+        match_fn=lambda q: q.startswith(("/broker-sources", "/broker-index", "/broker-fetch", "/broker-research", "/deep-research", "/report broker")),
         handler_fn=_h_broker_research,
         description="Broker research source registry and public report discovery",
     ))

@@ -3,6 +3,7 @@ from broker_research.commands import (
     BrokerIndexOptions,
     handle_broker_fetch_command,
     handle_broker_index_command,
+    handle_broker_research_command,
     parse_broker_fetch_command,
     parse_broker_index_command,
     render_broker_sources,
@@ -32,8 +33,12 @@ class FakeCursor:
             self.rows = [(77,)]
         elif "SELECT broker_report_id, broker_code, symbol, pdf_url, local_path" in normalized:
             self.rows = list(self.conn.report_rows)
+        elif "FROM company_intel.broker_research_facts" in normalized:
+            self.rows = list(self.conn.fact_rows)
         elif "FROM company_intel.broker_reports" in normalized and "pdf_hash = %s" in normalized:
             self.rows = list(self.conn.hash_rows)
+        elif "RETURNING research_run_id" in sql:
+            self.rows = [(101,)]
         else:
             self.rows = []
 
@@ -46,12 +51,16 @@ class FakeCursor:
     def fetchall(self):
         return list(self.rows)
 
+    def fetchall(self):
+        return list(self.rows)
+
 
 class FakeConnection:
     def __init__(self):
         self.executed = []
         self.report_rows = []
         self.hash_rows = []
+        self.fact_rows = []
         self.commits = 0
 
     def cursor(self):
@@ -151,3 +160,42 @@ def test_handle_broker_fetch_command_fetches_and_parses_discovered_reports(tmp_p
     assert "Parsed reports: 1" in output
     assert "UPDATE company_intel.broker_reports" in executed_sql
     assert "INSERT INTO company_intel.broker_report_pages" in executed_sql
+
+
+def test_handle_broker_research_command_writes_report_and_records_run(tmp_path):
+    conn = FakeConnection()
+    conn.fact_rows = [
+        (1, "icici", "BEL", "ICICI BEL", "https://example.com/icici.pdf", "rating", "BUY", 1),
+        (1, "icici", "BEL", "ICICI BEL", "https://example.com/icici.pdf", "target_price", "520", 1),
+        (2, "hdfc_hsie", "BEL", "HSIE BEL", "https://example.com/hdfc.pdf", "rating", "ADD", 1),
+        (2, "hdfc_hsie", "BEL", "HSIE BEL", "https://example.com/hdfc.pdf", "target_price", "475", 1),
+    ]
+
+    output = handle_broker_research_command(
+        "/broker-research BEL",
+        conn=conn,
+        output_dir=tmp_path / "broker_research",
+        latest_dir=tmp_path / "latest",
+    )
+
+    executed_sql = "\n".join(sql for sql, _params in conn.executed)
+    assert "Broker Research: BEL" in output
+    assert "reports/latest/broker_research_bel.html" not in output
+    assert "HTML:" in output
+    assert "INSERT INTO company_intel.broker_research_runs" in executed_sql
+    assert (tmp_path / "latest" / "broker_research_bel.html").exists()
+
+
+def test_handle_broker_research_command_accepts_report_broker_alias(tmp_path):
+    conn = FakeConnection()
+    conn.fact_rows = [(1, "icici", "BEL", "ICICI BEL", "https://example.com/icici.pdf", "rating", "BUY", 1)]
+
+    output = handle_broker_research_command(
+        "/report broker BEL html",
+        conn=conn,
+        output_dir=tmp_path / "broker_research",
+        latest_dir=tmp_path / "latest",
+    )
+
+    assert "Broker Research: BEL" in output
+    assert (tmp_path / "latest" / "broker_research_bel.html").exists()

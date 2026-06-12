@@ -11,11 +11,15 @@ from company_intelligence_pg import connect, get_company_aliases, upsert_company
 from .discovery import discover_report_links, score_report_match
 from .fetch import DEFAULT_REPORT_ROOT, fetch_broker_report_pdf
 from .parse import parse_and_store_broker_report
+from .consensus import build_broker_consensus
+from .report import render_broker_research_markdown, write_broker_research_report
 from .sources import active_public_sources
 from .storage import (
     find_report_by_hash,
     list_broker_sources,
+    list_broker_research_facts,
     list_reports_for_fetch,
+    record_broker_research_run,
     seed_broker_sources,
     update_report_fetch_metadata,
     upsert_discovered_report,
@@ -168,6 +172,65 @@ def handle_broker_fetch_command(
                 f"- Duplicate PDFs: {duplicates}",
                 f"- Fetch failures: {failed}",
                 f"- Parsed reports: {parsed}",
+            ]
+        )
+    finally:
+        if own_conn:
+            db.close()
+
+
+def _symbol_from_research_command(text: str) -> str:
+    parts = (text or "").split()
+    if len(parts) >= 3 and parts[0].lower() == "/report" and parts[1].lower() == "broker":
+        return parts[2].strip().upper()
+    if len(parts) >= 3 and parts[0].lower() == "/deep-research":
+        return parts[1].strip().upper()
+    if len(parts) >= 2:
+        return parts[1].strip().upper()
+    raise ValueError("symbol is required")
+
+
+def handle_broker_research_command(
+    text: str,
+    *,
+    conn: Any | None = None,
+    output_dir="reports/broker_research",
+    latest_dir="reports/latest",
+) -> str:
+    symbol = _symbol_from_research_command(text)
+    own_conn = conn is None
+    db = conn or connect()
+    try:
+        facts = list_broker_research_facts(db, symbol=symbol)
+        consensus = build_broker_consensus(symbol=symbol, facts=facts)
+        markdown = render_broker_research_markdown(symbol=symbol, consensus=consensus, facts=facts)
+        paths = write_broker_research_report(
+            symbol=symbol,
+            markdown=markdown,
+            output_dir=output_dir,
+            latest_dir=latest_dir,
+        )
+        run_id = record_broker_research_run(
+            db,
+            symbol=symbol,
+            objective="broker_research",
+            broker_filter="public",
+            status="ok",
+            coverage=consensus,
+            report_markdown_path=paths["markdown_path"],
+            report_html_path=paths["html_path"],
+        )
+        return "\n".join(
+            [
+                f"━━━ {DISCLAIMER} ━━━",
+                "",
+                f"## Broker Research: {symbol}",
+                "",
+                f"- Run ID: {run_id}",
+                f"- Broker facts: {len(facts)}",
+                f"- Brokers covered: {consensus['broker_count']}",
+                f"- Markdown: {paths['markdown_path']}",
+                f"- HTML: {paths['html_path']}",
             ]
         )
     finally:
