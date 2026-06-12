@@ -9,8 +9,17 @@ from typing import Any
 from company_intelligence_pg import connect, get_company_aliases, upsert_company
 
 from .discovery import discover_report_links, score_report_match
+from .fetch import DEFAULT_REPORT_ROOT, fetch_broker_report_pdf
+from .parse import parse_and_store_broker_report
 from .sources import active_public_sources
-from .storage import list_broker_sources, seed_broker_sources, upsert_discovered_report
+from .storage import (
+    find_report_by_hash,
+    list_broker_sources,
+    list_reports_for_fetch,
+    seed_broker_sources,
+    update_report_fetch_metadata,
+    upsert_discovered_report,
+)
 
 
 DISCLAIMER = "Not investment advice. For research and learning only."
@@ -22,6 +31,13 @@ class BrokerIndexOptions:
     broker: str = ""
     all_public: bool = False
     refresh: bool = False
+
+
+@dataclass(frozen=True)
+class BrokerFetchOptions:
+    symbol: str
+    broker: str = ""
+    limit: int = 10
 
 
 def parse_broker_index_command(text: str) -> BrokerIndexOptions:
@@ -37,6 +53,20 @@ def parse_broker_index_command(text: str) -> BrokerIndexOptions:
         broker=args.broker.strip().lower(),
         all_public=bool(args.all_public),
         refresh=bool(args.refresh),
+    )
+
+
+def parse_broker_fetch_command(text: str) -> BrokerFetchOptions:
+    parser = argparse.ArgumentParser(prog="/broker-fetch", add_help=False)
+    parser.add_argument("command")
+    parser.add_argument("symbol")
+    parser.add_argument("--broker", default="")
+    parser.add_argument("--limit", type=int, default=10)
+    args = parser.parse_args((text or "").split())
+    return BrokerFetchOptions(
+        symbol=args.symbol.strip().upper(),
+        broker=args.broker.strip().lower(),
+        limit=max(1, int(args.limit)),
     )
 
 
@@ -61,6 +91,85 @@ def handle_broker_sources_command(*, conn: Any | None = None) -> str:
     try:
         seed_broker_sources(db)
         return render_broker_sources(list_broker_sources(db))
+    finally:
+        if own_conn:
+            db.close()
+
+
+def handle_broker_fetch_command(
+    text: str,
+    *,
+    conn: Any | None = None,
+    root_dir=DEFAULT_REPORT_ROOT,
+    fetcher=None,
+    parser=None,
+) -> str:
+    options = parse_broker_fetch_command(text)
+    own_conn = conn is None
+    db = conn or connect()
+    fetched = 0
+    duplicates = 0
+    failed = 0
+    parsed = 0
+    try:
+        reports = list_reports_for_fetch(db, symbol=options.symbol, broker=options.broker, limit=options.limit)
+        for report in reports:
+            result = fetch_broker_report_pdf(
+                broker_code=str(report["broker_code"]),
+                symbol=str(report["symbol"]),
+                pdf_url=str(report["pdf_url"]),
+                root_dir=root_dir,
+                fetcher=fetcher,
+            )
+            status = str(result["status"])
+            if status != "ok":
+                failed += 1
+                update_report_fetch_metadata(
+                    db,
+                    broker_report_id=int(report["broker_report_id"]),
+                    fetch_status=status,
+                )
+                continue
+            duplicate = find_report_by_hash(db, str(result["pdf_hash"]))
+            if duplicate:
+                duplicates += 1
+                update_report_fetch_metadata(
+                    db,
+                    broker_report_id=int(report["broker_report_id"]),
+                    fetch_status="duplicate_pdf",
+                    pdf_hash=str(result["pdf_hash"]),
+                    local_path=str(duplicate["local_path"]),
+                )
+                continue
+            fetched += 1
+            update_report_fetch_metadata(
+                db,
+                broker_report_id=int(report["broker_report_id"]),
+                fetch_status="fetched",
+                pdf_hash=str(result["pdf_hash"]),
+                local_path=str(result["local_path"]),
+            )
+            parse_result = parse_and_store_broker_report(
+                db,
+                broker_report_id=int(report["broker_report_id"]),
+                local_path=str(result["local_path"]),
+                parser=parser,
+            )
+            if parse_result["parse_status"] in {"parsed", "partial"}:
+                parsed += 1
+        return "\n".join(
+            [
+                f"━━━ {DISCLAIMER} ━━━",
+                "",
+                f"## Broker Fetch: {options.symbol}",
+                "",
+                f"- Reports selected: {len(reports)}",
+                f"- Fetched PDFs: {fetched}",
+                f"- Duplicate PDFs: {duplicates}",
+                f"- Fetch failures: {failed}",
+                f"- Parsed reports: {parsed}",
+            ]
+        )
     finally:
         if own_conn:
             db.close()

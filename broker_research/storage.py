@@ -53,6 +53,47 @@ def list_broker_sources(conn: Any) -> list[dict[str, Any]]:
     ]
 
 
+def list_reports_for_fetch(
+    conn: Any,
+    *,
+    symbol: str,
+    broker: str = "",
+    limit: int = 10,
+) -> list[dict[str, Any]]:
+    clean_symbol = symbol.strip().upper()
+    params: list[Any] = [clean_symbol]
+    broker_clause = ""
+    if broker:
+        broker_clause = "AND broker_code = %s"
+        params.append(broker)
+    params.append(int(limit))
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
+            SELECT broker_report_id, broker_code, symbol, pdf_url, local_path
+            FROM company_intel.broker_reports
+            WHERE symbol = %s
+              AND pdf_url <> ''
+              AND fetch_status IN ('not_fetched', 'fetch_error', 'pdf_too_large')
+              {broker_clause}
+            ORDER BY broker_code, broker_report_id
+            LIMIT %s
+            """,
+            tuple(params),
+        )
+        rows = cur.fetchall()
+    return [
+        {
+            "broker_report_id": row[0],
+            "broker_code": row[1],
+            "symbol": row[2],
+            "pdf_url": row[3],
+            "local_path": row[4],
+        }
+        for row in rows
+    ]
+
+
 def record_index_run(conn: Any, *, source_id: int | None) -> int:
     with conn.cursor() as cur:
         cur.execute(
@@ -133,3 +174,100 @@ def upsert_discovered_report(
         row = cur.fetchone()
     conn.commit()
     return int(row[0])
+
+
+def find_report_by_hash(conn: Any, pdf_hash: str) -> dict[str, Any] | None:
+    if not pdf_hash:
+        return None
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT broker_report_id, broker_code, symbol, local_path
+            FROM company_intel.broker_reports
+            WHERE pdf_hash = %s AND local_path <> ''
+            ORDER BY updated_at DESC, broker_report_id DESC
+            LIMIT 1
+            """,
+            (pdf_hash,),
+        )
+        row = cur.fetchone()
+    if not row:
+        return None
+    return {
+        "broker_report_id": row[0],
+        "broker_code": row[1],
+        "symbol": row[2],
+        "local_path": row[3],
+    }
+
+
+def update_report_fetch_metadata(
+    conn: Any,
+    *,
+    broker_report_id: int,
+    fetch_status: str,
+    pdf_hash: str = "",
+    local_path: str = "",
+) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE company_intel.broker_reports
+            SET fetch_status = %s,
+                pdf_hash = %s,
+                local_path = %s,
+                updated_at = NOW()
+            WHERE broker_report_id = %s
+            """,
+            (fetch_status, pdf_hash, local_path, broker_report_id),
+        )
+    conn.commit()
+
+
+def replace_report_pages(conn: Any, *, broker_report_id: int, pages: list[dict[str, Any]]) -> int:
+    rows = [
+        (
+            broker_report_id,
+            int(page.get("page_number") or 0),
+            str(page.get("text") or ""),
+            int(page.get("char_count") if page.get("char_count") is not None else len(str(page.get("text") or ""))),
+        )
+        for page in pages
+        if int(page.get("page_number") or 0) > 0
+    ]
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            DELETE FROM company_intel.broker_report_pages
+            WHERE broker_report_id = %s
+            """,
+            (broker_report_id,),
+        )
+        if rows:
+            cur.executemany(
+                """
+                INSERT INTO company_intel.broker_report_pages
+                    (broker_report_id, page_number, text, char_count)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (broker_report_id, page_number) DO UPDATE SET
+                    text = EXCLUDED.text,
+                    char_count = EXCLUDED.char_count
+                """,
+                rows,
+            )
+    conn.commit()
+    return len(rows)
+
+
+def update_report_parse_status(conn: Any, *, broker_report_id: int, parse_status: str) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE company_intel.broker_reports
+            SET parse_status = %s,
+                updated_at = NOW()
+            WHERE broker_report_id = %s
+            """,
+            (parse_status, broker_report_id),
+        )
+    conn.commit()

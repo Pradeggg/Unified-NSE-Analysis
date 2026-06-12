@@ -1,6 +1,9 @@
 from broker_research.commands import (
+    BrokerFetchOptions,
     BrokerIndexOptions,
+    handle_broker_fetch_command,
     handle_broker_index_command,
+    parse_broker_fetch_command,
     parse_broker_index_command,
     render_broker_sources,
 )
@@ -27,6 +30,10 @@ class FakeCursor:
             self.rows = [("Bharat Electronics",)]
         elif "RETURNING broker_report_id" in sql:
             self.rows = [(77,)]
+        elif "SELECT broker_report_id, broker_code, symbol, pdf_url, local_path" in normalized:
+            self.rows = list(self.conn.report_rows)
+        elif "FROM company_intel.broker_reports" in normalized and "pdf_hash = %s" in normalized:
+            self.rows = list(self.conn.hash_rows)
         else:
             self.rows = []
 
@@ -43,6 +50,8 @@ class FakeCursor:
 class FakeConnection:
     def __init__(self):
         self.executed = []
+        self.report_rows = []
+        self.hash_rows = []
         self.commits = 0
 
     def cursor(self):
@@ -62,6 +71,12 @@ def test_parse_broker_index_command_flags():
     options = parse_broker_index_command("/broker-index bel --broker icici --all-public --refresh")
 
     assert options == BrokerIndexOptions(symbol="BEL", broker="icici", all_public=True, refresh=True)
+
+
+def test_parse_broker_fetch_command_flags():
+    options = parse_broker_fetch_command("/broker-fetch bel --broker icici --limit 5")
+
+    assert options == BrokerFetchOptions(symbol="BEL", broker="icici", limit=5)
 
 
 def test_render_broker_sources_has_research_only_framing():
@@ -98,3 +113,41 @@ def test_handle_broker_index_command_uses_injected_html_without_network():
     assert "Links discovered: 1" in output
     assert "Symbol matches: 1" in output
     assert "INSERT INTO company_intel.broker_reports" in executed_sql
+
+
+def test_handle_broker_fetch_command_fetches_and_parses_discovered_reports(tmp_path):
+    conn = FakeConnection()
+    conn.report_rows = [
+        (
+            88,
+            "icici",
+            "BEL",
+            "https://www.icicidirect.com/mailcontent/idirect_bharatelectronics_q3fy26.pdf",
+            "",
+        )
+    ]
+
+    class Response:
+        content = b"%PDF broker research"
+        headers = {"content-type": "application/pdf"}
+
+        def raise_for_status(self):
+            return None
+
+    def parser(path):
+        return {"status": "ok", "pages": [{"page_number": 1, "text": "Broker page", "char_count": 11}]}
+
+    output = handle_broker_fetch_command(
+        "/broker-fetch BEL --broker icici --limit 1",
+        conn=conn,
+        root_dir=tmp_path,
+        fetcher=lambda url: Response(),
+        parser=parser,
+    )
+
+    executed_sql = "\n".join(sql for sql, _params in conn.executed)
+    assert "Broker Fetch: BEL" in output
+    assert "Fetched PDFs: 1" in output
+    assert "Parsed reports: 1" in output
+    assert "UPDATE company_intel.broker_reports" in executed_sql
+    assert "INSERT INTO company_intel.broker_report_pages" in executed_sql
