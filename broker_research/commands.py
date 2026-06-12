@@ -238,6 +238,51 @@ def handle_broker_research_command(
             db.close()
 
 
+def _parse_broker_crawl_command(text: str) -> tuple[str, int | None]:
+    parser = argparse.ArgumentParser(prog="/broker-crawl", add_help=False)
+    parser.add_argument("command")
+    parser.add_argument("symbol")
+    parser.add_argument("--max-sources", type=int, default=0)
+    args = parser.parse_args((text or "").split())
+    return args.symbol.strip().upper(), (int(args.max_sources) or None)
+
+
+def handle_broker_crawl_command(
+    text: str,
+    *,
+    conn: Any | None = None,
+    runner=None,
+) -> str:
+    from .scheduler import run_scheduled_broker_crawl
+
+    symbol, max_sources = _parse_broker_crawl_command(text)
+    own_conn = conn is None
+    db = conn or connect()
+    run = runner or run_scheduled_broker_crawl
+    try:
+        result = run(conn=db, symbol=symbol, max_sources=max_sources)
+        lines = [
+            f"━━━ {DISCLAIMER} ━━━",
+            "",
+            f"## Broker Crawl: {result.symbol}",
+            "",
+            f"- Sources scanned: {result.sources_seen}",
+            f"- Sources succeeded: {result.sources_succeeded}",
+            f"- Sources failed: {result.sources_failed}",
+            f"- Skipped sources: {result.skipped_sources}",
+            f"- Links discovered: {result.links_discovered}",
+            f"- Reports stored: {result.reports_stored}",
+        ]
+        if result.failures:
+            lines.extend(["", "## Failures"])
+            for failure in result.failures:
+                lines.append(f"- {failure['broker_code']}: {failure['error']}")
+        return "\n".join(lines)
+    finally:
+        if own_conn:
+            db.close()
+
+
 def _fetch_source_html(source_url: str, *, timeout: int = 15) -> str:
     from urllib.request import Request, urlopen
 

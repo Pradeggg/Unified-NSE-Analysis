@@ -1,6 +1,7 @@
 from broker_research.commands import (
     BrokerFetchOptions,
     BrokerIndexOptions,
+    handle_broker_crawl_command,
     handle_broker_fetch_command,
     handle_broker_index_command,
     handle_broker_research_command,
@@ -8,6 +9,7 @@ from broker_research.commands import (
     parse_broker_index_command,
     render_broker_sources,
 )
+from broker_research.scheduler import ScheduledBrokerCrawlResult
 
 
 ICICI_URL = "https://www.icicidirect.com/mailcontent/co_reports.html"
@@ -199,3 +201,27 @@ def test_handle_broker_research_command_accepts_report_broker_alias(tmp_path):
 
     assert "Broker Research: BEL" in output
     assert (tmp_path / "latest" / "broker_research_bel.html").exists()
+
+
+def test_handle_broker_crawl_command_renders_scheduled_summary():
+    conn = FakeConnection()
+
+    def fake_runner(**kwargs):
+        assert kwargs["symbol"] == "BEL"
+        assert kwargs["max_sources"] == 2
+        return ScheduledBrokerCrawlResult(
+            symbol="BEL",
+            sources_seen=2,
+            sources_succeeded=2,
+            sources_failed=0,
+            links_discovered=4,
+            reports_stored=3,
+            skipped_sources=6,
+            failures=[],
+        )
+
+    output = handle_broker_crawl_command("/broker-crawl BEL --max-sources 2", conn=conn, runner=fake_runner)
+
+    assert "Broker Crawl: BEL" in output
+    assert "Sources scanned: 2" in output
+    assert "Reports stored: 3" in output

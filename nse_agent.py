@@ -1054,6 +1054,8 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/deep-research BEL --brokers public", "Publish deep broker research report for public broker facts"),
     ("/report broker",                   "Render latest broker research report for a symbol"),
     ("/report broker BEL html",          "Render broker research report for a symbol as HTML"),
+    ("/broker-crawl",                    "Scheduled public broker index crawl for one symbol"),
+    ("/broker-crawl BEL --max-sources 4", "Crawl bounded public broker sources for a symbol"),
     # ── Analyze / document commands ─────────────────────────────────────────
     ("/research RELIANCE",                "Comprehensive stock research report — overview, fundamentals, technicals, charts, narrative"),
     ("/research RELIANCE pdf",            "Comprehensive stock research report as PDF"),
@@ -7172,6 +7174,7 @@ def _build_command_registry():
     def _h_broker_research(query, agent, show_trace):
         from broker_research.commands import (
             handle_broker_fetch_command,
+            handle_broker_crawl_command,
             handle_broker_index_command,
             handle_broker_research_command,
             handle_broker_sources_command,
@@ -7184,6 +7187,10 @@ def _build_command_registry():
             return True
         if q.startswith("/broker-fetch"):
             output = handle_broker_fetch_command(query)
+            console.print(Markdown(_linkify_markdown(output)))
+            return True
+        if q.startswith("/broker-crawl"):
+            output = handle_broker_crawl_command(query)
             console.print(Markdown(_linkify_markdown(output)))
             return True
         if q.startswith(("/broker-research", "/deep-research")):
@@ -7199,7 +7206,7 @@ def _build_command_registry():
         return True
     registry.register(CommandHandler(
         name="broker-research",
-        match_fn=lambda q: q.startswith(("/broker-sources", "/broker-index", "/broker-fetch", "/broker-research", "/deep-research", "/report broker")),
+        match_fn=lambda q: q.startswith(("/broker-sources", "/broker-index", "/broker-fetch", "/broker-crawl", "/broker-research", "/deep-research", "/report broker")),
         handler_fn=_h_broker_research,
         description="Broker research source registry and public report discovery",
     ))

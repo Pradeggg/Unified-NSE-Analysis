@@ -553,6 +553,47 @@ def step_fundamentals_refresh(dry_run: bool) -> bool:
     )
 
 
+def step_broker_research_crawl(
+    symbol: str,
+    dry_run: bool,
+    max_sources: int | None = None,
+    runner=None,
+    conn=None,
+) -> bool:
+    """Run an explicit bounded public broker research crawl for one symbol."""
+    _section("Broker Research Crawl")
+    clean_symbol = (symbol or "").strip().upper()
+    if not clean_symbol:
+        print("   ❌ Broker crawl requires a symbol")
+        return False
+    print(f"   Symbol: {clean_symbol}")
+    if max_sources:
+        print(f"   Max sources: {max_sources}")
+    if dry_run:
+        print("   [DRY RUN — skipped]")
+        return True
+    try:
+        from company_intelligence_pg import connect
+        from broker_research.scheduler import run_scheduled_broker_crawl
+
+        run = runner or run_scheduled_broker_crawl
+        db = conn or connect(PG_DSN)
+        try:
+            result = run(conn=db, symbol=clean_symbol, max_sources=max_sources)
+        finally:
+            if conn is None:
+                db.close()
+        print(f"   Sources scanned: {result.sources_seen}")
+        print(f"   Sources succeeded: {result.sources_succeeded}")
+        print(f"   Sources failed: {result.sources_failed}")
+        print(f"   Links discovered: {result.links_discovered}")
+        print(f"   Reports stored: {result.reports_stored}")
+        return result.sources_failed == 0
+    except Exception as exc:
+        print(f"   ❌ Broker research crawl failed: {exc}")
+        return False
+
+
 def step_screener_fundamentals_backfill(
     dry_run: bool,
     index: str = "NIFTY 500",
@@ -711,6 +752,10 @@ def main() -> int:
                         help="Seconds between enrichment screener.in calls (default: 2.5)")
     parser.add_argument("--enrich-yfinance-fallback", action="store_true", default=True,
                         help="On screener failure, fall back to yfinance ratios (default: ON)")
+    parser.add_argument("--broker-crawl",
+                        help="Optional bounded public broker research crawl for one NSE symbol")
+    parser.add_argument("--broker-crawl-max-sources", type=int, default=0,
+                        help="Maximum broker index sources to crawl when --broker-crawl is set")
     parser.add_argument("--dry-run",         action="store_true",
                         help="Print plan without executing anything")
     args = parser.parse_args()
@@ -817,6 +862,14 @@ def main() -> int:
     if not step_postgres_load(args.dry_run):
         print("  ⚠️  PostgreSQL load failed — screeners not updated")
         failed.append("PostgreSQL screeners")
+
+    if args.broker_crawl:
+        if not step_broker_research_crawl(
+            args.broker_crawl,
+            args.dry_run,
+            max_sources=args.broker_crawl_max_sources or None,
+        ):
+            failed.append("Broker research crawl")
 
     # 4C. Sector rotation report. This refreshes sector context and signal_log.csv
     # for downstream report links and briefing after canonical snapshot load.

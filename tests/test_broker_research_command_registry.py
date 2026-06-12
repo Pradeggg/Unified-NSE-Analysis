@@ -10,3 +10,4 @@ def test_broker_commands_are_registered_in_catalog():
     assert "/broker-research" in commands
     assert "/deep-research" in commands
     assert "/report broker" in commands
+    assert "/broker-crawl" in commands

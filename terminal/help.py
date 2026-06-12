@@ -375,6 +375,7 @@ SECTIONS: dict[str, dict] = {
             ("/broker-index BEL",                "Discover public broker reports for a symbol"),
             ("/broker-index BEL --broker icici", "Discover reports from one broker source"),
             ("/broker-fetch BEL --limit 10",     "Download and parse discovered broker PDFs"),
+            ("/broker-crawl BEL --max-sources 4", "Bounded scheduled crawl of public broker indexes"),
             ("/broker-research BEL",             "Generate broker consensus report from stored facts"),
             ("/deep-research BEL --brokers public", "Publish deep broker research report"),
             ("/report broker BEL html",          "Render broker research report as HTML"),
