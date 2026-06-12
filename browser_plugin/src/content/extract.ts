@@ -1,10 +1,10 @@
-// Content script — read-only page metadata extractor.
+// Content script — page metadata extractor + RIC chart overlay.
 // Injected into TradingView, Zerodha Kite, ChartInk, NSE India.
 //
 // Rules:
-//  - Read-only: never mutates the DOM or interacts with the page.
-//  - No user data, cookies, or page content is sent — only symbol/timeframe metadata.
+//  - Read symbol/timeframe from DOM — no user data, cookies, or page content sent.
 //  - Sends metadata on load and when the background requests it.
+//  - Draws RIC analysis overlay on chart when requested by the side panel.
 
 import type {
   PageMetadata,
@@ -13,6 +13,7 @@ import type {
   CaptureSelectionRect,
   SelectCaptureAreaResponse,
 } from "../types";
+import { drawRicLevels, clearRicOverlay, type DrawSignal } from "./draw_levels";
 
 // ── TradingView timeframe normalisation ───────────────────────────────────
 // TradingView uses raw numbers: "1"=1m, "5"=5m, "60"=1h, "D"=1D etc.
@@ -226,6 +227,18 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         } satisfies SelectCaptureAreaResponse);
       });
     return true;
+  }
+
+  if (message.type === "DRAW_RIC_LEVELS") {
+    drawRicLevels(message.signals as DrawSignal[]);
+    sendResponse({ ok: true });
+    return false;
+  }
+
+  if (message.type === "CLEAR_RIC_OVERLAY") {
+    clearRicOverlay();
+    sendResponse({ ok: true });
+    return false;
   }
 
   return false;

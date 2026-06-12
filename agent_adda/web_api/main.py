@@ -26,7 +26,7 @@ if _env_file.exists() and not os.environ.get("PG_DSN"):
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routes import analysis, backtest, chart, patterns, health, symbols
+from .routes import analysis, backtest, chart, patterns, health, symbols, fno, ric
 
 app = FastAPI(
     title="Agent Adda Web API",
@@ -54,6 +54,8 @@ app.include_router(chart.router,    prefix="/api/chart",    tags=["chart"])
 app.include_router(analysis.router, prefix="/api/analysis", tags=["analysis"])
 app.include_router(patterns.router,  prefix="/api/patterns",  tags=["patterns"])
 app.include_router(backtest.router, prefix="/api/backtest", tags=["backtest"])
+app.include_router(fno.router,      prefix="/api/fno",       tags=["fno"])
+app.include_router(ric.router,      prefix="/api/ric",       tags=["ric"])
 
 
 if __name__ == "__main__":

@@ -176,7 +176,91 @@ export interface LeaderRow {
   options_score: number;
 }
 
-// ── Extension runtime messages ───────────────────────────────────────────
+// ── RIC (Recursive Insights Composite) types ─────────────────────────────
+
+export interface DrawSignal {
+  type:  string;
+  price: number;
+  label: string;
+  color: string;
+  width: number;
+  dash:  boolean;
+}
+
+export interface RicSetup {
+  bias:          "BULLISH" | "BEARISH" | "NEUTRAL";
+  trigger:       number;
+  stop:          number;
+  targets:       number[];
+  rr:            number;
+  strategy:      string;
+  potential_pct: number;
+  holding:       string;
+}
+
+export interface RicSafety {
+  score:   number;
+  rating:  "SAFE" | "MODERATE" | "CAUTION" | "RISKY";
+  color:   string;
+  reasons: string[];
+}
+
+export interface RicFno {
+  pcr:           number;
+  atm:           number;
+  max_pain:      number;
+  ce_resistance: number[];
+  pe_support:    number[];
+  basis_pct:     number | null;
+  fno_signal:    string;
+  expiry:        string;
+}
+
+export interface RicMarket {
+  nifty_close:    number;
+  nifty_chg_pct:  number;
+  nifty_up_days:  number;
+  nifty_trend:    string;
+  nifty_52w_high: number;
+  nifty_52w_low:  number;
+}
+
+export interface RicOptionsPlay {
+  strategy:    string;
+  description: string;
+  expiry:      string;
+  risk_note:   string;
+}
+
+export interface RicKeyLevels {
+  price:        number;
+  pivot:        number;
+  supports:     number[];
+  resistances:  number[];
+  ema9:         number;
+  ema21:        number;
+  ema50:        number;
+  ema200:       number;
+  pivot_levels: Record<string, number>;
+}
+
+export interface RicResult {
+  symbol:          string;
+  timeframe:       string;
+  as_of:           string;
+  safety:          RicSafety;
+  market:          RicMarket;
+  fno:             RicFno;
+  intraday:        RicSetup;
+  swing:           RicSetup;
+  options_play:    RicOptionsPlay;
+  key_levels:      RicKeyLevels;
+  draw_signals:    DrawSignal[];
+  recommendation:  string;
+  model:           string;
+  input_tokens:    number;
+  output_tokens:   number;
+}
 
 export interface CaptureVisibleTabRequest {
   type: "CAPTURE_VISIBLE_TAB";

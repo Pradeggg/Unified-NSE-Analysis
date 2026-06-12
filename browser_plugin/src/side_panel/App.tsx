@@ -3,6 +3,7 @@ import { Header }        from "./components/Header";
 import { CaptureButton } from "./components/CaptureButton";
 import { ChatPanel }     from "./components/ChatPanel";
 import { BacktestTab }   from "./components/BacktestTab";
+import { RicTab }        from "./components/RicTab";
 import { useChartContext } from "./store/chartContext";
 import { analyzeChart, askFollowUp, healthCheck } from "./api/client";
 import type {
@@ -18,7 +19,7 @@ import type {
 } from "../types";
 import "./App.css";
 
-type MainTab = "analyze" | "backtest";
+type MainTab = "analyze" | "backtest" | "ric";
 
 export function App() {
   const [symbol, setSymbol]       = useState("BANKNIFTY");
@@ -297,6 +298,10 @@ export function App() {
           className={`main-tab ${mainTab === "backtest" ? "main-tab--active" : ""}`}
           onClick={() => setMainTab("backtest")}
         >📊 Backtest</button>
+        <button
+          className={`main-tab ${mainTab === "ric" ? "main-tab--active" : ""}`}
+          onClick={() => setMainTab("ric")}
+        >🧠 RIC</button>
       </div>
 
       <main className="main">
@@ -332,6 +337,15 @@ export function App() {
 
         {mainTab === "backtest" && (
           <BacktestTab symbol={symbol} timeframe={timeframe} />
+        )}
+
+        {mainTab === "ric" && (
+          <RicTab
+            symbol={symbol}
+            timeframe={timeframe}
+            exchange={exchange}
+            captureId={ctx?.capture_id ?? null}
+          />
         )}
       </main>
 

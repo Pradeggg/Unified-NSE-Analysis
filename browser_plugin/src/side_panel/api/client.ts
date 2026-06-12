@@ -9,6 +9,7 @@ import type {
   PatternFinding,
   BacktestResult,
   LeaderRow,
+  RicResult,
 } from "../../types";
 
 const BASE_URL = "http://localhost:8765";
@@ -150,4 +151,28 @@ export async function fetchPatterns(
 ): Promise<ApiResponse<{ patterns: PatternFinding[] }>> {
   const params = new URLSearchParams({ symbol, exchange, timeframe });
   return apiFetch<{ patterns: PatternFinding[] }>(`/api/patterns/query?${params}`);
+}
+
+// ── RIC (Recursive Insights Composite) ───────────────────────────────────
+
+export async function fetchRic(
+  symbol:    string,
+  timeframe: string,
+  exchange:  string  = "NSE",
+  captureId?: string,
+): Promise<ApiResponse<RicResult>> {
+  const params = new URLSearchParams({ symbol, timeframe, exchange });
+  if (captureId) params.set("capture_id", captureId);
+  return apiFetch<RicResult>(`/api/ric/analyze?${params}`);
+}
+
+export async function sendDrawSignals(
+  tabId:   number,
+  signals: unknown[],
+): Promise<void> {
+  await chrome.tabs.sendMessage(tabId, { type: "DRAW_RIC_LEVELS", signals });
+}
+
+export async function clearChartOverlay(tabId: number): Promise<void> {
+  await chrome.tabs.sendMessage(tabId, { type: "CLEAR_RIC_OVERLAY" }).catch(() => {});
 }
