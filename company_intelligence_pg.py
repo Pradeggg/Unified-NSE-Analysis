@@ -30,6 +30,13 @@ REQUIRED_TABLES = [
     "website_pages",
     "website_links",
     "website_page_chunks",
+    "broker_sources",
+    "broker_index_runs",
+    "broker_reports",
+    "broker_report_pages",
+    "broker_report_tables",
+    "broker_research_facts",
+    "broker_research_runs",
 ]
 
 

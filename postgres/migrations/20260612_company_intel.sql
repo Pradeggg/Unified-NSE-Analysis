@@ -204,3 +204,111 @@ CREATE INDEX IF NOT EXISTS idx_company_intel_website_chunks_symbol
     ON company_intel.website_page_chunks (symbol, category);
 CREATE INDEX IF NOT EXISTS idx_company_intel_website_chunks_search
     ON company_intel.website_page_chunks USING GIN (search_vector);
+
+CREATE TABLE IF NOT EXISTS company_intel.broker_sources (
+    source_id BIGSERIAL PRIMARY KEY,
+    broker_code TEXT NOT NULL,
+    broker_name TEXT NOT NULL,
+    source_kind TEXT NOT NULL,
+    source_url TEXT NOT NULL,
+    access_mode TEXT NOT NULL,
+    url_pattern TEXT NOT NULL DEFAULT '',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    notes TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (broker_code, source_kind, source_url)
+);
+
+CREATE TABLE IF NOT EXISTS company_intel.broker_index_runs (
+    index_run_id BIGSERIAL PRIMARY KEY,
+    source_id BIGINT REFERENCES company_intel.broker_sources(source_id) ON DELETE SET NULL,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMPTZ,
+    status TEXT NOT NULL DEFAULT 'running',
+    http_status INTEGER,
+    reports_found INTEGER NOT NULL DEFAULT 0,
+    reports_new INTEGER NOT NULL DEFAULT 0,
+    failure_reason TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS company_intel.broker_reports (
+    broker_report_id BIGSERIAL PRIMARY KEY,
+    broker_code TEXT NOT NULL,
+    symbol TEXT NOT NULL DEFAULT '',
+    company_name TEXT NOT NULL DEFAULT '',
+    report_title TEXT NOT NULL DEFAULT '',
+    report_type TEXT NOT NULL DEFAULT 'unknown',
+    report_date DATE,
+    source_url TEXT NOT NULL DEFAULT '',
+    pdf_url TEXT NOT NULL,
+    pdf_hash TEXT NOT NULL DEFAULT '',
+    local_path TEXT NOT NULL DEFAULT '',
+    fetch_status TEXT NOT NULL DEFAULT 'not_fetched',
+    parse_status TEXT NOT NULL DEFAULT 'not_parsed',
+    discovered_via TEXT NOT NULL DEFAULT '',
+    match_score DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (broker_code, pdf_url)
+);
+
+CREATE TABLE IF NOT EXISTS company_intel.broker_report_pages (
+    page_id BIGSERIAL PRIMARY KEY,
+    broker_report_id BIGINT NOT NULL REFERENCES company_intel.broker_reports(broker_report_id) ON DELETE CASCADE,
+    page_number INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    char_count INTEGER NOT NULL DEFAULT 0,
+    search_vector TSVECTOR GENERATED ALWAYS AS (to_tsvector('english', coalesce(text, ''))) STORED,
+    UNIQUE (broker_report_id, page_number)
+);
+
+CREATE TABLE IF NOT EXISTS company_intel.broker_report_tables (
+    table_id BIGSERIAL PRIMARY KEY,
+    broker_report_id BIGINT NOT NULL REFERENCES company_intel.broker_reports(broker_report_id) ON DELETE CASCADE,
+    page_number INTEGER NOT NULL,
+    table_index INTEGER NOT NULL,
+    table_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    caption TEXT NOT NULL DEFAULT '',
+    UNIQUE (broker_report_id, page_number, table_index)
+);
+
+CREATE TABLE IF NOT EXISTS company_intel.broker_research_facts (
+    fact_id BIGSERIAL PRIMARY KEY,
+    broker_report_id BIGINT NOT NULL REFERENCES company_intel.broker_reports(broker_report_id) ON DELETE CASCADE,
+    symbol TEXT NOT NULL,
+    fact_type TEXT NOT NULL,
+    fact_name TEXT NOT NULL,
+    fact_value TEXT NOT NULL,
+    unit TEXT NOT NULL DEFAULT '',
+    period TEXT NOT NULL DEFAULT '',
+    page_number INTEGER,
+    confidence DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+    extractor TEXT NOT NULL DEFAULT 'deterministic',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS company_intel.broker_research_runs (
+    research_run_id BIGSERIAL PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    objective TEXT NOT NULL DEFAULT '',
+    broker_filter TEXT NOT NULL DEFAULT '',
+    as_of TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    status TEXT NOT NULL DEFAULT 'running',
+    report_markdown_path TEXT NOT NULL DEFAULT '',
+    report_html_path TEXT NOT NULL DEFAULT '',
+    report_pdf_path TEXT NOT NULL DEFAULT '',
+    coverage_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_company_intel_broker_sources_active
+    ON company_intel.broker_sources (is_active, access_mode, broker_code);
+CREATE INDEX IF NOT EXISTS idx_company_intel_broker_reports_symbol
+    ON company_intel.broker_reports (symbol, broker_code, report_date DESC NULLS LAST);
+CREATE INDEX IF NOT EXISTS idx_company_intel_broker_reports_pdf_hash
+    ON company_intel.broker_reports (pdf_hash) WHERE pdf_hash <> '';
+CREATE INDEX IF NOT EXISTS idx_company_intel_broker_pages_search
+    ON company_intel.broker_report_pages USING GIN (search_vector);
+CREATE INDEX IF NOT EXISTS idx_company_intel_broker_facts_symbol
+    ON company_intel.broker_research_facts (symbol, fact_type, broker_report_id);

@@ -1042,6 +1042,10 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/company-xray",                    "Company + Sector X-Ray report from indexed evidence"),
     ("/company-xray DMART",              "Run Company X-Ray for DMart"),
     ("/company-xray DMART --strict",     "Run Company X-Ray with strict evidence coverage"),
+    ("/broker-sources",                  "List PostgreSQL-backed broker research sources"),
+    ("/broker-index",                    "Discover public broker reports for a symbol"),
+    ("/broker-index BEL",                "Index public broker reports for Bharat Electronics"),
+    ("/broker-index BEL --broker icici", "Index one broker source for a symbol"),
     # ── Analyze / document commands ─────────────────────────────────────────
     ("/research RELIANCE",                "Comprehensive stock research report — overview, fundamentals, technicals, charts, narrative"),
     ("/research RELIANCE pdf",            "Comprehensive stock research report as PDF"),
@@ -7154,6 +7158,25 @@ def _build_command_registry():
         match_fn=lambda q: q.startswith("/data-coverage"),
         handler_fn=_h_data_coverage,
         description="Data coverage report",
+    ))
+
+    # /broker-sources and /broker-index
+    def _h_broker_research(query, agent, show_trace):
+        from broker_research.commands import handle_broker_index_command, handle_broker_sources_command
+        _print_user(query)
+        q = query.strip().lower()
+        if q.startswith("/broker-sources"):
+            output = handle_broker_sources_command()
+            console.print(Markdown(_linkify_markdown(output)))
+            return True
+        output = handle_broker_index_command(query)
+        console.print(Markdown(_linkify_markdown(output)))
+        return True
+    registry.register(CommandHandler(
+        name="broker-research",
+        match_fn=lambda q: q.startswith(("/broker-sources", "/broker-index")),
+        handler_fn=_h_broker_research,
+        description="Broker research source registry and public report discovery",
     ))
 
     # open-last-report (natural language)

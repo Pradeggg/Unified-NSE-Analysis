@@ -371,6 +371,9 @@ SECTIONS: dict[str, dict] = {
         "entries": [
             ("/research RELIANCE",                "Comprehensive 360° stock report: overview, fundamentals, technicals, chart, narrative"),
             ("/research RELIANCE pdf",            "Comprehensive stock report as PDF"),
+            ("/broker-sources",                  "List PostgreSQL-backed broker research sources"),
+            ("/broker-index BEL",                "Discover public broker reports for a symbol"),
+            ("/broker-index BEL --broker icici", "Discover reports from one broker source"),
             ("/analyze RELIANCE",                 "Broker-note ingest + internal DB critique"),
             ("/analyze report.pdf",               "Read and summarize a local PDF document"),
             ("/analyze annual_report.docx",       "Extract and summarize a Word document"),
