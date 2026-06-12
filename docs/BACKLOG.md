@@ -141,6 +141,16 @@ Every external and internal data source the platform uses or will use. Items mar
 | Yahoo Finance US Stocks | `yfinance` for starter liquid universe: MAG7, semis, financials, energy, defense, consumer, cloud/software | Daily | `data/global_market/prices.csv` | G2-G6: US screeners, stock deep dives, terminal commands |
 | Global / US Universe Config | Local curated symbol registry | On change | `data/global_market/universe.json` | G1: reproducible universe metadata and India read-through tags |
 
+#### P. Broker Research Intelligence Data (NEW — Deep Broker Research)
+
+| Source | URL / Method | Frequency | Local Cache | Used By |
+|---|---|---|---|---|
+| ICICI Direct research index | `https://www.icicidirect.com/mailcontent/co_reports.html` plus direct `idirect_*.pdf` links | On-demand, then scheduled after MVP | PostgreSQL `company_intel.broker_*`; PDFs under `data/company_intelligence/broker_reports/icici/{SYMBOL}/` | BRI-1 through BRI-5: broker report discovery, PDF parse, fact extraction, consensus, deep research |
+| HDFC Securities / HSIE reports | `https://www.hdfcsec.com/research/equity/stock-research-institutional-reports`; PDFs under `/hsl.docs/` | On-demand, then scheduled after MVP | PostgreSQL `company_intel.broker_*`; PDFs under `data/company_intelligence/broker_reports/hdfc_hsie/{SYMBOL}/` | BRI-1 through BRI-5 |
+| Axis Direct fundamental and trading reports | `https://simplehai.axisdirect.in/app/index.php/insights/reports/fundamental`, `https://simplehai.axisdirect.in/research/research-reports/trading-reports`; `downloadReport` and image PDF links | On-demand, then scheduled after MVP | PostgreSQL `company_intel.broker_*`; PDFs under `data/company_intelligence/broker_reports/axis/{SYMBOL}/` | BRI-1 through BRI-5 |
+| Sharekhan public newsletters | Fixed latest PDFs: `Investoreye.pdf`, `Eagleeye_e.pdf`, `DerivativeEye.pdf`; dated PDFs under `/MediaGalary/docs/` | On-demand, then scheduled after MVP | PostgreSQL `company_intel.broker_*`; PDFs under `data/company_intelligence/broker_reports/sharekhan/{SYMBOL}/` | BRI-1 through BRI-5 |
+| Trendlyne research report index | `https://trendlyne.com/research-reports/` and broker pages for Motilal Oswal, Kotak Securities, and others | Discovery only; direct broker PDF preferred as evidence | PostgreSQL discovery metadata; no paid/login bypass | BRI-1 discovery expansion, BRI-6 scheduled crawl |
+
 #### Access Notes
 
 1. **NSE APIs require browser-like headers**: `User-Agent: Mozilla/5.0`, `Referer: https://www.nseindia.com`. Always use `curl` subprocess or `requests` with timeout + retry (macOS hang issue).
@@ -149,6 +159,7 @@ Every external and internal data source the platform uses or will use. Items mar
 4. **Cache TTL defaults**: daily data = 24h, fundamental data = 30d, quarterly data = 100d, macro data = 45d.
 5. **Missing data is not a runtime crash condition**: if a source is unavailable, the corresponding field fills with `None` / `missing_evidence` and the report may still generate.
 6. **Missing evidence is a claim blocker**: recommendations, broker/concall/catalyst claims, F&O claims, forensic claims, and Strategy Council trade research must not be stated as facts unless the corresponding source-backed tool returned evidence.
+7. **Broker research is evidence, not advice**: public broker PDFs can be indexed, parsed, compared, and cited, but final outputs must distinguish broker opinion, Agent Adda cross-checks, and unsupported gaps. Login-only or paid research must be marked `login_required` and not bypassed.
 
 ---
 
@@ -161,6 +172,33 @@ Every external and internal data source the platform uses or will use. Items mar
 | 🔜 READY | Spec complete, not yet started — free to pick up |
 | ⏳ BLOCKED | Waiting on a dependency item |
 | 💤 DEFERRED | Intentionally deferred to a later sprint |
+
+### Broker Research Intelligence Backlog — 2026-06-12
+
+Broker Research Intelligence is the planned PostgreSQL-backed deep research workflow for public Indian broker reports. It discovers broker report links, stores report metadata/PDFs/page evidence in `company_intel`, extracts structured broker facts, compares assumptions across brokers, and publishes research-only deep market intelligence reports with source trails.
+
+Canonical references:
+
+- Design spec: `docs/superpowers/specs/2026-06-12-broker-research-intelligence-design.md`
+- Phase 1 implementation plan: `docs/superpowers/plans/2026-06-12-broker-research-intelligence-phase1.md`
+
+Coordination rules:
+
+- PostgreSQL is canonical. Do not add a new SQLite store for broker research.
+- Store source documents, page chunks, structured facts, and LLM interpretations separately.
+- Tests must use fixtures for broker HTML/PDF parsing; live broker network smokes are secondary.
+- Do not bypass login-only broker pages or paid research.
+- Do not publish buy/sell advice. Publish broker evidence, comparison, Agent Adda cross-checks, and gaps.
+
+| Item | Status | Priority | Suggested Owner | Files | Design / Implementation | Dependencies | Acceptance Criteria |
+|---|---|---|---|---|---|---|---|
+| BRI-0 Deep Broker Research Design + Plan | ✅ DONE | P0 | Codex | `docs/superpowers/specs/2026-06-12-broker-research-intelligence-design.md`, `docs/superpowers/plans/2026-06-12-broker-research-intelligence-phase1.md`, `docs/BACKLOG.md` | Defines the end-to-end Deep Broker Research Intelligence workflow, source registry, PostgreSQL tables, ingestion stages, LLM skills, output contract, error handling, and phased implementation. Phase 1 plan scopes the first shippable slice to schema, source seed, discovery parser, storage helpers, and terminal commands. | User-supplied broker source index and direct PDF links. Existing `company_intel` PostgreSQL foundation. | Design and plan exist, name all public sources supplied by the user, keep broker evidence separate from LLM interpretation, and defer market-wide crawling until single-stock flow is stable. |
+| BRI-1 PostgreSQL Registry And Single-Symbol Discovery | 🔜 READY | P0 | Broker research foundation assistant | `postgres/migrations/20260612_company_intel.sql`, `company_intelligence_pg.py`, `broker_research/`, `nse_agent.py`, `terminal/help.py`, `tests/test_broker_research_*.py` | Implement Phase 1: `company_intel.broker_sources`, `broker_index_runs`, `broker_reports`, `broker_report_pages`, `broker_report_tables`, `broker_research_facts`, `broker_research_runs`; seed ICICI/HDFC/Axis/Sharekhan/Trendlyne sources; parse public index HTML fixtures; match reports to symbol/company aliases; expose `/broker-sources` and `/broker-index SYMBOL`. | BRI-0. Existing PostgreSQL migration runner and `company_intelligence_pg.py`. | Focused tests pass without live network. `/broker-sources` lists seeded rows from PostgreSQL. `/broker-index BEL --broker icici` stores report metadata rows when supplied reachable public index HTML. |
+| BRI-2 PDF Fetch, Hash, Parse, And Page Search | 🔜 READY | P0 | Broker document ingestion assistant | `broker_research/fetch.py`, `broker_research/parse.py`, `broker_research/storage.py`, `data/company_intelligence/broker_reports/`, `tests/test_broker_research_fetch.py`, `tests/test_broker_research_parse.py` | Download selected public PDFs with timeout and max-size guards, calculate SHA-256, skip duplicate hashes, store local paths, extract page text, store `broker_report_pages`, and create full-text searchable page chunks. Reuse existing filing/PDF parser where practical. | BRI-1. Local writable document root. | Direct ICICI/HDFC/Axis fixture PDFs or local PDF fixtures parse into page-numbered rows. Duplicate PDF hash does not create duplicate report evidence. Fetch failures store structured status instead of crashing. |
+| BRI-3 Structured Broker Fact Extraction | 🔜 READY | P1 | Broker extraction assistant | `broker_research/extract.py`, `broker_research/prompts.py`, `broker_research/storage.py`, `tests/test_broker_research_extract.py` | Implement deterministic extraction for rating, target price, valuation method, valuation multiple, forecast periods, revenue/PAT/EPS snippets, risks, catalysts, and broker caveats. Add LLM extraction only over bounded page chunks and require page references in returned JSON. | BRI-2. Existing LLM client pattern in Agent Adda. | Facts are inserted into `company_intel.broker_research_facts` with `extractor`, `confidence`, and page number. Unsupported LLM facts are rejected or marked missing. Tests cover deterministic target/rating extraction and LLM JSON validation with fakes. |
+| BRI-4 Broker Consensus Comparator | 🔜 READY | P1 | Broker analysis assistant | `broker_research/consensus.py`, `broker_research/storage.py`, `tests/test_broker_research_consensus.py` | Compare broker coverage for one symbol: rating spread, target-price range, upside/downside assumptions, valuation method spread, forecast estimate spread, recurring catalysts, recurring risks, freshness, and disagreements. Store comparison output as a broker research run artifact. | BRI-3. Current market snapshot/fundamentals tools for cross-check context. | For a multi-broker fixture, comparator identifies target-price min/max, stale reports, repeated catalysts, repeated risks, and contradictions without inventing missing estimates. |
+| BRI-5 Deep Broker Research Report Publishing | 🔜 READY | P1 | Report publishing assistant | `broker_research/report.py`, `terminal/reports.py`, `reports/broker_research/`, `reports/latest/`, `tests/test_broker_research_report.py` | Add `/broker-research SYMBOL`, `/deep-research SYMBOL --brokers public`, and `/report broker SYMBOL html`. Publish markdown/html with executive summary, broker coverage map, rating/target consensus, valuation comparison, earnings estimates, bull/bear thesis, catalysts, risks, disagreements, Agent Adda cross-check, freshness, evidence quality, and source appendix. | BRI-4. Existing report theme/link registry conventions. | Report includes research-only disclaimer, source appendix, and missing evidence section. Every nontrivial claim maps to broker facts/page chunks or is labeled as inference. Latest report paths are addressable by follow-up commands. |
+| BRI-6 Scheduled Public Broker Crawl | 💤 DEFERRED | P2 | Broker crawler operations assistant | `broker_research/scheduler.py`, `daily_refresh.py`, `postgres/migrations/20260612_company_intel.sql`, `tests/test_broker_research_scheduler.py` | Add bounded scheduled crawling for public broker index pages after single-symbol discovery/fetch/extract/report flow is stable. Track per-source runs, report deltas, blocked sources, rate limits, and failures. | BRI-1 through BRI-5 stable. | Daily crawl discovers new public report metadata without refetching duplicates, respects rate limits, does not access login-only content, and emits a crawl summary suitable for daily refresh logs. |
 
 ### Research Council Parallel Build Backlog — 2026-05-26
 

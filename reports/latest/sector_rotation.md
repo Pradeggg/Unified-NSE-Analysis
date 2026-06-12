@@ -2,256 +2,253 @@
 
 **Agent Adda - Market Intelligence Agent**
 
-**Generated:** 2026-06-11  
-**Data as of:** N/A  
-**Source analysis:** `PostgreSQL/scores.mv_latest_snapshot`
+**Generated:** 2026-06-12  
+**Data as of:** 2026-06-12  
+**Source analysis:** `PostgreSQL/scores.stage_snapshots`
 
 > **Disclaimer:** This report is not investment advice. It is a learning journey demonstrating how AI and rules-based agents can be applied to financial markets. Validate all data, prices, liquidity, corporate events, and risk independently before making any financial decision.
 > **Use Restriction:** This material must not be replicated or used with any intent of trading or recommendation. Anyone doing so acts at their own risk and legal obligations. Agent Adda is not SEBI registered.
 
 ## Market Brief
 
-**Market Read:** The market is in a ROTATION regime with a 60% confidence, driven by sector relative strength. The economic cycle is in the LATE_EXPANSION phase, suggesting rising cost pressures and inflation. FII outflows continue, with a net sell of ₹1987.09 crore today, while DIIs absorbed with net buying of ₹4224.51 crore. Breadth is oversold with bearish divergence, but TRIN at 0.43 indicates potential bullish reversal.
+**Market Read:** The NSE market is currently in a Rotation regime with moderate confidence (0.6). The economic cycle is in the Recovery phase aligned with early market recovery, signaling improving trends from a weak base. FII outflows are significant, with a 5-day net of -15315.95 crore, while DIIs are absorbing with strong inflows of 24014.47 crore. Breadth indicators like TRIN are very bullish, but the market shows a bearish divergence, suggesting potential reversals.
 
-**Risk Posture:** Adopt a defensive yet vigilant stance due to mixed signals. Despite oversold conditions, weak breadth and continuous FII selling suggest caution. However, TRIN's very bullish reading hints at possible imminent reversals. The economic cycle suggests avoiding Banking, NBFC, and Real Estate sectors.
+**Risk Posture:** Maintain a cautiously optimistic stance as the market recovery gains traction. VIX is low at 14.7, indicating reduced market volatility, supporting a bullish outlook. However, significant FII selling pressure and bearish divergence warrant caution, suggesting potential volatility ahead.
 
-**Where to Focus:** Focus on Energy, Metals, and Capital Goods sectors aligned with the LATE_EXPANSION cycle phase. Monitor Metals & Mining, and Media & Entertainment for short-term momentum. Keep an eye on cost pressure-sensitive sectors due to rising inflation and commodities.
+**Where to Focus:** Focus on Banking, Capital Goods, Infrastructure, and Cement sectors, which benefit from the Recovery phase. Banking sectors, particularly private and PSU, show strong relative strength and performance, with private banks up 6.9% over the past month. Avoid defensive sectors due to low potential gains in the current regime.
 
-**What Would Change the View:** A reversal in FII trend with significant net buying could signal a shift towards bullish sentiment. Improvements in breadth metrics like net advances or a bullish divergence would also support a more optimistic view. A clear alignment between economic and market regimes with stable macro conditions would further bolster confidence in risk-taking.
+**What Would Change the View:** A shift in FII buying trends or significant improvements in breadth could reinforce a bullish view. Conversely, sustained FII selling pressure and worsening breadth divergence could exacerbate downward trends. Increased economic threat indicators or macroeconomic shocks could also alter the current positive trajectory.
 
 ## 1. Sector Rotation
 
-Current rotation is ranked using 1M return, 5D/1M/3M/6M relative strength versus Nifty 500, and short-term participation.
+Current rotation is ranked using 1M return, 5D/1M/3M/6M relative strength versus Nifty 500, then adjusted for the detected economic-cycle phase when available.
 
-| Rank | Index | Sector Lens | Close | 5D | 1M | 3M | 6M | RS 1M | Rotation Score |
-|---:|---|---|---:|---:|---:|---:|---:|---:|---:|
-| 1 | Nifty Metal | Metals & Mining | 12733.60 | -5.2% | -1.1% | 7.3% | 24.0% | -0.3% | 6.5 |
-| 2 | Nifty Media | Media & Entertainment | 1465.50 | 0.9% | 5.0% | 8.6% | 3.9% | 5.8% | 5.6 |
-| 3 | Nifty Energy | Energy - Power | 38655.90 | -4.4% | -2.2% | 4.9% | 11.2% | -1.4% | 4.5 |
-| 4 | Nifty Pharma | Pharma & Healthcare | 24306.95 | 0.5% | 2.0% | 4.4% | 6.7% | 2.8% | 3.5 |
-| 5 | Nifty Ind Defence | Defence & Aerospace | 8801.90 | -2.9% | -1.2% | 7.0% | 16.4% | -0.3% | 2.2 |
-| 6 | Nifty Chemicals | Chemicals & Specialty | 28716.60 | -1.2% | 0.1% | 6.2% | 1.3% | 0.9% | 1.7 |
+| Rank | Index | Sector Lens | Close | 5D | 1M | 3M | 6M | RS 1M | Base Score | Cycle Adj | Cycle-Adjusted Score |
+|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | Nifty Pvt Bank | Banking - Private | 27649.70 | 5.1% | 6.9% | 8.4% | -4.0% | 5.9% | 5.1 | 4.0 | 9.1 |
+| 2 | Nifty PSU Bank | Banking - PSU | 8528.75 | 3.3% | 5.8% | 0.1% | 3.4% | 4.8% | 3.9 | 4.0 | 7.9 |
+| 3 | Nifty Media | Media & Entertainment | 1487.60 | -1.0% | 6.6% | 14.3% | 5.5% | 5.6% | 5.2 | 0.0 | 5.2 |
+| 4 | Nifty Infra | Infrastructure | 9236.80 | 0.6% | -0.0% | 5.3% | -3.3% | -1.0% | -0.2 | 4.0 | 3.8 |
+| 5 | Nifty Capital Mkt | Capital Markets | 5347.60 | 1.4% | -0.7% | 20.5% | 14.8% | -1.7% | 2.9 | 0.0 | 2.9 |
+| 6 | Nifty EV | EV & Auto Ancillaries | 3067.40 | 0.1% | 2.9% | 12.5% | -1.6% | 1.9% | 2.3 | 0.0 | 2.3 |
 
 ## 2. Investment Candidates
 
 Candidates are ranked within rotating sectors by technical score, relative strength, fundamental score, Supertrend state, trading signal, and consolidation breakout status.
 
-### Metals & Mining
+### Banking - Private
 
 | Symbol | Company | Price | Signal | Setup | Action | Score | Tech | RS | Fund | RSI | Supertrend | Pattern | Volume Ratio |
 |---|---|---:|---|---|---|---:|---:|---:|---:|---:|---|---|---:|
-| WELCORP | Welspun Corp Limited | 1389.40 | BUY | NEUTRAL | WATCHLIST | 95.4 | 98.4 | 98.8% | 49.4 | 57.8 | BULLISH | TRENDING_OR_CHOPPY | 0.49x |
-| MBAPL | MBAPL | 559.50 | BUY | NEUTRAL | WATCHLIST | 88.0 | 94.1 | 82.5% | 66.7 | 55.8 | BULLISH | BASE_BUILDING | 0.95x |
-| SUNFLAG | SUNFLAG | 335.20 | BUY | WEAK_TREND | AVOID | 81.1 | 87.2 | 94.7% | 64.4 | 41.2 | BEARISH | TRENDING_OR_CHOPPY | 0.49x |
-| SAILIFE | SAILIFE | 1181.20 | BUY | NEUTRAL | WATCHLIST | 80.0 | 93.1 | 75.8% | 80.8 | 56.3 | BULLISH | TRENDING_OR_CHOPPY | 0.23x |
-| JSWSTEEL | JSW Steel Limited | 1282.30 | BUY | NEUTRAL | WATCHLIST | 68.8 | 86.6 | 56.5% | 47.7 | 50.3 | BULLISH | BASE_BUILDING | 0.96x |
+| BANDHANBNK | BANDHANBNK | 204.60 | STRONG_BUY | NEUTRAL | WATCHLIST | 90.8 | 76.7 | 37.2% | 65.6 | 59.9 | BULLISH | TRENDING_OR_CHOPPY | 1.17x |
+| RBLBANK | RBL Bank Limited | 365.85 | BUY | NEUTRAL | BREAKOUT_WATCH | 71.4 | 76.0 | 18.8% | 50.6 | 70.7 | BULLISH | NEAR_RESISTANCE | 1.94x |
+| FEDERALBNK | Federal Bank Limited | 315.70 | HOLD | NEUTRAL | BREAKOUT_WATCH | 60.1 | 63.3 | 14.2% | 55.8 | 81.5 | BULLISH | NEAR_RESISTANCE | 0.45x |
+| INDUSINDBK | INDUSINDBK | 917.35 | HOLD | NEUTRAL | WATCHLIST | 58.8 | 58.0 | 14.4% | 50.1 | 51.9 | BULLISH | BASE_BUILDING | 1.45x |
+| AUBANK | AUBANK | 1015.50 | BUY | WEAK_TREND | AVOID | 58.7 | 73.3 | 13.0% | 55.0 | 58.9 | BEARISH | BASE_BUILDING | 2.42x |
+
+### Banking - PSU
+
+| Symbol | Company | Price | Signal | Setup | Action | Score | Tech | RS | Fund | RSI | Supertrend | Pattern | Volume Ratio |
+|---|---|---:|---|---|---|---:|---:|---:|---:|---:|---|---|---:|
+| J&KBANK | J&KBANK | 157.40 | BUY | NEUTRAL | BREAKOUT_WATCH | 85.6 | 69.3 | 35.6% | 61.5 | 74.3 | BULLISH | NEAR_RESISTANCE | 0.91x |
+| KTKBANK | KTKBANK | 275.70 | BUY | NEUTRAL | BREAKOUT_WATCH | 68.7 | 74.0 | 16.1% | 51.6 | 59.3 | BULLISH | NEAR_RESISTANCE | 0.92x |
 
 ### Media & Entertainment
 
 | Symbol | Company | Price | Signal | Setup | Action | Score | Tech | RS | Fund | RSI | Supertrend | Pattern | Volume Ratio |
 |---|---|---:|---|---|---|---:|---:|---:|---:|---:|---|---|---:|
-| NUVAMA | NUVAMA | 1510.20 | HOLD | NEUTRAL | WATCHLIST | 71.0 | 69.6 | 86.4% | 73.3 | 52.3 | BULLISH | TRENDING_OR_CHOPPY | 1.22x |
+| NUVAMA | NUVAMA | 1588.10 | BUY | NEUTRAL | BREAKOUT_WATCH | 73.8 | 54.7 | 29.3% | 73.3 | 67.9 | BULLISH | NEAR_RESISTANCE | 0.97x |
 
-### Energy - Power
-
-| Symbol | Company | Price | Signal | Setup | Action | Score | Tech | RS | Fund | RSI | Supertrend | Pattern | Volume Ratio |
-|---|---|---:|---|---|---|---:|---:|---:|---:|---:|---|---|---:|
-| INOXINDIA | INOXINDIA | 1848.80 | BUY | NEUTRAL | WATCHLIST | 94.9 | 89.5 | 97.7% | 64.8 | 78.6 | BULLISH | TRENDING_OR_CHOPPY | 1.92x |
-| ADANIGREEN | Adani Green Energy Limited | 1454.50 | BUY | NEUTRAL | WATCHLIST | 85.7 | 98.9 | 98.7% | 10.0 | 60.4 | BULLISH | TRENDING_OR_CHOPPY | 0.50x |
-| ADANIPOWER | Adani Power Limited | 215.51 | BUY | WEAK_TREND | AVOID | 71.9 | 91.6 | 97.6% | 10.0 | 47.5 | BEARISH | TRENDING_OR_CHOPPY | 0.72x |
-| JSWENERGY | JSWENERGY | 552.25 | HOLD | NEUTRAL | WATCHLIST | 67.0 | 74.8 | 74.6% | 77.4 | 51.4 | BULLISH | TRENDING_OR_CHOPPY | 0.78x |
-
-### Pharma & Healthcare
+### Infrastructure
 
 | Symbol | Company | Price | Signal | Setup | Action | Score | Tech | RS | Fund | RSI | Supertrend | Pattern | Volume Ratio |
 |---|---|---:|---|---|---|---:|---:|---:|---:|---:|---|---|---:|
-| GRANULES | GRANULES | 763.15 | BUY | NEUTRAL | WATCHLIST | 93.5 | 92.5 | 91.2% | 74.6 | 49.5 | BULLISH | BASE_BUILDING | 0.68x |
-| BLISSGVS | BLISSGVS | 436.55 | BUY | NEUTRAL | WATCHLIST | 93.2 | 90.7 | 99.7% | 66.8 | 77.2 | BULLISH | TRENDING_OR_CHOPPY | 0.28x |
-| LAURUSLABS | LAURUSLABS | 1390.80 | BUY | NEUTRAL | WATCHLIST | 91.1 | 96.8 | 92.7% | 73.1 | 57.4 | BULLISH | TRENDING_OR_CHOPPY | 0.77x |
-| SHILPAMED | SHILPAMED | 538.85 | HOLD | NEUTRAL | WATCHLIST | 87.6 | 79.9 | 98.0% | 81.2 | 67.8 | BULLISH | TRENDING_OR_CHOPPY | 0.43x |
-| GLAND | GLAND | 2306.50 | HOLD | NEUTRAL | WATCHLIST | 82.4 | 76.8 | 93.6% | 81.5 | 46.9 | BULLISH | TRENDING_OR_CHOPPY | 2.67x |
+| ADANIPORTS | Adani Ports and Special Economic Zone Limited | 1812.90 | HOLD | NEUTRAL | WATCHLIST | 62.8 | 59.3 | 30.6% | 10.0 | 54.8 | BULLISH | BASE_BUILDING | 1.01x |
+| GRASIM | GRASIM | 3105.50 | HOLD | NEUTRAL | WATCHLIST | 61.9 | 52.7 | 13.9% | 72.2 | 40.6 | BULLISH | BASE_BUILDING | 0.51x |
+| WELSPUNLIV | WELSPUNLIV | 138.54 | HOLD | NEUTRAL | WATCHLIST | 61.6 | 52.7 | 20.4% | 49.3 | 48.8 | BULLISH | BASE_BUILDING | 0.41x |
+| TRUALT | TRUALT | 501.25 | HOLD | NEUTRAL | WATCHLIST | 54.6 | 52.0 | 16.7% | 54.6 | 52.7 | BULLISH | TRENDING_OR_CHOPPY | 0.45x |
+| LT | LT | 4049.30 | HOLD | WEAK_TREND | AVOID | 50.8 | 57.3 | 8.0% | 75.9 | 59.3 | BEARISH | BASE_BUILDING | 1.57x |
 
-### Defence & Aerospace
-
-| Symbol | Company | Price | Signal | Setup | Action | Score | Tech | RS | Fund | RSI | Supertrend | Pattern | Volume Ratio |
-|---|---|---:|---|---|---|---:|---:|---:|---:|---:|---|---|---:|
-| KERNEX | KERNEX | 1893.70 | BUY | NEUTRAL | WATCHLIST | 92.6 | 87.5 | 99.1% | 69.7 | 83.5 | BULLISH | TRENDING_OR_CHOPPY | 0.72x |
-| PARAS | PARAS | 989.10 | BUY | NEUTRAL | WATCHLIST | 90.0 | 90.6 | 91.1% | 84.4 | 73.8 | BULLISH | TRENDING_OR_CHOPPY | 1.04x |
-| PREMIERENE | PREMIERENE | 1058.00 | HOLD | NEUTRAL | WATCHLIST | 88.2 | 83.4 | 95.9% | 86.3 | 60.2 | BULLISH | TRENDING_OR_CHOPPY | 0.35x |
-| RRKABEL | RRKABEL | 2128.10 | BUY | NEUTRAL | WATCHLIST | 85.4 | 95.1 | 93.9% | 48.5 | 66.3 | BULLISH | TRENDING_OR_CHOPPY | 0.85x |
-| AEROFLEX | AEROFLEX | 408.55 | BUY | NEUTRAL | WATCHLIST | 81.4 | 97.1 | 99.2% | 10.0 | 57.0 | BULLISH | TRENDING_OR_CHOPPY | 0.65x |
-
-### Chemicals & Specialty
+### Capital Markets
 
 | Symbol | Company | Price | Signal | Setup | Action | Score | Tech | RS | Fund | RSI | Supertrend | Pattern | Volume Ratio |
 |---|---|---:|---|---|---|---:|---:|---:|---:|---:|---|---|---:|
-| RAIN | RAIN | 194.69 | BUY | NEUTRAL | WATCHLIST | 91.1 | 92.2 | 96.0% | 68.0 | 72.4 | BULLISH | TRENDING_OR_CHOPPY | 0.39x |
-| NEOGEN | NEOGEN | 2028.70 | HOLD | NEUTRAL | BREAKOUT_WATCH | 80.8 | 71.3 | 97.3% | 57.7 | 86.0 | BULLISH | NEAR_RESISTANCE | 1.35x |
-| NAVINFLUOR | NAVINFLUOR | 7157.00 | BUY | NEUTRAL | WATCHLIST | 71.4 | 89.1 | 68.2% | 70.0 | 51.3 | BULLISH | BASE_BUILDING | 1.00x |
+| ANGELONE | ANGELONE | 339.50 | BUY | NEUTRAL | WATCHLIST | 81.2 | 71.3 | 41.7% | 48.2 | 50.1 | BULLISH | TRENDING_OR_CHOPPY | 0.89x |
+| BSE | BSE | 4041.10 | BUY | WEAK_TREND | AVOID | 71.4 | 63.3 | 43.1% | 61.3 | 44.2 | BEARISH | TRENDING_OR_CHOPPY | 0.67x |
+
+### EV & Auto Ancillaries
+
+| Symbol | Company | Price | Signal | Setup | Action | Score | Tech | RS | Fund | RSI | Supertrend | Pattern | Volume Ratio |
+|---|---|---:|---|---|---|---:|---:|---:|---:|---:|---|---|---:|
+| SANSERA | SANSERA | 2914.20 | BUY | NEUTRAL | WATCHLIST | 72.0 | 66.0 | 33.0% | 48.6 | 54.1 | BULLISH | TRENDING_OR_CHOPPY | 0.58x |
+| ATHERENERG | Ather Energy Limited | 1028.70 | BUY | NEUTRAL | WATCHLIST | 71.8 | 64.7 | 28.9% | 63.4 | 70.2 | BULLISH | TRENDING_OR_CHOPPY | 0.64x |
+| MOTHERSON | MOTHERSON | 143.40 | HOLD | NEUTRAL | WATCHLIST | 64.1 | 62.7 | 28.9% | 51.6 | 60.1 | BULLISH | TRENDING_OR_CHOPPY | 0.44x |
+| TIINDIA | TIINDIA | 3141.80 | BUY | NEUTRAL | WATCHLIST | 57.7 | 62.7 | 17.3% | 48.7 | 56.9 | BULLISH | TRENDING_OR_CHOPPY | 0.66x |
+| SONACOMS | SONACOMS | 593.05 | HOLD | NEUTRAL | WATCHLIST | 55.0 | 56.0 | 15.7% | 49.7 | 49.7 | BULLISH | BASE_BUILDING | 0.51x |
 
 ## 3. Deep Technical Notes
 
-### WELCORP - Welspun Corp Limited
+### BANDHANBNK - BANDHANBNK
 
-- **Sector:** Metals & Mining | **Setup:** NEUTRAL | **Action:** WATCHLIST
+- **Sector:** Banking - Private | **Setup:** NEUTRAL | **Action:** WATCHLIST
 - **Action reason:** Mixed setup; wait for cleaner confirmation.
-- **Relative strength:** 98.8% vs Nifty 500; RS rank score 98.7.
-- **Technical pattern:** TRENDING_OR_CHOPPY with no confirmed consolidation breakout; resistance 1427.00, support 1252.20.
-- **Supertrend:** BULLISH around 1259.59.
-- **Technofunda:** technical 98.4, Minervini 12, CAN SLIM 11, enhanced fundamental 49.4.
+- **Relative strength:** 37.2% vs Nifty 500; RS rank score 86.2.
+- **Technical pattern:** TRENDING_OR_CHOPPY with no confirmed consolidation breakout; resistance 212.48, support 186.55.
+- **Supertrend:** BULLISH around 191.41.
+- **Technofunda:** technical 76.7, Minervini 17, CAN SLIM 14, enhanced fundamental 65.6.
 
-### INOXINDIA - INOXINDIA
+### J&KBANK - J&KBANK
 
-- **Sector:** Energy - Power | **Setup:** NEUTRAL | **Action:** WATCHLIST
-- **Action reason:** Mixed setup; wait for cleaner confirmation.
-- **Relative strength:** 97.7% vs Nifty 500; RS rank score 95.0.
-- **Technical pattern:** TRENDING_OR_CHOPPY with no confirmed consolidation breakout; resistance 1980.00, support 1368.10.
-- **Supertrend:** BULLISH around 1525.86.
-- **Technofunda:** technical 89.5, Minervini 4, CAN SLIM 18, enhanced fundamental 64.8.
-
-### GRANULES - GRANULES
-
-- **Sector:** Pharma & Healthcare | **Setup:** NEUTRAL | **Action:** WATCHLIST
-- **Action reason:** Mixed setup; wait for cleaner confirmation.
-- **Relative strength:** 91.2% vs Nifty 500; RS rank score 72.8.
-- **Technical pattern:** BASE_BUILDING with no confirmed consolidation breakout; resistance 804.30, support 721.15.
-- **Supertrend:** BULLISH around 720.98.
-- **Technofunda:** technical 92.5, Minervini 12, CAN SLIM 11, enhanced fundamental 74.6.
-
-### BLISSGVS - BLISSGVS
-
-- **Sector:** Pharma & Healthcare | **Setup:** NEUTRAL | **Action:** WATCHLIST
-- **Action reason:** Mixed setup; wait for cleaner confirmation.
-- **Relative strength:** 99.7% vs Nifty 500; RS rank score 100.0.
-- **Technical pattern:** TRENDING_OR_CHOPPY with no confirmed consolidation breakout; resistance 462.80, support 268.55.
-- **Supertrend:** BULLISH around 354.82.
-- **Technofunda:** technical 90.7, Minervini 6, CAN SLIM 15, enhanced fundamental 66.8.
-
-### KERNEX - KERNEX
-
-- **Sector:** Defence & Aerospace | **Setup:** NEUTRAL | **Action:** WATCHLIST
-- **Action reason:** Mixed setup; wait for cleaner confirmation.
-- **Relative strength:** 99.1% vs Nifty 500; RS rank score 99.8.
-- **Technical pattern:** TRENDING_OR_CHOPPY with no confirmed consolidation breakout; resistance 1980.00, support 1328.40.
-- **Supertrend:** BULLISH around 1517.25.
-- **Technofunda:** technical 87.5, Minervini 6, CAN SLIM 15, enhanced fundamental 69.7.
-
-### RAIN - RAIN
-
-- **Sector:** Chemicals & Specialty | **Setup:** NEUTRAL | **Action:** WATCHLIST
-- **Action reason:** Mixed setup; wait for cleaner confirmation.
-- **Relative strength:** 96.0% vs Nifty 500; RS rank score 89.2.
-- **Technical pattern:** TRENDING_OR_CHOPPY with no confirmed consolidation breakout; resistance 209.68, support 147.90.
-- **Supertrend:** BULLISH around 168.92.
-- **Technofunda:** technical 92.2, Minervini 6, CAN SLIM 15, enhanced fundamental 68.0.
-
-### LAURUSLABS - LAURUSLABS
-
-- **Sector:** Pharma & Healthcare | **Setup:** NEUTRAL | **Action:** WATCHLIST
-- **Action reason:** Mixed setup; wait for cleaner confirmation.
-- **Relative strength:** 92.7% vs Nifty 500; RS rank score 77.9.
-- **Technical pattern:** TRENDING_OR_CHOPPY with no confirmed consolidation breakout; resistance 1457.00, support 1246.60.
-- **Supertrend:** BULLISH around 1351.98.
-- **Technofunda:** technical 96.8, Minervini 11, CAN SLIM 13, enhanced fundamental 73.1.
-
-### PARAS - PARAS
-
-- **Sector:** Defence & Aerospace | **Setup:** NEUTRAL | **Action:** WATCHLIST
-- **Action reason:** Mixed setup; wait for cleaner confirmation.
-- **Relative strength:** 91.1% vs Nifty 500; RS rank score 72.2.
-- **Technical pattern:** TRENDING_OR_CHOPPY with no confirmed consolidation breakout; resistance 1066.75, support 721.00.
-- **Supertrend:** BULLISH around 853.68.
-- **Technofunda:** technical 90.6, Minervini 4, CAN SLIM 16, enhanced fundamental 84.4.
-
-### PREMIERENE - PREMIERENE
-
-- **Sector:** Defence & Aerospace | **Setup:** NEUTRAL | **Action:** WATCHLIST
-- **Action reason:** Mixed setup; wait for cleaner confirmation.
-- **Relative strength:** 95.9% vs Nifty 500; RS rank score 88.9.
-- **Technical pattern:** TRENDING_OR_CHOPPY with no confirmed consolidation breakout; resistance 1103.90, support 943.10.
-- **Supertrend:** BULLISH around 985.58.
-- **Technofunda:** technical 83.4, Minervini 12, CAN SLIM 11, enhanced fundamental 86.3.
-
-### MBAPL - MBAPL
-
-- **Sector:** Metals & Mining | **Setup:** NEUTRAL | **Action:** WATCHLIST
-- **Action reason:** Mixed setup; wait for cleaner confirmation.
-- **Relative strength:** 82.5% vs Nifty 500; RS rank score 42.9.
-- **Technical pattern:** BASE_BUILDING with no confirmed consolidation breakout; resistance 572.35, support 520.45.
-- **Supertrend:** BULLISH around 520.09.
-- **Technofunda:** technical 94.1, Minervini 11, CAN SLIM 13, enhanced fundamental 66.7.
-
-### SHILPAMED - SHILPAMED
-
-- **Sector:** Pharma & Healthcare | **Setup:** NEUTRAL | **Action:** WATCHLIST
-- **Action reason:** Mixed setup; wait for cleaner confirmation.
-- **Relative strength:** 98.0% vs Nifty 500; RS rank score 96.0.
-- **Technical pattern:** TRENDING_OR_CHOPPY with no confirmed consolidation breakout; resistance 581.00, support 432.50.
-- **Supertrend:** BULLISH around 490.21.
-- **Technofunda:** technical 79.9, Minervini 6, CAN SLIM 15, enhanced fundamental 81.2.
-
-### ADANIGREEN - Adani Green Energy Limited
-
-- **Sector:** Energy - Power | **Setup:** NEUTRAL | **Action:** WATCHLIST
-- **Action reason:** Mixed setup; wait for cleaner confirmation.
-- **Relative strength:** 98.7% vs Nifty 500; RS rank score 98.4.
-- **Technical pattern:** TRENDING_OR_CHOPPY with no confirmed consolidation breakout; resistance 1544.80, support 1291.40.
-- **Supertrend:** BULLISH around 1342.14.
-- **Technofunda:** technical 98.9, Minervini 8, CAN SLIM 11, enhanced fundamental 10.0.
-
-### RRKABEL - RRKABEL
-
-- **Sector:** Defence & Aerospace | **Setup:** NEUTRAL | **Action:** WATCHLIST
-- **Action reason:** Mixed setup; wait for cleaner confirmation.
-- **Relative strength:** 93.9% vs Nifty 500; RS rank score 81.9.
-- **Technical pattern:** TRENDING_OR_CHOPPY with no confirmed consolidation breakout; resistance 2239.80, support 1898.10.
-- **Supertrend:** BULLISH around 1925.35.
-- **Technofunda:** technical 95.1, Minervini 6, CAN SLIM 11, enhanced fundamental 48.5.
-
-### GLAND - GLAND
-
-- **Sector:** Pharma & Healthcare | **Setup:** NEUTRAL | **Action:** WATCHLIST
-- **Action reason:** Mixed setup; wait for cleaner confirmation.
-- **Relative strength:** 93.6% vs Nifty 500; RS rank score 81.0.
-- **Technical pattern:** TRENDING_OR_CHOPPY with no confirmed consolidation breakout; resistance 2396.00, support 1813.00.
-- **Supertrend:** BULLISH around 2045.67.
-- **Technofunda:** technical 76.8, Minervini 13, CAN SLIM 20, enhanced fundamental 81.5.
-
-### ASTERDM - Aster DM Healthcare Limited
-
-- **Sector:** Pharma & Healthcare | **Setup:** NEUTRAL | **Action:** BREAKOUT_WATCH
+- **Sector:** Banking - PSU | **Setup:** NEUTRAL | **Action:** BREAKOUT_WATCH
 - **Action reason:** Near high/base setup; wait for price and volume breakout confirmation.
-- **Relative strength:** 84.6% vs Nifty 500; RS rank score 50.2.
-- **Technical pattern:** NEAR_RESISTANCE with no confirmed consolidation breakout; resistance 824.90, support 711.30.
-- **Supertrend:** BULLISH around 735.02.
-- **Technofunda:** technical 93.0, Minervini 4, CAN SLIM 14, enhanced fundamental 60.9.
+- **Relative strength:** 35.6% vs Nifty 500; RS rank score 81.1.
+- **Technical pattern:** NEAR_RESISTANCE with no confirmed consolidation breakout; resistance 158.40, support 126.12.
+- **Supertrend:** BULLISH around 139.82.
+- **Technofunda:** technical 69.3, Minervini 18, CAN SLIM 15, enhanced fundamental 61.5.
 
-### AEROFLEX - AEROFLEX
+### ANGELONE - ANGELONE
 
-- **Sector:** Defence & Aerospace | **Setup:** NEUTRAL | **Action:** WATCHLIST
+- **Sector:** Capital Markets | **Setup:** NEUTRAL | **Action:** WATCHLIST
 - **Action reason:** Mixed setup; wait for cleaner confirmation.
-- **Relative strength:** 99.2% vs Nifty 500; RS rank score 100.0.
-- **Technical pattern:** TRENDING_OR_CHOPPY with no confirmed consolidation breakout; resistance 446.05, support 345.45.
-- **Supertrend:** BULLISH around 352.66.
-- **Technofunda:** technical 97.1, Minervini 6, CAN SLIM 15, enhanced fundamental 10.0.
+- **Relative strength:** 41.7% vs Nifty 500; RS rank score 100.0.
+- **Technical pattern:** TRENDING_OR_CHOPPY with no confirmed consolidation breakout; resistance 351.00, support 290.80.
+- **Supertrend:** BULLISH around 311.67.
+- **Technofunda:** technical 71.3, Minervini 18, CAN SLIM 15, enhanced fundamental 48.2.
 
-### SUNFLAG - SUNFLAG
+### NUVAMA - NUVAMA
 
-- **Sector:** Metals & Mining | **Setup:** WEAK_TREND | **Action:** AVOID
+- **Sector:** Media & Entertainment | **Setup:** NEUTRAL | **Action:** BREAKOUT_WATCH
+- **Action reason:** Near high/base setup; wait for price and volume breakout confirmation.
+- **Relative strength:** 29.3% vs Nifty 500; RS rank score 61.6.
+- **Technical pattern:** NEAR_RESISTANCE with no confirmed consolidation breakout; resistance 1600.00, support 1417.10.
+- **Supertrend:** BULLISH around 1442.14.
+- **Technofunda:** technical 54.7, Minervini 10, CAN SLIM 13, enhanced fundamental 73.3.
+
+### SANSERA - SANSERA
+
+- **Sector:** EV & Auto Ancillaries | **Setup:** NEUTRAL | **Action:** WATCHLIST
+- **Action reason:** Mixed setup; wait for cleaner confirmation.
+- **Relative strength:** 33.0% vs Nifty 500; RS rank score 73.0.
+- **Technical pattern:** TRENDING_OR_CHOPPY with no confirmed consolidation breakout; resistance 2995.00, support 2317.40.
+- **Supertrend:** BULLISH around 2634.47.
+- **Technofunda:** technical 66.0, Minervini 15, CAN SLIM 15, enhanced fundamental 48.6.
+
+### ATHERENERG - Ather Energy Limited
+
+- **Sector:** EV & Auto Ancillaries | **Setup:** NEUTRAL | **Action:** WATCHLIST
+- **Action reason:** Mixed setup; wait for cleaner confirmation.
+- **Relative strength:** 28.9% vs Nifty 500; RS rank score 60.6.
+- **Technical pattern:** TRENDING_OR_CHOPPY with no confirmed consolidation breakout; resistance 1069.00, support 873.60.
+- **Supertrend:** BULLISH around 877.45.
+- **Technofunda:** technical 64.7, Minervini 13, CAN SLIM 13, enhanced fundamental 63.4.
+
+### RBLBANK - RBL Bank Limited
+
+- **Sector:** Banking - Private | **Setup:** NEUTRAL | **Action:** BREAKOUT_WATCH
+- **Action reason:** Near high/base setup; wait for price and volume breakout confirmation.
+- **Relative strength:** 18.8% vs Nifty 500; RS rank score 29.2.
+- **Technical pattern:** NEAR_RESISTANCE with no confirmed consolidation breakout; resistance 366.40, support 318.45.
+- **Supertrend:** BULLISH around 325.36.
+- **Technofunda:** technical 76.0, Minervini 17, CAN SLIM 16, enhanced fundamental 50.6.
+
+### BSE - BSE
+
+- **Sector:** Capital Markets | **Setup:** WEAK_TREND | **Action:** AVOID
 - **Action reason:** Weak trend or sell signal; avoid fresh exposure until repaired.
-- **Relative strength:** 94.7% vs Nifty 500; RS rank score 84.6.
-- **Technical pattern:** TRENDING_OR_CHOPPY with no confirmed consolidation breakout; resistance 427.20, support 338.55.
-- **Supertrend:** BEARISH around 418.96.
-- **Technofunda:** technical 87.2, Minervini 0, CAN SLIM 10, enhanced fundamental 64.4.
+- **Relative strength:** 43.1% vs Nifty 500; RS rank score 100.0.
+- **Technical pattern:** TRENDING_OR_CHOPPY with no confirmed consolidation breakout; resistance 4446.80, support 3784.80.
+- **Supertrend:** BEARISH around 4358.00.
+- **Technofunda:** technical 63.3, Minervini 15, CAN SLIM 11, enhanced fundamental 61.3.
 
-### NEOGEN - NEOGEN
+### KTKBANK - KTKBANK
 
-- **Sector:** Chemicals & Specialty | **Setup:** NEUTRAL | **Action:** BREAKOUT_WATCH
+- **Sector:** Banking - PSU | **Setup:** NEUTRAL | **Action:** BREAKOUT_WATCH
 - **Action reason:** Near high/base setup; wait for price and volume breakout confirmation.
-- **Relative strength:** 97.3% vs Nifty 500; RS rank score 93.5.
-- **Technical pattern:** NEAR_RESISTANCE with no confirmed consolidation breakout; resistance 2035.80, support 1547.00.
-- **Supertrend:** BULLISH around 1683.77.
-- **Technofunda:** technical 71.3, Minervini 8, CAN SLIM 16, enhanced fundamental 57.7.
+- **Relative strength:** 16.1% vs Nifty 500; RS rank score 21.2.
+- **Technical pattern:** NEAR_RESISTANCE with no confirmed consolidation breakout; resistance 278.40, support 238.70.
+- **Supertrend:** BULLISH around 240.39.
+- **Technofunda:** technical 74.0, Minervini 17, CAN SLIM 15, enhanced fundamental 51.6.
+
+### MOTHERSON - MOTHERSON
+
+- **Sector:** EV & Auto Ancillaries | **Setup:** NEUTRAL | **Action:** WATCHLIST
+- **Action reason:** Mixed setup; wait for cleaner confirmation.
+- **Relative strength:** 28.9% vs Nifty 500; RS rank score 60.7.
+- **Technical pattern:** TRENDING_OR_CHOPPY with no confirmed consolidation breakout; resistance 151.77, support 125.15.
+- **Supertrend:** BULLISH around 130.08.
+- **Technofunda:** technical 62.7, Minervini 10, CAN SLIM 15, enhanced fundamental 51.6.
+
+### ADANIPORTS - Adani Ports and Special Economic Zone Limited
+
+- **Sector:** Infrastructure | **Setup:** NEUTRAL | **Action:** WATCHLIST
+- **Action reason:** Mixed setup; wait for cleaner confirmation.
+- **Relative strength:** 30.6% vs Nifty 500; RS rank score 65.8.
+- **Technical pattern:** BASE_BUILDING with no confirmed consolidation breakout; resistance 1857.80, support 1744.30.
+- **Supertrend:** BULLISH around 1717.75.
+- **Technofunda:** technical 59.3, Minervini 13, CAN SLIM 12, enhanced fundamental 10.0.
+
+### GRASIM - GRASIM
+
+- **Sector:** Infrastructure | **Setup:** NEUTRAL | **Action:** WATCHLIST
+- **Action reason:** Mixed setup; wait for cleaner confirmation.
+- **Relative strength:** 13.9% vs Nifty 500; RS rank score 14.2.
+- **Technical pattern:** BASE_BUILDING with no confirmed consolidation breakout; resistance 3197.50, support 2880.60.
+- **Supertrend:** BULLISH around 2961.30.
+- **Technofunda:** technical 52.7, Minervini 12, CAN SLIM 13, enhanced fundamental 72.2.
+
+### WELSPUNLIV - WELSPUNLIV
+
+- **Sector:** Infrastructure | **Setup:** NEUTRAL | **Action:** WATCHLIST
+- **Action reason:** Mixed setup; wait for cleaner confirmation.
+- **Relative strength:** 20.4% vs Nifty 500; RS rank score 34.2.
+- **Technical pattern:** BASE_BUILDING with no confirmed consolidation breakout; resistance 146.00, support 132.60.
+- **Supertrend:** BULLISH around 131.11.
+- **Technofunda:** technical 52.7, Minervini 8, CAN SLIM 10, enhanced fundamental 49.3.
+
+### FEDERALBNK - Federal Bank Limited
+
+- **Sector:** Banking - Private | **Setup:** NEUTRAL | **Action:** BREAKOUT_WATCH
+- **Action reason:** Near high/base setup; wait for price and volume breakout confirmation.
+- **Relative strength:** 14.2% vs Nifty 500; RS rank score 15.1.
+- **Technical pattern:** NEAR_RESISTANCE with no confirmed consolidation breakout; resistance 316.70, support 277.55.
+- **Supertrend:** BULLISH around 288.86.
+- **Technofunda:** technical 63.3, Minervini 13, CAN SLIM 15, enhanced fundamental 55.8.
+
+### INDUSINDBK - INDUSINDBK
+
+- **Sector:** Banking - Private | **Setup:** NEUTRAL | **Action:** WATCHLIST
+- **Action reason:** Mixed setup; wait for cleaner confirmation.
+- **Relative strength:** 14.4% vs Nifty 500; RS rank score 15.8.
+- **Technical pattern:** BASE_BUILDING with no confirmed consolidation breakout; resistance 940.20, support 870.20.
+- **Supertrend:** BULLISH around 873.21.
+- **Technofunda:** technical 58.0, Minervini 18, CAN SLIM 12, enhanced fundamental 50.1.
+
+### AUBANK - AUBANK
+
+- **Sector:** Banking - Private | **Setup:** WEAK_TREND | **Action:** AVOID
+- **Action reason:** Weak trend or sell signal; avoid fresh exposure until repaired.
+- **Relative strength:** 13.0% vs Nifty 500; RS rank score 11.4.
+- **Technical pattern:** BASE_BUILDING with no confirmed consolidation breakout; resistance 1025.00, support 941.40.
+- **Supertrend:** BEARISH around 1036.92.
+- **Technofunda:** technical 73.3, Minervini 16, CAN SLIM 16, enhanced fundamental 55.0.
+
+### TIINDIA - TIINDIA
+
+- **Sector:** EV & Auto Ancillaries | **Setup:** NEUTRAL | **Action:** WATCHLIST
+- **Action reason:** Mixed setup; wait for cleaner confirmation.
+- **Relative strength:** 17.3% vs Nifty 500; RS rank score 24.7.
+- **Technical pattern:** TRENDING_OR_CHOPPY with no confirmed consolidation breakout; resistance 3250.00, support 2729.30.
+- **Supertrend:** BULLISH around 2848.48.
+- **Technofunda:** technical 62.7, Minervini 15, CAN SLIM 15, enhanced fundamental 48.7.
+
+### AXISBANK - Axis Bank Limited
+
+- **Sector:** Banking - Private | **Setup:** NEUTRAL | **Action:** WATCHLIST
+- **Action reason:** Mixed setup; wait for cleaner confirmation.
+- **Relative strength:** 9.3% vs Nifty 500; RS rank score 0.0.
+- **Technical pattern:** BASE_BUILDING with no confirmed consolidation breakout; resistance 1339.50, support 1222.10.
+- **Supertrend:** BULLISH around 1249.91.
+- **Technofunda:** technical 60.0, Minervini 11, CAN SLIM 10, enhanced fundamental 52.5.
 
 ## 4. Peak Resilience & Fast Recovery
 
@@ -259,26 +256,25 @@ This screen adds stocks in rotating sectors that remain within 20% of their 52-w
 
 | Rank | Symbol | Sector | Price | 52W High | 52W Low | Drawdown From High | Recovery From Low | Days Since Low | Recovery Speed | Peak Score |
 |---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| 1 | KERNEX | Defence & Aerospace | 1893.70 | 1987.00 | 850.00 | -4.7% | 122.8% | 73 | 1.68%/day | 91.4 |
-| 2 | WELCORP | Metals & Mining | 1389.40 | 1427.00 | 710.00 | -2.6% | 95.7% | 129 | 0.74%/day | 85.8 |
-| 3 | CAPLIPOINT | Metals & Mining | 2331.00 | 2409.00 | 1500.30 | -3.2% | 55.4% | 73 | 0.76%/day | 78.0 |
-| 4 | GLAND | Pharma & Healthcare | 2306.50 | 2396.00 | 1573.60 | -3.7% | 46.6% | 87 | 0.54%/day | 77.8 |
-| 5 | NEOGEN | Chemicals & Specialty | 2028.70 | 2075.00 | 966.70 | -2.2% | 109.9% | 183 | 0.60%/day | 76.3 |
-| 6 | LAURUSLABS | Pharma & Healthcare | 1390.80 | 1457.00 | 626.60 | -4.5% | 122.0% | 370 | 0.33%/day | 76.2 |
-| 7 | ASTERDM | Pharma & Healthcare | 813.75 | 825.00 | 519.10 | -1.4% | 56.8% | 127 | 0.45%/day | 72.8 |
-| 8 | RRKABEL | Defence & Aerospace | 2128.10 | 2239.80 | 1165.00 | -5.0% | 82.7% | 286 | 0.29%/day | 71.6 |
-| 9 | ZYDUSLIFE | Pharma & Healthcare | 1105.90 | 1119.80 | 835.50 | -1.2% | 32.4% | 70 | 0.46%/day | 71.5 |
-| 10 | MBAPL | Metals & Mining | 559.50 | 585.00 | 340.00 | -4.4% | 64.6% | 364 | 0.18%/day | 66.2 |
-| 11 | SAILIFE | Metals & Mining | 1181.20 | 1239.50 | 716.60 | -4.7% | 64.8% | 357 | 0.18%/day | 64.8 |
-| 12 | NAVINFLUOR | Chemicals & Specialty | 7157.00 | 7525.00 | 4348.20 | -4.9% | 64.6% | 365 | 0.18%/day | 58.3 |
-| 13 | APOLLOHOSP | Pharma & Healthcare | 8493.00 | 8624.00 | 6696.50 | -1.5% | 26.8% | 139 | 0.19%/day | 55.0 |
-| 14 | TORNTPHARM | Pharma & Healthcare | 4572.20 | 4712.90 | 3132.70 | -3.0% | 46.0% | 370 | 0.12%/day | 52.7 |
-| 15 | PIDILITIND | Chemicals & Specialty | 1498.80 | 1574.95 | 1259.00 | -4.8% | 19.0% | 66 | 0.29%/day | 49.8 |
-| 16 | JSWSTEEL | Metals & Mining | 1282.30 | 1328.00 | 967.65 | -3.4% | 32.5% | 370 | 0.09%/day | 48.1 |
+| 1 | MSTCLTD | Infrastructure | 568.55 | 576.80 | 362.15 | -1.4% | 57.0% | 74 | 0.77%/day | 79.0 |
+| 2 | ATHERENERG | EV & Auto Ancillaries | 1028.70 | 1069.00 | 306.25 | -3.8% | 235.9% | 364 | 0.65%/day | 76.5 |
+| 3 | J&KBANK | Banking - PSU | 157.40 | 158.83 | 97.35 | -0.9% | 61.7% | 164 | 0.38%/day | 72.4 |
+| 4 | BANDHANBNK | Banking - Private | 204.60 | 212.66 | 134.25 | -3.8% | 52.4% | 185 | 0.28%/day | 72.0 |
+| 5 | SANSERA | EV & Auto Ancillaries | 2914.20 | 2995.00 | 1216.30 | -2.7% | 139.6% | 305 | 0.46%/day | 70.6 |
+| 6 | RBLBANK | Banking - Private | 365.85 | 368.45 | 214.04 | -0.7% | 70.9% | 361 | 0.20%/day | 56.5 |
+| 7 | KTKBANK | Banking - PSU | 275.70 | 278.40 | 169.12 | -1.0% | 63.0% | 288 | 0.22%/day | 55.4 |
+| 8 | GRASIM | Infrastructure | 3105.50 | 3197.50 | 2502.50 | -2.9% | 24.1% | 81 | 0.30%/day | 54.2 |
+| 9 | FEDERALBNK | Banking - Private | 315.70 | 318.35 | 185.11 | -0.8% | 70.5% | 312 | 0.23%/day | 52.5 |
+| 10 | ADANIPORTS | Infrastructure | 1812.90 | 1857.80 | 1290.50 | -2.4% | 40.5% | 302 | 0.13%/day | 50.6 |
+| 11 | BHARATFORG | EV & Auto Ancillaries | 1945.10 | 2044.00 | 1100.50 | -4.8% | 76.7% | 287 | 0.27%/day | 49.5 |
+| 12 | SONACOMS | EV & Auto Ancillaries | 593.05 | 621.80 | 402.30 | -4.6% | 47.4% | 256 | 0.19%/day | 48.4 |
+| 13 | AXISBANK | Banking - Private | 1356.30 | 1418.30 | 1042.50 | -4.4% | 30.1% | 287 | 0.10%/day | 43.7 |
+| 14 | HEALTHIETF | Infrastructure | 159.49 | 166.20 | 138.65 | -4.0% | 15.0% | 130 | 0.12%/day | 38.6 |
 
 ## 5. Methodology
 
-- **Sector rotation:** 0.35 x RS 1M + 0.25 x 1M return + 0.20 x RS 5D + 0.10 x RS 3M + 0.10 x RS 6M.
+- **Sector rotation base score:** 0.35 x RS 1M + 0.25 x 1M return + 0.20 x RS 5D + 0.10 x RS 3M + 0.10 x RS 6M.
+- **Cycle-adjusted score:** base sector rotation score plus the economic-cycle adjustment shown in the sector table, when cycle detection is available.
 - **Investment score:** 0.38 x technical + 0.27 x RS rank + 0.25 x enhanced fundamental + pattern, Supertrend, and signal bonuses.
 - **Supertrend:** ATR-based calculation using local NSE OHLC cache with period 10 and multiplier 3.
 - **Consolidation breakout:** latest close above prior 20-session resistance after a base width of 12% or less, with volume ratio threshold of 1.4x where volume is available.

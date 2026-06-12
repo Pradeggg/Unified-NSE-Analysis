@@ -1,9 +1,9 @@
 {
-  "timestamp": ["2026-06-11 20:10:17"],
-  "stock_records": [56340],
-  "index_records": [3197],
-  "stock_date_range": ["2026-05-11", "2026-06-11"],
-  "index_date_range": ["2026-05-11", "2026-06-11"],
+  "timestamp": ["2026-06-12 19:41:25"],
+  "stock_records": [58770],
+  "index_records": [3336],
+  "stock_date_range": ["2026-05-11", "2026-06-12"],
+  "index_date_range": ["2026-05-11", "2026-06-12"],
   "unique_stocks": [2538],
   "unique_indices": [139]
 }

@@ -1,10 +1,3 @@
-date,indicator,series_id,frequency,latest_value,latest_date,trend,momentum_1m_pct,momentum_3m_pct,z_score,signal_score
-2026-06-11,USD/INR,DEXINUS,daily,94.25,2026-04-24,FLAT,-0.61,2.47,3.0,-3.0
-2026-06-11,Brent Crude,DCOILBRENTEU,daily,113.89,2026-04-27,FLAT,-6.56,68.18,3.0,-3.0
-2026-06-11,Copper (USD/MT),PCOPPUSDM,monthly,12528.7095,2026-03-01,RISING,0.0,0.0,0.38,0.38
-2026-06-11,US 10Y Treasury,DGS10,daily,4.4,2026-04-30,FLAT,2.09,4.51,3.0,-3.0
-2026-06-11,India CPI Index,INDCPIALLMINMEI,monthly,157.5517,2025-03-01,RISING,2.36,26.34,1.34,-1.34
-2026-06-11,Brent Monthly Avg,MCOILBRENTEU,monthly,103.13,2026-03-01,RISING,0.0,0.0,1.96,-1.96
-2026-06-11,India Interest Rate,IRSTCI01INM156N,monthly,5.5,2026-02-01,FALLING,0.0,0.0,0.0,-0.0
-2026-06-11,India VIX,INDIA VIX,daily,15.61,2026-06-11,FLAT,-0.12,0.0,0.0,0.06
-2026-06-11,Nifty 50,NIFTY 50,daily,23161.6,2026-06-11,FLAT,-0.23,0.0,0.0,-0.12
+date,indicator,series_id,frequency,latest_value,latest_date,trend,momentum_1m_pct,momentum_3m_pct,z_score,signal_score,source_status,cycle_eligible
+2026-06-12,India VIX,INDIA VIX,daily,14.72,2026-06-12,FALLING,-5.73,0,0,2.87,NSE_LIVE_OR_CACHE,True
+2026-06-12,Nifty 50,NIFTY 50,daily,23622.9,2026-06-12,RISING,1.99,0,0,0.99,NSE_LIVE_OR_CACHE,True
