@@ -607,6 +607,11 @@ def fetch_live_option_chain(symbol: str, expiry: str | None = None,
             if r.status_code == 401 and attempt < retries:
                 time.sleep(1)
                 continue
+            if r.status_code == 404:
+                fallback = _live_chain_from_eod(sym, expiry)
+                if "error" not in fallback:
+                    fallback["live_error"] = "NSE option-chain endpoint returned 404"
+                return fallback
             r.raise_for_status()
             raw = r.json()
         except Exception as exc:

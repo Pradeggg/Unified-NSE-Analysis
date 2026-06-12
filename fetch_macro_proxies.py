@@ -2,28 +2,24 @@
 """
 P1-6 — Macro-Economic Proxy Signals
 ====================================
-Fetches macro indicator data from reliable public sources (FRED, NSE),
-computes trend signals, and maps them to sector-level tailwinds/headwinds.
+Computes macro indicator signals from local/cache-safe sources and maps them
+to sector-level tailwinds/headwinds.
 
-Data sources (all free, no API key required):
-  FRED CSV API:
-    - DEXINUS        : USD/INR daily
-    - DCOILBRENTEU   : Brent crude daily
-    - PCOPPUSDM      : Copper monthly (USD/MT)
-    - DGS10          : US 10-Year Treasury yield daily
-    - INDCPIALLMINMEI: India CPI monthly (OECD index)
-    - MCOILBRENTEU   : Brent crude monthly avg
-    - IRSTCI01INM156N: India short-term interest rate monthly
-  NSE API:
+Data sources:
+  NSE API/cache:
     - /api/allIndices : India VIX, Nifty 50, sector indices (live)
+
+FRED is intentionally decommissioned from the daily path. Legacy FRED cache
+rows may still be loaded for audit visibility, but they are marked ineligible
+for macro tailwinds and economic-cycle scoring.
 
 Output:
   data/macro_proxy_signals.csv  — one row per indicator per date
   data/macro_sector_tailwind.csv — MACRO_TAILWIND score per sector
 
 Usage:
-  python fetch_macro_proxies.py              # use cache if fresh (<24h)
-  python fetch_macro_proxies.py --refresh    # force re-download
+  python fetch_macro_proxies.py              # use NSE cache/live data only
+  python fetch_macro_proxies.py --refresh    # force NSE refresh only
   python fetch_macro_proxies.py --date 2026-04-29
 
 Author: Optimus (ShunyaAI-CodingAgent) — P1-6
@@ -63,6 +59,7 @@ _FRED_SERIES = {
     "MCOILBRENTEU":     {"name": "Brent Monthly Avg", "freq": "monthly", "direction": "lower_is_better"},
     "IRSTCI01INM156N":  {"name": "India Interest Rate","freq": "monthly","direction": "lower_is_better"},
 }
+_FRED_DECOMMISSIONED = True
 
 # ── NSE indicators ──
 _NSE_INDEX_TARGETS = {
@@ -135,6 +132,40 @@ def fetch_fred_series(series_id: str, start_date: str = "",
     df.dropna(subset=[series_id], inplace=True)
     df.to_csv(cache_file, index=False)
     return df
+
+
+def _is_fred_series_id(value: object) -> bool:
+    return str(value or "").strip().upper() in _FRED_SERIES
+
+
+def _boolish(value: object, default: bool = True) -> bool:
+    if value is None:
+        return default
+    text = str(value).strip().lower()
+    if text in {"false", "0", "no", "n", "off"}:
+        return False
+    if text in {"true", "1", "yes", "y", "on"}:
+        return True
+    return default
+
+
+def _mark_macro_eligibility(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df.copy()
+    out = df.copy()
+    if "series_id" not in out.columns:
+        out["series_id"] = ""
+    fred_mask = out["series_id"].map(_is_fred_series_id)
+    if "source_status" not in out.columns:
+        out["source_status"] = "LOCAL_OR_CACHE"
+    out.loc[fred_mask, "source_status"] = "FRED_DECOMMISSIONED_CACHE"
+    out.loc[~fred_mask & out["source_status"].isna(), "source_status"] = "LOCAL_OR_CACHE"
+    if "cycle_eligible" not in out.columns:
+        out["cycle_eligible"] = True
+    out["cycle_eligible"] = out["cycle_eligible"].map(lambda value: _boolish(value, default=True))
+    out.loc[fred_mask, "cycle_eligible"] = False
+    out["cycle_eligible"] = out["cycle_eligible"].astype(object)
+    return out
 
 
 def fetch_nse_live_indices(force: bool = False) -> dict:
@@ -224,53 +255,14 @@ def _zscore(value: float, values: list[float]) -> float:
 
 
 def compute_indicator_signals(force: bool = False) -> pd.DataFrame:
-    """Fetch all FRED series, compute signals, return unified DataFrame."""
+    """Compute macro signals without live FRED dependencies."""
     rows = []
     today_str = datetime.now().strftime("%Y-%m-%d")
 
-    # 1. FRED series
-    for series_id, meta in _FRED_SERIES.items():
-        df = fetch_fred_series(series_id, force=force)  # uses 6-month rolling window
-        if df.empty:
-            print(f"  {series_id}: no data available.")
-            continue
+    if _FRED_DECOMMISSIONED:
+        print("  FRED macro proxies decommissioned; using NSE/local indicators only.")
 
-        values = df[series_id].tolist()
-        latest_val = values[-1]
-        latest_date = df["observation_date"].iloc[-1]
-
-        trend = _trend(values, window=20)
-        mom_1m = _mom_pct(values, periods=20)
-        mom_3m = _mom_pct(values, periods=60)
-        z = _zscore(latest_val, values[-60:])
-
-        # Signal: combine trend + z-score; NaN-safe
-        if meta["direction"] == "higher_is_better":
-            signal_score = z  # positive z → bullish
-        else:
-            signal_score = -z  # negative z → bullish (lower is better)
-        # Replace NaN with 0 (insufficient history)
-        if math.isnan(signal_score):
-            signal_score = 0.0
-        if math.isnan(z):
-            z = 0.0
-
-        rows.append({
-            "date": today_str,
-            "indicator": meta["name"],
-            "series_id": series_id,
-            "frequency": meta["freq"],
-            "latest_value": round(latest_val, 4),
-            "latest_date": latest_date.strftime("%Y-%m-%d") if hasattr(latest_date, "strftime") else str(latest_date),
-            "trend": trend,
-            "momentum_1m_pct": round(mom_1m, 2),
-            "momentum_3m_pct": round(mom_3m, 2),
-            "z_score": round(z, 2),
-            "signal_score": round(signal_score, 2),
-        })
-        print(f"  {meta['name']:25s}: {latest_val:>12.2f}  trend={trend:8s}  z={z:+.2f}  signal={signal_score:+.2f}")
-
-    # 2. NSE live indices (VIX, Nifty)
+    # NSE live/cache indices (VIX, Nifty)
     nse_data = fetch_nse_live_indices(force=force)
     for idx_name, meta in _NSE_INDEX_TARGETS.items():
         item = nse_data.get(idx_name, {})
@@ -296,10 +288,12 @@ def compute_indicator_signals(force: bool = False) -> pd.DataFrame:
             "momentum_3m_pct": 0,  # not available for live
             "z_score": 0,
             "signal_score": round(signal_score, 2),
+            "source_status": "NSE_LIVE_OR_CACHE",
+            "cycle_eligible": True,
         })
         print(f"  {meta['name']:25s}: {val:>12.2f}  today={pct_chg:+.2f}%  signal={signal_score:+.2f}")
 
-    signals_df = pd.DataFrame(rows)
+    signals_df = _mark_macro_eligibility(pd.DataFrame(rows))
     if not signals_df.empty:
         signals_df.to_csv(_SIGNALS_CSV, index=False)
         print(f"\n  Saved {len(signals_df)} indicator signals → {_SIGNALS_CSV.name}")
@@ -355,6 +349,11 @@ def compute_sector_tailwinds(signals_df: pd.DataFrame) -> pd.DataFrame:
     """Map indicator signals to per-sector MACRO_TAILWIND scores."""
     if signals_df.empty:
         return pd.DataFrame(columns=["SECTOR_NAME", "MACRO_TAILWIND", "MACRO_DETAIL"])
+    signals_df = _mark_macro_eligibility(signals_df)
+    if "cycle_eligible" in signals_df.columns:
+        signals_df = signals_df[signals_df["cycle_eligible"].map(lambda value: _boolish(value, default=True))]
+    if signals_df.empty:
+        return pd.DataFrame(columns=["SECTOR_NAME", "MACRO_TAILWIND", "MACRO_DETAIL"])
 
     # Build lookup: indicator_name → signal_score
     sig_map = {}
@@ -406,7 +405,7 @@ def load_macro_signals() -> pd.DataFrame:
         age_d = (datetime.now().timestamp() - _SIGNALS_CSV.stat().st_mtime) / 86400
         if age_d > 45:
             print(f"  WARNING: Macro signals are {age_d:.0f} days old (>45d stale threshold).")
-        return pd.read_csv(_SIGNALS_CSV)
+        return _mark_macro_eligibility(pd.read_csv(_SIGNALS_CSV))
     return pd.DataFrame()
 
 

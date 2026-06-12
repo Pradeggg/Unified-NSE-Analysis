@@ -2351,6 +2351,11 @@ def _run_ric(agent, key: str, arg: str, show_trace: bool, output_format: str = "
         prompt = step["prompt"].replace("{symbol}", symbol)\
                                .replace("{sector}", symbol)\
                                .replace("{index}",  symbol)
+        agent_prompt = (
+            f"[[RIC_STEP_PREVALIDATED_SYMBOL={symbol}]] {prompt}"
+            if symbol and ric.get("arg") == "symbol"
+            else prompt
+        )
 
         console.print(
             f"[bold yellow]  Step {i}/{n_steps}[/bold yellow]"
@@ -2359,7 +2364,7 @@ def _run_ric(agent, key: str, arg: str, show_trace: bool, output_format: str = "
         console.print("[dim cyan]  ⏳  Running…[/dim cyan]")
 
         try:
-            result = agent.query(prompt, show_trace=show_trace)
+            result = agent.query(agent_prompt, show_trace=show_trace)
             _print_response(result)
             # Collect clean answer for report
             answer, _ = _parse_followups(result.get("answer", ""))

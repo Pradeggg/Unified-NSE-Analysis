@@ -2546,6 +2546,40 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
 
         self.assertIsNone(_validate_required_tools(query, "stock_brief", tool_results))
 
+    def test_required_tool_validator_allows_ric_step_with_prevalidated_symbol(self):
+        from terminal.agent import _validate_required_tools
+
+        marker = "[[RIC_STEP_PREVALIDATED_SYMBOL=AEROFLEX]]"
+        cases = [
+            (
+                f"{marker} Full technical setup for AEROFLEX — Weinstein stage, RSI, ADX, MACD.",
+                [
+                    {"tool": "get_technical_setup", "args": {"symbol": "AEROFLEX"}, "result": {"symbol": "AEROFLEX"}},
+                    {"tool": "get_symbol_snapshot", "args": {"symbol": "AEROFLEX"}, "result": {"symbol": "AEROFLEX"}},
+                ],
+            ),
+            (
+                f"{marker} Fundamental analysis of AEROFLEX from screener.in — P/E, P/B, ROE, ROCE.",
+                [
+                    {"tool": "get_cached_financials", "args": {"symbol": "AEROFLEX"}, "result": {"symbol": "AEROFLEX"}},
+                    {"tool": "scrape_screener_in", "args": {"symbol": "AEROFLEX"}, "result": {"symbol": "AEROFLEX"}},
+                ],
+            ),
+            (
+                f"{marker} Latest news and catalysts for AEROFLEX — recent announcements, results, management commentary.",
+                [
+                    {"tool": "search_latest_catalysts", "args": {"symbol": "AEROFLEX"}, "result": {"symbol": "AEROFLEX"}},
+                    {"tool": "search_nse_announcements", "args": {"symbol": "AEROFLEX"}, "result": {"symbol": "AEROFLEX"}},
+                    {"tool": "search_bse_filings", "args": {"symbol": "AEROFLEX"}, "result": {"symbol": "AEROFLEX"}},
+                    {"tool": "get_latest_results", "args": {"symbol": "AEROFLEX"}, "result": {"symbol": "AEROFLEX"}},
+                ],
+            ),
+        ]
+
+        for query, tool_results in cases:
+            with self.subTest(query=query):
+                self.assertIsNone(_validate_required_tools(query, "stock_brief", tool_results))
+
 
 class UnifiedRouterAgentWiringTests(unittest.TestCase):
     """AA-UR-6: Agent ↔ UnifiedRouter wiring parity tests."""

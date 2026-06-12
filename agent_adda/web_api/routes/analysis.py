@@ -1,6 +1,7 @@
 """Chart analysis routes — vision LLM reads the screenshot directly."""
 from __future__ import annotations
 
+import re
 import uuid
 import os
 import sys
@@ -16,6 +17,28 @@ router = APIRouter()
 _sessions: dict[str, dict] = {}
 
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+
+# Keywords that trigger live F&O data injection
+_FNO_KEYWORDS = re.compile(
+    r"\b(f[&n]o|options?|option chain|oi\b|open interest|pcr|put.call|max.pain|"
+    r"premium|futures?|basis|rollover|ce\b|pe\b|calls?\b|puts?\b|strike|expiry|"
+    r"iv\b|implied volatility|greeks?|delta|gamma|theta|vega|straddle|strangle|"
+    r"iron condor|spread|hedg|atm\b|itm\b|otm\b)\b",
+    re.IGNORECASE,
+)
+
+def _is_fno_question(text: str) -> bool:
+    return bool(_FNO_KEYWORDS.search(text))
+
+def _fetch_fno_context(symbol: str) -> str:
+    """Fetch live F&O data and format as text for LLM injection. Never throws."""
+    try:
+        if _REPO_ROOT not in sys.path:
+            sys.path.insert(0, _REPO_ROOT)
+        from .fno import _fno_context_text
+        return _fno_context_text(symbol)
+    except Exception:
+        return ""
 
 
 def _system_prompt(
@@ -212,14 +235,34 @@ async def follow_up(req: FollowUpRequest):
     if not session:
         raise HTTPException(status_code=404, detail=f"Session '{req.capture_id}' not found. Re-capture the chart.")
 
+    question = req.question
+    fno_injected = False
+
+    # If the question is about F&O/options/OI, fetch live data and prepend
+    if _is_fno_question(question):
+        fno_ctx = _fetch_fno_context(session["symbol"])
+        if fno_ctx:
+            question = (
+                f"{fno_ctx}\n\n"
+                f"Using the live F&O data above, answer this question:\n{req.question}"
+            )
+            fno_injected = True
+        # If fetch failed, let LLM know data was attempted
+        else:
+            question = (
+                f"[NOTE: Live F&O data fetch was attempted for {session['symbol']} "
+                f"but is currently unavailable (market may be closed or NSE API is down). "
+                f"Answer based on chart context only.]\n\n{req.question}"
+            )
+
     try:
         answer, model, in_tok, out_tok = _call_vision(
             system=session["system"],
             image_b64=None,               # image was already in the first turn
-            question=req.question,
+            question=question,
             history=session["history"],
         )
-        session["history"].append({"role": "user",      "content": req.question})
+        session["history"].append({"role": "user",      "content": question})
         session["history"].append({"role": "assistant", "content": answer})
     except Exception as exc:
         answer = f"[Follow-up error: {exc}]"
@@ -232,9 +275,10 @@ async def follow_up(req: FollowUpRequest):
         timeframe=session["timeframe"],
         answer=answer,
         evidence_trail=EvidenceTrail(
-            source="vision_llm_followup",
+            source="vision_llm_followup_fno" if fno_injected else "vision_llm_followup",
             as_of=datetime.utcnow().isoformat(),
             screenshot_used=False,
+            pg_levels_used=fno_injected,
         ),
         model=model,
         input_tokens=in_tok,

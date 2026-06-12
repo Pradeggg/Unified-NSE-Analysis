@@ -1433,11 +1433,24 @@ def load_macro(cur, dry_run=False):
 
 
 # ---------------------------------------------------------------------------
-# 8. PORTFOLIO
+# 8. COMPANY INTELLIGENCE
+# ---------------------------------------------------------------------------
+
+def load_company_intel_schema(cur, dry_run=False):
+    print("\n[8/9] COMPANY INTELLIGENCE — PostgreSQL schema")
+    schema_path = BASE / "postgres" / "migrations" / "20260612_company_intel.sql"
+    sql = schema_path.read_text(encoding="utf-8")
+    if not dry_run:
+        cur.execute(sql)
+    log("company_intel schema: ready")
+
+
+# ---------------------------------------------------------------------------
+# 9. PORTFOLIO
 # ---------------------------------------------------------------------------
 
 def load_portfolio(cur, dry_run=False):
-    print("\n[8/8] PORTFOLIO — Holdings")
+    print("\n[9/9] PORTFOLIO — Holdings")
     h = DATA / "holdings.csv"
     if h.exists():
         df = pd.read_csv(h, low_memory=False)
@@ -1477,6 +1490,7 @@ SECTIONS = {
     "signals":     load_signals,
     "breadth":     load_breadth,
     "macro":       load_macro,
+    "company_intel": load_company_intel_schema,
     "portfolio":   load_portfolio,
 }
 

@@ -45,16 +45,28 @@ def _clean_text(value: object) -> str:
     return str(value or "").strip().lower()
 
 
+def _cycle_eligible(value: object) -> bool:
+    text = str(value).strip().lower()
+    if text in {"false", "0", "no", "n", "off"}:
+        return False
+    return True
+
+
 def _find_signal(macro_signals: pd.DataFrame, *needles: str) -> dict[str, Any]:
     if macro_signals is None or macro_signals.empty or "indicator" not in macro_signals.columns:
         return {}
-    indicator = macro_signals["indicator"].astype(str).str.lower()
-    mask = pd.Series(True, index=macro_signals.index)
+    frame = macro_signals
+    if "cycle_eligible" in frame.columns:
+        frame = frame[frame["cycle_eligible"].map(_cycle_eligible)]
+    if frame.empty:
+        return {}
+    indicator = frame["indicator"].astype(str).str.lower()
+    mask = pd.Series(True, index=frame.index)
     for needle in needles:
         mask &= indicator.str.contains(needle.lower(), regex=False, na=False)
     if not mask.any():
         return {}
-    row = macro_signals[mask].iloc[-1]
+    row = frame[mask].iloc[-1]
     return row.to_dict()
 
 
