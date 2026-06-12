@@ -909,6 +909,7 @@ def _market_knowledge_query(query: str) -> str:
 def _routing_query_text(query: str) -> str:
     """Return the user's actual market question, without voice-copilot wrappers."""
     text = (query or "").strip()
+    text = re.sub(r"^\s*\[\[RIC_STEP_PREVALIDATED_SYMBOL=[A-Z0-9&-]+\]\]\s*", "", text, flags=re.I)
     match = re.match(
         r"^(?:answer|analy[sz]e)\s+this\s+spoken\s+market\s+question:\s*(.+?)(?:\.\s*(?:be concise|include evidence)\b.*)?$",
         text,
@@ -1836,11 +1837,56 @@ def _required_tools_for_query(intent: str, query: str) -> tuple[str, ...]:
     return tuple(dict.fromkeys(required))
 
 
+def _ric_prevalidated_symbol(query: str) -> str:
+    match = re.match(
+        r"^\s*\[\[RIC_STEP_PREVALIDATED_SYMBOL=([A-Z0-9&-]+)\]\]",
+        query or "",
+        flags=re.I,
+    )
+    return match.group(1).upper() if match else ""
+
+
+def _ric_step_evidence_satisfied(query: str, intent: str, executed: set[str]) -> bool:
+    """RIC recipes resolve the symbol once before the step sequence.
+
+    Each step is intentionally partial, so stock_brief's full-response
+    mandatory tool contract would be a false positive for step-local evidence.
+    """
+    if not _ric_prevalidated_symbol(query):
+        return False
+    q = _routing_query_text(query).lower()
+    if intent == "stock_brief":
+        if any(term in q for term in ("fundamental", "fundamentals", "screener.in", "p/e", "roe", "roce")):
+            return bool(executed & {"get_cached_financials", "scrape_screener_in", "get_symbol_snapshot"})
+        if any(term in q for term in ("news", "catalyst", "catalysts", "announcement", "announcements", "management commentary")):
+            return bool(executed & {
+                "search_latest_catalysts",
+                "search_nse_announcements",
+                "search_bse_filings",
+                "get_latest_results",
+                "search_concall_transcripts",
+            })
+        if any(term in q for term in ("technical", "rsi", "adx", "macd", "supertrend", "weinstein")):
+            return bool(executed & {"get_technical_setup", "explain_intraday_setup", "get_intraday_analysis"})
+        if any(term in q for term in ("live price", "quote", "current price")):
+            return bool(executed & {"get_live_quote", "get_symbol_snapshot", "get_nse_intraday_snapshot"})
+    if intent in {"intraday_setup", "intraday_levels"}:
+        return bool(executed & {
+            "explain_intraday_setup",
+            "get_intraday_levels",
+            "get_nse_intraday_snapshot",
+            "get_intraday_analysis",
+        })
+    return False
+
+
 def _validate_required_tools(query: str, intent: str, tool_results: list[dict]) -> str | None:
     required = _required_tools_for_query(intent, query)
     if not required:
         return None
     executed = {str(tr.get("tool")) for tr in tool_results or []}
+    if _ric_step_evidence_satisfied(query, intent, executed):
+        return None
     # If the user invoked /analyze on a document URL/file, the expanded prompt template
     # references "concall transcript / management commentary / guidance" as generic
     # interpretation hints. Those words must not coerce search_concall_transcripts /
@@ -2353,16 +2399,37 @@ def _build_market_situation_assessment_plan(query: str, data_mode: str = "histor
     }
 
 
-def _extract_fno_symbol(query: str) -> str:
+def _extract_fno_symbol(query: str, fallback_symbol: str = "") -> str:
     """Extract an index/stock symbol for F&O tools without treating F&O terms as symbols.
 
     Resolution order:
       1. Known multi-word index aliases (banknifty / finnifty / etc).
-      2. The first token that is present in the NSE symbol universe.
-      3. The first token not in the F&O-jargon skip list (back-compat fallback).
-      4. Default to NIFTY.
+      2. The first token that is present in the NSE symbol universe
+         AND is NOT a known F&O option-type abbreviation (CE, PE, ATM, ITM, OTM).
+      3. The first token not in the F&O-jargon skip list (back-compat fallback),
+         again excluding option-type abbreviations.
+      4. fallback_symbol (passed by caller from compound-query context).
+      5. Default to NIFTY.
     """
+    # ── Option-type tokens that must NEVER be used as underlying symbols ──────
+    # CE = Call European (also NSE-listed Crompton Greaves), PE = Put European,
+    # ATM/ITM/OTM = moneyness labels. These appear in F&O questions but are NOT
+    # underlying index/stock symbols.
+    _OPTION_ABBREVS = {
+        "CE", "PE", "ATM", "ITM", "OTM",
+        "CALL", "PUT", "CALLS", "PUTS",
+        "EXPIRY", "STRIKE", "STRIKES",
+        "STRADDLE", "STRANGLE", "SPREAD", "CONDOR", "BUTTERFLY",
+        "DELTA", "GAMMA", "THETA", "VEGA", "IV",
+        "LONGSTRADDLE", "SHORTSTRADDLE",
+    }
+
     text = query or ""
+    # Strip "CE/PE" and "CE & PE" compound forms so they don't pollute tokenisation
+    text = re.sub(r"\bCE\s*/\s*PE\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bPE\s*/\s*CE\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bCE\s+&\s+PE\b",  "", text, flags=re.IGNORECASE)
+
     q = text.lower()
     if "banknifty" in q or "bank nifty" in q or "nifty bank" in q:
         return "BANKNIFTY"
@@ -2394,7 +2461,11 @@ def _extract_fno_symbol(query: str) -> str:
         "OVERVIEW", "OPTION", "OPTIONS", "CHAIN", "PCR", "MAX", "PAIN", "TOP", "OI",
         "STRIKES", "FUTURES", "BASIS", "COST", "CARRY", "ROLL", "ROLLOVER", "RECOMMEND",
         "BEST", "STRATEGY", "CURRENT", "DATA", "OPEN", "INTEREST",
-    }
+        # OI-context keywords that look like tickers
+        "SHOW", "KEY", "WHERE", "SUPPORT", "RESISTANCE", "LEVELS", "BUILDING",
+        "UNWINDING", "TODAY", "INTRADAY", "SWING", "WHICH", "THAT", "WHAT",
+        "ANALYSE", "ANALYZE", "CHECK", "RUN", "GET", "FIND",
+    } | _OPTION_ABBREVS  # CE, PE, ATM, ITM, OTM etc. always excluded
     tokens = [t.upper() for t in re.findall(r"\b[A-Z][A-Z0-9&-]{1,12}\b", text)]
     candidates = [t for t in tokens if t not in skip]
 
@@ -2407,10 +2478,19 @@ def _extract_fno_symbol(query: str) -> str:
     except Exception:
         universe = frozenset()
     for token in candidates:
+        # Extra guard: skip tokens that are option-type abbreviations even if they
+        # happen to appear in the NSE universe (e.g. CE = Crompton Greaves).
+        if token in _OPTION_ABBREVS:
+            continue
         if universe and token in universe:
             return token
     for token in candidates:
+        if token in _OPTION_ABBREVS:
+            continue
         return token
+    # Use caller-supplied context symbol (e.g. from compound-query Part N-1)
+    if fallback_symbol:
+        return fallback_symbol
     return "NIFTY"
 
 
@@ -2789,7 +2869,7 @@ def _results_feed_slash_days(query: str) -> int | None:
     return min(90, max(1, weeks * 7))
 
 
-def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
+def _keyword_intent(query: str, data_mode: str = "historical", context_symbol: str = "") -> dict:
     """Detect intent and build a tool plan from keywords alone."""
     routing_text = _routing_query_text(query)
     q = routing_text.lower()
@@ -2957,7 +3037,7 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         "short straddle", "straddle", "strangle", "iron condor", "butterfly",
     )
     if any(term in f" {q} " for term in fno_terms):
-        symbol = _extract_fno_symbol(routing_text)
+        symbol = _extract_fno_symbol(routing_text, fallback_symbol=context_symbol)
         if data_mode == "intraday" and any(
             term in q
             for term in (

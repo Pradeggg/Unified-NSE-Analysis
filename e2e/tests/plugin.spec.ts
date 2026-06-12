@@ -171,11 +171,12 @@ test("Analyze tab is active by default", async () => {
   await expect(analyzeTab).toContainText(/analyze/i);
 });
 
-test("both main tabs are rendered", async () => {
+test("all three main tabs are rendered", async () => {
   const tabs = panelPage.locator(".main-tab");
-  await expect(tabs).toHaveCount(2);
+  await expect(tabs).toHaveCount(3);
   await expect(tabs.nth(0)).toContainText(/analyze/i);
   await expect(tabs.nth(1)).toContainText(/backtest/i);
+  await expect(tabs.nth(2)).toContainText(/ric/i);
 });
 
 test("clicking Backtest tab switches to backtest view", async () => {
@@ -241,4 +242,94 @@ test("switching back to Analyze tab restores capture button", async () => {
   await panelPage.locator(".main-tab").nth(0).click();
   await expect(panelPage.locator(".capture-btn")).toBeVisible();
   await expect(panelPage.locator(".bt-panel")).not.toBeVisible();
+});
+
+// ── RIC Tab ───────────────────────────────────────────────────────────────────
+
+test("clicking RIC tab shows RIC view", async () => {
+  await panelPage.locator(".main-tab").nth(2).click();
+  await expect(panelPage.locator(".ric-tab")).toBeVisible();
+  await expect(panelPage.locator(".capture-btn")).not.toBeVisible();
+});
+
+test("RIC tab has Run RIC Analysis button", async () => {
+  await panelPage.locator(".main-tab").nth(2).click();
+  const btn = panelPage.locator(".ric-run-btn");
+  await expect(btn).toBeVisible();
+  await expect(btn).toContainText(/run ric/i);
+});
+
+test("RIC tab shows symbol context next to run button", async () => {
+  await panelPage.locator(".main-tab").nth(2).click();
+  const ctx = panelPage.locator(".ric-context");
+  await expect(ctx).toBeVisible();
+  // Should contain symbol and timeframe e.g. "BANKNIFTY · 5m"
+  const text = await ctx.textContent();
+  expect(text).toMatch(/·/);
+});
+
+test("clicking Run RIC shows loading state (⏳)", async () => {
+  await panelPage.locator(".main-tab").nth(2).click();
+  const btn = panelPage.locator(".ric-run-btn");
+  await btn.click();
+  await expect(btn).toContainText(/⏳|analysing/i, { timeout: 3_000 });
+});
+
+test("RIC Run returns safety badge within 30s (API call)", async () => {
+  await panelPage.locator(".main-tab").nth(2).click();
+  await panelPage.locator(".ric-run-btn").click();
+  // Wait for results — up to 30s for LLM call
+  await panelPage.waitForSelector(".ric-safety", { timeout: 30_000 });
+  const badge = panelPage.locator(".ric-safety-badge");
+  await expect(badge).toBeVisible();
+  const text = await badge.textContent();
+  expect(text).toMatch(/SAFE|MODERATE|CAUTION|RISKY/);
+});
+
+test("RIC results show intraday and swing cards", async () => {
+  // RIC results should already be present from the previous test
+  await panelPage.locator(".main-tab").nth(2).click();
+  const safetyVisible = await panelPage.locator(".ric-safety").isVisible();
+  if (!safetyVisible) {
+    await panelPage.locator(".ric-run-btn").click();
+    await panelPage.waitForSelector(".ric-safety", { timeout: 30_000 });
+  }
+  const cards = panelPage.locator(".ric-card");
+  const count = await cards.count();
+  expect(count).toBeGreaterThanOrEqual(1);
+  // Each card should show entry/stop prices
+  const firstCard = cards.first();
+  await expect(firstCard).toContainText(/Entry|₹/i);
+});
+
+test("RIC results show Draw on Chart button after analysis", async () => {
+  await panelPage.locator(".main-tab").nth(2).click();
+  const safetyVisible = await panelPage.locator(".ric-safety").isVisible();
+  if (!safetyVisible) {
+    await panelPage.locator(".ric-run-btn").click();
+    await panelPage.waitForSelector(".ric-safety", { timeout: 30_000 });
+  }
+  const drawBtn = panelPage.locator(".ric-draw-btn");
+  await expect(drawBtn).toBeVisible();
+  await expect(drawBtn).toContainText(/draw levels/i);
+});
+
+test("RIC results show AI recommendation text", async () => {
+  await panelPage.locator(".main-tab").nth(2).click();
+  const safetyVisible = await panelPage.locator(".ric-safety").isVisible();
+  if (!safetyVisible) {
+    await panelPage.locator(".ric-run-btn").click();
+    await panelPage.waitForSelector(".ric-safety", { timeout: 30_000 });
+  }
+  const rec = panelPage.locator(".ric-rec-text");
+  await expect(rec).toBeVisible();
+  const text = await rec.textContent();
+  expect((text ?? "").length).toBeGreaterThan(20);
+});
+
+test("switching from RIC back to Analyze restores capture button", async () => {
+  await panelPage.locator(".main-tab").nth(2).click();
+  await panelPage.locator(".main-tab").nth(0).click();
+  await expect(panelPage.locator(".capture-btn")).toBeVisible();
+  await expect(panelPage.locator(".ric-tab")).not.toBeVisible();
 });

@@ -223,6 +223,14 @@ export interface RicMarket {
   nifty_trend:    string;
   nifty_52w_high: number;
   nifty_52w_low:  number;
+  // Symbol's own index data (populated when symbol is a known index)
+  symbol_close:    number;
+  symbol_chg_pct:  number;
+  symbol_52w_high: number;
+  symbol_52w_low:  number;
+  symbol_trend:    string;
+  symbol_up_days:  number;
+  is_index:        boolean;
 }
 
 export interface RicOptionsPlay {

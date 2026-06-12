@@ -34,6 +34,22 @@ _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..",
 _FNO_INDICES = {"BANKNIFTY", "NIFTY", "FINNIFTY", "MIDCPNIFTY", "NIFTYNXT50", "SENSEX"}
 
 
+# ── Symbol → NSE index name mapping (for get_index_snapshot) ─────────────────
+
+_SYMBOL_TO_INDEX: dict[str, str] = {
+    "NIFTY":       "Nifty 50",
+    "BANKNIFTY":   "Nifty Bank",
+    "FINNIFTY":    "Nifty Fin Service",
+    "MIDCPNIFTY":  "NIFTY MID SELECT",
+    "NIFTYNXT50":  "Nifty Next 50",
+    "SENSEX":      "SENSEX",
+}
+
+
+def _sym_index_name(sym: str) -> str | None:
+    return _SYMBOL_TO_INDEX.get(sym.upper())
+
+
 def _tools():
     if _REPO_ROOT not in sys.path:
         sys.path.insert(0, _REPO_ROOT)
@@ -53,6 +69,14 @@ def _safe(fn, *args, default=None):
     except Exception as exc:
         log.debug("_safe %s failed: %s", getattr(fn, "__name__", fn), exc)
         return default if default is not None else {}
+
+
+def _sym_trend(snap: dict) -> str:
+    """Derive trend label from index snapshot's trend_10d up_days."""
+    up = int((snap.get("trend_10d") or {}).get("up_days", -1) or -1)
+    if up < 0:
+        return "unknown"
+    return "bullish" if up >= 6 else "bearish" if up <= 4 else "neutral"
 
 
 # ── Safety score ──────────────────────────────────────────────────────────────
@@ -398,12 +422,15 @@ async def ric_analyze(
     t   = _tools()
 
     # ── Parallel data fetch ───────────────────────────────────────────────────
+    sym_index_name = _sym_index_name(sym)   # e.g. MIDCPNIFTY → "NIFTY MIDCAP SELECT"
     fetch_results = await asyncio.gather(
         _run(lambda: _safe(t.get_intraday_levels, sym, tf)),
         _run(lambda: _safe(t.get_index_snapshot, "NIFTY 50")),
         _run(lambda: _safe(t.get_options_chain, sym)),
         _run(lambda: _safe(t.get_futures_analysis, sym)),
         _run(lambda: _safe(t._quick_analysis_fno, sym)),
+        # Fetch the symbol's own index snapshot (non-null only for known indices)
+        _run(lambda: _safe(t.get_index_snapshot, sym_index_name) if sym_index_name else {}),
         return_exceptions=True,
     )
 
@@ -415,6 +442,7 @@ async def ric_analyze(
     options  = _unpack(fetch_results[2])
     futures  = _unpack(fetch_results[3])
     pg_fno   = _unpack(fetch_results[4])
+    sym_snap = _unpack(fetch_results[5])   # symbol's own index snapshot (may be {})
 
     # ── Extract primitives ────────────────────────────────────────────────────
     price       = float(levels.get("latest_close", 0) or 0)
@@ -468,6 +496,14 @@ async def ric_analyze(
         "nifty_trend":    "bullish" if nifty_up_days >= 6 else "bearish" if nifty_up_days <= 4 else "neutral",
         "nifty_52w_high": float(nifty.get("52w_high", 0) or 0),
         "nifty_52w_low":  float(nifty.get("52w_low",  0) or 0),
+        # Symbol's own snapshot (e.g. MIDCPNIFTY vs NIFTY 50 as broad market)
+        "symbol_close":    float(sym_snap.get("close", price) or price),
+        "symbol_chg_pct":  float(sym_snap.get("chg_pct", 0) or 0),
+        "symbol_52w_high": float(sym_snap.get("52w_high", 0) or 0),
+        "symbol_52w_low":  float(sym_snap.get("52w_low",  0) or 0),
+        "symbol_trend":    _sym_trend(sym_snap),
+        "symbol_up_days":  int((sym_snap.get("trend_10d") or {}).get("up_days", 0) or 0),
+        "is_index":        sym_index_name is not None,
     }
 
     key_levels_data = {

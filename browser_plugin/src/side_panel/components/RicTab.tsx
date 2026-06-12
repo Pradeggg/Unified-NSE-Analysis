@@ -204,7 +204,25 @@ export function RicTab({ symbol, timeframe, exchange, captureId }: Props) {
           <div className="ric-section">
             <div className="ric-section-title">🌍 Market</div>
             <div className="ric-fno-grid">
-              <span>NIFTY</span>
+              {/* Show the analysed symbol's own data first when it's an index */}
+              {ric.market.is_index && ric.market.symbol_close > 0 && (
+                <>
+                  <span>{symbol}</span>
+                  <span>
+                    ₹{ric.market.symbol_close?.toLocaleString("en-IN")}
+                    &nbsp;
+                    <span style={{ color: ric.market.symbol_chg_pct >= 0 ? "#00c853" : "#f85149" }}>
+                      {ric.market.symbol_chg_pct >= 0 ? "+" : ""}{ric.market.symbol_chg_pct?.toFixed(2)}%
+                    </span>
+                  </span>
+                  <span>Trend 10d</span>
+                  <span style={{ color: ric.market.symbol_trend === "bullish" ? "#00c853" : ric.market.symbol_trend === "bearish" ? "#f85149" : "#ffd740" }}>
+                    {ric.market.symbol_up_days}/10 up · {ric.market.symbol_trend}
+                  </span>
+                </>
+              )}
+              {/* NIFTY 50 as broader market benchmark */}
+              <span style={{ color: "#8b949e" }}>NIFTY 50</span>
               <span>
                 ₹{ric.market.nifty_close?.toLocaleString("en-IN")}
                 &nbsp;
@@ -212,7 +230,7 @@ export function RicTab({ symbol, timeframe, exchange, captureId }: Props) {
                   {ric.market.nifty_chg_pct >= 0 ? "+" : ""}{ric.market.nifty_chg_pct?.toFixed(2)}%
                 </span>
               </span>
-              <span>Trend 10d</span>
+              <span style={{ color: "#8b949e" }}>Trend 10d</span>
               <span style={{ color: ric.market.nifty_trend === "bullish" ? "#00c853" : ric.market.nifty_trend === "bearish" ? "#f85149" : "#ffd740" }}>
                 {ric.market.nifty_up_days}/10 up · {ric.market.nifty_trend}
               </span>
