@@ -2,6 +2,7 @@ from broker_research.discovery import DiscoveredReportLink
 from broker_research.sources import BROKER_SOURCES
 from broker_research.storage import (
     complete_index_run,
+    insert_broker_research_facts,
     list_broker_sources,
     record_index_run,
     seed_broker_sources,
@@ -108,3 +109,32 @@ def test_list_broker_sources_returns_dicts():
             "source_url": "https://example.com",
         }
     ]
+
+
+def test_insert_broker_research_facts_uses_company_intel_table():
+    conn = FakeConnection()
+
+    count = insert_broker_research_facts(
+        conn,
+        [
+            {
+                "broker_report_id": 33,
+                "symbol": "BEL",
+                "fact_type": "rating",
+                "fact_name": "broker_rating",
+                "fact_value": "BUY",
+                "unit": "",
+                "period": "",
+                "page_number": 1,
+                "confidence": 0.8,
+                "extractor": "deterministic",
+            }
+        ],
+    )
+
+    sql = conn.executed[0][0]
+    params = conn.executed[0][1]
+    assert "INSERT INTO company_intel.broker_research_facts" in sql
+    assert params == [(33, "BEL", "rating", "broker_rating", "BUY", "", "", 1, 0.8, "deterministic")]
+    assert count == 1
+    assert conn.commits == 1

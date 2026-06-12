@@ -271,3 +271,34 @@ def update_report_parse_status(conn: Any, *, broker_report_id: int, parse_status
             (parse_status, broker_report_id),
         )
     conn.commit()
+
+
+def insert_broker_research_facts(conn: Any, facts: list[dict[str, Any]]) -> int:
+    rows = [
+        (
+            int(fact["broker_report_id"]),
+            str(fact["symbol"]).strip().upper(),
+            str(fact["fact_type"]),
+            str(fact["fact_name"]),
+            str(fact["fact_value"]),
+            str(fact.get("unit") or ""),
+            str(fact.get("period") or ""),
+            int(fact["page_number"]) if fact.get("page_number") is not None else None,
+            float(fact.get("confidence") or 0.0),
+            str(fact.get("extractor") or "deterministic"),
+        )
+        for fact in facts
+    ]
+    if not rows:
+        return 0
+    with conn.cursor() as cur:
+        cur.executemany(
+            """
+            INSERT INTO company_intel.broker_research_facts
+                (broker_report_id, symbol, fact_type, fact_name, fact_value, unit, period, page_number, confidence, extractor)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            rows,
+        )
+    conn.commit()
+    return len(rows)
