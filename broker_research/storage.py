@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from .discovery import DiscoveredReportLink
@@ -302,3 +303,39 @@ def insert_broker_research_facts(conn: Any, facts: list[dict[str, Any]]) -> int:
         )
     conn.commit()
     return len(rows)
+
+
+def record_broker_research_run(
+    conn: Any,
+    *,
+    symbol: str,
+    objective: str,
+    broker_filter: str,
+    status: str,
+    coverage: dict[str, Any],
+    report_markdown_path: str = "",
+    report_html_path: str = "",
+    report_pdf_path: str = "",
+) -> int:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO company_intel.broker_research_runs
+                (symbol, objective, broker_filter, status, report_markdown_path, report_html_path, report_pdf_path, coverage_json)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb)
+            RETURNING research_run_id
+            """,
+            (
+                symbol.strip().upper(),
+                objective,
+                broker_filter,
+                status,
+                report_markdown_path,
+                report_html_path,
+                report_pdf_path,
+                json.dumps(coverage, sort_keys=True),
+            ),
+        )
+        row = cur.fetchone()
+    conn.commit()
+    return int(row[0])
