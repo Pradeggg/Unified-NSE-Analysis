@@ -7172,37 +7172,51 @@ def _build_command_registry():
 
     # /broker-sources, /broker-index, /broker-fetch, /broker-research, and /deep-research
     def _h_broker_research(query, agent, show_trace):
-        from broker_research.commands import (
-            handle_broker_fetch_command,
-            handle_broker_crawl_command,
-            handle_broker_index_command,
-            handle_broker_research_command,
-            handle_broker_sources_command,
-        )
         _print_user(query)
-        q = query.strip().lower()
-        if q.startswith("/broker-sources"):
-            output = handle_broker_sources_command()
+        try:
+            from broker_research.commands import (
+                handle_broker_fetch_command,
+                handle_broker_crawl_command,
+                handle_broker_index_command,
+                handle_broker_research_command,
+                handle_broker_sources_command,
+            )
+
+            q = query.strip().lower()
+            if q.startswith("/broker-sources"):
+                output = handle_broker_sources_command()
+                console.print(Markdown(_linkify_markdown(output)))
+                return True
+            if q.startswith("/broker-fetch"):
+                output = handle_broker_fetch_command(query)
+                console.print(Markdown(_linkify_markdown(output)))
+                return True
+            if q.startswith("/broker-crawl"):
+                output = handle_broker_crawl_command(query)
+                console.print(Markdown(_linkify_markdown(output)))
+                return True
+            if q.startswith(("/broker-research", "/deep-research")):
+                output = handle_broker_research_command(query)
+                console.print(Markdown(_linkify_markdown(output)))
+                return True
+            if q.startswith("/report broker"):
+                output = handle_broker_research_command(query)
+                console.print(Markdown(_linkify_markdown(output)))
+                return True
+            output = handle_broker_index_command(query)
             console.print(Markdown(_linkify_markdown(output)))
             return True
-        if q.startswith("/broker-fetch"):
-            output = handle_broker_fetch_command(query)
+        except Exception as exc:
+            output = (
+                "━━━ Broker Research Command Failed ━━━\n\n"
+                f"Command: `{query}`\n\n"
+                f"Error: `{type(exc).__name__}: {exc}`\n\n"
+                "No market brief was generated because this broker research "
+                "slash command failed before completion. Check PostgreSQL "
+                "connectivity and the broker source URL, then retry."
+            )
             console.print(Markdown(_linkify_markdown(output)))
             return True
-        if q.startswith("/broker-crawl"):
-            output = handle_broker_crawl_command(query)
-            console.print(Markdown(_linkify_markdown(output)))
-            return True
-        if q.startswith(("/broker-research", "/deep-research")):
-            output = handle_broker_research_command(query)
-            console.print(Markdown(_linkify_markdown(output)))
-            return True
-        if q.startswith("/report broker"):
-            output = handle_broker_research_command(query)
-            console.print(Markdown(_linkify_markdown(output)))
-            return True
-        output = handle_broker_index_command(query)
-        console.print(Markdown(_linkify_markdown(output)))
         return True
     registry.register(CommandHandler(
         name="broker-research",
