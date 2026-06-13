@@ -4411,6 +4411,34 @@ class Agent:
                       "cache_creation_input_tokens": 0},
         }
 
+    def _handle_brainstorm_command(self, user_input: str) -> dict | None:
+        """Handle the ``/brainstorm <topic>`` slash command.
+
+        Returns a query()-shaped dict with a market-context-aware brainstorm
+        template; ``None`` if the input is not a /brainstorm command.
+        """
+        from terminal.copilot_workflows.brainstorm import handle_brainstorm_command
+        raw = (user_input or "").strip()
+        if not raw.startswith("/brainstorm"):
+            return None
+        rest = raw[len("/brainstorm"):]
+        if rest and not rest[0].isspace():
+            return None  # e.g. "/brainstorming" — not our command
+        topic = rest.strip()
+        # Enrich with current session symbols so the template is market-aware
+        ctx_symbols = list(self._last_symbols) if self._last_symbols else []
+        answer = handle_brainstorm_command(f"/brainstorm {topic}", ctx_symbols)
+        return {
+            "answer": answer,
+            "trace": [{"step": "brainstorm_command", "topic": topic or "unspecified",
+                       "context_symbols": ctx_symbols}],
+            "backend": self.backend_name,
+            "intent": "brainstorm_command",
+            "usage": {"input_tokens": 0, "output_tokens": 0,
+                      "cache_read_input_tokens": 0,
+                      "cache_creation_input_tokens": 0},
+        }
+
     @staticmethod
     def _tool_schema_name(schema: dict) -> str:
         function = schema.get("function") if isinstance(schema, dict) else {}
@@ -5004,6 +5032,11 @@ class Agent:
         mode_result = self._handle_mode_command(user_input)
         if mode_result is not None:
             return mode_result
+
+        # /brainstorm slash command — market-context-aware design discussion.
+        brainstorm_result = self._handle_brainstorm_command(user_input)
+        if brainstorm_result is not None:
+            return brainstorm_result
 
         parts = _split_compound_query(user_input)
         if len(parts) <= 1:
