@@ -4414,29 +4414,58 @@ class Agent:
     def _handle_brainstorm_command(self, user_input: str) -> dict | None:
         """Handle the ``/brainstorm <topic>`` slash command.
 
-        Returns a query()-shaped dict with a market-context-aware brainstorm
-        template; ``None`` if the input is not a /brainstorm command.
+        Calls the LLM with a market-context-aware system prompt so it generates
+        real ideas rather than a static scaffold.  Returns ``None`` if the input
+        is not a /brainstorm command.
         """
-        from terminal.copilot_workflows.brainstorm import handle_brainstorm_command
         raw = (user_input or "").strip()
         if not raw.startswith("/brainstorm"):
             return None
         rest = raw[len("/brainstorm"):]
         if rest and not rest[0].isspace():
             return None  # e.g. "/brainstorming" — not our command
-        topic = rest.strip()
-        # Enrich with current session symbols so the template is market-aware
+        topic = rest.strip() or "general trading ideas"
+
         ctx_symbols = list(self._last_symbols) if self._last_symbols else []
-        answer = handle_brainstorm_command(f"/brainstorm {topic}", ctx_symbols)
+        symbol_line = (
+            f"Current session symbols: {', '.join(ctx_symbols)}." if ctx_symbols
+            else "No specific symbol in context — answer for the broader NSE market."
+        )
+
+        system_prompt = (
+            "You are Agent Adda, an NSE market intelligence assistant. "
+            "The user has invoked /brainstorm to explore ideas before committing to any action. "
+            "Your job: generate a structured, insightful brainstorm — real ideas with market reasoning, "
+            "not generic advice. Use your knowledge of NSE instruments, F&O dynamics, intraday/swing "
+            "setups, and risk management. Be specific and actionable but make clear nothing is executed "
+            "until the user approves.\n\n"
+            f"{symbol_line}\n\n"
+            "Format your response with these sections:\n"
+            "## 💡 Ideas & Approaches\n"
+            "## ⚠️ Risks & Assumptions\n"
+            "## ✅ Recommendation\n"
+            "## 🚦 Approval Gate\n"
+            "End with: 'Reply `approved` to proceed or describe changes.'"
+        )
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"Brainstorm: {topic}"},
+        ]
+        resp = self.backend.chat(messages, tools=[])
+        answer = (resp.get("content") or "").strip()
+        usage = resp.get("usage") or {}
         return {
             "answer": answer,
-            "trace": [{"step": "brainstorm_command", "topic": topic or "unspecified",
+            "trace": [{"step": "brainstorm_command", "topic": topic,
                        "context_symbols": ctx_symbols}],
             "backend": self.backend_name,
             "intent": "brainstorm_command",
-            "usage": {"input_tokens": 0, "output_tokens": 0,
-                      "cache_read_input_tokens": 0,
-                      "cache_creation_input_tokens": 0},
+            "usage": {
+                "input_tokens": usage.get("input_tokens", 0),
+                "output_tokens": usage.get("output_tokens", 0),
+                "cache_read_input_tokens": usage.get("cache_read_input_tokens", 0),
+                "cache_creation_input_tokens": usage.get("cache_creation_input_tokens", 0),
+            },
         }
 
     @staticmethod
