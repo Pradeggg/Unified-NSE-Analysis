@@ -7473,7 +7473,6 @@ def _build_command_registry():
     # /brainstorm, /plan, /debug, /review, /verify — AA-COP-4 copilot workflows
     def _h_copilot(query: str, agent, show_trace: bool) -> bool:
         from terminal.copilot_workflows import (
-            handle_brainstorm_command,
             handle_debug_command,
             handle_plan_command,
             handle_review_command,
@@ -7483,15 +7482,20 @@ def _build_command_registry():
 
         _print_user(query)
         root = query.strip().split(maxsplit=1)[0].lower()
-        handlers = {
-            "/brainstorm": handle_brainstorm_command,
-            "/plan": handle_plan_command,
-            "/debug": handle_debug_command,
-            "/review": handle_review_command,
-            "/status": handle_status_command,
-            "/verify": handle_verify_command,
-        }
-        output = handlers[root](query)
+
+        if root == "/brainstorm":
+            # Route through agent so the LLM generates real ideas with market context
+            result = agent.query(query)
+            output = result.get("answer", "")
+        else:
+            handlers = {
+                "/plan": handle_plan_command,
+                "/debug": handle_debug_command,
+                "/review": handle_review_command,
+                "/status": handle_status_command,
+                "/verify": handle_verify_command,
+            }
+            output = handlers[root](query)
         console.print(Markdown(_linkify_markdown(output)))
         return True
     registry.register(CommandHandler(

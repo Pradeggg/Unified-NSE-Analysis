@@ -4451,9 +4451,16 @@ class Agent:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"Brainstorm: {topic}"},
         ]
-        resp = self.backend.chat(messages, tools=[])
-        answer = (resp.get("content") or "").strip()
-        usage = resp.get("usage") or {}
+        try:
+            resp = self.backend.chat(messages)
+            answer = (resp.get("content") or "").strip()
+            if not answer:
+                answer = f"## 💡 Brainstorm: {topic}\n\n*(LLM returned empty response — try again)*"
+            usage = resp.get("usage") or {}
+        except Exception as exc:
+            log.warning("brainstorm LLM call failed: %s", exc)
+            answer = f"## 💡 Brainstorm: {topic}\n\n⚠️ LLM error: {exc}\n\nTry again or check your API key."
+            usage = {}
         return {
             "answer": answer,
             "trace": [{"step": "brainstorm_command", "topic": topic,
