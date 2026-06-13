@@ -7,11 +7,26 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .report import DISCLAIMER, render_broker_research_html
+from .report import DISCLAIMER, markdown_table_cell, render_broker_research_html
 
 
 def _clean(text: Any) -> str:
     return " ".join(str(text or "").split())
+
+
+def _normalize_markdown(text: Any) -> str:
+    lines = [line.rstrip() for line in str(text or "").replace("\r\n", "\n").split("\n")]
+    compact: list[str] = []
+    blank_seen = False
+    for line in lines:
+        if not line.strip():
+            if not blank_seen:
+                compact.append("")
+            blank_seen = True
+            continue
+        compact.append(line)
+        blank_seen = False
+    return "\n".join(compact).strip()
 
 
 def _money(value: Any) -> str:
@@ -138,7 +153,7 @@ def build_financial_analyst_markdown(
     if len(risk_line) > 500:
         risk_line = risk_line[:500].rstrip() + "..."
 
-    analyst_view = _clean(llm_view) or (
+    analyst_view = _normalize_markdown(llm_view) or (
         f"The extracted broker evidence is constructive for {clean_symbol}: "
         f"ratings are {ratings or 'not extracted'} and the extracted target-price average is {_money(target_average)}. "
         "The view depends on order execution, defence order inflows, margin delivery, and working-capital control."
@@ -192,9 +207,9 @@ def build_financial_analyst_markdown(
         lines.append(
             "| {broker} | {title} | {page} | {evidence} | {url} |".format(
                 broker=page.get("broker_code") or "",
-                title=page.get("report_title") or "",
+                title=markdown_table_cell(page.get("report_title") or ""),
                 page=f"Page {page.get('page_number') or ''}".strip(),
-                evidence=text[:260],
+                evidence=markdown_table_cell(text[:260]),
                 url=page.get("pdf_url") or "",
             )
         )
@@ -218,9 +233,9 @@ def build_financial_analyst_markdown(
         lines.append(
             "| {broker} | {title} | {fact_type}: {fact_value} | {page} | {url} |".format(
                 broker=fact.get("broker_code") or "",
-                title=fact.get("report_title") or "",
+                title=markdown_table_cell(fact.get("report_title") or ""),
                 fact_type=fact.get("fact_type") or "",
-                fact_value=fact.get("fact_value") or "",
+                fact_value=markdown_table_cell(fact.get("fact_value") or ""),
                 page=fact.get("page_number") or "",
                 url=fact.get("pdf_url") or "",
             )

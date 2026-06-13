@@ -41,8 +41,22 @@ def test_render_broker_research_html_wraps_markdown_content():
     html = render_broker_research_html("# Broker Research: BEL\n\nNot investment advice.")
 
     assert "<!doctype html>" in html
+    assert "<title>Broker Research: BEL</title>" in html
     assert "Broker Research: BEL" in html
     assert "Not investment advice." in html
+
+
+def test_render_broker_research_html_preserves_markdown_structure():
+    html = render_broker_research_html(
+        "# Report\n\n## Analyst View\n\n---\n\n### Thesis\n\n- **Order book** supports growth.\n\nPlain paragraph."
+    )
+
+    assert "<h2>Analyst View</h2>" in html
+    assert "<hr>" in html
+    assert "<h3>Thesis</h3>" in html
+    assert "<li><strong>Order book</strong> supports growth.</li>" in html
+    assert "<ol start=\"1\">" in render_broker_research_html("1. **Check** the backlog")
+    assert "<p>Plain paragraph.</p>" in html
 
 
 def test_write_broker_research_report_writes_markdown_html_and_latest(tmp_path):

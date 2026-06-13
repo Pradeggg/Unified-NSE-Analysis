@@ -63,6 +63,35 @@ def test_build_financial_analyst_markdown_is_evidence_grounded():
     assert "Page 2" in markdown
 
 
+def test_build_financial_analyst_markdown_preserves_llm_markdown_and_sanitizes_tables():
+    markdown = build_financial_analyst_markdown(
+        symbol="BEL",
+        consensus={
+            "broker_count": 1,
+            "brokers": ["icici"],
+            "ratings": {"BUY": 1},
+            "target_price": {"average": 530.0},
+        },
+        facts=[],
+        pages=[
+            {
+                "broker_code": "icici",
+                "report_title": "Shubh Nivesh | Bharat Electronics",
+                "pdf_url": "https://example.com/bel.pdf",
+                "page_number": 3,
+                "text": "ICICI Securities | Retail Research with pipe delimiters",
+            }
+        ],
+        llm_view="## Analyst Memo\n\n### Thesis\n\n- **Backlog** supports visibility.",
+    )
+
+    assert "## Analyst Memo" in markdown
+    assert "### Thesis" in markdown
+    assert "**Backlog** supports visibility" in markdown
+    assert "Shubh Nivesh / Bharat Electronics" in markdown
+    assert "ICICI Securities / Retail Research" in markdown
+
+
 def test_build_llm_financial_prompt_contains_page_bounded_evidence():
     prompt = build_llm_financial_prompt(
         symbol="BEL",
