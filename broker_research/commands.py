@@ -19,6 +19,7 @@ from .financial_view import (
     build_llm_financial_prompt,
     write_financial_analyst_report,
 )
+from .pg_context import fetch_agent_adda_pg_context
 from .report import render_broker_research_markdown, write_broker_research_report
 from .sources import active_public_sources
 from .storage import (
@@ -342,7 +343,14 @@ def handle_financial_research_command(
             facts = [fact for fact in facts if str(fact.get("broker_code") or "").lower() == options.broker]
         pages = list_broker_report_pages(db, symbol=options.symbol, broker=options.broker)
         consensus = build_broker_consensus(symbol=options.symbol, facts=facts)
-        prompt = build_llm_financial_prompt(symbol=options.symbol, consensus=consensus, facts=facts, pages=pages)
+        agent_adda_context = fetch_agent_adda_pg_context(db, symbol=options.symbol)
+        prompt = build_llm_financial_prompt(
+            symbol=options.symbol,
+            consensus=consensus,
+            facts=facts,
+            pages=pages,
+            agent_adda_context=agent_adda_context,
+        )
         if llm_synthesizer is not None:
             llm_view = str(llm_synthesizer(prompt) or "")
         else:
@@ -353,6 +361,7 @@ def handle_financial_research_command(
             facts=facts,
             pages=pages,
             llm_view=llm_view,
+            agent_adda_context=agent_adda_context,
         )
         paths = write_financial_analyst_report(
             symbol=options.symbol,
@@ -372,6 +381,7 @@ def handle_financial_research_command(
                 "facts": len(facts),
                 "pages": len(pages),
                 "llm_synthesis": bool(llm_view),
+                "agent_adda_pg_context": bool(agent_adda_context.get("available")),
             },
             report_markdown_path=paths["markdown_path"],
             report_html_path=paths["html_path"],
