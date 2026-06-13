@@ -1,10 +1,13 @@
 from broker_research.commands import (
     BrokerFetchOptions,
     BrokerIndexOptions,
+    handle_financial_research_command,
     handle_broker_crawl_command,
     handle_broker_fetch_command,
     handle_broker_index_command,
     handle_broker_research_command,
+    handle_open_research_command,
+    handle_research_reports_command,
     parse_broker_fetch_command,
     parse_broker_index_command,
     render_broker_sources,
@@ -37,6 +40,10 @@ class FakeCursor:
             self.rows = list(self.conn.report_rows)
         elif "FROM company_intel.broker_research_facts" in normalized:
             self.rows = list(self.conn.fact_rows)
+        elif "FROM company_intel.broker_reports r JOIN company_intel.broker_report_pages p" in normalized:
+            self.rows = list(self.conn.page_rows)
+        elif "FROM company_intel.broker_research_runs" in normalized:
+            self.rows = list(self.conn.run_rows)
         elif "FROM company_intel.broker_reports" in normalized and "pdf_hash = %s" in normalized:
             self.rows = list(self.conn.hash_rows)
         elif "RETURNING research_run_id" in sql:
@@ -63,6 +70,8 @@ class FakeConnection:
         self.report_rows = []
         self.hash_rows = []
         self.fact_rows = []
+        self.page_rows = []
+        self.run_rows = []
         self.commits = 0
 
     def cursor(self):
@@ -146,7 +155,7 @@ def test_handle_broker_fetch_command_fetches_and_parses_discovered_reports(tmp_p
             return None
 
     def parser(path):
-        return {"status": "ok", "pages": [{"page_number": 1, "text": "Broker page", "char_count": 11}]}
+        return {"status": "ok", "pages": [{"page_number": 1, "text": "BUY target price ₹520", "char_count": 21}]}
 
     output = handle_broker_fetch_command(
         "/broker-fetch BEL --broker icici --limit 1",
@@ -162,6 +171,7 @@ def test_handle_broker_fetch_command_fetches_and_parses_discovered_reports(tmp_p
     assert "Parsed reports: 1" in output
     assert "UPDATE company_intel.broker_reports" in executed_sql
     assert "INSERT INTO company_intel.broker_report_pages" in executed_sql
+    assert "INSERT INTO company_intel.broker_research_facts" in executed_sql
 
 
 def test_handle_broker_research_command_writes_report_and_records_run(tmp_path):
@@ -225,3 +235,81 @@ def test_handle_broker_crawl_command_renders_scheduled_summary():
     assert "Broker Crawl: BEL" in output
     assert "Sources scanned: 2" in output
     assert "Reports stored: 3" in output
+
+
+def test_handle_financial_research_command_writes_analyst_report_and_catalogs_run(tmp_path):
+    conn = FakeConnection()
+    conn.fact_rows = [
+        (1, "icici", "BEL", "Shubh Nivesh", "https://example.com/bel.pdf", "rating", "BUY", 2),
+        (1, "icici", "BEL", "Shubh Nivesh", "https://example.com/bel.pdf", "target_price", "530", 2),
+    ]
+    conn.page_rows = [
+        (
+            1,
+            "icici",
+            "BEL",
+            "Shubh Nivesh",
+            "https://example.com/bel.pdf",
+            2,
+            "CMP: ₹ 422 Target: ₹530 (26%) BUY. Order backlog ₹ 74,000 crore. Key risks high working capital.",
+        )
+    ]
+
+    output = handle_financial_research_command(
+        "/financial-research BEL --broker icici",
+        conn=conn,
+        output_dir=tmp_path / "financial_research",
+        latest_dir=tmp_path / "latest",
+        llm_synthesizer=lambda prompt: "Constructive financial view with execution risk.",
+    )
+
+    executed_sql = "\n".join(sql for sql, _params in conn.executed)
+    assert "Financial Research: BEL" in output
+    assert "Broker facts: 2" in output
+    assert "INSERT INTO company_intel.broker_research_runs" in executed_sql
+    assert (tmp_path / "latest" / "financial_research_bel.html").exists()
+    assert "Constructive financial view" in (tmp_path / "latest" / "financial_research_bel.md").read_text(encoding="utf-8")
+
+
+def test_handle_research_reports_command_lists_cataloged_reports():
+    conn = FakeConnection()
+    conn.run_rows = [
+        (
+            101,
+            "BEL",
+            "financial_research",
+            "icici",
+            "ok",
+            "2026-06-13 10:03:13+05:30",
+            "reports/broker_research/bel.md",
+            "reports/broker_research/bel.html",
+        )
+    ]
+
+    output = handle_research_reports_command("/research-reports BEL", conn=conn)
+
+    assert "Research Reports: BEL" in output
+    assert "financial_research" in output
+    assert "reports/broker_research/bel.html" in output
+
+
+def test_handle_open_research_command_opens_latest_report():
+    conn = FakeConnection()
+    opened = []
+    conn.run_rows = [
+        (
+            101,
+            "BEL",
+            "financial_research",
+            "icici",
+            "ok",
+            "2026-06-13 10:03:13+05:30",
+            "reports/broker_research/bel.md",
+            "reports/broker_research/bel.html",
+        )
+    ]
+
+    output = handle_open_research_command("/open-research BEL", conn=conn, opener=opened.append)
+
+    assert "Opened research report" in output
+    assert opened == ["reports/broker_research/bel.html"]

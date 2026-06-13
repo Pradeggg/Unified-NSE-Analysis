@@ -34,16 +34,35 @@ def recurring_fact_values(facts: list[dict[str, Any]], *, fact_type: str, min_co
 
 def build_broker_consensus(*, symbol: str, facts: list[dict[str, Any]]) -> dict[str, Any]:
     brokers = sorted({str(fact.get("broker_code") or "") for fact in facts if fact.get("broker_code")})
+    rating_seen: set[tuple[str, str]] = set()
+    rating_values: list[str] = []
+    for fact in facts:
+        if fact.get("fact_type") != "rating":
+            continue
+        value = str(fact.get("fact_value") or "").strip().upper()
+        if not value:
+            continue
+        key = (str(fact.get("broker_report_id") or fact.get("broker_code") or ""), value)
+        if key in rating_seen:
+            continue
+        rating_seen.add(key)
+        rating_values.append(value)
     ratings = Counter(
-        str(fact.get("fact_value") or "").strip().upper()
-        for fact in facts
-        if fact.get("fact_type") == "rating" and str(fact.get("fact_value") or "").strip()
+        rating_values
     )
-    target_values = [
-        value
-        for value in (_float_value(fact.get("fact_value")) for fact in facts if fact.get("fact_type") == "target_price")
-        if value is not None
-    ]
+    target_seen: set[tuple[str, float]] = set()
+    target_values = []
+    for fact in facts:
+        if fact.get("fact_type") != "target_price":
+            continue
+        value = _float_value(fact.get("fact_value"))
+        if value is None:
+            continue
+        key = (str(fact.get("broker_report_id") or fact.get("broker_code") or ""), value)
+        if key in target_seen:
+            continue
+        target_seen.add(key)
+        target_values.append(value)
     target_summary = {
         "count": len(target_values),
         "min": min(target_values) if target_values else None,

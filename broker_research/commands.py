@@ -3,19 +3,28 @@
 from __future__ import annotations
 
 import argparse
+import subprocess
 from dataclasses import dataclass
 from typing import Any
 
 from company_intelligence_pg import connect, get_company_aliases, upsert_company
 
 from .discovery import discover_report_links, score_report_match
+from .extract import extract_and_store_facts_from_pages
 from .fetch import DEFAULT_REPORT_ROOT, fetch_broker_report_pdf
 from .parse import parse_and_store_broker_report
 from .consensus import build_broker_consensus
+from .financial_view import (
+    build_financial_analyst_markdown,
+    build_llm_financial_prompt,
+    write_financial_analyst_report,
+)
 from .report import render_broker_research_markdown, write_broker_research_report
 from .sources import active_public_sources
 from .storage import (
     find_report_by_hash,
+    list_broker_report_pages,
+    list_broker_research_runs,
     list_broker_sources,
     list_broker_research_facts,
     list_reports_for_fetch,
@@ -42,6 +51,20 @@ class BrokerFetchOptions:
     symbol: str
     broker: str = ""
     limit: int = 10
+
+
+@dataclass(frozen=True)
+class FinancialResearchOptions:
+    symbol: str
+    broker: str = ""
+
+
+@dataclass(frozen=True)
+class ResearchReportCatalogOptions:
+    symbol: str = ""
+    objective: str = ""
+    limit: int = 20
+    report_date: str = ""
 
 
 def parse_broker_index_command(text: str) -> BrokerIndexOptions:
@@ -71,6 +94,44 @@ def parse_broker_fetch_command(text: str) -> BrokerFetchOptions:
         symbol=args.symbol.strip().upper(),
         broker=args.broker.strip().lower(),
         limit=max(1, int(args.limit)),
+    )
+
+
+def parse_financial_research_command(text: str) -> FinancialResearchOptions:
+    parser = argparse.ArgumentParser(prog="/financial-research", add_help=False)
+    parser.add_argument("command")
+    parser.add_argument("symbol")
+    parser.add_argument("--broker", default="")
+    args = parser.parse_args((text or "").split())
+    return FinancialResearchOptions(symbol=args.symbol.strip().upper(), broker=args.broker.strip().lower())
+
+
+def parse_research_reports_command(text: str) -> ResearchReportCatalogOptions:
+    parser = argparse.ArgumentParser(prog="/research-reports", add_help=False)
+    parser.add_argument("command")
+    parser.add_argument("symbol", nargs="?", default="")
+    parser.add_argument("--objective", default="")
+    parser.add_argument("--limit", type=int, default=20)
+    args = parser.parse_args((text or "").split())
+    return ResearchReportCatalogOptions(
+        symbol=args.symbol.strip().upper(),
+        objective=args.objective.strip(),
+        limit=max(1, int(args.limit)),
+    )
+
+
+def parse_open_research_command(text: str) -> ResearchReportCatalogOptions:
+    parser = argparse.ArgumentParser(prog="/open-research", add_help=False)
+    parser.add_argument("command")
+    parser.add_argument("symbol", nargs="?", default="")
+    parser.add_argument("--objective", default="financial_research")
+    parser.add_argument("--date", default="")
+    args = parser.parse_args((text or "").split())
+    return ResearchReportCatalogOptions(
+        symbol=args.symbol.strip().upper(),
+        objective=args.objective.strip() or "financial_research",
+        limit=20,
+        report_date=args.date.strip(),
     )
 
 
@@ -161,6 +222,12 @@ def handle_broker_fetch_command(
             )
             if parse_result["parse_status"] in {"parsed", "partial"}:
                 parsed += 1
+                extract_and_store_facts_from_pages(
+                    db,
+                    broker_report_id=int(report["broker_report_id"]),
+                    symbol=str(report["symbol"]),
+                    pages=list(parse_result.get("pages") or []),
+                )
         return "\n".join(
             [
                 f"━━━ {DISCLAIMER} ━━━",
@@ -231,6 +298,173 @@ def handle_broker_research_command(
                 f"- Brokers covered: {consensus['broker_count']}",
                 f"- Markdown: {paths['markdown_path']}",
                 f"- HTML: {paths['html_path']}",
+            ]
+        )
+    finally:
+        if own_conn:
+            db.close()
+
+
+def _llm_synthesis_from_backend(llm_backend: Any, prompt: str) -> str:
+    if llm_backend is None:
+        return ""
+    try:
+        response = llm_backend.chat(
+            [
+                {
+                    "role": "system",
+                    "content": "You produce concise, evidence-grounded financial analyst research. Do not give investment advice.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=4000,
+        )
+        return str(response.get("content") or "").strip()
+    except Exception:
+        return ""
+
+
+def handle_financial_research_command(
+    text: str,
+    *,
+    conn: Any | None = None,
+    output_dir="reports/financial_research",
+    latest_dir="reports/latest",
+    llm_backend: Any | None = None,
+    llm_synthesizer=None,
+) -> str:
+    options = parse_financial_research_command(text)
+    own_conn = conn is None
+    db = conn or connect()
+    try:
+        facts = list_broker_research_facts(db, symbol=options.symbol)
+        if options.broker:
+            facts = [fact for fact in facts if str(fact.get("broker_code") or "").lower() == options.broker]
+        pages = list_broker_report_pages(db, symbol=options.symbol, broker=options.broker)
+        consensus = build_broker_consensus(symbol=options.symbol, facts=facts)
+        prompt = build_llm_financial_prompt(symbol=options.symbol, consensus=consensus, facts=facts, pages=pages)
+        if llm_synthesizer is not None:
+            llm_view = str(llm_synthesizer(prompt) or "")
+        else:
+            llm_view = _llm_synthesis_from_backend(llm_backend, prompt)
+        markdown = build_financial_analyst_markdown(
+            symbol=options.symbol,
+            consensus=consensus,
+            facts=facts,
+            pages=pages,
+            llm_view=llm_view,
+        )
+        paths = write_financial_analyst_report(
+            symbol=options.symbol,
+            markdown=markdown,
+            output_dir=output_dir,
+            latest_dir=latest_dir,
+        )
+        run_id = record_broker_research_run(
+            db,
+            symbol=options.symbol,
+            objective="financial_research",
+            broker_filter=options.broker or "public",
+            status="ok",
+            coverage={
+                "broker_count": consensus.get("broker_count", 0),
+                "broker_filter": options.broker or "public",
+                "facts": len(facts),
+                "pages": len(pages),
+                "llm_synthesis": bool(llm_view),
+            },
+            report_markdown_path=paths["markdown_path"],
+            report_html_path=paths["html_path"],
+        )
+        return "\n".join(
+            [
+                f"━━━ {DISCLAIMER} ━━━",
+                "",
+                f"## Financial Research: {options.symbol}",
+                "",
+                f"- Run ID: {run_id}",
+                f"- Broker facts: {len(facts)}",
+                f"- Parsed pages: {len(pages)}",
+                f"- LLM synthesis: {'yes' if llm_view else 'not available; deterministic analyst sections used'}",
+                f"- Markdown: {paths['markdown_path']}",
+                f"- HTML: {paths['html_path']}",
+            ]
+        )
+    finally:
+        if own_conn:
+            db.close()
+
+
+def handle_research_reports_command(text: str, *, conn: Any | None = None) -> str:
+    options = parse_research_reports_command(text)
+    own_conn = conn is None
+    db = conn or connect()
+    try:
+        rows = list_broker_research_runs(
+            db,
+            symbol=options.symbol,
+            objective=options.objective,
+            limit=options.limit,
+        )
+        title_symbol = options.symbol or "ALL"
+        lines = [f"━━━ {DISCLAIMER} ━━━", "", f"## Research Reports: {title_symbol}", ""]
+        if not rows:
+            lines.append("No cataloged research reports found.")
+            return "\n".join(lines)
+        lines.extend(["| Run | As Of | Symbol | Objective | Broker | Status | HTML |", "|---:|---|---|---|---|---|---|"])
+        for row in rows:
+            lines.append(
+                "| {run} | {as_of} | {symbol} | {objective} | {broker} | {status} | {html} |".format(
+                    run=row.get("research_run_id") or "",
+                    as_of=row.get("as_of") or "",
+                    symbol=row.get("symbol") or "",
+                    objective=row.get("objective") or "",
+                    broker=row.get("broker_filter") or "",
+                    status=row.get("status") or "",
+                    html=row.get("report_html_path") or "",
+                )
+            )
+        return "\n".join(lines)
+    finally:
+        if own_conn:
+            db.close()
+
+
+def handle_open_research_command(text: str, *, conn: Any | None = None, opener=None) -> str:
+    options = parse_open_research_command(text)
+    own_conn = conn is None
+    db = conn or connect()
+    try:
+        rows = list_broker_research_runs(
+            db,
+            symbol=options.symbol,
+            objective=options.objective,
+            limit=options.limit,
+        )
+        if options.report_date:
+            rows = [row for row in rows if str(row.get("as_of") or "").startswith(options.report_date)]
+        if not rows:
+            return "\n".join(
+                [
+                    f"━━━ {DISCLAIMER} ━━━",
+                    "",
+                    f"## Open Research: {options.symbol or 'ALL'}",
+                    "",
+                    "No matching cataloged research report found.",
+                ]
+            )
+        path = str(rows[0].get("report_html_path") or rows[0].get("report_markdown_path") or "")
+        if not path:
+            return "Cataloged report has no file path."
+        open_fn = opener or (lambda p: subprocess.run(["open", p], check=False))
+        open_fn(path)
+        return "\n".join(
+            [
+                f"━━━ {DISCLAIMER} ━━━",
+                "",
+                f"## Open Research: {options.symbol or rows[0].get('symbol') or 'ALL'}",
+                "",
+                f"Opened research report: {path}",
             ]
         )
     finally:

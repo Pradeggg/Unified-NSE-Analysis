@@ -1050,6 +1050,12 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/broker-fetch BEL --limit 10",     "Fetch and parse discovered broker PDFs for a symbol"),
     ("/broker-research",                 "Generate broker consensus research report from stored facts"),
     ("/broker-research BEL",             "Publish broker consensus report for a symbol"),
+    ("/financial-research",              "Generate LLM-backed financial analyst research report from broker evidence"),
+    ("/financial-research BEL --broker icici", "Publish financial analyst POV from stored broker research evidence"),
+    ("/research-reports",                "List cataloged broker and financial research reports"),
+    ("/research-reports BEL",            "List dated research reports for a symbol"),
+    ("/open-research",                   "Open the latest cataloged financial research report"),
+    ("/open-research BEL",               "Open the latest financial research report for a symbol"),
     ("/deep-research",                   "Alias: deep broker research report from stored public broker facts"),
     ("/deep-research BEL --brokers public", "Publish deep broker research report for public broker facts"),
     ("/report broker",                   "Render latest broker research report for a symbol"),
@@ -7180,6 +7186,9 @@ def _build_command_registry():
                 handle_broker_index_command,
                 handle_broker_research_command,
                 handle_broker_sources_command,
+                handle_financial_research_command,
+                handle_open_research_command,
+                handle_research_reports_command,
             )
 
             q = query.strip().lower()
@@ -7193,6 +7202,22 @@ def _build_command_registry():
                 return True
             if q.startswith("/broker-crawl"):
                 output = handle_broker_crawl_command(query)
+                console.print(Markdown(_linkify_markdown(output)))
+                return True
+            if q.startswith("/financial-research"):
+                output = handle_financial_research_command(
+                    query,
+                    llm_backend=getattr(agent, "backend", None),
+                )
+                console.print(Markdown(_linkify_markdown(output)))
+                _remember_generated_report(output)
+                return True
+            if q.startswith("/research-reports"):
+                output = handle_research_reports_command(query)
+                console.print(Markdown(_linkify_markdown(output)))
+                return True
+            if q.startswith("/open-research"):
+                output = handle_open_research_command(query)
                 console.print(Markdown(_linkify_markdown(output)))
                 return True
             if q.startswith(("/broker-research", "/deep-research")):
@@ -7220,7 +7245,18 @@ def _build_command_registry():
         return True
     registry.register(CommandHandler(
         name="broker-research",
-        match_fn=lambda q: q.startswith(("/broker-sources", "/broker-index", "/broker-fetch", "/broker-crawl", "/broker-research", "/deep-research", "/report broker")),
+        match_fn=lambda q: q.startswith((
+            "/broker-sources",
+            "/broker-index",
+            "/broker-fetch",
+            "/broker-crawl",
+            "/broker-research",
+            "/financial-research",
+            "/research-reports",
+            "/open-research",
+            "/deep-research",
+            "/report broker",
+        )),
         handler_fn=_h_broker_research,
         description="Broker research source registry and public report discovery",
     ))

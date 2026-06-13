@@ -32,4 +32,4 @@ def parse_and_store_broker_report(
         pages_stored = 0
         parse_status = "parse_failed"
     update_report_parse_status(conn, broker_report_id=broker_report_id, parse_status=parse_status)
-    return {"status": status, "pages_stored": pages_stored, "parse_status": parse_status}
+    return {"status": status, "pages": pages, "pages_stored": pages_stored, "parse_status": parse_status}

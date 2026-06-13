@@ -132,6 +132,108 @@ def list_broker_research_facts(conn: Any, *, symbol: str) -> list[dict[str, Any]
     ]
 
 
+def list_broker_report_pages(
+    conn: Any,
+    *,
+    symbol: str,
+    broker: str = "",
+    limit: int = 40,
+) -> list[dict[str, Any]]:
+    clean_symbol = symbol.strip().upper()
+    params: list[Any] = [clean_symbol]
+    broker_clause = ""
+    if broker:
+        broker_clause = "AND r.broker_code = %s"
+        params.append(broker.strip().lower())
+    params.append(int(limit))
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
+            SELECT
+                r.broker_report_id,
+                r.broker_code,
+                r.symbol,
+                r.report_title,
+                r.pdf_url,
+                p.page_number,
+                p.text
+            FROM company_intel.broker_reports r JOIN company_intel.broker_report_pages p
+              ON p.broker_report_id = r.broker_report_id
+            WHERE r.symbol = %s
+              AND r.parse_status IN ('parsed', 'partial')
+              {broker_clause}
+            ORDER BY r.broker_code, r.broker_report_id, p.page_number
+            LIMIT %s
+            """,
+            tuple(params),
+        )
+        rows = cur.fetchall()
+    return [
+        {
+            "broker_report_id": row[0],
+            "broker_code": row[1],
+            "symbol": row[2],
+            "report_title": row[3],
+            "pdf_url": row[4],
+            "page_number": row[5],
+            "text": row[6],
+        }
+        for row in rows
+    ]
+
+
+def list_broker_research_runs(
+    conn: Any,
+    *,
+    symbol: str = "",
+    objective: str = "",
+    limit: int = 20,
+) -> list[dict[str, Any]]:
+    clauses: list[str] = []
+    params: list[Any] = []
+    if symbol:
+        clauses.append("symbol = %s")
+        params.append(symbol.strip().upper())
+    if objective:
+        clauses.append("objective = %s")
+        params.append(objective)
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    params.append(int(limit))
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
+            SELECT
+                research_run_id,
+                symbol,
+                objective,
+                broker_filter,
+                status,
+                as_of,
+                report_markdown_path,
+                report_html_path
+            FROM company_intel.broker_research_runs
+            {where}
+            ORDER BY as_of DESC, research_run_id DESC
+            LIMIT %s
+            """,
+            tuple(params),
+        )
+        rows = cur.fetchall()
+    return [
+        {
+            "research_run_id": row[0],
+            "symbol": row[1],
+            "objective": row[2],
+            "broker_filter": row[3],
+            "status": row[4],
+            "as_of": str(row[5]),
+            "report_markdown_path": row[6],
+            "report_html_path": row[7],
+        }
+        for row in rows
+    ]
+
+
 def record_index_run(conn: Any, *, source_id: int | None) -> int:
     with conn.cursor() as cur:
         cur.execute(

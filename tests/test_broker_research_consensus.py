@@ -45,6 +45,20 @@ def test_build_broker_consensus_calculates_rating_and_target_spread():
     assert "rating_disagreement" in consensus["disagreements"]
 
 
+def test_build_broker_consensus_counts_one_rating_per_report():
+    facts = [
+        {"broker_code": "icici", "broker_report_id": 1, "fact_type": "rating", "fact_value": "BUY", "page_number": 2},
+        {"broker_code": "icici", "broker_report_id": 1, "fact_type": "rating", "fact_value": "BUY", "page_number": 3},
+        {"broker_code": "icici", "broker_report_id": 1, "fact_type": "target_price", "fact_value": "530", "page_number": 2},
+        {"broker_code": "icici", "broker_report_id": 1, "fact_type": "target_price", "fact_value": "530", "page_number": 4},
+    ]
+
+    consensus = build_broker_consensus(symbol="BEL", facts=facts)
+
+    assert consensus["ratings"] == {"BUY": 1}
+    assert consensus["target_price"]["count"] == 1
+
+
 def test_recurring_fact_values_counts_normalized_risks_and_catalysts():
     facts = [
         {"fact_type": "risk", "fact_value": "Risks include execution delay."},

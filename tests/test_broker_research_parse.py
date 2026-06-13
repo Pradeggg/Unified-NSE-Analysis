@@ -79,7 +79,10 @@ def test_parse_and_store_broker_report_uses_parser_and_updates_status(tmp_path):
     )
 
     executed = "\n".join(sql for sql, _params in conn.executed)
-    assert result == {"status": "ok", "pages_stored": 1, "parse_status": "parsed"}
+    assert result["status"] == "ok"
+    assert result["pages_stored"] == 1
+    assert result["parse_status"] == "parsed"
+    assert result["pages"] == [{"page_number": 1, "text": "Broker thesis page", "char_count": 18}]
     assert "INSERT INTO company_intel.broker_report_pages" in executed
     assert "UPDATE company_intel.broker_reports" in executed
 
