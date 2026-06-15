@@ -823,7 +823,7 @@ def resolve_symbol(query: str) -> dict:
     ``NSE_SYMBOL_RESOLUTION_TELEMETRY`` env var so tests never pollute
     ``logs/symbol_resolution.jsonl``.
     """
-    import requests as _req
+    from urllib.parse import quote as _url_quote
     q = query.strip().upper()
     # Guard: refuse to resolve well-known analytics/screener tokens that the
     # LLM sometimes mistakes for tickers (e.g. "high RS stocks" → "RS").
@@ -908,7 +908,7 @@ def resolve_symbol(query: str) -> dict:
     # Fall back to NSE live search API
     try:
         s   = _get_live_session()
-        url = f"https://www.nseindia.com/api/search?q={_req.utils.quote(query)}&type=equity"
+        url = f"https://www.nseindia.com/api/search?q={_url_quote(query)}&type=equity"
         r   = s.get(url, timeout=10)
         r.raise_for_status()
         payload_search = r.json()
@@ -953,7 +953,7 @@ def resolve_symbol(query: str) -> dict:
     if re.fullmatch(r"[A-Z0-9&-]{2,12}", q_clean):
         try:
             s = _get_live_session()
-            url = f"https://www.nseindia.com/api/quote-equity?symbol={_req.utils.quote(q_clean)}"
+            url = f"https://www.nseindia.com/api/quote-equity?symbol={_url_quote(q_clean)}"
             r = s.get(url, timeout=10)
             if r.ok is True:
                 payload_quote = r.json()
@@ -4633,14 +4633,25 @@ _live_session_ts: float = 0.0
 
 
 def _get_live_session():
-    import requests, time as _time
+    """Return a warmed-up HTTP session for NSE API calls.
+
+    Uses curl_cffi with Chrome TLS fingerprint impersonation to bypass NSE's
+    bot-detection layer.  Falls back gracefully to stdlib requests when
+    curl_cffi is unavailable so unit tests and offline usage still work.
+    """
+    import time as _time
     global _live_session, _live_session_ts
     if _live_session is None or (_time.time() - _live_session_ts) > 180:
-        s = requests.Session()
+        try:
+            from curl_cffi import requests as _cffi_req
+            s = _cffi_req.Session(impersonate="chrome120")
+        except ImportError:
+            import requests as _req
+            s = _req.Session()
         s.headers.update(_NSE_HEADERS)
         try:
             s.get("https://www.nseindia.com/", timeout=8)
-            # Second warmup is required for gated NSE endpoints (cookie/csrf).
+            # Second warmup required for gated NSE endpoints (cookie/csrf).
             s.get("https://www.nseindia.com/market-data/live-equity-market?symbol=NIFTY+50", timeout=8)
         except Exception:
             pass
@@ -4711,11 +4722,11 @@ def get_live_quote(symbol: str) -> dict:
     Returns current price, VWAP, day OHLC, volume, % change, 52-week range,
     circuit limits, sector P/E, and last-update timestamp — all from NSE live.
     """
-    import requests
+    from urllib.parse import quote as _url_quote
     sym = symbol.strip().upper()
     try:
         s   = _get_live_session()
-        url = f"https://www.nseindia.com/api/quote-equity?symbol={requests.utils.quote(sym)}"
+        url = f"https://www.nseindia.com/api/quote-equity?symbol={_url_quote(sym)}"
         r   = s.get(url, timeout=10)
         r.raise_for_status()
         d   = r.json()
@@ -4742,7 +4753,7 @@ def get_live_quote(symbol: str) -> dict:
         vol_lakh = None; val_cr = None; mkt_cap_cr = None
         try:
             r2 = s.get(
-                f"https://www.nseindia.com/api/quote-equity?symbol={requests.utils.quote(sym)}&section=trade_info",
+                f"https://www.nseindia.com/api/quote-equity?symbol={_url_quote(sym)}&section=trade_info",
                 timeout=8,
             )
             ti = r2.json().get("marketDeptOrderBook", {}).get("tradeInfo", {})
@@ -4797,7 +4808,7 @@ def get_nse_quotes(symbols: list[str]) -> dict:
     Args:
         symbols: List of NSE tickers, up to 20.
     """
-    import requests
+    from urllib.parse import quote as _url_quote
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
     syms    = [s.strip().upper() for s in symbols[:20] if s.strip()]
@@ -4805,7 +4816,7 @@ def get_nse_quotes(symbols: list[str]) -> dict:
 
     def _fetch(sym: str) -> tuple[str, dict]:
         try:
-            url = f"https://www.nseindia.com/api/quote-equity?symbol={requests.utils.quote(sym)}"
+            url = f"https://www.nseindia.com/api/quote-equity?symbol={_url_quote(sym)}"
             r   = session.get(url, timeout=10)
             r.raise_for_status()
             d     = r.json()
@@ -4860,10 +4871,10 @@ def nse_search(query: str, top_n: int = 5) -> dict:
         query: Company name, partial name, or keyword (e.g. 'Tata Steel', 'HDFC').
         top_n: Max results to return.
     """
-    import requests
+    from urllib.parse import quote as _url_quote
     try:
         s   = _get_live_session()
-        url = f"https://www.nseindia.com/api/search?q={requests.utils.quote(query)}&type=equity"
+        url = f"https://www.nseindia.com/api/search?q={_url_quote(query)}&type=equity"
         r   = s.get(url, timeout=10)
         r.raise_for_status()
         results = r.json().get("results", [])[:top_n]
@@ -6170,7 +6181,6 @@ def get_latest_results_feed(days_back: int = 7, limit: int = 50) -> dict:
         days_back: calendar days back to include (default 7).
         limit:     max rows to return (default 50).
     """
-    import requests as _req
     import datetime as _dt
     import time as _time
 
