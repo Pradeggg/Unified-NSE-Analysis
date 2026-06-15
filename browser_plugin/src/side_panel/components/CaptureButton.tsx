@@ -9,19 +9,23 @@ interface CaptureButtonProps {
   analysing: boolean;
   capturedAt: string | null;
   onCapture: (mode?: "visible" | "area") => void;
+  onMultiCapture: () => void;
+  multiRunning: boolean;
 }
 
 export function CaptureButton({
-  disabled, capturing, analysing, capturedAt, onCapture,
+  disabled, capturing, analysing, capturedAt, onCapture, onMultiCapture, multiRunning,
 }: CaptureButtonProps) {
-  const active = capturing || analysing;
+  const active = capturing || analysing || multiRunning;
   const status = capturing
     ? "Capturing visible chart"
     : analysing
       ? "Reading candles, indicators, and levels"
-      : capturedAt
-        ? `Captured ${new Date(capturedAt).toLocaleTimeString("en-IN")}`
-        : "Ready to capture the visible chart";
+      : multiRunning
+        ? "Analyzing all charts…"
+        : capturedAt
+          ? `Captured ${new Date(capturedAt).toLocaleTimeString("en-IN")}`
+          : "Ready to capture the visible chart";
   const buttonLabel = capturedAt ? "Recapture Chart" : "Capture Chart";
 
   return (
@@ -48,14 +52,27 @@ export function CaptureButton({
       >
         {capturing ? "Capturing..." : analysing ? "Analyzing..." : buttonLabel}
       </button>
-      <button
-        className="capture-area-btn"
-        onClick={() => onCapture("area")}
-        disabled={disabled || active}
-        aria-label="Select chart area for analysis"
-      >
-        Select Area
-      </button>
+      <div style={{ display: "flex", gap: "6px" }}>
+        <button
+          className="capture-area-btn"
+          style={{ flex: 1 }}
+          onClick={() => onCapture("area")}
+          disabled={disabled || active}
+          aria-label="Select chart area for analysis"
+        >
+          Select Area
+        </button>
+        <button
+          className="capture-area-btn"
+          style={{ flex: 1 }}
+          onClick={onMultiCapture}
+          disabled={disabled || active}
+          aria-label="Analyze all visible charts"
+          title="Detects and analyzes each chart pane individually"
+        >
+          {multiRunning ? "Analyzing…" : "All Charts"}
+        </button>
+      </div>
     </div>
   );
 }

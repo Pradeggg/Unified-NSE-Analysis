@@ -68,6 +68,126 @@ function SetupCard({ title, setup, icon }: { title: string; setup: RicSetup; ico
   );
 }
 
+type RecommendationTone = "verdict" | "trade" | "swing" | "options" | "risk" | "watch" | "neutral";
+
+interface RecommendationSection {
+  title: string;
+  body: string;
+  chips: string[];
+  tone: RecommendationTone;
+  icon: string;
+}
+
+function stripMarkdown(value: string): string {
+  return value
+    .replace(/\*\*/g, "")
+    .replace(/^[-•]\s*/, "")
+    .replace(/^\d+[.)]\s*/, "")
+    .trim();
+}
+
+function displayTitle(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/^KEY\s+/i, "Key ")
+    .replace(/\b\w/g, (match) => match.toUpperCase())
+    .replace(/\bAi\b/g, "AI")
+    .replace(/\bRr\b/g, "R:R");
+}
+
+function recommendationMeta(title: string, body: string): { tone: RecommendationTone; icon: string } {
+  const text = `${title} ${body}`.toLowerCase();
+  if (text.includes("risk") || text.includes("invalid")) return { tone: "risk", icon: "⚠" };
+  if (text.includes("option") || text.includes("condor") || text.includes("spread")) return { tone: "options", icon: "🎯" };
+  if (text.includes("swing")) return { tone: "swing", icon: "📈" };
+  if (text.includes("intraday") || text.includes("trade") || text.includes("entry")) return { tone: "trade", icon: "⚡" };
+  if (text.includes("watch") || text.includes("next")) return { tone: "watch", icon: "👁" };
+  if (text.includes("verdict") || text.includes("safe") || text.includes("risky") || text.includes("caution")) {
+    return { tone: "verdict", icon: "🧭" };
+  }
+  return { tone: "neutral", icon: "•" };
+}
+
+function splitBody(body: string): { body: string; chips: string[] } {
+  const pieces = body.split(/\s+\|\s+/).map((part) => part.trim()).filter(Boolean);
+  if (pieces.length <= 1) return { body: body.trim(), chips: [] };
+
+  const firstLooksLikeChip = /^(action|entry|stop|target|r:r|strategy|strikes|holding|invalidation):/i.test(pieces[0]);
+  return {
+    body: firstLooksLikeChip ? "" : pieces[0],
+    chips: firstLooksLikeChip ? pieces : pieces.slice(1),
+  };
+}
+
+function parseRecommendation(text: string): RecommendationSection[] {
+  const sections: RecommendationSection[] = [];
+  const lines = text.split(/\r?\n/).map(stripMarkdown).filter(Boolean);
+
+  for (const raw of lines) {
+    const clean = raw.replace(/^▶\s*/, "").trim();
+    const match = clean.match(/^([A-Za-z][A-Za-z\s/&]+?)(?::| — | - )\s*(.*)$/);
+    if (match) {
+      const title = displayTitle(match[1].trim());
+      const bodyParts = splitBody(match[2].trim());
+      const meta = recommendationMeta(title, bodyParts.body || bodyParts.chips.join(" "));
+      sections.push({ title, body: bodyParts.body, chips: bodyParts.chips, ...meta });
+      continue;
+    }
+
+    if (sections.length) {
+      const last = sections[sections.length - 1];
+      last.body = [last.body, clean].filter(Boolean).join(" ");
+    } else {
+      const bodyParts = splitBody(clean);
+      const meta = recommendationMeta("Observation", clean);
+      sections.push({ title: "Observation", body: bodyParts.body, chips: bodyParts.chips, ...meta });
+    }
+  }
+
+  return sections.length ? sections : [{
+    title: "Recommendation",
+    body: stripMarkdown(text),
+    chips: [],
+    tone: "neutral",
+    icon: "•",
+  }];
+}
+
+function chipTone(chip: string): string {
+  const text = chip.toLowerCase();
+  if (text.includes("stop") || text.includes("risk") || text.includes("invalid")) return "risk";
+  if (text.includes("target") || text.includes("r:r") || text.includes("rr")) return "target";
+  if (text.includes("entry") || text.includes("action") || text.includes("buy")) return "entry";
+  if (text.includes("sell") || text.includes("short")) return "risk";
+  return "neutral";
+}
+
+function RicRecommendation({ text }: { text: string }) {
+  const sections = parseRecommendation(text);
+  return (
+    <div className="ric-rec-list">
+      {sections.map((section, index) => (
+        <article key={`${section.title}-${index}`} className={`ric-rec-card ric-rec-card--${section.tone}`}>
+          <div className="ric-rec-heading">
+            <span className="ric-rec-icon">{section.icon}</span>
+            <span>{section.title}</span>
+          </div>
+          {section.body && <p className="ric-rec-body">{section.body}</p>}
+          {section.chips.length ? (
+            <div className="ric-rec-chips">
+              {section.chips.map((chip) => (
+                <span key={chip} className={`ric-rec-chip ric-rec-chip--${chipTone(chip)}`}>
+                  {chip}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </article>
+      ))}
+    </div>
+  );
+}
+
 // ── Main component ─────────────────────────────────────────────────────────
 
 export function RicTab({ symbol, timeframe, exchange, captureId }: Props) {
@@ -93,15 +213,22 @@ export function RicTab({ symbol, timeframe, exchange, captureId }: Props) {
 
   const handleDraw = useCallback(async () => {
     if (!ric?.draw_signals?.length) return;
-    const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-    if (!tab?.id) { setError("No active tab found"); return; }
+    setError(null);
 
     if (drawn) {
-      await clearChartOverlay(tab.id);
-      setDrawn(false);
+      try {
+        await clearChartOverlay();
+        setDrawn(false);
+      } catch (drawError) {
+        setError(drawError instanceof Error ? drawError.message : String(drawError));
+      }
     } else {
-      await sendDrawSignals(tab.id, ric.draw_signals).catch(() => {});
-      setDrawn(true);
+      try {
+        await sendDrawSignals(ric.draw_signals);
+        setDrawn(true);
+      } catch (drawError) {
+        setError(drawError instanceof Error ? drawError.message : String(drawError));
+      }
     }
   }, [ric, drawn]);
 
@@ -204,20 +331,26 @@ export function RicTab({ symbol, timeframe, exchange, captureId }: Props) {
           <div className="ric-section">
             <div className="ric-section-title">🌍 Market</div>
             <div className="ric-fno-grid">
-              {/* Show the analysed symbol's own data first when it's an index */}
-              {ric.market.is_index && ric.market.symbol_close > 0 && (
+              {/* Analysed instrument first; NIFTY 50 is only the broad benchmark. */}
+              {(ric.market.symbol_close > 0 || ric.key_levels.price > 0) && (
                 <>
                   <span>{symbol}</span>
                   <span>
-                    ₹{ric.market.symbol_close?.toLocaleString("en-IN")}
-                    &nbsp;
-                    <span style={{ color: ric.market.symbol_chg_pct >= 0 ? "#00c853" : "#f85149" }}>
-                      {ric.market.symbol_chg_pct >= 0 ? "+" : ""}{ric.market.symbol_chg_pct?.toFixed(2)}%
-                    </span>
+                    ₹{(ric.market.symbol_close || ric.key_levels.price)?.toLocaleString("en-IN")}
+                    {ric.market.symbol_chg_pct !== 0 && (
+                      <>
+                        &nbsp;
+                        <span style={{ color: ric.market.symbol_chg_pct >= 0 ? "#00c853" : "#f85149" }}>
+                          {ric.market.symbol_chg_pct >= 0 ? "+" : ""}{ric.market.symbol_chg_pct?.toFixed(2)}%
+                        </span>
+                      </>
+                    )}
                   </span>
-                  <span>Trend 10d</span>
+                  <span>Instrument trend</span>
                   <span style={{ color: ric.market.symbol_trend === "bullish" ? "#00c853" : ric.market.symbol_trend === "bearish" ? "#f85149" : "#ffd740" }}>
-                    {ric.market.symbol_up_days}/10 up · {ric.market.symbol_trend}
+                    {ric.market.symbol_trend !== "unknown"
+                      ? `${ric.market.symbol_up_days}/10 up · ${ric.market.symbol_trend}`
+                      : "intraday levels only"}
                   </span>
                 </>
               )}
@@ -241,7 +374,7 @@ export function RicTab({ symbol, timeframe, exchange, captureId }: Props) {
           {ric.recommendation && (
             <div className="ric-section ric-recommendation">
               <div className="ric-section-title">🤖 AI Recommendation</div>
-              <pre className="ric-rec-text">{ric.recommendation}</pre>
+              <RicRecommendation text={ric.recommendation} />
             </div>
           )}
 

@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { Header }        from "./components/Header";
-import { CaptureButton } from "./components/CaptureButton";
-import { ChatPanel }     from "./components/ChatPanel";
-import { BacktestTab }   from "./components/BacktestTab";
-import { RicTab }        from "./components/RicTab";
-import { useChartContext } from "./store/chartContext";
+import { Header }           from "./components/Header";
+import { CaptureButton }    from "./components/CaptureButton";
+import { ChatPanel }        from "./components/ChatPanel";
+import { BacktestTab }      from "./components/BacktestTab";
+import { RicTab }           from "./components/RicTab";
+import { MultiChartPanel }  from "./components/MultiChartPanel";
+import { useChartContext }   from "./store/chartContext";
 import { analyzeChart, askFollowUp, healthCheck } from "./api/client";
 import type {
   Exchange,
@@ -16,10 +17,13 @@ import type {
   SelectCaptureAreaResponse,
   CaptureSelectionRect,
   SelectCaptureAreaRequest,
+  GetChartPanesRequest,
+  GetChartPanesResponse,
+  MultiChartAnalysis,
 } from "../types";
 import "./App.css";
 
-type MainTab = "analyze" | "backtest" | "ric";
+type MainTab = "analyze" | "backtest" | "ric" | "multi";
 
 export function App() {
   const [symbol, setSymbol]       = useState("BANKNIFTY");
@@ -30,6 +34,8 @@ export function App() {
   const [analysing, setAnalysing] = useState(false);
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [mainTab, setMainTab]     = useState<MainTab>("analyze");
+  const [multiAnalyses, setMultiAnalyses] = useState<MultiChartAnalysis[]>([]);
+  const [multiRunning, setMultiRunning]   = useState(false);
 
   const { ctx, loading, createContext, addConclusion, applyAnalysisResult, resetContext } = useChartContext();
 
@@ -201,6 +207,18 @@ export function App() {
     }
   }, [symbol, exchange, timeframe]);
 
+  async function requestChartPanes(): Promise<GetChartPanesResponse> {
+    const request: GetChartPanesRequest = { type: "GET_CHART_PANES" };
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(request, (response: GetChartPanesResponse | undefined) => {
+        const error = chrome.runtime.lastError;
+        if (error) { reject(new Error(error.message)); return; }
+        if (!response) { reject(new Error("No panes response from content script.")); return; }
+        resolve(response);
+      });
+    });
+  }
+
   // ── Capture + auto-analyse ────────────────────────────────────────────────
   const handleCapture = useCallback(async (mode: "visible" | "area" = "visible") => {
     if (capturing || analysing) return;
@@ -261,6 +279,99 @@ export function App() {
     }
   }, [capturing, analysing, symbol, exchange, timeframe, createContext, applyAnalysisResult]);
 
+  // ── Multi-chart sequential capture+analyse ───────────────────────────────
+  const handleMultiCapture = useCallback(async () => {
+    if (capturing || analysing || multiRunning) return;
+    setCaptureError(null);
+    setMultiAnalyses([]);
+    setMultiRunning(true);
+    setCapturing(true);
+
+    try {
+      // 1. Ask the content script to identify all chart panes.
+      const panesResp = await requestChartPanes();
+      if (!panesResp.ok || panesResp.panes.length === 0) {
+        throw new Error(panesResp.error ?? "No chart panes detected on this page.");
+      }
+
+      // 2. One full-page screenshot for all panes.
+      const capture = await requestVisibleTabCapture();
+      if (!capture.ok || !capture.dataUrl) {
+        throw new Error(capture.error ?? "Chart capture failed.");
+      }
+      setCapturing(false);
+
+      // 3. Seed the analysis slots and switch to the Multi tab.
+      const initialSlots: MultiChartAnalysis[] = panesResp.panes.map((pane) => ({
+        pane,
+        status: "pending",
+        answer: null,
+        error: null,
+        cost_usd: 0,
+      }));
+      setMultiAnalyses(initialSlots);
+      setMainTab("multi");
+
+      // 4. Analyze each pane sequentially so results stream in one by one.
+      for (let i = 0; i < panesResp.panes.length; i++) {
+        const pane = panesResp.panes[i];
+        setMultiAnalyses((prev) =>
+          prev.map((a, idx) => (idx === i ? { ...a, status: "analyzing" } : a)),
+        );
+
+        try {
+          const croppedDataUrl = await cropDataUrlToRect(capture.dataUrl!, pane.rect);
+          const sym   = pane.symbol   ?? symbol;
+          const exch  = pane.exchange ?? exchange;
+          const tf    = pane.timeframe ?? timeframe;
+
+          const res = await analyzeChart({
+            image:      croppedDataUrl,
+            source_url: capture.tab?.url ?? null,
+            page_title: capture.tab?.title ?? null,
+            user_symbol: sym,
+            exchange:    exch,
+            timeframe:   tf,
+            visible_indicators: [],
+            user_question: [
+              `Analyze Chart ${i + 1} of ${panesResp.panes.length} (${exch}:${sym} · ${tf}) as a technical trading setup.`,
+              "MANDATORY: Start with ▶ IDENTITY including Visible, Context, Match, and Type.",
+              "Inventory every visible indicator before concluding: EMAs, Supertrend, RSI, volume, levels, and drawn zones.",
+              "Use tree-of-thought scenario checks for bull, bear, and range/no-trade cases.",
+              "Produce precise support, resistance, invalidation, targets, volume/RSI read, and a final trade plan with confidence.",
+            ].join(" "),
+            conflict_policy: "prefer_pg",
+          });
+
+          setMultiAnalyses((prev) =>
+            prev.map((a, idx) =>
+              idx === i
+                ? {
+                    ...a,
+                    status:   res.ok && res.data && !res.data.error ? "done" : "error",
+                    answer:   res.data?.answer ?? null,
+                    error:    res.data?.error ?? (res.ok ? null : (res.error ?? "Analysis failed.")),
+                    cost_usd: res.data?.cost_usd ?? 0,
+                  }
+                : a,
+            ),
+          );
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setMultiAnalyses((prev) =>
+            prev.map((a, idx) => (idx === i ? { ...a, status: "error", error: msg } : a)),
+          );
+        }
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setCaptureError(message);
+    } finally {
+      setCapturing(false);
+      setMultiRunning(false);
+    }
+  }, [capturing, analysing, multiRunning, symbol, exchange, timeframe]);
+
   // ── Follow-up send ────────────────────────────────────────────────────────
   const handleSend = useCallback(
     async (q: string): Promise<AnalysisResult | null> => {
@@ -274,7 +385,7 @@ export function App() {
 
   if (loading) return <div className="loading">Loading…</div>;
 
-  const busy = capturing || analysing;
+  const busy = capturing || analysing || multiRunning;
 
   return (
     <div className="app">
@@ -295,6 +406,10 @@ export function App() {
           onClick={() => setMainTab("analyze")}
         >🔍 Analyze</button>
         <button
+          className={`main-tab ${mainTab === "multi" ? "main-tab--active" : ""}`}
+          onClick={() => setMainTab("multi")}
+        >🔲 Multi</button>
+        <button
           className={`main-tab ${mainTab === "backtest" ? "main-tab--active" : ""}`}
           onClick={() => setMainTab("backtest")}
         >📊 Backtest</button>
@@ -314,6 +429,8 @@ export function App() {
                 analysing={analysing}
                 capturedAt={ctx?.captured_at ?? null}
                 onCapture={handleCapture}
+                onMultiCapture={handleMultiCapture}
+                multiRunning={multiRunning}
               />
             </section>
 
@@ -332,6 +449,27 @@ export function App() {
               timeframe={timeframe}
               onSend={handleSend}
             />
+          </>
+        )}
+
+        {mainTab === "multi" && (
+          <>
+            {!multiRunning && (
+              <section className="capture-area">
+                <button
+                  className="capture-btn"
+                  style={{ width: "100%" }}
+                  disabled={!apiReachable || busy}
+                  onClick={handleMultiCapture}
+                >
+                  {multiRunning ? "Analyzing charts…" : "Analyze All Charts"}
+                </button>
+              </section>
+            )}
+            {captureError && (
+              <div className="capture-error" role="alert">{captureError}</div>
+            )}
+            <MultiChartPanel analyses={multiAnalyses} isRunning={multiRunning} />
           </>
         )}
 

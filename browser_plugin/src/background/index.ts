@@ -10,6 +10,11 @@ import type {
   CaptureVisibleTabResponse,
   SelectCaptureAreaRequest,
   SelectCaptureAreaResponse,
+  DrawRicLevelsRequest,
+  ClearRicOverlayRequest,
+  DrawOverlayResponse,
+  GetChartPanesRequest,
+  GetChartPanesResponse,
 } from "../types";
 
 interface StoredPageMetadata {
@@ -130,10 +135,10 @@ async function selectCaptureArea(): Promise<SelectCaptureAreaResponse> {
     return await chrome.tabs.sendMessage(tab.id, { type: "SELECT_CAPTURE_AREA" } satisfies SelectCaptureAreaRequest);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (message.includes("Receiving end does not exist") || message.includes("Could not establish connection")) {
+    if (isMissingReceiverError(message)) {
       const injected = await injectContentScript(tab.id);
       if (!injected.ok) {
-        return injected;
+        return { ok: false, rect: null, error: injected.error };
       }
       try {
         return await chrome.tabs.sendMessage(tab.id, { type: "SELECT_CAPTURE_AREA" } satisfies SelectCaptureAreaRequest);
@@ -146,22 +151,90 @@ async function selectCaptureArea(): Promise<SelectCaptureAreaResponse> {
   }
 }
 
-async function injectContentScript(tabId: number): Promise<SelectCaptureAreaResponse> {
+function isMissingReceiverError(message: string): boolean {
+  return message.includes("Receiving end does not exist") || message.includes("Could not establish connection");
+}
+
+async function injectContentScript(tabId: number): Promise<DrawOverlayResponse> {
   try {
     await chrome.scripting.executeScript({
       target: { tabId },
       files: ["content.js"],
     });
     await new Promise((resolve) => setTimeout(resolve, 100));
-    return { ok: true, rect: null, error: null };
+    return { ok: true, error: null };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return {
       ok: false,
-      rect: null,
       error: `Could not inject selection overlay into this page: ${message}`,
     };
   }
+}
+
+async function getChartPanes(): Promise<GetChartPanesResponse> {
+  const tab = await getActivePageTab();
+  if (!tab?.id) {
+    return { ok: false, panes: [], error: "No active chart tab was found." };
+  }
+  try {
+    const resp = await chrome.tabs.sendMessage(tab.id, { type: "GET_CHART_PANES" } satisfies GetChartPanesRequest);
+    return resp as GetChartPanesResponse;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!isMissingReceiverError(message)) {
+      return { ok: false, panes: [], error: message };
+    }
+    const injected = await injectContentScript(tab.id);
+    if (!injected.ok) return { ok: false, panes: [], error: injected.error };
+    try {
+      const resp = await chrome.tabs.sendMessage(tab.id, { type: "GET_CHART_PANES" } satisfies GetChartPanesRequest);
+      return resp as GetChartPanesResponse;
+    } catch (retryError) {
+      return { ok: false, panes: [], error: String(retryError) };
+    }
+  }
+}
+
+async function sendOverlayMessageToActiveChart(
+  message: DrawRicLevelsRequest | ClearRicOverlayRequest,
+): Promise<DrawOverlayResponse> {
+  const tab = await getActivePageTab();
+  if (!tab?.id) {
+    return { ok: false, error: "No active chart tab was found." };
+  }
+
+  try {
+    const response = await chrome.tabs.sendMessage(tab.id, message);
+    return normaliseOverlayResponse(response);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    if (!isMissingReceiverError(reason)) {
+      return { ok: false, error: reason };
+    }
+
+    const injected = await injectContentScript(tab.id);
+    if (!injected.ok) return injected;
+
+    try {
+      const response = await chrome.tabs.sendMessage(tab.id, message);
+      return normaliseOverlayResponse(response);
+    } catch (retryError) {
+      const retryReason = retryError instanceof Error ? retryError.message : String(retryError);
+      return { ok: false, error: retryReason };
+    }
+  }
+}
+
+function normaliseOverlayResponse(response: unknown): DrawOverlayResponse {
+  if (response && typeof response === "object" && "ok" in response) {
+    const candidate = response as { ok?: unknown; error?: unknown };
+    return {
+      ok: candidate.ok === true,
+      error: typeof candidate.error === "string" ? candidate.error : null,
+    };
+  }
+  return { ok: true, error: null };
 }
 
 // Relay content-script metadata to the side panel and handle side-panel
@@ -204,11 +277,38 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if ((message as GetChartPanesRequest).type === "GET_CHART_PANES") {
+    getChartPanes()
+      .then(sendResponse)
+      .catch((error: Error) => {
+        sendResponse({ ok: false, panes: [], error: error.message } satisfies GetChartPanesResponse);
+      });
+    return true;
+  }
+
   if ((message as SelectCaptureAreaRequest).type === "SELECT_CAPTURE_AREA") {
     selectCaptureArea()
       .then(sendResponse)
       .catch((error: Error) => {
         sendResponse({ ok: false, rect: null, error: error.message } satisfies SelectCaptureAreaResponse);
+      });
+    return true;
+  }
+
+  if ((message as DrawRicLevelsRequest).type === "DRAW_RIC_LEVELS") {
+    sendOverlayMessageToActiveChart(message as DrawRicLevelsRequest)
+      .then(sendResponse)
+      .catch((error: Error) => {
+        sendResponse({ ok: false, error: error.message } satisfies DrawOverlayResponse);
+      });
+    return true;
+  }
+
+  if ((message as ClearRicOverlayRequest).type === "CLEAR_RIC_OVERLAY") {
+    sendOverlayMessageToActiveChart(message as ClearRicOverlayRequest)
+      .then(sendResponse)
+      .catch((error: Error) => {
+        sendResponse({ ok: false, error: error.message } satisfies DrawOverlayResponse);
       });
     return true;
   }

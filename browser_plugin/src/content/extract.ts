@@ -12,6 +12,9 @@ import type {
   Timeframe,
   CaptureSelectionRect,
   SelectCaptureAreaResponse,
+  DrawOverlayResponse,
+  ChartPane,
+  GetChartPanesResponse,
 } from "../types";
 import { drawRicLevels, clearRicOverlay, type DrawSignal } from "./draw_levels";
 
@@ -32,9 +35,42 @@ function normalizeTVTimeframe(raw: string): Timeframe | null {
   return MAP[raw.trim()] ?? null;
 }
 
-// Strip futures/options suffix: "TORNTPHARM1!" → "TORNTPHARM", "NIFTY50!" → "NIFTY50"
+const INVALID_SYMBOL_WORDS = new Set([
+  "CHANGE",
+  "CHANGESYMBOL",
+  "SYMBOL",
+  "FUTURES",
+  "FUTURE",
+  "INDICATORS",
+  "COMPARE",
+  "PUBLISH",
+  "TRADE",
+]);
+
+// Strip continuous-futures suffix: "TORNTPHARM1!" → "TORNTPHARM", "NIFTY50!" → "NIFTY50".
 function cleanSymbol(raw: string): string {
-  return raw.replace(/[!0-9]+$/, "").trim().toUpperCase();
+  let value = raw
+    .replace(/^(NSE|BSE):/i, "")
+    .split(/[,\n]/)[0]
+    .trim()
+    .toUpperCase();
+
+  if (!value) return "";
+  if (/change\s+symbol/i.test(value)) return "";
+
+  value = value.replace(/\s+/g, "");
+  if (/^[A-Z&]+[12]!$/.test(value)) value = value.replace(/[12]!$/, "");
+  else value = value.replace(/!$/, "");
+
+  return value;
+}
+
+function normaliseSymbolCandidate(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const cleaned = cleanSymbol(raw);
+  if (!cleaned || INVALID_SYMBOL_WORDS.has(cleaned)) return null;
+  if (!/^[A-Z0-9&]{2,30}$/.test(cleaned)) return null;
+  return cleaned;
 }
 
 // ── TradingView DOM-based extraction ─────────────────────────────────────
@@ -56,10 +92,9 @@ function readTVSymbolFromDOM(): string | null {
   ];
   for (const sel of selectors) {
     const el = document.querySelector<HTMLElement>(sel);
-    const text = el?.getAttribute("data-symbol-short") || el?.textContent?.trim();
-    if (text && /^[A-Z0-9&!.]{2,30}$/.test(text.toUpperCase().split(" ")[0])) {
-      return cleanSymbol(text.split(" ")[0]);
-    }
+    const raw = el?.getAttribute("data-symbol-short") || el?.textContent?.trim();
+    const symbol = normaliseSymbolCandidate(raw);
+    if (symbol) return symbol;
   }
   return null;
 }
@@ -94,48 +129,51 @@ function extractTradingView(): Partial<PageMetadata> {
   const symParam = params.get("symbol");
   if (symParam) {
     const [exch, sym] = symParam.includes(":") ? symParam.split(":") : ["NSE", symParam];
+    const symbol = normaliseSymbolCandidate(sym);
+    if (!symbol) return { detected_from: "none" };
     return {
-      symbol: cleanSymbol(sym ?? ""),
+      symbol,
       exchange: (exch as Exchange) ?? "NSE",
       detected_from: "url",
     };
   }
 
-  // 2. Page title — multiple TV formats:
+  // 2. DOM — prefer compact tickers over title text, which may contain company names.
+  const domSym = readTVSymbolFromDOM();
+  const domTF  = readTVTimeframeFromDOM();
+  if (domSym) {
+    return { symbol: domSym, timeframe: domTF ?? undefined, detected_from: "dom" };
+  }
+
+  // 3. Page title — multiple TV formats:
   //   "TORNTPHARM, D — TradingView"
   //   "BANKNIFTY, 5 — TradingView"
   //   "TORRENT PHARM FUTURES · 1D · NSE — TradingView"
   //   "TORNTPHARM · D — TradingView"
   const title = document.title;
 
+  // Pattern C: match NSE:SYMBOL or BSE:SYMBOL anywhere in the title
+  const mC = title.match(/\b(NSE|BSE):([A-Z0-9&!]{2,20})\b/);
+  if (mC) {
+    const symbol = normaliseSymbolCandidate(mC[2]);
+    if (symbol) return { exchange: mC[1] as Exchange, symbol, detected_from: "title" };
+  }
+
   // Pattern A: "SYMBOL, TF" (comma-separated)
   const mA = title.match(/^([A-Z0-9&!.]+),\s*([A-Z0-9]+)/);
   if (mA) {
     const tf = normalizeTVTimeframe(mA[2]);
-    return { symbol: cleanSymbol(mA[1]), timeframe: tf ?? undefined, detected_from: "title" };
+    const symbol = normaliseSymbolCandidate(mA[1]);
+    if (symbol) return { symbol, timeframe: tf ?? undefined, detected_from: "title" };
   }
 
   // Pattern B: "SYMBOL · TF" or "SYMBOL • TF" (bullet/middot separator)
-  const mB = title.match(/^([A-Z0-9&!.\s]{2,25?})\s*[·•]\s*([A-Z0-9]+)/i);
+  const mB = title.match(/^([A-Z0-9&!.\s]{2,25}?)\s*[·•]\s*([A-Z0-9]+)/i);
   if (mB) {
     const rawSym = mB[1].trim().split(/\s+/).pop() ?? mB[1].trim();
     const tf = normalizeTVTimeframe(mB[2]);
-    if (rawSym.length >= 2) {
-      return { symbol: cleanSymbol(rawSym), timeframe: tf ?? undefined, detected_from: "title" };
-    }
-  }
-
-  // Pattern C: match NSE:SYMBOL or BSE:SYMBOL anywhere in the title
-  const mC = title.match(/\b(NSE|BSE):([A-Z0-9&!]{2,20})\b/);
-  if (mC) {
-    return { exchange: mC[1] as Exchange, symbol: cleanSymbol(mC[2]), detected_from: "title" };
-  }
-
-  // 3. DOM — TradingView-specific elements
-  const domSym = readTVSymbolFromDOM();
-  const domTF  = readTVTimeframeFromDOM();
-  if (domSym) {
-    return { symbol: domSym, timeframe: domTF ?? undefined, detected_from: "dom" };
+    const symbol = normaliseSymbolCandidate(rawSym);
+    if (symbol) return { symbol, timeframe: tf ?? undefined, detected_from: "title" };
   }
 
   // 4. Generic fallback: data-symbol / data-ticker attributes
@@ -146,7 +184,8 @@ function extractTradingView(): Partial<PageMetadata> {
     const raw = symbolEl.getAttribute("data-symbol") || symbolEl.getAttribute("data-ticker") || symbolEl.title;
     if (raw) {
       const [exch, sym] = raw.includes(":") ? raw.split(":") : ["NSE", raw];
-      return { symbol: cleanSymbol(sym), exchange: exch as Exchange, detected_from: "dom" };
+      const symbol = normaliseSymbolCandidate(sym);
+      if (symbol) return { symbol, exchange: exch as Exchange, detected_from: "dom" };
     }
   }
 
@@ -158,9 +197,11 @@ function extractKite(): Partial<PageMetadata> {
   const parts = window.location.pathname.split("/");
   const exchIdx = parts.indexOf("NSE") !== -1 ? parts.indexOf("NSE") : parts.indexOf("BSE");
   if (exchIdx !== -1 && parts[exchIdx + 1]) {
+    const symbol = normaliseSymbolCandidate(parts[exchIdx + 1]);
+    if (!symbol) return { detected_from: "none" };
     return {
       exchange: parts[exchIdx] as Exchange,
-      symbol: cleanSymbol(parts[exchIdx + 1]),
+      symbol,
       detected_from: "url",
     };
   }
@@ -171,7 +212,8 @@ function extractGeneric(): Partial<PageMetadata> {
   // Generic fallback: try to find NSE/BSE symbol in title
   const match = document.title.match(/\b(NSE|BSE):([A-Z0-9&]{2,20})\b/);
   if (match) {
-    return { exchange: match[1] as Exchange, symbol: cleanSymbol(match[2]), detected_from: "title" };
+    const symbol = normaliseSymbolCandidate(match[2]);
+    if (symbol) return { exchange: match[1] as Exchange, symbol, detected_from: "title" };
   }
   return { detected_from: "none" };
 }
@@ -194,6 +236,132 @@ function buildMetadata(): PageMetadata {
     source_url: window.location.href,
     detected_from: partial.detected_from ?? "none",
   };
+}
+
+// ── Multi-chart pane detection ────────────────────────────────────────────
+
+function extractPaneSymbol(container: HTMLElement): string | null {
+  const selectors = [
+    '[class*="pane-legend"] [class*="symbolTitle"]',
+    '[class*="pane-legend"] [class*="symbol-title"]',
+    '[class*="pane-legend"] [class*="title-"]',
+    '[class*="legendTitle"]',
+    '[class*="main-title"]',
+  ];
+  for (const sel of selectors) {
+    const el = container.querySelector<HTMLElement>(sel);
+    const raw = el?.getAttribute("data-symbol-short") || el?.textContent?.trim();
+    const sym = normaliseSymbolCandidate(raw ?? null);
+    if (sym) return sym;
+  }
+  return null;
+}
+
+function extractPaneTimeframe(container: HTMLElement): Timeframe | null {
+  const selectors = [
+    'button[class*="isActive"][class*="interval"]',
+    'button[class*="interval"][class*="active"]',
+    '[class*="timeframes"] button[aria-checked="true"]',
+    '[class*="pane-legend"] [class*="description"]',
+  ];
+  for (const sel of selectors) {
+    const el = container.querySelector<HTMLElement>(sel);
+    const text = el?.textContent?.trim();
+    if (text) {
+      const tf = normalizeTVTimeframe(text);
+      if (tf) return tf;
+    }
+  }
+  return null;
+}
+
+function buildFullPagePane(
+  index: number,
+  symbol: string | null,
+  exchange: Exchange | null,
+  timeframe: Timeframe | null,
+): ChartPane {
+  return {
+    index,
+    symbol,
+    exchange,
+    timeframe,
+    rect: {
+      x: 0,
+      y: 0,
+      width: window.innerWidth,
+      height: window.innerHeight,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+    },
+  };
+}
+
+function detectTVChartPanes(): ChartPane[] {
+  // Try selectors from most-specific to least-specific.
+  // Each TV chart pane in a multi-layout has its own legend element.
+  const CONTAINER_SELECTORS = [
+    '[class*="chart-container-border"]',
+    '[class*="chart-markup-table"]',
+    '[class*="layout__area"]',
+  ];
+
+  let containers: HTMLElement[] = [];
+  for (const sel of CONTAINER_SELECTORS) {
+    const found = Array.from(document.querySelectorAll<HTMLElement>(sel));
+    if (found.length >= 1) {
+      containers = found;
+      break;
+    }
+  }
+
+  // Keep only containers that have their own legend (real chart pane, not wrapper)
+  // and are large enough to be a meaningful chart area.
+  const chartContainers = containers.filter((el) => {
+    const r = el.getBoundingClientRect();
+    const hasLegend = el.querySelector('[class*="pane-legend"]') !== null;
+    return r.width >= 150 && r.height >= 150 && hasLegend;
+  });
+
+  // Remove containers that are parents of other chart containers (deduplicate nesting).
+  const deduped = chartContainers.filter(
+    (el) => !chartContainers.some((other) => other !== el && el.contains(other)),
+  );
+
+  if (deduped.length === 0) {
+    // Fallback: single pane covering the full visible page.
+    return [buildFullPagePane(0, readTVSymbolFromDOM(), "NSE", readTVTimeframeFromDOM())];
+  }
+
+  const panes: ChartPane[] = [];
+  for (const el of deduped) {
+    const r = el.getBoundingClientRect();
+    const symbol   = extractPaneSymbol(el);
+    const timeframe = extractPaneTimeframe(el);
+    panes.push({
+      index:    panes.length,
+      symbol,
+      exchange: symbol ? "NSE" : null,
+      timeframe,
+      rect: {
+        x:             Math.round(r.left),
+        y:             Math.round(r.top),
+        width:         Math.round(r.width),
+        height:        Math.round(r.height),
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+      },
+    });
+  }
+  return panes;
+}
+
+function detectChartPanes(): ChartPane[] {
+  const host = window.location.hostname;
+  if (host.includes("tradingview.com")) return detectTVChartPanes();
+  // For other platforms return a single full-page pane.
+  const meta = buildMetadata();
+  return [buildFullPagePane(0, meta.symbol, meta.exchange, meta.timeframe)];
 }
 
 // ── Messaging ─────────────────────────────────────────────────────────────
@@ -229,15 +397,36 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === "GET_CHART_PANES") {
+    try {
+      const panes = detectChartPanes();
+      sendResponse({ ok: true, panes, error: null } satisfies GetChartPanesResponse);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      sendResponse({ ok: false, panes: [], error: reason } satisfies GetChartPanesResponse);
+    }
+    return false;
+  }
+
   if (message.type === "DRAW_RIC_LEVELS") {
-    drawRicLevels(message.signals as DrawSignal[]);
-    sendResponse({ ok: true });
+    try {
+      drawRicLevels(message.signals as DrawSignal[]);
+      sendResponse({ ok: true, error: null } satisfies DrawOverlayResponse);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      sendResponse({ ok: false, error: reason } satisfies DrawOverlayResponse);
+    }
     return false;
   }
 
   if (message.type === "CLEAR_RIC_OVERLAY") {
-    clearRicOverlay();
-    sendResponse({ ok: true });
+    try {
+      clearRicOverlay();
+      sendResponse({ ok: true, error: null } satisfies DrawOverlayResponse);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      sendResponse({ ok: false, error: reason } satisfies DrawOverlayResponse);
+    }
     return false;
   }
 

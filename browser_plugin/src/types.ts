@@ -306,3 +306,49 @@ export interface SelectCaptureAreaResponse {
   rect: CaptureSelectionRect | null;
   error: string | null;
 }
+
+export interface DrawRicLevelsRequest {
+  type: "DRAW_RIC_LEVELS";
+  signals: DrawSignal[];
+}
+
+export interface ClearRicOverlayRequest {
+  type: "CLEAR_RIC_OVERLAY";
+}
+
+export interface DrawOverlayResponse {
+  ok: boolean;
+  error: string | null;
+}
+
+// ── Multi-chart pane detection ────────────────────────────────────────────
+
+export interface ChartPane {
+  index: number;
+  symbol: string | null;
+  exchange: Exchange | null;
+  timeframe: Timeframe | null;
+  rect: CaptureSelectionRect;
+}
+
+export interface GetChartPanesRequest {
+  type: "GET_CHART_PANES";
+}
+
+export interface GetChartPanesResponse {
+  ok: boolean;
+  panes: ChartPane[];
+  error: string | null;
+}
+
+// ── Multi-chart sequential analysis state ────────────────────────────────
+
+export type MultiChartStatus = "pending" | "analyzing" | "done" | "error";
+
+export interface MultiChartAnalysis {
+  pane: ChartPane;
+  status: MultiChartStatus;
+  answer: string | null;
+  error: string | null;
+  cost_usd: number;
+}

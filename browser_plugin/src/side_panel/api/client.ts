@@ -10,6 +10,7 @@ import type {
   BacktestResult,
   LeaderRow,
   RicResult,
+  DrawOverlayResponse,
 } from "../../types";
 
 const BASE_URL = "http://localhost:8765";
@@ -166,13 +167,21 @@ export async function fetchRic(
   return apiFetch<RicResult>(`/api/ric/analyze?${params}`);
 }
 
-export async function sendDrawSignals(
-  tabId:   number,
-  signals: unknown[],
-): Promise<void> {
-  await chrome.tabs.sendMessage(tabId, { type: "DRAW_RIC_LEVELS", signals });
+export async function sendDrawSignals(signals: unknown[]): Promise<void> {
+  const response = (await chrome.runtime.sendMessage({
+    type: "DRAW_RIC_LEVELS",
+    signals,
+  })) as DrawOverlayResponse | undefined;
+  if (!response?.ok) {
+    throw new Error(response?.error ?? "Could not draw RIC levels on the active chart.");
+  }
 }
 
-export async function clearChartOverlay(tabId: number): Promise<void> {
-  await chrome.tabs.sendMessage(tabId, { type: "CLEAR_RIC_OVERLAY" }).catch(() => {});
+export async function clearChartOverlay(): Promise<void> {
+  const response = (await chrome.runtime.sendMessage({
+    type: "CLEAR_RIC_OVERLAY",
+  })) as DrawOverlayResponse | undefined;
+  if (!response?.ok) {
+    throw new Error(response?.error ?? "Could not clear the RIC chart overlay.");
+  }
 }
