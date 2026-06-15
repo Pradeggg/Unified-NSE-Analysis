@@ -1,11 +1,10 @@
-// Header component — app identity, API status, and compact chart context.
+// Header component — app identity, API status, and compact chart context (single row).
 
 import { useState } from "react";
-
 import type { Exchange, Timeframe } from "../../types";
 
 const TIMEFRAMES: Timeframe[] = ["1m","3m","5m","15m","30m","1h","4h","1D","1W","1M"];
-const EXCHANGES: Exchange[] = ["NSE","BSE"];
+const EXCHANGES: Exchange[]   = ["NSE","BSE"];
 
 interface HeaderProps {
   symbol: string;
@@ -26,29 +25,21 @@ export function Header({
 
   return (
     <header className="header">
-      <div className="header-top">
+      {/* Single compact row: brand | context | edit | api dot */}
+      <div className="header-row">
         <span className="brand">⚡ Agent Adda</span>
-        <div className="header-status">
-          <span className="api-status-text">{apiReachable ? "API ready" : "API offline"}</span>
-          <span className={`api-dot ${apiReachable ? "api-dot--ok" : "api-dot--err"}`}
-                title={apiReachable ? "API connected" : "API unreachable — start local server"} />
-        </div>
-      </div>
-
-      <div className="chart-context">
-        <div className="context-copy">
-          <span className="context-label">Chart context</span>
-          <span className="context-value">{contextLabel}</span>
-        </div>
+        <span className="header-context">{contextLabel}</span>
         <button
           type="button"
           className="context-edit-btn"
-          onClick={() => setEditing((value) => !value)}
+          onClick={() => setEditing((v) => !v)}
           aria-expanded={editing}
-          aria-label={editing ? "Hide chart context editor" : "Edit chart context"}
-        >
-          {editing ? "Done" : "Edit"}
-        </button>
+          aria-label={editing ? "Close editor" : "Edit chart context"}
+        >{editing ? "Done" : "Edit"}</button>
+        <span
+          className={`api-dot ${apiReachable ? "api-dot--ok" : "api-dot--err"}`}
+          title={apiReachable ? "API connected" : "API unreachable — start local server"}
+        />
       </div>
 
       {editing && (
@@ -62,27 +53,21 @@ export function Header({
             onChange={(e) => onSymbolChange(e.target.value.toUpperCase())}
             aria-label="Symbol"
           />
-
           <select
             className="select"
             value={exchange}
             onChange={(e) => onExchangeChange(e.target.value as Exchange)}
             aria-label="Exchange"
           >
-            {EXCHANGES.map((ex) => (
-              <option key={ex} value={ex}>{ex}</option>
-            ))}
+            {EXCHANGES.map((ex) => <option key={ex} value={ex}>{ex}</option>)}
           </select>
-
           <select
             className="select"
             value={timeframe}
             onChange={(e) => onTimeframeChange(e.target.value as Timeframe)}
             aria-label="Timeframe"
           >
-            {TIMEFRAMES.map((tf) => (
-              <option key={tf} value={tf}>{tf}</option>
-            ))}
+            {TIMEFRAMES.map((tf) => <option key={tf} value={tf}>{tf}</option>)}
           </select>
         </div>
       )}

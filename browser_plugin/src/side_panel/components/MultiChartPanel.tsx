@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import type { MultiChartAnalysis } from "../../types";
+import { renderMarkdown } from "../utils/renderMarkdown";
 
 interface MultiChartPanelProps {
   analyses: MultiChartAnalysis[];
@@ -35,38 +36,10 @@ function paneLabel(analysis: MultiChartAnalysis): string {
   return parts.join(" · ");
 }
 
-function renderAnalysisText(text: string) {
-  return text.split("\n").map((line, i) => {
-    const trimmed = line.trim();
-    if (trimmed === "") return <div key={i} style={{ height: "4px" }} />;
-
-    if (line.startsWith("━━━") && line.endsWith("━━━")) {
-      return <p key={i} className="result-title">{line.replace(/━/g, "").trim()}</p>;
-    }
-    if (/^#{1,6}\s+/.test(trimmed) || trimmed.startsWith("▶ ")) {
-      return (
-        <p key={i} className="result-section result-section--neutral">
-          <span className="result-section-marker">▶</span>
-          {trimmed.replace(/^#{1,6}\s+/, "").replace(/^▶\s*/, "")}
-        </p>
-      );
-    }
-    if (/^\s*[-*•]\s+/.test(line)) {
-      return (
-        <p key={i} className="result-bullet">
-          <span className="result-bullet-dot">•</span>
-          {line.replace(/^\s*[-*•]\s+/, "")}
-        </p>
-      );
-    }
-    return <p key={i} className="result-line result-line--neutral">{line}</p>;
-  });
-}
-
 function ChartAnalysisCard({ analysis }: { analysis: MultiChartAnalysis }) {
   const [collapsed, setCollapsed] = useState(false);
   const { status, answer, error, cost_usd } = analysis;
-  const isDone = status === "done";
+  const isDone      = status === "done";
   const isAnalyzing = status === "analyzing";
 
   return (
@@ -102,7 +75,7 @@ function ChartAnalysisCard({ analysis }: { analysis: MultiChartAnalysis }) {
 
       {isDone && answer && !collapsed && (
         <div className="multi-chart-card-body result-body">
-          {renderAnalysisText(answer)}
+          {renderMarkdown(answer)}
         </div>
       )}
     </div>
@@ -113,7 +86,7 @@ export function MultiChartPanel({ analyses, isRunning }: MultiChartPanelProps) {
   if (analyses.length === 0) {
     return (
       <div className="multi-chart-empty">
-        <p>Click <strong>Analyze All Charts</strong> to detect and analyze all charts visible on the page.</p>
+        <p>Click <strong>All Charts</strong> to detect and analyze each chart pane individually.</p>
         <p style={{ marginTop: "8px", color: "var(--text-dim)" }}>
           Works best with TradingView multi-layout (2×2, 3×1, etc.).
         </p>

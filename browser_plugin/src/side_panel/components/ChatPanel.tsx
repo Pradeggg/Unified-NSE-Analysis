@@ -92,8 +92,6 @@ export function ChatPanel({
 
   return (
     <section className="chat-panel">
-      <h3 className="panel-title">💬 Chat</h3>
-
       {locked && (
         <div className="chat-locked">
           <p>Capture a chart first to enable analysis</p>
