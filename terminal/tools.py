@@ -4717,90 +4717,105 @@ def _nse_get_json(url: str, *, timeout: int = 10) -> dict:
 
 
 def get_live_quote(symbol: str) -> dict:
-    """Fetch live intraday quote for a single NSE symbol from the NSE API.
+    """Fetch live intraday quote for a single NSE symbol.
 
-    Returns current price, VWAP, day OHLC, volume, % change, 52-week range,
-    circuit limits, sector P/E, and last-update timestamp — all from NSE live.
+    Primary source: yfinance (.NS suffix) — always works, no bot detection.
+    Supplementary: NSE API for VWAP, circuit limits, sector PE — used when
+    the session has a valid _abck cookie; silently skipped on 403.
+
+    Returns current price, day OHLC, volume, % change, 52-week range,
+    market cap, and where available: VWAP, circuit limits, sector P/E.
     """
     from urllib.parse import quote as _url_quote
+    import yfinance as _yf
+
     sym = symbol.strip().upper()
     try:
-        s   = _get_live_session()
-        url = f"https://www.nseindia.com/api/quote-equity?symbol={_url_quote(sym)}"
-        r   = s.get(url, timeout=10)
-        r.raise_for_status()
-        d   = r.json()
+        ticker = _yf.Ticker(f"{sym}.NS")
+        fi     = ticker.fast_info
+        hist   = ticker.history(period="2d", interval="1d", auto_adjust=True)
 
-        info  = d.get("info", {})
-        meta  = d.get("metadata", {})
-        price = d.get("priceInfo", {})
-        week  = price.get("weekHighLow", {})
-        idhl  = price.get("intraDayHighLow", {})
-
-        last   = price.get("lastPrice",     idhl.get("value"))
-        open_  = price.get("open",          None)
-        high   = idhl.get("max",            None)
-        low    = idhl.get("min",            None)
-        prev   = price.get("previousClose", None)
-        chg    = price.get("change",        None)
-        pchg   = price.get("pChange",       None)
-        vwap   = price.get("vwap",          None)
+        last   = fi.last_price
+        prev   = fi.previous_close
+        open_  = fi.open
+        high   = fi.day_high
+        low    = fi.day_low
+        mktcap = fi.market_cap
 
         if last is None:
-            return {"symbol": sym, "error": "No price data returned"}
+            return {"symbol": sym, "error": "No price data from yfinance"}
 
-        # Fetch trade info (volume, value, market cap) via separate section call
-        vol_lakh = None; val_cr = None; mkt_cap_cr = None
+        vol_shares = int(hist["Volume"].iloc[-1]) if not hist.empty else None
+        vol_lakh   = round(vol_shares / 1e5, 2)  if vol_shares else None
+        chg        = round(last - prev, 2)        if prev else None
+        pchg       = round((last / prev - 1) * 100, 2) if prev else None
+        mkt_cap_cr = round(mktcap / 1e7)         if mktcap else None
+
+        result: dict = {
+            "symbol":          sym,
+            "last_price":      round(last,  2),
+            "open":            round(open_, 2) if open_ else None,
+            "day_high":        round(high,  2) if high  else None,
+            "day_low":         round(low,   2) if low   else None,
+            "prev_close":      round(prev,  2) if prev  else None,
+            "change":          chg,
+            "pct_change":      pchg,
+            "volume":          vol_lakh,
+            "volume_shares":   vol_shares,
+            "market_cap_cr":   mkt_cap_cr,
+            # Supplementary fields — populated below if NSE API succeeds
+            "vwap":            None,
+            "lower_circuit":   None,
+            "upper_circuit":   None,
+            "52w_high":        None,
+            "52w_low":         None,
+            "sector_pe":       None,
+            "stock_pe":        None,
+            "sector":          None,
+            "as_of":           datetime.now().strftime("%d-%b-%Y %H:%M:%S"),
+            "source":          "yfinance (NSE)",
+        }
+
+        # Best-effort NSE API enrichment (VWAP, circuits, 52w, sector PE)
         try:
-            r2 = s.get(
-                f"https://www.nseindia.com/api/quote-equity?symbol={_url_quote(sym)}&section=trade_info",
-                timeout=8,
-            )
-            ti = r2.json().get("marketDeptOrderBook", {}).get("tradeInfo", {})
-            vol_lakh   = ti.get("totalTradedVolume")   # in lakh shares
-            val_cr     = ti.get("totalTradedValue")    # in crores
-            mkt_cap_cr = ti.get("totalMarketCap")      # in crores
+            s   = _get_live_session()
+            url = f"https://www.nseindia.com/api/quote-equity?symbol={_url_quote(sym)}"
+            r   = s.get(url, timeout=8)
+            if r.status_code == 200:
+                d      = r.json()
+                meta   = d.get("metadata", {})
+                price  = d.get("priceInfo", {})
+                week   = price.get("weekHighLow", {})
+                result.update({
+                    "name":          d.get("info", {}).get("companyName", sym),
+                    "series":        meta.get("series", "EQ"),
+                    "vwap":          price.get("vwap"),
+                    "lower_circuit": price.get("lowerCP"),
+                    "upper_circuit": price.get("upperCP"),
+                    "52w_high":      week.get("max"),
+                    "52w_low":       week.get("min"),
+                    "52w_high_date": week.get("maxDate"),
+                    "52w_low_date":  week.get("minDate"),
+                    "sector":        meta.get("industry"),
+                    "sector_pe":     meta.get("pdSectorPe"),
+                    "stock_pe":      meta.get("pdSymbolPe"),
+                    "indices":       meta.get("pdSectorIndAll", [])[:5],
+                    "as_of":         meta.get("lastUpdateTime", result["as_of"]),
+                    "source":        "yfinance + NSE live API",
+                })
         except Exception:
             pass
 
-        return {
-            "symbol":          sym,
-            "name":            info.get("companyName", meta.get("symbol", sym)),
-            "series":          meta.get("series", "EQ"),
-            "last_price":      last,
-            "open":            open_,
-            "day_high":        high,
-            "day_low":         low,
-            "vwap":            vwap,
-            "prev_close":      prev,
-            "change":          round(chg,  2) if chg  is not None else None,
-            "pct_change":      round(pchg, 2) if pchg is not None else None,
-            "volume":          vol_lakh,        # in lakh shares
-            "volume_shares":   round(vol_lakh * 1e5) if vol_lakh else None,
-            "traded_value_cr": val_cr,
-            "market_cap_cr":   mkt_cap_cr,
-            "52w_high":        week.get("max"),
-            "52w_low":         week.get("min"),
-            "52w_high_date":   week.get("maxDate"),
-            "52w_low_date":    week.get("minDate"),
-            "lower_circuit":   price.get("lowerCP"),
-            "upper_circuit":   price.get("upperCP"),
-            "sector":          meta.get("industry"),
-            "sector_pe":       meta.get("pdSectorPe"),
-            "stock_pe":        meta.get("pdSymbolPe"),
-            "indices":         meta.get("pdSectorIndAll", [])[:5],
-            "as_of":           meta.get("lastUpdateTime",
-                                        datetime.now().strftime("%d-%b-%Y %H:%M:%S")),
-            "source":          "NSE live API (real-time)",
-        }
+        return result
     except Exception as e:
         return {"symbol": sym, "error": str(e)}
 
 
 def get_nse_quotes(symbols: list[str]) -> dict:
-    """Fetch live NSE prices for multiple symbols in parallel.
+    """Fetch live NSE prices for multiple symbols — fast batch via yfinance.
 
-    Returns a dict keyed by symbol with price, % change, VWAP, volume.
+    Returns a dict keyed by symbol with price, % change, OHLC, volume.
+    Uses yf.download() for a single batch HTTP call (~2s for up to 20 symbols).
     Faster than calling get_live_quote() sequentially.
     Use for: 'prices of RELIANCE, TCS, INFY', 'watchlist prices',
     'how are these stocks doing: X, Y, Z'.
@@ -4808,56 +4823,52 @@ def get_nse_quotes(symbols: list[str]) -> dict:
     Args:
         symbols: List of NSE tickers, up to 20.
     """
-    from urllib.parse import quote as _url_quote
-    from concurrent.futures import ThreadPoolExecutor, as_completed
+    import yfinance as _yf
 
-    syms    = [s.strip().upper() for s in symbols[:20] if s.strip()]
-    session = _get_live_session()
+    syms = [s.strip().upper() for s in symbols[:20] if s.strip()]
+    if not syms:
+        return {"quotes": {}, "count": 0, "source": "yfinance (NSE)"}
 
-    def _fetch(sym: str) -> tuple[str, dict]:
-        try:
-            url = f"https://www.nseindia.com/api/quote-equity?symbol={_url_quote(sym)}"
-            r   = session.get(url, timeout=10)
-            r.raise_for_status()
-            d     = r.json()
-            meta  = d.get("metadata", {})
-            price = d.get("priceInfo", {})
-            idhl  = price.get("intraDayHighLow", {})
-            trade = d.get("marketDeptOrderBook", {}).get("tradeInfo", {})
-            last  = price.get("lastPrice", idhl.get("value"))
-            return sym, {
-                "symbol":     sym,
-                "name":       d.get("info", {}).get("companyName", sym),
-                "last_price": last,
-                "change":     round(price.get("change", 0), 2),
-                "pct_change": round(price.get("pChange", 0), 2),
-                "day_high":   idhl.get("max"),
-                "day_low":    idhl.get("min"),
-                "vwap":       price.get("vwap"),
-                "volume":     trade.get("totalTradedVolume"),
-                "prev_close": price.get("previousClose"),
-                "lower_circuit": price.get("lowerCP"),
-                "upper_circuit": price.get("upperCP"),
-                "sector":     meta.get("industry"),
-                "sector_pe":  meta.get("pdSectorPe"),
-                "stock_pe":   meta.get("pdSymbolPe"),
-                "as_of":      meta.get("lastUpdateTime"),
-            }
-        except Exception as e:
-            return sym, {"symbol": sym, "error": str(e)}
+    tickers_yf = [f"{s}.NS" for s in syms]
+    data = _yf.download(
+        tickers_yf, period="2d", interval="1d",
+        progress=False, auto_adjust=True, group_by="ticker",
+    )
 
     results: dict = {}
-    with ThreadPoolExecutor(max_workers=6) as ex:
-        futures = {ex.submit(_fetch, s): s for s in syms}
-        for fut in as_completed(futures):
-            sym, data = fut.result()
-            results[sym] = data
+    for sym, yf_sym in zip(syms, tickers_yf):
+        try:
+            if len(syms) == 1:
+                rows = data.dropna()
+            else:
+                rows = data[yf_sym].dropna()
+            if len(rows) < 1:
+                results[sym] = {"symbol": sym, "error": "No data"}
+                continue
+            cur  = rows.iloc[-1]
+            prev = rows.iloc[-2] if len(rows) > 1 else cur
+            last = float(cur["Close"])
+            pc   = float(prev["Close"])
+            pchg = round((last / pc - 1) * 100, 2) if pc else None
+            results[sym] = {
+                "symbol":     sym,
+                "last_price": round(last, 2),
+                "change":     round(last - pc, 2) if pc else None,
+                "pct_change": pchg,
+                "open":       round(float(cur["Open"]), 2),
+                "day_high":   round(float(cur["High"]), 2),
+                "day_low":    round(float(cur["Low"]),  2),
+                "volume":     round(float(cur["Volume"]) / 1e5, 2),  # lakh shares
+                "prev_close": round(pc, 2),
+            }
+        except Exception as e:
+            results[sym] = {"symbol": sym, "error": str(e)}
 
     return {
-        "quotes":     results,
-        "count":      len(results),
-        "as_of":      datetime.now().strftime("%d-%b-%Y %H:%M:%S"),
-        "source":     "NSE live API (real-time, parallel fetch)",
+        "quotes":  results,
+        "count":   len(results),
+        "as_of":   datetime.now().strftime("%d-%b-%Y %H:%M:%S"),
+        "source":  "yfinance (NSE batch)",
     }
 
 
