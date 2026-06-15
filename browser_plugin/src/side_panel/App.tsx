@@ -23,7 +23,7 @@ import type {
 } from "../types";
 import "./App.css";
 
-type MainTab = "analyze" | "backtest" | "ric" | "multi";
+type MainTab = "analyze" | "backtest" | "ric";
 
 export function App() {
   const [symbol, setSymbol]       = useState("BANKNIFTY");
@@ -219,31 +219,112 @@ export function App() {
     });
   }
 
-  // ── Capture + auto-analyse ────────────────────────────────────────────────
+  // ── Capture + auto-analyse (smart: detects multiple panes automatically) ──
   const handleCapture = useCallback(async (mode: "visible" | "area" = "visible") => {
-    if (capturing || analysing) return;
+    if (capturing || analysing || multiRunning) return;
     setCaptureError(null);
     setCapturing(true);
+    setMultiAnalyses([]);
+
     try {
       const selection = mode === "area" ? await requestAreaSelection() : null;
       if (selection && (!selection.ok || !selection.rect)) {
         throw new Error(selection.error ?? "Area selection failed.");
       }
 
+      // For area selection, always single-chart mode.
+      const isAreaCapture = mode === "area" && !!selection?.rect;
+
+      // Detect panes unless user selected a specific area.
+      let panes: GetChartPanesResponse["panes"] = [];
+      if (!isAreaCapture) {
+        try {
+          const panesResp = await requestChartPanes();
+          if (panesResp.ok) panes = panesResp.panes;
+        } catch {
+          // Detection failure → fall through to single-chart mode.
+        }
+      }
+
       const capture = await requestVisibleTabCapture();
       if (!capture.ok || !capture.dataUrl) {
         throw new Error(capture.error ?? "Chart capture failed.");
       }
+      setCapturing(false);
 
+      // ── Multi-chart path ────────────────────────────────────────────────
+      if (panes.length > 1) {
+        const initialSlots: MultiChartAnalysis[] = panes.map((pane) => ({
+          pane,
+          status: "pending",
+          answer: null,
+          error: null,
+          cost_usd: 0,
+        }));
+        setMultiAnalyses(initialSlots);
+        setMultiRunning(true);
+
+        for (let i = 0; i < panes.length; i++) {
+          const pane = panes[i];
+          setMultiAnalyses((prev) =>
+            prev.map((a, idx) => (idx === i ? { ...a, status: "analyzing" } : a)),
+          );
+          try {
+            const croppedDataUrl = await cropDataUrlToRect(capture.dataUrl!, pane.rect);
+            const sym  = pane.symbol   ?? symbol;
+            const exch = pane.exchange ?? exchange;
+            const tf   = pane.timeframe ?? timeframe;
+
+            const res = await analyzeChart({
+              image:      croppedDataUrl,
+              source_url: capture.tab?.url ?? null,
+              page_title: capture.tab?.title ?? null,
+              user_symbol: sym,
+              exchange:    exch,
+              timeframe:   tf,
+              visible_indicators: [],
+              user_question: [
+                `Analyze Chart ${i + 1} of ${panes.length} (${exch}:${sym} · ${tf}) as a technical trading setup.`,
+                "MANDATORY: Start with ▶ IDENTITY including Visible, Context, Match, and Type.",
+                "Inventory every visible indicator before concluding: EMAs, Supertrend, RSI, volume, levels, and drawn zones.",
+                "Use tree-of-thought scenario checks for bull, bear, and range/no-trade cases.",
+                "Produce precise support, resistance, invalidation, targets, volume/RSI read, and a final trade plan with confidence.",
+              ].join(" "),
+              conflict_policy: "prefer_pg",
+            });
+
+            setMultiAnalyses((prev) =>
+              prev.map((a, idx) =>
+                idx === i
+                  ? {
+                      ...a,
+                      status:   res.ok && res.data && !res.data.error ? "done" : "error",
+                      answer:   res.data?.answer ?? null,
+                      error:    res.data?.error ?? (res.ok ? null : (res.error ?? "Analysis failed.")),
+                      cost_usd: res.data?.cost_usd ?? 0,
+                    }
+                  : a,
+              ),
+            );
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            setMultiAnalyses((prev) =>
+              prev.map((a, idx) => (idx === i ? { ...a, status: "error", error: msg } : a)),
+            );
+          }
+        }
+        setMultiRunning(false);
+        return;
+      }
+
+      // ── Single-chart path ───────────────────────────────────────────────
       const imageDataUrl = selection?.rect
         ? await cropDataUrlToRect(capture.dataUrl, selection.rect)
         : capture.dataUrl;
 
       createContext(symbol, exchange, timeframe, imageDataUrl);
-      setCapturing(false);
       setAnalysing(true);
 
-      // Auto-fire initial analysis immediately — image is the source of truth.
       const res = await analyzeChart({
         image: imageDataUrl,
         source_url: capture.tab?.url ?? null,
@@ -262,12 +343,8 @@ export function App() {
         ].join(" "),
         conflict_policy: "prefer_pg",
       });
-      if (!res.ok || !res.data) {
-        throw new Error(res.error ?? "Agent Adda analysis failed.");
-      }
-      if (res.data.error) {
-        throw new Error(res.data.error);
-      }
+      if (!res.ok || !res.data) throw new Error(res.error ?? "Agent Adda analysis failed.");
+      if (res.data.error) throw new Error(res.data.error);
       applyAnalysisResult(res.data);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -276,101 +353,9 @@ export function App() {
     } finally {
       setCapturing(false);
       setAnalysing(false);
-    }
-  }, [capturing, analysing, symbol, exchange, timeframe, createContext, applyAnalysisResult]);
-
-  // ── Multi-chart sequential capture+analyse ───────────────────────────────
-  const handleMultiCapture = useCallback(async () => {
-    if (capturing || analysing || multiRunning) return;
-    setCaptureError(null);
-    setMultiAnalyses([]);
-    setMultiRunning(true);
-    setCapturing(true);
-
-    try {
-      // 1. Ask the content script to identify all chart panes.
-      const panesResp = await requestChartPanes();
-      if (!panesResp.ok || panesResp.panes.length === 0) {
-        throw new Error(panesResp.error ?? "No chart panes detected on this page.");
-      }
-
-      // 2. One full-page screenshot for all panes.
-      const capture = await requestVisibleTabCapture();
-      if (!capture.ok || !capture.dataUrl) {
-        throw new Error(capture.error ?? "Chart capture failed.");
-      }
-      setCapturing(false);
-
-      // 3. Seed the analysis slots and switch to the Multi tab.
-      const initialSlots: MultiChartAnalysis[] = panesResp.panes.map((pane) => ({
-        pane,
-        status: "pending",
-        answer: null,
-        error: null,
-        cost_usd: 0,
-      }));
-      setMultiAnalyses(initialSlots);
-      setMainTab("multi");
-
-      // 4. Analyze each pane sequentially so results stream in one by one.
-      for (let i = 0; i < panesResp.panes.length; i++) {
-        const pane = panesResp.panes[i];
-        setMultiAnalyses((prev) =>
-          prev.map((a, idx) => (idx === i ? { ...a, status: "analyzing" } : a)),
-        );
-
-        try {
-          const croppedDataUrl = await cropDataUrlToRect(capture.dataUrl!, pane.rect);
-          const sym   = pane.symbol   ?? symbol;
-          const exch  = pane.exchange ?? exchange;
-          const tf    = pane.timeframe ?? timeframe;
-
-          const res = await analyzeChart({
-            image:      croppedDataUrl,
-            source_url: capture.tab?.url ?? null,
-            page_title: capture.tab?.title ?? null,
-            user_symbol: sym,
-            exchange:    exch,
-            timeframe:   tf,
-            visible_indicators: [],
-            user_question: [
-              `Analyze Chart ${i + 1} of ${panesResp.panes.length} (${exch}:${sym} · ${tf}) as a technical trading setup.`,
-              "MANDATORY: Start with ▶ IDENTITY including Visible, Context, Match, and Type.",
-              "Inventory every visible indicator before concluding: EMAs, Supertrend, RSI, volume, levels, and drawn zones.",
-              "Use tree-of-thought scenario checks for bull, bear, and range/no-trade cases.",
-              "Produce precise support, resistance, invalidation, targets, volume/RSI read, and a final trade plan with confidence.",
-            ].join(" "),
-            conflict_policy: "prefer_pg",
-          });
-
-          setMultiAnalyses((prev) =>
-            prev.map((a, idx) =>
-              idx === i
-                ? {
-                    ...a,
-                    status:   res.ok && res.data && !res.data.error ? "done" : "error",
-                    answer:   res.data?.answer ?? null,
-                    error:    res.data?.error ?? (res.ok ? null : (res.error ?? "Analysis failed.")),
-                    cost_usd: res.data?.cost_usd ?? 0,
-                  }
-                : a,
-            ),
-          );
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          setMultiAnalyses((prev) =>
-            prev.map((a, idx) => (idx === i ? { ...a, status: "error", error: msg } : a)),
-          );
-        }
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      setCaptureError(message);
-    } finally {
-      setCapturing(false);
       setMultiRunning(false);
     }
-  }, [capturing, analysing, multiRunning, symbol, exchange, timeframe]);
+  }, [capturing, analysing, multiRunning, symbol, exchange, timeframe, createContext, applyAnalysisResult]);
 
   // ── Follow-up send ────────────────────────────────────────────────────────
   const handleSend = useCallback(
@@ -406,10 +391,6 @@ export function App() {
           onClick={() => setMainTab("analyze")}
         >🔍 Analyze</button>
         <button
-          className={`main-tab ${mainTab === "multi" ? "main-tab--active" : ""}`}
-          onClick={() => setMainTab("multi")}
-        >🔲 Multi</button>
-        <button
           className={`main-tab ${mainTab === "backtest" ? "main-tab--active" : ""}`}
           onClick={() => setMainTab("backtest")}
         >📊 Backtest</button>
@@ -429,7 +410,6 @@ export function App() {
                 analysing={analysing}
                 capturedAt={ctx?.captured_at ?? null}
                 onCapture={handleCapture}
-                onMultiCapture={handleMultiCapture}
                 multiRunning={multiRunning}
               />
             </section>
@@ -440,36 +420,22 @@ export function App() {
               </div>
             )}
 
-            {/* Chat panel — locked for follow-up until initial analysis has run */}
-            <ChatPanel
-              captureId={ctx?.llm_conclusions.length ? ctx.capture_id : null}
-              initialAnalysis={ctx?.llm_conclusions[0]}
-              symbol={symbol}
-              exchange={exchange}
-              timeframe={timeframe}
-              onSend={handleSend}
-            />
-          </>
-        )}
+            {/* Multi-chart results — shown when multiple panes were detected */}
+            {multiAnalyses.length > 0 && (
+              <MultiChartPanel analyses={multiAnalyses} isRunning={multiRunning} />
+            )}
 
-        {mainTab === "multi" && (
-          <>
-            {!multiRunning && (
-              <section className="capture-area">
-                <button
-                  className="capture-btn"
-                  style={{ width: "100%" }}
-                  disabled={!apiReachable || busy}
-                  onClick={handleMultiCapture}
-                >
-                  {multiRunning ? "Analyzing charts…" : "Analyze All Charts"}
-                </button>
-              </section>
+            {/* Single-chart chat panel — shown after a single-chart analysis */}
+            {multiAnalyses.length === 0 && (
+              <ChatPanel
+                captureId={ctx?.llm_conclusions.length ? ctx.capture_id : null}
+                initialAnalysis={ctx?.llm_conclusions[0]}
+                symbol={symbol}
+                exchange={exchange}
+                timeframe={timeframe}
+                onSend={handleSend}
+              />
             )}
-            {captureError && (
-              <div className="capture-error" role="alert">{captureError}</div>
-            )}
-            <MultiChartPanel analyses={multiAnalyses} isRunning={multiRunning} />
           </>
         )}
 

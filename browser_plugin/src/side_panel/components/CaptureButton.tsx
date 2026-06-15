@@ -8,12 +8,11 @@ interface CaptureButtonProps {
   analysing: boolean;
   capturedAt: string | null;
   onCapture: (mode?: "visible" | "area") => void;
-  onMultiCapture: () => void;
   multiRunning: boolean;
 }
 
 export function CaptureButton({
-  disabled, capturing, analysing, capturedAt, onCapture, onMultiCapture, multiRunning,
+  disabled, capturing, analysing, capturedAt, onCapture, multiRunning,
 }: CaptureButtonProps) {
   const busy = capturing || analysing || multiRunning;
 
@@ -28,20 +27,14 @@ export function CaptureButton({
           className="capture-toolbar-btn"
           onClick={() => onCapture("visible")}
           disabled={disabled}
-          title="Recapture full visible chart"
-        >⟳ Recapture</button>
+          title="Re-analyze (auto-detects single or multi-chart)"
+        >⟳ Analyze</button>
         <button
           className="capture-toolbar-btn"
           onClick={() => onCapture("area")}
           disabled={disabled}
           title="Select a specific chart area"
         >◻ Area</button>
-        <button
-          className="capture-toolbar-btn"
-          onClick={onMultiCapture}
-          disabled={disabled}
-          title="Detect and analyze all chart panes"
-        >⊞ All Charts</button>
       </div>
     );
   }
@@ -52,8 +45,8 @@ export function CaptureButton({
     : analysing
       ? "Reading candles, indicators, and levels…"
       : multiRunning
-        ? "Analyzing all chart panes…"
-        : "Ready to capture the visible chart";
+        ? "Analyzing chart panes…"
+        : "Ready to capture — detects single or multiple charts automatically";
 
   return (
     <div className="capture-section">
@@ -76,27 +69,17 @@ export function CaptureButton({
         className="capture-btn"
         onClick={() => onCapture("visible")}
         disabled={disabled || busy}
-        aria-label="Capture visible chart for analysis"
+        aria-label="Capture and analyze chart(s)"
       >
-        {capturing ? "Capturing…" : analysing ? "Analyzing…" : "Capture Chart"}
+        {capturing ? "Capturing…" : analysing ? "Analyzing…" : multiRunning ? "Analyzing panes…" : "Analyze"}
       </button>
 
-      <div style={{ display: "flex", gap: "6px" }}>
-        <button
-          className="capture-area-btn"
-          style={{ flex: 1 }}
-          onClick={() => onCapture("area")}
-          disabled={disabled || busy}
-          aria-label="Select chart area for analysis"
-        >Select Area</button>
-        <button
-          className="capture-area-btn"
-          style={{ flex: 1 }}
-          onClick={onMultiCapture}
-          disabled={disabled || busy}
-          title="Detect and analyze all chart panes"
-        >{multiRunning ? "Analyzing…" : "All Charts"}</button>
-      </div>
+      <button
+        className="capture-area-btn"
+        onClick={() => onCapture("area")}
+        disabled={disabled || busy}
+        aria-label="Select chart area for analysis"
+      >Select Area</button>
     </div>
   );
 }

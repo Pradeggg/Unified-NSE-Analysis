@@ -84,14 +84,7 @@ function ChartAnalysisCard({ analysis }: { analysis: MultiChartAnalysis }) {
 
 export function MultiChartPanel({ analyses, isRunning }: MultiChartPanelProps) {
   if (analyses.length === 0) {
-    return (
-      <div className="multi-chart-empty">
-        <p>Click <strong>All Charts</strong> to detect and analyze each chart pane individually.</p>
-        <p style={{ marginTop: "8px", color: "var(--text-dim)" }}>
-          Works best with TradingView multi-layout (2×2, 3×1, etc.).
-        </p>
-      </div>
-    );
+    return null;
   }
 
   const done  = analyses.filter((a) => a.status === "done").length;
