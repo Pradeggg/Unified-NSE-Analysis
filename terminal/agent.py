@@ -974,6 +974,12 @@ _INDEX_NAME_PATTERNS: tuple[tuple[str, str], ...] = (
     ("NIFTY MIDCAP 50", "NIFTY MIDCAP 50"),
     ("NIFTY NEXT 50", "NIFTY NEXT 50"),
     ("NIFTY MICROCAP 250", "NIFTY MICROCAP 250"),
+    ("NIFTY FINANCIAL SERVICES EX-BANK", "NIFTY FINSEREXBNK"),
+    ("NIFTY FINANCIAL SERVICES EX BANK", "NIFTY FINSEREXBNK"),
+    ("NIFTY FINSEREXBNK", "NIFTY FINSEREXBNK"),
+    ("FINSEREXBNK", "NIFTY FINSEREXBNK"),
+    ("NIFTY FINANCIAL SERVICES 25 50", "NIFTY FINSRV25 50"),
+    ("NIFTY FINANCIAL SERVICES", "NIFTY FIN SERVICE"),
     ("NIFTY 500", "NIFTY 500"),
     ("NIFTY500", "NIFTY 500"),
     ("NIFTY 200", "NIFTY 200"),
@@ -1846,6 +1852,75 @@ def _ric_prevalidated_symbol(query: str) -> str:
     return match.group(1).upper() if match else ""
 
 
+def _is_contextual_synthesis_query(query: str) -> bool:
+    """True when the user is asking for a synthesis/recommendation on already-gathered evidence.
+
+    These queries don't name a new stock — they refer back to the current context
+    ("based on the analysis", "what is your recommendation", "should I buy/sell",
+    "summarise", "what do you think", "give me a verdict", etc.).
+    The symbol is already known from prior turns; demanding a fresh resolve_symbol
+    call is a false negative.
+    """
+    q = _routing_query_text(query).lower()
+    synthesis_signals = (
+        "based on",
+        "your recommendation",
+        "what is your",
+        "what do you think",
+        "should i buy",
+        "should i sell",
+        "should i hold",
+        "buy or sell",
+        "is it a buy",
+        "is it a sell",
+        "give me a verdict",
+        "give me a view",
+        "what is the verdict",
+        "summarize",
+        "summarise",
+        "sum up",
+        "overall view",
+        "overall verdict",
+        "overall recommendation",
+        "investment recommendation",
+        "trading recommendation",
+        "trade recommendation",
+        "final recommendation",
+        "what do you recommend",
+        "your view",
+        "your take",
+        "your opinion",
+    )
+    return any(signal in q for signal in synthesis_signals)
+
+
+def _context_symbol_resolved(tool_results: list[dict]) -> bool:
+    """True when a downstream tool that requires a valid symbol ran successfully.
+
+    get_symbol_snapshot / get_technical_setup / explain_intraday_setup etc. can
+    only run on a known NSE symbol. If any of them returned a non-error result,
+    the symbol was effectively resolved from context — resolve_symbol is satisfied.
+    """
+    context_evidence_tools = {
+        "get_symbol_snapshot",
+        "get_symbol_quick_analysis",
+        "get_technical_setup",
+        "explain_intraday_setup",
+        "get_intraday_analysis",
+        "get_intraday_levels",
+        "get_nse_intraday_snapshot",
+        "get_cached_financials",
+        "scrape_screener_in",
+    }
+    for tr in tool_results or []:
+        if tr.get("tool") not in context_evidence_tools:
+            continue
+        result = tr.get("result") or {}
+        if isinstance(result, dict) and not result.get("error"):
+            return True
+    return False
+
+
 def _ric_step_evidence_satisfied(query: str, intent: str, executed: set[str]) -> bool:
     """RIC recipes resolve the symbol once before the step sequence.
 
@@ -1886,6 +1961,22 @@ def _validate_required_tools(query: str, intent: str, tool_results: list[dict]) 
         return None
     executed = {str(tr.get("tool")) for tr in tool_results or []}
     if _ric_step_evidence_satisfied(query, intent, executed):
+        return None
+
+    # ── Contextual follow-up: symbol resolved from prior turn context ─────
+    # If the user is asking a synthesis/recommendation question (e.g. "based
+    # on the analysis what is your recommendation") and substantive evidence
+    # tools ran successfully, resolve_symbol is satisfied implicitly — the
+    # symbol was bound from the previous turn and the LLM called downstream
+    # tools directly (get_symbol_snapshot, get_technical_setup, etc.).
+    # Guard: only applies when the query is a pure synthesis/meta question
+    # with no new ticker to resolve. Fresh "tell me about RELIANCE" queries
+    # still require resolve_symbol even if snapshot data was gathered.
+    if (
+        "resolve_symbol" in required
+        and _is_contextual_synthesis_query(query)
+        and _context_symbol_resolved(tool_results)
+    ):
         return None
     # If the user invoked /analyze on a document URL/file, the expanded prompt template
     # references "concall transcript / management commentary / guidance" as generic
@@ -4016,10 +4107,11 @@ def _execute_plan(plan: list[tuple[str, dict]]) -> list[dict]:
         # Capture resolved symbol for downstream tools
         if tool_name == "resolve_symbol" and result.get("symbol"):
             resolved_sym = result["symbol"]
+            original_query = str(args.get("query") or "")
             # Patch subsequent args that reference the original fuzzy query
             for _, a in plan:
                 for k, v in a.items():
-                    if isinstance(v, str) and v.upper() == args["query"].upper():
+                    if isinstance(v, str) and original_query and v.upper() == original_query.upper():
                         a[k] = resolved_sym
 
         results.append({"tool": tool_name, "args": args, "result": result})
