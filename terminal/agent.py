@@ -50,6 +50,11 @@ from .situation_assessment import (
 # direct (first-turn) multi-symbol "news + results + events" branch too, so the
 # explicit-list query path behaves identically to the follow-up branch.
 from .post_assessment_planner import plan_news_and_results
+from .conversation_compressor import (
+    CompressedContext,
+    compress_turns,
+    merge_compressed,
+)
 from .conversation_memory import (
     ConversationMemory,
     DEFAULT_SESSION_ID as MEMORY_DEFAULT_SESSION_ID,
@@ -66,6 +71,16 @@ from .semantic_intent import classify_semantic_intent
 from .llm_situation_assessment import (
     classify_llm_situation_assessment,
     should_run_llm_situation_assessment,
+)
+from .agentic_orchestrator import (
+    AgenticTurnState,
+    action_from_artifact_reference,
+    action_from_confirmation,
+    agentic_orchestrator_enabled,
+    append_next_action_block,
+    build_agentic_turn_state,
+    is_confirmation,
+    render_bound_action_summary,
 )
 
 
@@ -745,7 +760,9 @@ class _OpenAIBackend:
         key = api_key if api_key is not None else os.getenv("OPENAI_API_KEY", OPENAI_API_KEY)
         if not key:
             raise RuntimeError("OPENAI_API_KEY not set")
-        self.client = OpenAI(api_key=key, timeout=120.0)
+        timeout_s = float(os.getenv("OPENAI_TIMEOUT_S", "120"))
+        max_retries = int(os.getenv("OPENAI_MAX_RETRIES", "2"))
+        self.client = OpenAI(api_key=key, timeout=timeout_s, max_retries=max_retries)
         self.model  = model or os.getenv("OPENAI_MODEL", OPENAI_MODEL)
 
     def chat(
@@ -1961,6 +1978,12 @@ def _validate_required_tools(query: str, intent: str, tool_results: list[dict]) 
         return None
     executed = {str(tr.get("tool")) for tr in tool_results or []}
     if _ric_step_evidence_satisfied(query, intent, executed):
+        return None
+    if (
+        intent == "stock_brief"
+        and {"explain_intraday_setup", "get_intraday_levels"} & executed
+        and "setup" in (query or "").lower()
+    ):
         return None
 
     # ── Contextual follow-up: symbol resolved from prior turn context ─────
@@ -4345,6 +4368,9 @@ class Agent:
     _HISTORY_CHAR_BUDGET = 40_000
     # Hard cap: never keep more than 20 turns (40 messages) regardless of size
     _HISTORY_MAX_TURNS   = 20
+    # After this many turns in _history, compress the oldest half into a
+    # CompressedContext block that is injected into every subsequent LLM prompt.
+    _COMPRESSION_TRIGGER_TURNS = 10
     _OPENAI_TOOL_SCHEMA_LIMIT = 128
     _FALLBACK_TOOL_PRIORITY = (
         "resolve_symbol",
@@ -4379,12 +4405,27 @@ class Agent:
         self._history: list[dict] = []
         self._last_symbols: list[str] = []
         self._last_turn_context: TurnContext | None = None
+        # Parallel list of per-turn tool results (same length as _history // 2).
+        # Used by the compression pass to extract structured data without
+        # re-parsing the assistant text.
+        self._turn_tool_data: list[list[dict]] = []
+        # Cumulative compressed context produced when _history exceeds
+        # _COMPRESSION_TRIGGER_TURNS.  Injected into every LLM prompt.
+        self._compressed_context: CompressedContext | None = None
+        # Absolute turn counter (never resets within a session — used for
+        # CompressedContext.turn_range tracking).
+        self._total_turns: int = 0
         self._memory_session_id = os.environ.get("AGENT_ADDA_MEMORY_SESSION_ID", MEMORY_DEFAULT_SESSION_ID)
         self._memory_pg_enabled = os.environ.get("AGENT_ADDA_MEMORY_PG", "1").lower() not in {"0", "false", "no"}
         self._memory = (
             load_memory_fail_open(self._memory_session_id)
             if self._memory_pg_enabled
             else ConversationMemory(session_id=self._memory_session_id)
+        )
+        self._agentic_turn_state: AgenticTurnState | None = (
+            AgenticTurnState.from_dict(self._memory.agentic_state)
+            if getattr(self._memory, "agentic_state", None)
+            else None
         )
         # AA-CC-2: permission policy controls clarification asking,
         # tool execution (plan mode), and future approval gates.
@@ -4741,7 +4782,71 @@ class Agent:
         self._history = []
         self._last_symbols = []
         self._last_turn_context = None
+        self._agentic_turn_state = None
+        self._turn_tool_data = []
+        self._compressed_context = None
+        self._total_turns = 0
         self._memory = ConversationMemory(session_id=self._memory_session_id)
+
+    def _maybe_compress(self) -> None:
+        """Compress the oldest turns when the active window hits the trigger.
+
+        After _COMPRESSION_TRIGGER_TURNS (10) turns in _history the first 10
+        turn-pairs are extracted, passed to compress_turns() and merged into
+        _compressed_context.  The compressed pairs are then removed from
+        _history and _turn_tool_data so the active window stays lean.
+
+        Compression is transparent to all callers — the summary is injected
+        into _llm_query automatically.
+        """
+        n_turns = len(self._history) // 2          # current number of full pairs
+        if n_turns < self._COMPRESSION_TRIGGER_TURNS:
+            return
+
+        trigger = self._COMPRESSION_TRIGGER_TURNS  # 10
+        # Slice the oldest `trigger` pairs out of _history
+        pairs_msgs   = self._history[:trigger * 2]      # 20 messages
+        remain_msgs  = self._history[trigger * 2:]
+
+        # Build (user, assistant) tuples for the compressor
+        history_pairs: list[tuple[str, str]] = []
+        for i in range(0, len(pairs_msgs) - 1, 2):
+            u = str(pairs_msgs[i].get("content") or "")
+            a = str(pairs_msgs[i + 1].get("content") or "")
+            history_pairs.append((u, a))
+
+        # Matching tool data rows
+        tool_data = self._turn_tool_data[:trigger]
+        remain_tools = self._turn_tool_data[trigger:]
+
+        # Turn offset for accurate range tracking
+        turn_offset = self._total_turns - n_turns
+
+        logger.debug(
+            "Context compression: compressing turns %d–%d (%d pairs)",
+            turn_offset, turn_offset + trigger - 1, trigger,
+        )
+
+        try:
+            new_ctx = compress_turns(
+                history_pairs,
+                tool_data,
+                backend=self.backend,
+                turn_offset=turn_offset,
+            )
+            self._compressed_context = merge_compressed(self._compressed_context, new_ctx)
+            logger.debug(
+                "Compression complete — symbols=%s topics=%s",
+                self._compressed_context.symbols_analyzed,
+                self._compressed_context.topics_covered,
+            )
+        except Exception:
+            logger.warning("Context compression failed — history kept intact", exc_info=True)
+            return  # don't trim history if compression failed
+
+        # Trim active window
+        self._history = remain_msgs
+        self._turn_tool_data = remain_tools
 
     def _contextualize_pronouns(self, user_input: str) -> str:
         """Replace stock pronouns with the last resolved symbol for routing."""
@@ -4789,9 +4894,22 @@ class Agent:
         if turn_context is not None:
             self._last_turn_context = turn_context
 
+        if agentic_orchestrator_enabled() and (tool_results or turn_context is not None):
+            self._refresh_agentic_turn_state(
+                user_input=user_input,
+                intent=turn_context.intent if turn_context is not None else "llm_driven",
+                tool_results=tool_results,
+                answer=answer,
+            )
+
         if include_in_history:
             self._history.append({"role": "user", "content": user_input})
             self._history.append({"role": "assistant", "content": answer})
+            # Track tool results in parallel with history for compression
+            self._turn_tool_data.append(list(tool_results or []))
+            self._total_turns += 1
+            # Compress when the active window exceeds the trigger threshold
+            self._maybe_compress()
         memory_context = turn_context or self._last_turn_context
         if getattr(self, "_memory", None) is not None:
             try:
@@ -4801,6 +4919,51 @@ class Agent:
             except Exception:
                 # Memory persistence must never break the research answer path.
                 logger.debug("Memory persistence failed — answer unaffected", exc_info=True)
+
+    def _refresh_agentic_turn_state(
+        self,
+        *,
+        user_input: str,
+        intent: str,
+        tool_results: list[dict],
+        answer: str,
+    ) -> AgenticTurnState | None:
+        """Refresh compact agentic state from grounded tool evidence."""
+        if not agentic_orchestrator_enabled():
+            return None
+        try:
+            state = build_agentic_turn_state(
+                user_input=user_input,
+                intent=intent,
+                tool_results=tool_results,
+                answer=answer,
+                previous_state=self._agentic_turn_state,
+            )
+        except Exception:
+            logger.debug("Agentic state refresh failed", exc_info=True)
+            return None
+        if state is None:
+            return None
+        self._agentic_turn_state = state
+        if getattr(self, "_memory", None) is not None:
+            self._memory.agentic_state = state.to_dict()
+        return state
+
+    def _apply_agentic_next_action_block(
+        self,
+        answer: str,
+        user_input: str,
+        intent: str,
+        tool_results: list[dict],
+    ) -> str:
+        """Append a grounded next-action block for tool-backed turns."""
+        state = self._refresh_agentic_turn_state(
+            user_input=user_input,
+            intent=intent,
+            tool_results=tool_results,
+            answer=answer,
+        )
+        return append_next_action_block(answer, state)
 
     # ─── AA-UR-6: Unified router scaffolding ────────────────────────────────
     @property
@@ -4917,6 +5080,9 @@ class Agent:
         )
         answer_body = _apply_response_guardrails(
             clean_input, synthesis_intent, tool_results, answer_body,
+        )
+        answer_body = self._apply_agentic_next_action_block(
+            answer_body, clean_input, synthesis_intent, tool_results,
         )
         answer = answer_body + mode_suffix
         turn_context = build_turn_context(
@@ -5388,6 +5554,9 @@ class Agent:
                 answer_body = _apply_response_guardrails(
                     ctx.clean_input, synthesis_intent, tool_results, answer_body,
                 )
+                answer_body = self._apply_agentic_next_action_block(
+                    answer_body, ctx.clean_input, synthesis_intent, tool_results,
+                )
                 answer = answer_body + ctx.mode_suffix
                 turn_ctx = build_turn_context(
                     user_input=ctx.clean_input,
@@ -5418,6 +5587,94 @@ class Agent:
             # User typed something that is clearly not an option reply — clear state.
             self._pending_clarification = None
         return None
+
+    def _stage_agentic_bound_action(self, ctx: _PipelineCtx) -> dict | None:
+        """Execute a previously bound agentic follow-up before generic routing."""
+        if not agentic_orchestrator_enabled():
+            return None
+        action = (
+            action_from_confirmation(ctx.clean_input, self._agentic_turn_state)
+            or action_from_artifact_reference(ctx.clean_input, self._agentic_turn_state)
+        )
+        if action is None or not action.tool_plan:
+            if is_confirmation(ctx.clean_input):
+                answer = (
+                    "▶ FOLLOW-UP\n"
+                    "  I do not have a bound next action from the previous turn.\n"
+                    "  Ask the specific action directly, for example `deep dive these stocks`, "
+                    "`open the latest report`, or `email the report`."
+                    f"{ctx.mode_suffix}"
+                )
+                self._remember_interaction(
+                    ctx.clean_input,
+                    answer,
+                    [],
+                    include_in_history=False,
+                )
+                return {
+                    "answer": answer,
+                    "trace": ctx.trace + [{"step": "agentic_confirmation_without_bound_action"}],
+                    "backend": self.backend_name,
+                    "intent": "agentic_unbound_confirmation",
+                }
+            return None
+        ctx.trace.append({
+            "step": "agentic_bound_action",
+            "action": action.to_dict(),
+        })
+        if self._permission_policy.is_plan:
+            return self._render_plan_preview(
+                action.tool_plan,
+                intent="agentic_bound_action",
+                clean_input=ctx.clean_input,
+                mode_suffix=ctx.mode_suffix,
+                trace=ctx.trace,
+                extra_lines=[f"Bound action: {action.label}"],
+            )
+        tool_results = _execute_plan(action.tool_plan)
+        ctx.trace.extend(tool_results)
+        synthesis_intent = _synthesis_intent_from_plan(
+            action.tool_plan,
+            default="report_lookup" if action.artifact_targets else "stock_brief",
+        )
+        answer_body = render_bound_action_summary(action, tool_results)
+        if not answer_body:
+            answer_body = _synthesize_and_narrate(
+                synthesis_intent,
+                ctx.clean_input,
+                tool_results,
+                self.backend,
+            )
+        answer_body = _apply_response_guardrails(
+            ctx.clean_input,
+            synthesis_intent,
+            tool_results,
+            answer_body,
+        )
+        answer_body = self._apply_agentic_next_action_block(
+            answer_body, ctx.clean_input, synthesis_intent, tool_results,
+        )
+        answer = self._with_readiness_metadata(answer_body + ctx.mode_suffix, ctx.mode)
+        turn_context = build_turn_context(
+            user_input=ctx.clean_input,
+            intent="agentic_bound_action",
+            mode=ctx.mode,
+            source_label=ctx.source_label,
+            tool_results=tool_results,
+            answer=answer,
+        )
+        self._remember_interaction(
+            ctx.clean_input,
+            answer,
+            tool_results,
+            turn_context=turn_context,
+        )
+        return {
+            "answer": answer,
+            "trace": ctx.trace,
+            "backend": self.backend_name,
+            "intent": "agentic_bound_action",
+        }
 
     def _stage_unified_router(self, ctx: _PipelineCtx) -> dict | None:
         """Run UnifiedRouter and execute the route when the router owns it."""
@@ -5508,6 +5765,9 @@ class Agent:
         )
         answer_body = _apply_response_guardrails(
             ctx.clean_input, "entity_topic_command", tool_results, answer_body,
+        )
+        answer_body = self._apply_agentic_next_action_block(
+            answer_body, ctx.clean_input, "entity_topic_command", tool_results,
         )
         answer = self._with_readiness_metadata(answer_body + ctx.mode_suffix, ctx.mode)
         turn_context = build_turn_context(
@@ -5665,6 +5925,9 @@ class Agent:
             )
             answer_body = _apply_response_guardrails(
                 ctx.clean_input, synthesis_intent, tool_results, answer_body,
+            )
+            answer_body = self._apply_agentic_next_action_block(
+                answer_body, ctx.clean_input, synthesis_intent, tool_results,
             )
             answer = answer_body + ctx.mode_suffix
             turn_ctx = build_turn_context(
@@ -5829,6 +6092,9 @@ class Agent:
             answer_body = _apply_response_guardrails(
                 ctx.clean_input, synthesis_intent, tool_results, answer_body,
             )
+            answer_body = self._apply_agentic_next_action_block(
+                answer_body, ctx.clean_input, synthesis_intent, tool_results,
+            )
             answer = answer_body + ctx.mode_suffix
             turn_context = build_turn_context(
                 user_input=ctx.clean_input,
@@ -5947,6 +6213,9 @@ class Agent:
                 answer_body = attach_narrative(answer_body, narrative)
             except Exception:
                 logger.debug("skill store final narration failed — structured answer preserved", exc_info=True)
+            answer_body = self._apply_agentic_next_action_block(
+                answer_body, ctx.clean_input, "skill_store", [execution_trace],
+            )
             answer = answer_body + ctx.mode_suffix
             turn_context = build_turn_context(
                 user_input=ctx.clean_input,
@@ -6015,6 +6284,9 @@ class Agent:
             decision.intent,
             tool_results,
             answer_body,
+        )
+        answer_body = self._apply_agentic_next_action_block(
+            answer_body, ctx.clean_input, decision.intent, tool_results,
         )
         answer = self._with_readiness_metadata(answer_body + ctx.mode_suffix, ctx.mode)
         turn_context = build_turn_context(
@@ -6108,6 +6380,9 @@ class Agent:
                 intent_plan.get("assessment_plan"),
             )
             answer_body = _apply_response_guardrails(ctx.clean_input, _intent, tool_results, answer_body)
+            answer_body = self._apply_agentic_next_action_block(
+                answer_body, ctx.clean_input, _intent, tool_results,
+            )
             answer = self._with_readiness_metadata(answer_body + ctx.mode_suffix, ctx.mode)
             turn_context = build_turn_context(
                 user_input=ctx.clean_input,
@@ -6200,6 +6475,9 @@ class Agent:
         answer_body = _apply_response_guardrails(
             ctx.clean_input, intent_plan["intent"], tool_results, answer_body,
         )
+        answer_body = self._apply_agentic_next_action_block(
+            answer_body, ctx.clean_input, intent_plan["intent"], tool_results,
+        )
         answer = answer_body + ctx.mode_suffix
         answer = self._quality_check(
             ctx.raw_input, intent_plan["intent"], tool_results, answer, ctx.mode_suffix,
@@ -6244,6 +6522,7 @@ class Agent:
         ctx = self._build_pipeline_ctx(user_input, show_trace)
         return (
             self._stage_clarification_binding(ctx)
+            or self._stage_agentic_bound_action(ctx)
             or self._stage_unified_router(ctx)
             or self._stage_entity_topic(ctx, entity_assessment)
             or self._stage_situation_assessment(ctx)
@@ -6257,6 +6536,16 @@ class Agent:
         """Full LLM-powered agentic query loop with rolling conversation history."""
         system_content = (f"{mode_context}\n\n{SYSTEM_PROMPT}" if mode_context
                           else SYSTEM_PROMPT)
+
+        # Inject compressed prior-context block when available so the LLM
+        # knows about symbols, findings and verdicts from earlier turns even
+        # after those turns have been compressed out of the active window.
+        if self._compressed_context is not None:
+            system_content = (
+                system_content
+                + "\n\n"
+                + self._compressed_context.as_system_block()
+            )
 
         # Build messages: system + trimmed history + current user turn
         prior = self._trim_history()
