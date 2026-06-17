@@ -50,7 +50,9 @@ class CompressedContext:
     def as_system_block(self) -> str:
         """Compact system-prompt block for LLM injection."""
         lines = [
-            "╔══ COMPRESSED PRIOR CONTEXT ══╗",
+            "╔══════════════════════════════════════════════════════════════════╗",
+            "║           COMPRESSED PRIOR CONTEXT — USE THIS DATA               ║",
+            "╠══════════════════════════════════════════════════════════════════╣",
             f"  Turns compressed : {self.raw_turns}",
         ]
         if self.symbols_analyzed:
@@ -58,9 +60,10 @@ class CompressedContext:
         if self.topics_covered:
             lines.append(f"  Topics covered   : {'; '.join(self.topics_covered)}")
         if self.key_findings:
-            lines.append("  Key findings ─")
+            lines.append("")
+            lines.append("  ┌─ KEY FINDINGS (use these directly for synthesis) ───────────────┐")
             for sym, data in self.key_findings.items():
-                parts: list[str] = [f"    {sym}"]
+                parts: list[str] = [f"    {sym}:"]
                 if data.get("price"):
                     parts.append(f"price=₹{data['price']}")
                 if data.get("rsi") is not None:
@@ -69,15 +72,19 @@ class CompressedContext:
                     parts.append(f"PE={data['pe']}")
                 if data.get("verdict"):
                     parts.append(f"verdict={data['verdict']}")
-                if data.get("tools"):
-                    parts.append(f"tools=[{', '.join(list(data['tools'])[:5])}]")
                 lines.append("  " + "  ".join(parts))
+            lines.append("  └──────────────────────────────────────────────────────────────────┘")
         if self.summary:
             lines.append("")
-            lines.append("  Summary ─")
+            lines.append("  Summary:")
             for ln in self.summary.strip().splitlines():
-                lines.append(f"  {ln}")
-        lines.append("╚══ END COMPRESSED CONTEXT ══╝")
+                lines.append(f"    {ln}")
+        lines.append("")
+        lines.append("╔══════════════════════════════════════════════════════════════════╗")
+        lines.append("║  CRITICAL: For synthesis questions about these stocks (which     ║")
+        lines.append("║  has the best RSI, compare all, rank them, top pick), DO NOT     ║")
+        lines.append("║  call tools. Answer DIRECTLY from key_findings above.            ║")
+        lines.append("╚══════════════════════════════════════════════════════════════════╝")
         return "\n".join(lines)
 
 

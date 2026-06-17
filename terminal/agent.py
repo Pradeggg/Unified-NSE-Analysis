@@ -1874,7 +1874,7 @@ def _is_contextual_synthesis_query(query: str) -> bool:
 
     These queries don't name a new stock — they refer back to the current context
     ("based on the analysis", "what is your recommendation", "should I buy/sell",
-    "summarise", "what do you think", "give me a verdict", etc.).
+    "summarise", "compare all", "give me a summary", "which would you pick", etc.).
     The symbol is already known from prior turns; demanding a fresh resolve_symbol
     call is a false negative.
     """
@@ -1892,6 +1892,8 @@ def _is_contextual_synthesis_query(query: str) -> bool:
         "is it a sell",
         "give me a verdict",
         "give me a view",
+        "give me a summary",
+        "give me an overview",
         "what is the verdict",
         "summarize",
         "summarise",
@@ -1907,6 +1909,28 @@ def _is_contextual_synthesis_query(query: str) -> bool:
         "your view",
         "your take",
         "your opinion",
+        # cross-stock synthesis / comparison
+        "which would you pick",
+        "which one would you",
+        "which has the best",
+        "which is the best",
+        "compare all",
+        "compare the stocks",
+        "compare these stocks",
+        "rank them",
+        "rank these",
+        "which of these",
+        "all the stocks we",
+        "everything we covered",
+        "everything we analysed",
+        "everything we analyzed",
+        "all the above",
+        "all of the above",
+        "from the above",
+        "from all the",
+        "across all",
+        "best pick",
+        "top pick",
     )
     return any(signal in q for signal in synthesis_signals)
 
@@ -2052,7 +2076,17 @@ def _validate_symbol_grounding(
     query: str,
     intent: str,
     tool_results: list[dict],
+    compressed_symbols: list[str] | None = None,
 ) -> str | None:
+    # ── Synthesis query over compressed context ───────────────────────────────
+    # When the query is a synthesis question (compare, rank, which is best) and
+    # compressed_symbols were provided OR the query contains an injected
+    # [CONTEXT: prior stocks analysed = ...] suffix, those symbols are already
+    # in the LLM system prompt — the LLM synthesises from that data without
+    # needing fresh tool calls. Skip the symbol grounding check entirely.
+    has_injected_context = "[CONTEXT: prior stocks analysed" in query
+    if (compressed_symbols or has_injected_context) and _is_contextual_synthesis_query(query):
+        return None
     stock_360_symbol = _stock_360_prompt_symbol(query)
     requested = [stock_360_symbol] if stock_360_symbol else _explicit_requested_symbols(query)
     if not requested:
@@ -2154,11 +2188,12 @@ def _apply_response_guardrails(
     intent: str,
     tool_results: list[dict],
     answer: str,
+    compressed_symbols: list[str] | None = None,
 ) -> str:
     required_failure = _validate_required_tools(query, intent, tool_results)
     if required_failure:
         return required_failure
-    symbol_failure = _validate_symbol_grounding(query, intent, tool_results)
+    symbol_failure = _validate_symbol_grounding(query, intent, tool_results, compressed_symbols)
     if symbol_failure:
         return symbol_failure
     return _append_missing_evidence_guard(answer, tool_results)
@@ -5406,6 +5441,22 @@ class Agent:
                 mode = "intraday"
 
         clean_input = self._contextualize_pronouns(clean_input)
+
+        # ── Compressed-context symbol injection ──────────────────────────────
+        # When the query is a cross-stock synthesis ("which has the best RSI",
+        # "compare all the stocks we covered") and compressed context holds
+        # symbols from prior turns, append them as an explicit hint so the LLM
+        # can map them directly without calling resolve_symbol on vague phrases.
+        if (
+            self._compressed_context is not None
+            and self._compressed_context.symbols_analyzed
+            and _is_contextual_synthesis_query(clean_input)
+        ):
+            syms = ", ".join(self._compressed_context.symbols_analyzed)
+            clean_input = (
+                f"{clean_input} "
+                f"[CONTEXT: prior stocks analysed = {syms}]"
+            )
         market_context = market_context_for_agent()
         mode_context = (
             f"Data mode: {mode}. "
@@ -6522,6 +6573,7 @@ class Agent:
         ctx = self._build_pipeline_ctx(user_input, show_trace)
         return (
             self._stage_clarification_binding(ctx)
+            or self._stage_compressed_context_synthesis(ctx)
             or self._stage_agentic_bound_action(ctx)
             or self._stage_unified_router(ctx)
             or self._stage_entity_topic(ctx, entity_assessment)
@@ -6530,6 +6582,72 @@ class Agent:
             or self._stage_semantic_intent(ctx)
             or self._stage_keyword_and_llm(ctx)
         )
+
+    def _stage_compressed_context_synthesis(self, ctx: _PipelineCtx) -> dict | None:
+        """Handle synthesis queries over compressed context with NO tool calls.
+
+        When the user asks a synthesis question ("which has the best RSI",
+        "compare all stocks", "rank them") AND we have compressed context with
+        key_findings, route directly to an LLM call with tools=None. This
+        forces the LLM to answer from the compressed data rather than calling
+        tools that would only fetch partial fresh data.
+        """
+        if self._compressed_context is None:
+            return None
+        if not self._compressed_context.key_findings:
+            return None
+        if not _is_contextual_synthesis_query(ctx.clean_input):
+            return None
+
+        ctx.trace.append({
+            "step": "compressed_context_synthesis",
+            "symbols": self._compressed_context.symbols_analyzed,
+            "findings_count": len(self._compressed_context.key_findings),
+        })
+
+        # Build system prompt with compressed context
+        system_content = (
+            f"{ctx.mode_context}\n\n{SYSTEM_PROMPT}\n\n"
+            + self._compressed_context.as_system_block()
+        )
+
+        # Strip the [CONTEXT: ...] suffix from clean_input for cleaner prompt
+        user_msg = ctx.clean_input
+        if "[CONTEXT: prior stocks analysed" in user_msg:
+            user_msg = user_msg.split("[CONTEXT:")[0].strip()
+
+        messages = [
+            {"role": "system", "content": system_content},
+            *self._trim_history(),
+            {"role": "user", "content": user_msg},
+        ]
+
+        # Call LLM with NO tools — force synthesis from context
+        resp = self.backend.chat(messages, tools=None)
+        answer = resp.get("content") or ""
+
+        if "research and learning only" not in answer[-400:]:
+            answer += "\n\n━━━ Not investment advice. For research and learning only. ━━━"
+
+        answer = self._with_readiness_metadata(answer + ctx.mode_suffix, ctx.mode)
+
+        turn_context = build_turn_context(
+            user_input=ctx.clean_input,
+            intent="compressed_context_synthesis",
+            mode=ctx.mode,
+            source_label=ctx.source_label,
+            tool_results=[],
+            answer=answer,
+        )
+        self._remember_interaction(ctx.clean_input, answer, [], turn_context=turn_context)
+
+        return {
+            "answer": answer,
+            "trace": ctx.trace,
+            "backend": self.backend_name,
+            "intent": "compressed_context_synthesis",
+            "usage": resp.get("usage") or {},
+        }
 
     def _llm_query(self, user_input: str, show_trace: bool,
                    mode_context: str = "") -> dict:
@@ -6613,7 +6731,12 @@ class Agent:
                 # Only append disclaimer if LLM didn't include it (check last 400 chars)
                 if "research and learning only" not in answer[-400:]:
                     answer += "\n\n━━━ Not investment advice. For research and learning only. ━━━"
-                answer = _apply_response_guardrails(user_input, "llm_driven", tool_results, answer)
+                compressed_syms = (
+                    self._compressed_context.symbols_analyzed
+                    if self._compressed_context is not None
+                    else None
+                )
+                answer = _apply_response_guardrails(user_input, "llm_driven", tool_results, answer, compressed_syms)
 
                 # ── Persist compact conversation and resolved entity state ──
                 self._remember_interaction(user_input, answer, tool_results)
@@ -6660,7 +6783,12 @@ class Agent:
 
         # If we exhausted rounds without a text response, synthesize from tool results
         answer = _synthesize_and_narrate("stock_brief", user_input, tool_results, self.backend)
-        answer = _apply_response_guardrails(user_input, "llm_driven_fallback", tool_results, answer)
+        compressed_syms = (
+            self._compressed_context.symbols_analyzed
+            if self._compressed_context is not None
+            else None
+        )
+        answer = _apply_response_guardrails(user_input, "llm_driven_fallback", tool_results, answer, compressed_syms)
         # Still save the turn so context is preserved
         self._remember_interaction(user_input, answer, tool_results)
         _has_trail = "_Mode:" in answer or "Mode: " in answer[-300:]
