@@ -354,6 +354,8 @@ Slash commands:
 - `/monitor stop mtf_retest`
 - `/monitor status`
 - `/mtf-retest scan`
+- `/mtf-retest dashboard`
+- `/mtf-retest dash`
 - `/mtf-retest candidates`
 - `/mtf-retest active`
 - `/mtf-retest history SYMBOL`
@@ -378,6 +380,103 @@ Terminal output should distinguish:
 - Closed or invalidated candidates.
 
 Every response should include evidence freshness and source trail.
+
+## Dashboard UX
+
+The tracker should expose a dedicated terminal dashboard similar to `/dashboard`, but focused on the breakout-retest lifecycle rather than broad market tape.
+
+Commands:
+
+- `/mtf-retest dashboard`
+- `/mtf-retest dash`
+- `/mtf-retest dashboard --once`
+- `/mtf-retest dashboard --html`
+- `/mtf-retest dashboard --open`
+- `/mtf-retest dashboard --symbols TRENT,DIXON,HDFCBANK`
+- `/mtf-retest dashboard --drilldown`
+
+The dashboard should use the same operating model as the current market dashboard:
+
+- Live Rich terminal renderable.
+- `--once` for a single terminal snapshot.
+- `--html` to write a dashboard HTML file under `reports/dashboards`.
+- `--open` to write and open the HTML dashboard.
+- Auto-refresh while running interactively.
+- Clear source/freshness panel.
+- Compact fallback layout for small terminal windows.
+
+Terminal layout:
+
+```text
+MTF Breakout-Retest Command Center
+
+LIVE TAPE
+  Market bias · F&O universe · scan refresh · active alerts
+
+STATE FUNNEL
+  Watch → About to Breakout → Breakout → Retest Pending → Retest Hold → Trade Ready → Open → Closed
+
+TRADE-READY SETUPS
+  Symbol · State · Score · Entry · Stop · Target · R:R · Option plan · Max loss
+
+ABOUT TO BREAKOUT
+  Symbol · Distance to breakout · 15m/60m alignment · volume pressure · resistance
+
+BREAKOUT / RETEST PENDING
+  Symbol · Breakout level · breakout time · retest zone · invalidation
+
+OPEN / ACTIVE TRACKING
+  Symbol · entry · CMP · stop · target · status · alert state
+
+F&O CONTROL
+  Symbol · PCR · max pain · basis · option liquidity · sizing confidence
+
+ALERT LOG
+  Latest state changes · email draft status · dedupe state
+```
+
+Dashboard snapshot contract:
+
+- `fetched_at`
+- `market_status`
+- `universe`
+- `state_counts`
+- `state_funnel`
+- `trade_ready`
+- `about_to_breakout`
+- `breakout_retest_pending`
+- `open_positions`
+- `fno_control`
+- `alert_log`
+- `source_chain`
+- `degraded`
+- `errors`
+
+Visual encodings:
+
+- State funnel as a compact horizontal count strip.
+- Trade-ready rows sorted by score and R:R.
+- About-to-breakout rows sorted by distance to breakout level.
+- Risk flags shown as short chips.
+- Alert state shown as `drafted`, `suppressed_duplicate`, `pending`, or `error`.
+- Stale or partial evidence shown in yellow rather than hidden.
+
+HTML dashboard:
+
+- Use the current `/dashboard` HTML style as the baseline.
+- Include panels for state funnel, trade-ready setups, pending setups, F&O control, active tracking, alert log, and source/freshness audit.
+- Use clickable details blocks for each symbol.
+- Keep essential numbers visible without hover.
+- Support mobile by stacking panels in lifecycle order.
+
+Implementation functions should mirror the existing dashboard shape:
+
+- `fetch_mtf_retest_dashboard_snapshot(...)`
+- `_mtf_retest_dashboard_renderable(snapshot, width=None, height=None, drilldown=False)`
+- `_render_mtf_retest_dashboard_html(snapshot, drilldown=False)`
+- `_write_mtf_retest_dashboard_html(snapshot, drilldown=False, open_browser=False)`
+- `_run_mtf_retest_dashboard_live(...)`
+- `_parse_mtf_retest_dashboard_command(text)`
 
 ## Reports And Paper Trading
 
@@ -420,6 +519,9 @@ Agent tests:
 - Slash commands route to the tracker.
 - Natural-language prompts produce tracker intent and not generic intraday output.
 - Renderer includes levels, state, F&O, sizing, risk flags, and source trail.
+- Dashboard command parser handles `--once`, `--html`, `--open`, `--symbols`, and `--drilldown`.
+- Dashboard terminal renderable includes state funnel, trade-ready setups, F&O control, and alert log.
+- Dashboard HTML includes lifecycle panels, symbol drilldowns, and source/freshness audit.
 
 Interactive tests:
 
@@ -427,24 +529,26 @@ Interactive tests:
 - Scan a small symbol list.
 - Verify state transitions across synthetic snapshots.
 - Verify email draft generation is suppressed for duplicate state.
+- Run `/mtf-retest dashboard --once` after a synthetic scan and verify the terminal output is coherent.
+- Run `/mtf-retest dashboard --html` and verify the generated report opens with lifecycle panels.
 
 ## Rollout Plan
 
 Phase 1:
 
 - Build deterministic detector, state model, PostgreSQL persistence, and renderer.
-- Provide scan and candidates commands.
+- Provide scan, candidates, and dashboard `--once` commands.
 - No background monitor yet.
 
 Phase 2:
 
 - Add monitor worker integration.
 - Add email draft generation and dedupe.
-- Add manual close and active/history commands.
+- Add manual close, active/history commands, and live dashboard refresh.
 
 Phase 3:
 
-- Add report output.
+- Add full HTML dashboard/report output.
 - Add optional paper-trading consumer.
 - Add strategy quality analytics from historical intraday bars.
 
