@@ -40,6 +40,16 @@ test("GET /api/symbols/search returns results for RELIANCE", async ({ request })
   expect(body.results[0].symbol).toBeTruthy();
 });
 
+test("GET /api/symbols/universe returns broad plugin symbol universe", async ({ request }) => {
+  const res = await request.get("/api/symbols/universe?limit=1500");
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  const symbols = body.results.map((row: { symbol: string }) => row.symbol);
+  expect(symbols.length).toBeGreaterThan(200);
+  expect(symbols).toContain("CDSL");
+  expect(symbols).toContain("SWIGGY");
+});
+
 // ── Chart OHLCV ───────────────────────────────────────────────────────────────
 
 test("GET /api/chart/ohlcv returns bars for BANKNIFTY 5m", async ({ request }) => {

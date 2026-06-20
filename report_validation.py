@@ -133,6 +133,14 @@ REPORT_SPECS: dict[str, ReportSpec] = {
         required_terms=("Top Investment Picks", "Executive Summary", "Pick Summary", "vcp+sector"),
         fix_command=(PYTHON, "top_picks_report.py"),
     ),
+    "eod_market": ReportSpec(
+        key="eod_market",
+        title="EOD Market Report",
+        paths=(LATEST_DIR / "eod_market_report.html",),
+        min_bytes=25_000,
+        required_terms=("EOD Market Report", "Market Desk Commentary", "Hour-By-Hour Tape", "Sector Breadth", "Coverage note"),
+        fix_command=(PYTHON, "scripts/build_eod_market_report.py", "--no-open"),
+    ),
     "portfolio_eod": ReportSpec(
         key="portfolio_eod",
         title="My Portfolio EOD",
@@ -148,7 +156,8 @@ CHECKPOINT_REPORTS: dict[str, tuple[str, ...]] = {
     "sector_rotation": ("portfolio_strategy_lab", "sector_rotation"),
     "stage2_tracker": ("portfolio_strategy_lab", "sector_rotation", "stage2_tracker"),
     "top_picks": ("portfolio_strategy_lab", "sector_rotation", "stage2_tracker", "top_picks"),
-    "portfolio_eod": ("portfolio_strategy_lab", "sector_rotation", "stage2_tracker", "top_picks", "portfolio_eod"),
+    "eod_market": ("portfolio_strategy_lab", "sector_rotation", "stage2_tracker", "top_picks", "eod_market"),
+    "portfolio_eod": ("portfolio_strategy_lab", "sector_rotation", "stage2_tracker", "top_picks", "eod_market", "portfolio_eod"),
     "final": tuple(REPORT_SPECS),
 }
 

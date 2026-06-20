@@ -125,6 +125,26 @@ async function getActivePageMetadata(): Promise<StoredPageMetadata | null> {
   return cached[0] ?? null;
 }
 
+async function refreshActivePageMetadata(): Promise<StoredPageMetadata | null> {
+  const tab = await getActivePageTab();
+  if (tab?.id != null) {
+    try {
+      await chrome.tabs.sendMessage(tab.id, { type: "REQUEST_METADATA" });
+      await new Promise((resolve) => setTimeout(resolve, 180));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (isMissingReceiverError(message)) {
+        const injected = await injectContentScript(tab.id);
+        if (injected.ok) {
+          await chrome.tabs.sendMessage(tab.id, { type: "REQUEST_METADATA" }).catch(() => {});
+          await new Promise((resolve) => setTimeout(resolve, 180));
+        }
+      }
+    }
+  }
+  return getActivePageMetadata();
+}
+
 async function selectCaptureArea(): Promise<SelectCaptureAreaResponse> {
   const tab = await getActivePageTab();
   if (!tab?.id) {
@@ -263,7 +283,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === "GET_ACTIVE_METADATA") {
-    getActivePageMetadata()
+    refreshActivePageMetadata()
       .then((metadata) => {
         sendResponse({
           type: "ACTIVE_METADATA",

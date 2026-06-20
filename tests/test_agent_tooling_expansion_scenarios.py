@@ -106,7 +106,12 @@ def test_scenario_latest_results_routes_to_composite_tool():
     routed = _keyword_intent("latest results for DMART")
 
     assert routed["intent"] == "stock_results"
-    assert routed["plan"] == [("resolve_symbol", {"query": "DMART"}), ("get_latest_results", {"symbol": "DMART"})]
+    assert routed["plan"] == [
+        ("resolve_symbol", {"query": "DMART"}),
+        ("get_cached_financials", {"symbol": "DMART"}),
+        ("scrape_screener_in", {"symbol": "DMART"}),
+        ("get_latest_results", {"symbol": "DMART"}),
+    ]
 
 
 def test_scenario_forensic_prompt_requires_forensic_tool():

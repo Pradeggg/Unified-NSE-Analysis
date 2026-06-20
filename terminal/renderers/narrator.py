@@ -130,6 +130,8 @@ Rules:
   5. "▶ MARKET VERDICT"             — 1–2 sentence actionable takeaway for the trader
 - Do NOT use stock-analysis section headers (FINANCIAL PERFORMANCE, etc.).
 - Do NOT include SOURCE TRAIL or investment-advice disclaimers.
+- Do NOT use placeholder values such as XX, X,XXX, TBD, or unknown-looking
+  template text. If exact evidence is unavailable, say it is unavailable.
 - Do NOT repeat every number in the table — pick the 3–5 most relevant facts.
 - Be specific: name the sectors/indices with their % change.
 - Keep total answer under 300 words.
@@ -182,6 +184,22 @@ def _strip_forbidden_final_sections(content: str) -> str:
         if idx != -1:
             text = text[:idx].strip()
     return text
+
+
+_UNRESOLVED_PLACEHOLDER_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"\bX{2,}\b", re.IGNORECASE),
+    re.compile(r"\bX,XXX\b", re.IGNORECASE),
+    re.compile(r"\bTBD\b", re.IGNORECASE),
+    re.compile(r"\b<[^>\n]+>\b"),
+    re.compile(r"\[[^\]\n]*(?:insert|value|number|price|metric)[^\]\n]*\]", re.IGNORECASE),
+)
+
+
+def _contains_unresolved_placeholders(content: str) -> bool:
+    text = content or ""
+    if not text.strip():
+        return False
+    return any(pattern.search(text) for pattern in _UNRESOLVED_PLACEHOLDER_PATTERNS)
 
 
 _FINAL_SECTION_LABELS = {
@@ -342,6 +360,9 @@ def build_market_final_answer(
     try:
         resp = backend.chat(messages, tools=[], max_tokens=_MAX_FINAL_ANSWER_TOKENS)
         content = _strip_forbidden_final_sections((resp or {}).get("content") or "")
+        if _contains_unresolved_placeholders(content):
+            logger.debug("Market final answer discarded due to unresolved placeholders")
+            return ""
         return _normalize_final_answer_format(content)
     except Exception as exc:
         logger.debug("Market final answer LLM synthesis failed: %s", exc)
@@ -400,6 +421,9 @@ def build_final_answer(
     try:
         resp = backend.chat(messages, tools=[], max_tokens=_MAX_FINAL_ANSWER_TOKENS)
         content = _strip_forbidden_final_sections((resp or {}).get("content") or "")
+        if _contains_unresolved_placeholders(content):
+            logger.debug("Final answer discarded due to unresolved placeholders")
+            return ""
         return _normalize_final_answer_format(content)
     except Exception as exc:
         logger.debug("Final answer LLM synthesis failed: %s", exc)

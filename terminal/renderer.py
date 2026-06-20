@@ -891,24 +891,41 @@ def _is_placeholder_metric(metric: dict) -> bool:
     value = str((metric or {}).get("value") or "").strip()
     if not value:
         return True
+    if value.lower() in {"none", "null", "nan", "n/a", "na", "unknown", "unavailable"}:
+        return True
+    if re.search(r"\b(?:none|null|nan|n/a|unknown|unavailable)\b", value, flags=re.IGNORECASE):
+        return True
     compact = re.sub(r"[\s,._-]+", "", value).upper()
-    return bool(re.fullmatch(r"(?:₹|RS\.?|INR|\$)?[WXYZABC]", compact))
+    if bool(re.fullmatch(r"(?:₹|RS\.?|INR|\$)?[WXYZABC]+", compact)):
+        return True
+    return bool(re.search(r"\b(?:XX+|X,XXX|TBD)\b", value, flags=re.IGNORECASE))
 
 
 def _has_placeholder_text(text: str) -> bool:
-    compact = re.sub(r"[\s,._-]+", "", text or "").upper()
-    return bool(re.search(r"(?:₹|RS\.?|INR|\$)?[WXYZABC](?:CRORES?|CR|BN|M|LAKH|L)?\b", compact))
+    raw = text or ""
+    if re.search(r"\b(?:none|null|nan|n/a|unknown|unavailable)\b", raw, flags=re.IGNORECASE):
+        return True
+    if re.search(r"\b(?:XX+|X,XXX|TBD)\b", raw, flags=re.IGNORECASE):
+        return True
+    compact = re.sub(r"[\s,._-]+", "", raw).upper()
+    return bool(re.search(r"(?:₹|RS\.?|INR|\$)?[WXYZABC]+(?:CRORES?|CR|BN|M|LAKH|L)?\b", compact))
 
 
 def sanitize_render_plan(plan: dict, answer: str, trace: list[dict]) -> dict:
     """Apply deterministic safety guards after the optional LLM render planner."""
     guarded = dict(_SENTINEL_PLAN) | dict(plan or {})
+    original_metrics = [
+        metric for metric in (guarded.get("key_metrics") or []) if isinstance(metric, dict)
+    ]
     guarded["key_metrics"] = [
         metric
-        for metric in (guarded.get("key_metrics") or [])
-        if isinstance(metric, dict) and not _is_placeholder_metric(metric)
+        for metric in original_metrics
+        if not _is_placeholder_metric(metric)
     ]
+    removed_all_metrics = bool(original_metrics) and not guarded["key_metrics"]
     if _has_placeholder_text(guarded.get("summary_line") or ""):
+        guarded["summary_line"] = ""
+    if removed_all_metrics:
         guarded["summary_line"] = ""
     if guarded.get("show_summary_strip") and not guarded.get("summary_line") and not guarded.get("key_metrics"):
         guarded["show_summary_strip"] = False

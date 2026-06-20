@@ -2,7 +2,14 @@ import os
 import unittest
 from unittest.mock import patch
 
-from terminal.agent import Agent, SYSTEM_PROMPT, _keyword_intent, _required_tools_for_query, _split_compound_query
+from terminal.agent import (
+    Agent,
+    SYSTEM_PROMPT,
+    _keyword_intent,
+    _required_tools_for_query,
+    _split_compound_query,
+    _synthesis_intent_from_plan,
+)
 from terminal.renderers.narrator import NARRATION_INTENTS
 from terminal.situation_assessment import TurnContext
 from terminal.tools import compare_stocks
@@ -1439,6 +1446,58 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertIn(("explain_intraday_setup", {"symbol": "M&M", "timeframe": "15m"}), routed["plan"])
         self.assertNotIn("M&MFIN", str(routed["plan"]))
 
+    def test_intraday_option_trading_bank_name_routes_to_options_trade_plan(self):
+        routed = _keyword_intent("intraday analysis option trading INDUSIND BANK", data_mode="intraday")
+
+        self.assertEqual(routed["intent"], "intraday_options_trade_plan")
+        self.assertIn(("resolve_symbol", {"query": "INDUSINDBK"}), routed["plan"])
+        self.assertIn(("get_nse_intraday_snapshot", {"symbol": "INDUSINDBK"}), routed["plan"])
+        self.assertIn(("get_intraday_levels", {"symbol": "INDUSINDBK", "timeframe": "15m"}), routed["plan"])
+        self.assertIn(("get_fno_overview", {"symbol": "INDUSINDBK", "expiry_index": 0}), routed["plan"])
+        self.assertIn(("get_options_chain", {"symbol": "INDUSINDBK", "expiry_index": 0}), routed["plan"])
+        self.assertIn(("get_intraday_analysis", {"symbol": "INDUSINDBK", "interval": "15m"}), routed["plan"])
+        self.assertNotIn("INDUSIND BANK", str(routed["plan"]))
+
+        axis = _keyword_intent(
+            "is AXIS BANK good for options now support resistance stop loss target",
+            data_mode="intraday",
+        )
+        self.assertEqual(axis["intent"], "intraday_options_trade_plan")
+        self.assertIn(("resolve_symbol", {"query": "AXISBANK"}), axis["plan"])
+        self.assertIn(("get_options_chain", {"symbol": "AXISBANK", "expiry_index": 0}), axis["plan"])
+
+    def test_agent_backend_path_uses_intraday_options_trade_plan_before_llm(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {"tool": "resolve_symbol", "args": {"query": "INDUSINDBK"}, "result": {"symbol": "INDUSINDBK"}},
+                {"tool": "get_nse_intraday_snapshot", "args": {"symbol": "INDUSINDBK"}, "result": {"symbol": "INDUSINDBK", "last_price": 931.35}},
+                {"tool": "get_intraday_levels", "args": {"symbol": "INDUSINDBK", "timeframe": "15m"}, "result": {"symbol": "INDUSINDBK", "supports": [928.97], "resistances": [931.85], "pivot": 929.73}},
+                {"tool": "get_fno_overview", "args": {"symbol": "INDUSINDBK", "expiry_index": 0}, "result": {"symbol": "INDUSINDBK", "pcr": 0.91, "max_pain": 930.0}},
+                {"tool": "get_options_chain", "args": {"symbol": "INDUSINDBK", "expiry_index": 0}, "result": {"symbol": "INDUSINDBK", "pcr": 0.91, "max_pain": 930.0}},
+                {"tool": "explain_intraday_setup", "args": {"symbol": "INDUSINDBK", "timeframe": "15m"}, "result": {"symbol": "INDUSINDBK", "setup_label": "LONG_SETUP"}},
+                {"tool": "get_intraday_analysis", "args": {"symbol": "INDUSINDBK", "interval": "15m"}, "result": {"symbol": "INDUSINDBK"}},
+            ]
+
+            result = agent.query("intraday analysis option trading INDUSIND BANK")
+
+        self.assertEqual(result["intent"], "intraday_options_trade_plan")
+        self.assertIn("▶ CE SETUP", result["answer"])
+        execute_plan.assert_called_once()
+
+    def test_mtf_detector_defers_when_options_trade_plan_requested(self):
+        from nse_agent import _detect_mtf_intent_scored
+
+        rewrite, confidence = _detect_mtf_intent_scored(
+            "latest on INDUSINDBK intraday multi timeframe analysis options F&O buildup support resistance target stop loss"
+        )
+
+        self.assertIsNone(rewrite)
+        self.assertIsNone(confidence)
+
     def test_live_stock_fno_intraday_answer_renders_both_derivatives_and_setup(self):
         agent = Agent()
         agent.backend = object()
@@ -2080,6 +2139,19 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         )
         self.assertTrue(set(required).issubset({name for name, _args in routed["plan"]}))
 
+    def test_report_plus_results_analysis_plan_prefers_stock_results_synthesis(self):
+        plan = [
+            ("read_report", {"path": "/tmp/AEROENTER_research.html", "max_chars": 12000}),
+            ("get_latest_results", {"symbol": "AEROENTER"}),
+        ]
+
+        intent = _synthesis_intent_from_plan(
+            plan,
+            query="analyze this report and perform a deep analysis of the quarterly results",
+        )
+
+        self.assertEqual(intent, "stock_results")
+
     def test_larsen_and_toubro_deep_analysis_routes_to_lt_not_larsen(self):
         from terminal.agent import _keyword_intent
 
@@ -2579,6 +2651,36 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         for query, tool_results in cases:
             with self.subTest(query=query):
                 self.assertIsNone(_validate_required_tools(query, "stock_brief", tool_results))
+
+    def test_required_tool_validator_allows_setup_review_backed_by_intraday_setup(self):
+        from terminal.agent import _validate_required_tools
+
+        query = "Review short setups"
+        tool_results = [
+            {
+                "tool": "explain_intraday_setup",
+                "args": {"symbol": "EXIDEIND", "timeframe": "15m"},
+                "result": {"symbol": "EXIDEIND", "timeframe": "15m", "setup_label": "SHORT_SETUP"},
+            },
+            {
+                "tool": "explain_intraday_setup",
+                "args": {"symbol": "SBICARD", "timeframe": "15m"},
+                "result": {"symbol": "SBICARD", "timeframe": "15m", "setup_label": "SHORT_SETUP"},
+            },
+        ]
+
+        self.assertIsNone(_validate_required_tools(query, "stock_brief", tool_results))
+        self.assertIsNone(_validate_required_tools(
+            query,
+            "stock_brief",
+            [
+                {
+                    "tool": "get_intraday_levels",
+                    "args": {"symbol": "EXIDEIND"},
+                    "result": {"symbol": "EXIDEIND", "supports": [100], "resistances": [110]},
+                }
+            ],
+        ))
 
 
 class UnifiedRouterAgentWiringTests(unittest.TestCase):

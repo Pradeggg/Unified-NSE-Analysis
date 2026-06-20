@@ -42,6 +42,7 @@ from .situation_assessment import (
     assess_entity_topic_request,
     assess_followup,
     build_turn_context,
+    is_index_context_followup,
     needs_situation_assessment,
     render_assessment_block,
     render_context_answer,
@@ -989,6 +990,10 @@ _INDEX_NAME_PATTERNS: tuple[tuple[str, str], ...] = (
     ("NIFTY MIDCAP 150", "NIFTY MIDCAP 150"),
     ("NIFTY MIDCAP 100", "NIFTY MIDCAP 100"),
     ("NIFTY MIDCAP 50", "NIFTY MIDCAP 50"),
+    ("NIFTY MIDCAP SELECT", "NIFTY MIDCAP SELECT"),
+    ("NIFTY MIDCAP", "NIFTY MIDCAP SELECT"),
+    ("MIDCAP NIFTY", "NIFTY MIDCAP SELECT"),
+    ("MIDCPNIFTY", "NIFTY MIDCAP SELECT"),
     ("NIFTY NEXT 50", "NIFTY NEXT 50"),
     ("NIFTY MICROCAP 250", "NIFTY MICROCAP 250"),
     ("NIFTY FINANCIAL SERVICES EX-BANK", "NIFTY FINSEREXBNK"),
@@ -1434,6 +1439,7 @@ _INTENT_SOURCE_LABEL_OVERRIDES: dict[str, str] = {
     "market_swing_candidates":     "EOD index snapshots + DB breadth + quality breakout screener",
     "market_dashboard":           "dashboard planner + NSE live API + DB breadth + FII/DII + global context",
     "intraday_market_recap":      "NSE live API + PG intraday.quote_snapshots + DB breadth",
+    "intraday_options_trade_plan": "PG intraday levels + NSE live snapshot + NSE options/F&O evidence",
     "fno_overview":               "NSE options/futures API + F&O EOD fallback",
     "long_term_growth_research":  "NSE live index constituents + DB growth scores + screener.in",
 }
@@ -1444,6 +1450,7 @@ _INTENT_SOURCE_LABEL_OVERRIDES: dict[str, str] = {
 _INTENT_MODE_LABEL_OVERRIDES: dict[str, str] = {
     "market_dashboard":          "Intraday",
     "intraday_market_recap":     "Intraday",
+    "intraday_options_trade_plan": "Intraday",
     "fno_overview":              "Intraday",
     "long_term_growth_research": "Research",
 }
@@ -1458,6 +1465,7 @@ _REQUIRED_TOOLS_BY_INTENT: dict[str, tuple[str, ...]] = {
     "intraday_symbol_scan": ("scan_symbols_intraday",),
     "intraday_setup": ("explain_intraday_setup", "get_nse_intraday_snapshot"),
     "intraday_levels": ("get_intraday_levels", "get_nse_intraday_snapshot"),
+    "intraday_options_trade_plan": ("get_intraday_levels", "get_options_chain", "get_nse_intraday_snapshot"),
     "fno_overview": ("get_fno_overview",),
     "visual_scan": ("run_visual_scan",),
     "stock_comparison": ("compare_stocks",),
@@ -1533,6 +1541,7 @@ _REPORT_LOOKUP_TOOLS: frozenset[str] = frozenset({
 def _synthesis_intent_from_plan(
     tool_plan: list[tuple[str, dict]] | tuple,
     default: str = "intraday_symbol_scan",
+    query: str = "",
 ) -> str:
     """PG-SYNTH-INTENT: derive a synthesis_intent from the executed plan.
 
@@ -1545,6 +1554,27 @@ def _synthesis_intent_from_plan(
     if not tool_plan:
         return default
     names = [name for name, _ in tool_plan]
+    q = (query or "").lower()
+    wants_results_analysis = (
+        "get_latest_results" in names
+        and any(
+            term in q
+            for term in (
+                "analyze",
+                "analysis",
+                "deep dive",
+                "deep analysis",
+                "quarterly result",
+                "quarterly results",
+                "latest results",
+                "results analysis",
+                "earnings analysis",
+                "financial results",
+            )
+        )
+    )
+    if wants_results_analysis:
+        return "stock_results"
     if any(n in _REPORT_LOOKUP_TOOLS for n in names):
         return "report_lookup"
     for name in names:
@@ -1931,6 +1961,23 @@ def _is_contextual_synthesis_query(query: str) -> bool:
         "across all",
         "best pick",
         "top pick",
+        # contextual follow-up signals (referencing prior context)
+        "deep dive",
+        "dive into",
+        "more on this",
+        "more about this",
+        "tell me more",
+        "latest results",
+        "the results",
+        "its results",
+        "their results",
+        "can we look",
+        "can you look",
+        "let's look",
+        "on this",
+        "into this",
+        "about this",
+        "for this",
     )
     return any(signal in q for signal in synthesis_signals)
 
@@ -1952,6 +1999,8 @@ def _context_symbol_resolved(tool_results: list[dict]) -> bool:
         "get_nse_intraday_snapshot",
         "get_cached_financials",
         "scrape_screener_in",
+        "get_latest_results",
+        "search_nse_announcements",
     }
     for tr in tool_results or []:
         if tr.get("tool") not in context_evidence_tools:
@@ -2589,6 +2638,17 @@ def _extract_fno_symbol(query: str, fallback_symbol: str = "") -> str:
     if "nifty" in q:
         return "NIFTY"
 
+    bank_phrase_match = re.search(r"\b([A-Za-z][A-Za-z0-9&-]{2,20})\s+BANK\b", text, flags=re.IGNORECASE)
+    if bank_phrase_match:
+        phrase = bank_phrase_match.group(0).strip()
+        try:
+            resolved = resolve_symbol(phrase)
+            symbol = str(resolved.get("symbol") or "").strip().upper() if isinstance(resolved, dict) else ""
+        except Exception:
+            symbol = ""
+        if symbol:
+            return symbol
+
     phrases = [
         phrase
         for phrase in (_symbol_phrase_after_preposition(text), _leading_company_phrase(text))
@@ -2641,6 +2701,19 @@ def _extract_fno_symbol(query: str, fallback_symbol: str = "") -> str:
     if fallback_symbol:
         return fallback_symbol
     return "NIFTY"
+
+
+def _intraday_options_trade_plan(symbol: str, timeframe: str = "15m") -> list[tuple[str, dict]]:
+    """Evidence plan for intraday options trade setup synthesis."""
+    return [
+        ("resolve_symbol", {"query": symbol}),
+        ("get_nse_intraday_snapshot", {"symbol": symbol}),
+        ("get_intraday_levels", {"symbol": symbol, "timeframe": timeframe}),
+        ("get_fno_overview", {"symbol": symbol, "expiry_index": 0}),
+        ("get_options_chain", {"symbol": symbol, "expiry_index": 0}),
+        ("explain_intraday_setup", {"symbol": symbol, "timeframe": timeframe}),
+        ("get_intraday_analysis", {"symbol": symbol, "interval": timeframe}),
+    ]
 
 
 # --- Compound-query splitter ------------------------------------------------
@@ -3183,26 +3256,63 @@ def _keyword_intent(query: str, data_mode: str = "historical", context_symbol: s
         "pcr", "put call", "put-call", "max pain", "open interest", " oi ",
         "top oi", "futures basis", "cost of carry", "rollover", "futures premium",
         "futures discount", "options strategy", "option strategy", "long straddle",
+        "option trading", "options trading", "option trade", "options trade",
+        "ce setup", "pe setup", "call setup", "put setup",
         "short straddle", "straddle", "strangle", "iron condor", "butterfly",
     )
-    if any(term in f" {q} " for term in fno_terms):
+    q_padded = f" {q} "
+    explicit_options_trade_terms = (
+        "option trading", "options trading", "option trade", "options trade",
+        "ce setup", "pe setup", "call setup", "put setup",
+    )
+    has_option_token = any(term in q_padded for term in (" option ", " options ", " ce ", " pe ", " call ", " put "))
+    has_options_trade_context = has_option_token and any(
+        term in q
+        for term in (
+            "good for options", "support", "resistance", "target", "targets",
+            " stop ", "stop loss", "stop-loss", "buildup", "build-up",
+        )
+    )
+    explicit_options_trade_request = (
+        any(term in q for term in explicit_options_trade_terms)
+        or has_options_trade_context
+    )
+    if (
+        data_mode == "intraday"
+        and not explicit_options_trade_request
+        and any(term in q_padded for term in (" f&o ", " fno ", " derivatives "))
+        and any(term in q for term in ("intraday", "trade setup", "tradesetup", "trading setup"))
+    ):
         symbol = _extract_fno_symbol(routing_text, fallback_symbol=context_symbol)
-        if data_mode == "intraday" and any(
+        timeframe = _extract_intraday_timeframe(q)
+        return {"intent": "intraday_setup", "plan": [
+            ("resolve_symbol", {"query": symbol}),
+            ("get_nse_intraday_snapshot", {"symbol": symbol}),
+            ("get_fno_overview", {"symbol": symbol, "expiry_index": 0}),
+            ("explain_intraday_setup", {"symbol": symbol, "timeframe": timeframe}),
+            ("get_intraday_analysis", {"symbol": symbol, "interval": timeframe}),
+        ]}
+    if any(term in q_padded for term in fno_terms) or explicit_options_trade_request:
+        symbol = _extract_fno_symbol(routing_text, fallback_symbol=context_symbol)
+        try:
+            resolved = resolve_symbol(symbol)
+            if isinstance(resolved, dict) and resolved.get("symbol") and _is_trusted_symbol_resolution(resolved):
+                symbol = str(resolved["symbol"]).upper()
+        except Exception:
+            pass
+        if data_mode == "intraday" and explicit_options_trade_request and any(
             term in q
             for term in (
                 "intraday", "trade setup", "tradesetup", "trading setup",
                 "live price", "live prices", "live pricies", "price", "prices", "pricies",
+                "support", "resistance", "target", "stop loss", "stop-loss",
             )
         ) and symbol not in {"NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"}:
             timeframe = _extract_intraday_timeframe(q)
-            plan = [
-                ("resolve_symbol", {"query": symbol}),
-                ("get_nse_intraday_snapshot", {"symbol": symbol}),
-                ("get_fno_overview", {"symbol": symbol, "expiry_index": 0}),
-                ("explain_intraday_setup", {"symbol": symbol, "timeframe": timeframe}),
-                ("get_intraday_analysis", {"symbol": symbol, "interval": timeframe}),
-            ]
-            return {"intent": "intraday_setup", "plan": plan}
+            return {
+                "intent": "intraday_options_trade_plan",
+                "plan": _intraday_options_trade_plan(symbol, timeframe),
+            }
         plan = [("get_fno_overview", {"symbol": symbol, "expiry_index": 0})]
         return {"intent": "fno_overview", "plan": plan}
 
@@ -4262,6 +4372,40 @@ def _indent_answer_block(text: str) -> str:
     return "\n".join(f"  {line}" if line else "" for line in (text or "").splitlines())
 
 
+def _structured_output_is_diagnostics_only(structured: str) -> bool:
+    """Return true when the deterministic render adds no evidence beyond errors.
+
+    Final synthesis already explains missing evidence in user-facing language.
+    If the render only contains a title, missing-evidence block, source trail,
+    and footer, appending it creates a noisy duplicate response.
+    """
+    text = structured or ""
+    if "▶ MISSING EVIDENCE" not in text:
+        return False
+
+    substantive_markers = (
+        "▶ SNAPSHOT",
+        "▶ CURRENT OVERVIEW",
+        "▶ TECHNICAL SETUP",
+        "▶ TECHNICAL AND SECTOR CONTEXT",
+        "▶ FUNDAMENTAL",
+        "▶ QUARTERLY RESULTS",
+        "▶ ANNUAL P&L",
+        "▶ SALES & EPS GROWTH",
+        "▶ SECTOR CONTEXT",
+        "▶ MARKET OVERVIEW",
+        "▶ MARKET BREADTH",
+        "▶ TOP MOVERS",
+        "▶ TOP STOCK",
+        "▶ KEY MOVERS",
+        "▶ INDEX TAPE",
+        "▶ OPTION CHAIN",
+        "▶ FUTURES",
+        "▶ STRATEGY",
+    )
+    return not any(marker in text for marker in substantive_markers)
+
+
 def _synthesize_and_narrate(
     intent: str,
     query: str,
@@ -4287,6 +4431,9 @@ def _synthesize_and_narrate(
         assessment_plan,
     )
     if final_answer:
+        if _structured_output_is_diagnostics_only(structured):
+            from terminal.renderers._base import FOOTER
+            return f"▶ ANSWER\n{_indent_answer_block(final_answer)}\n{FOOTER}"
         return f"▶ ANSWER\n{_indent_answer_block(final_answer)}\n\n{structured}"
     narrative = build_narrative(intent, query, tool_results, structured, backend)
     return attach_narrative(structured, narrative)
@@ -4938,6 +5085,12 @@ class Agent:
             )
 
         if include_in_history:
+            if not hasattr(self, "_turn_tool_data"):
+                self._turn_tool_data = []
+            if not hasattr(self, "_total_turns"):
+                self._total_turns = 0
+            if not hasattr(self, "_compressed_context"):
+                self._compressed_context = None
             self._history.append({"role": "user", "content": user_input})
             self._history.append({"role": "assistant", "content": answer})
             # Track tool results in parallel with history for compression
@@ -5108,7 +5261,7 @@ class Agent:
             # stays consistent with tool_results (matters when _execute_plan is
             # mocked in tests and the result set diverges from the planned tools).
             _ran = [(tr["tool"], {}) for tr in tool_results] or tool_plan
-            synthesis_intent = _synthesis_intent_from_plan(_ran)
+            synthesis_intent = _synthesis_intent_from_plan(_ran, query=clean_input)
 
         answer_body = _synthesize_and_narrate(
             synthesis_intent, clean_input, tool_results, self.backend,
@@ -5593,7 +5746,7 @@ class Agent:
                 ctx.trace.extend(tool_results)
                 synthesis_intent = (
                     getattr(bound, "synthesis_intent", "")
-                    or _synthesis_intent_from_plan(bound.tool_plan)
+                    or _synthesis_intent_from_plan(bound.tool_plan, query=ctx.clean_input)
                 )
                 answer_body = (
                     render_assessment_block(bound)
@@ -5687,6 +5840,7 @@ class Agent:
         synthesis_intent = _synthesis_intent_from_plan(
             action.tool_plan,
             default="report_lookup" if action.artifact_targets else "stock_brief",
+            query=ctx.clean_input,
         )
         answer_body = render_bound_action_summary(action, tool_results)
         if not answer_body:
@@ -5737,6 +5891,11 @@ class Agent:
         # instead of letting VisualScanProvider preempt the report.
         if _stock_360_prompt_symbol(ctx.clean_input):
             return None
+        if (
+            self._last_turn_context is not None
+            and is_index_context_followup(ctx.clean_input, self._last_turn_context)
+        ):
+            return None
         if any(term in ctx.clean_input.lower() for term in (
             "my portfolio",
             "my porfolio",
@@ -5748,6 +5907,12 @@ class Agent:
         )):
             return None
         qlow = ctx.clean_input.lower()
+        try:
+            direct_plan = _keyword_intent(ctx.clean_input, data_mode="intraday")
+        except Exception:
+            direct_plan = {}
+        if direct_plan.get("intent") == "intraday_options_trade_plan":
+            return None
         if _looks_like_stock_research_prompt(qlow) and _stock_research_symbol_from_query(ctx.clean_input):
             return None
         if "sector" in qlow and re.search(
@@ -5787,6 +5952,9 @@ class Agent:
         if needs_situation_assessment(ctx.clean_input) or (
             self._last_turn_context is not None
             and _is_implicit_results_followup(ctx.clean_input)
+        ) or (
+            self._last_turn_context is not None
+            and is_index_context_followup(ctx.clean_input, self._last_turn_context)
         ) or should_run_llm_situation_assessment(ctx.clean_input, self._last_turn_context):
             return None
         if entity_assessment is None:
@@ -5965,7 +6133,7 @@ class Agent:
             ctx.trace.extend(tool_results)
             synthesis_intent = (
                 getattr(bound, "synthesis_intent", "")
-                or _synthesis_intent_from_plan(bound.tool_plan)
+                or _synthesis_intent_from_plan(bound.tool_plan, query=ctx.clean_input)
             )
             answer_body = (
                 render_assessment_block(bound)
@@ -6016,6 +6184,12 @@ class Agent:
             needs_context = True
         if (
             not needs_context
+            and self._last_turn_context is not None
+            and is_index_context_followup(ctx.clean_input, self._last_turn_context)
+        ):
+            needs_context = True
+        if (
+            not needs_context
             and should_run_llm_situation_assessment(ctx.clean_input, self._last_turn_context)
         ):
             needs_context = True
@@ -6024,6 +6198,74 @@ class Agent:
         previous_context = self._last_turn_context or self._conversation_fallback_context(
             mode=ctx.mode, source_label=ctx.source_label,
         )
+
+        direct_plan = _keyword_intent(ctx.clean_input, data_mode="intraday")
+        if direct_plan.get("intent") == "intraday_options_trade_plan" and direct_plan.get("plan"):
+            plan_list = list(direct_plan["plan"])
+            symbol = ""
+            for tool_name, args in plan_list:
+                if tool_name == "resolve_symbol":
+                    symbol = str((args or {}).get("query") or "").upper()
+                    break
+            assessment = SituationAssessment(
+                applies=True,
+                decision="run_tool_plan",
+                confidence="high",
+                user_is_asking="Intraday options trade-plan request with stock, levels, and derivatives context.",
+                context_found="Direct intraday options intent detected; bypassing contextual LLM routing.",
+                resolved_entities=[symbol] if symbol else [],
+                evidence_plan=[tool for tool, _ in plan_list],
+                tool_plan=plan_list,
+                plan=[
+                    "Resolve the stock to its canonical NSE symbol.",
+                    "Fetch live/intraday levels and setup evidence.",
+                    "Fetch options/F&O evidence for PCR, max pain, and positioning where available.",
+                    "Synthesize conditional CE/PE setups with triggers, stops, targets, no-trade zone, and missing evidence.",
+                ],
+                synthesis_intent="intraday_options_trade_plan",
+            )
+            ctx.trace.append({"step": "situation_assessment", "result": assessment.__dict__})
+            if self._permission_policy.is_plan:
+                return self._render_plan_preview(
+                    assessment.tool_plan,
+                    intent="situation_assessment",
+                    clean_input=ctx.clean_input,
+                    mode_suffix=ctx.mode_suffix,
+                    trace=ctx.trace,
+                )
+            tool_results = _execute_plan(assessment.tool_plan)
+            ctx.trace.extend(tool_results)
+            answer_body = (
+                render_assessment_block(assessment)
+                + "\n\n"
+                + _synthesize_and_narrate(
+                    "intraday_options_trade_plan", ctx.clean_input, tool_results, self.backend,
+                )
+            )
+            answer_body = _apply_response_guardrails(
+                ctx.clean_input, "intraday_options_trade_plan", tool_results, answer_body,
+            )
+            answer_body = self._apply_agentic_next_action_block(
+                answer_body, ctx.clean_input, "intraday_options_trade_plan", tool_results,
+            )
+            answer = answer_body + ctx.mode_suffix
+            turn_ctx = build_turn_context(
+                user_input=ctx.clean_input,
+                intent="intraday_options_trade_plan",
+                mode=ctx.mode,
+                source_label=ctx.source_label,
+                tool_results=tool_results,
+                answer=answer,
+            )
+            self._remember_interaction(
+                ctx.clean_input, answer, tool_results, turn_context=turn_ctx,
+            )
+            return {
+                "answer": answer,
+                "trace": ctx.trace,
+                "backend": self.backend_name,
+                "intent": "intraday_options_trade_plan",
+            }
 
         if (
             entity_assessment.applies
@@ -6131,9 +6373,15 @@ class Agent:
                 )
             tool_results = _execute_plan(assessment.tool_plan)
             ctx.trace.extend(tool_results)
+            # PG-SYNTH-INTENT 2026-06-17: Derive synthesis_intent from the
+            # actual tool plan first (authoritative), then fall back to LLM's
+            # assessment. This prevents validation failures when the LLM returns
+            # a default/example intent like "stock_brief" but the plan actually
+            # ran different tools (e.g. get_latest_results -> stock_results).
             synthesis_intent = (
-                getattr(assessment, "synthesis_intent", "")
-                or _synthesis_intent_from_plan(assessment.tool_plan)
+                _synthesis_intent_from_plan(assessment.tool_plan, query=ctx.clean_input)
+                or getattr(assessment, "synthesis_intent", "")
+                or "contextual_tool_plan"
             )
             answer_body = (
                 render_assessment_block(assessment)
@@ -6401,6 +6649,7 @@ class Agent:
             "long_term_growth_research",
             "market_overview", "intraday_index_scan", "intraday_screener",
             "intraday_market_recap", "intraday_setup", "intraday_levels",
+            "intraday_options_trade_plan",
             "data_health", "intraday_health",
             "youtube_video_analysis", "youtube_channel_latest",
             "youtube_video_transcription", "youtube_channel_transcription",
@@ -6658,11 +6907,12 @@ class Agent:
         # Inject compressed prior-context block when available so the LLM
         # knows about symbols, findings and verdicts from earlier turns even
         # after those turns have been compressed out of the active window.
-        if self._compressed_context is not None:
+        compressed_context = getattr(self, "_compressed_context", None)
+        if compressed_context is not None:
             system_content = (
                 system_content
                 + "\n\n"
-                + self._compressed_context.as_system_block()
+                + compressed_context.as_system_block()
             )
 
         # Build messages: system + trimmed history + current user turn
@@ -6731,9 +6981,10 @@ class Agent:
                 # Only append disclaimer if LLM didn't include it (check last 400 chars)
                 if "research and learning only" not in answer[-400:]:
                     answer += "\n\n━━━ Not investment advice. For research and learning only. ━━━"
+                compressed_context = getattr(self, "_compressed_context", None)
                 compressed_syms = (
-                    self._compressed_context.symbols_analyzed
-                    if self._compressed_context is not None
+                    compressed_context.symbols_analyzed
+                    if compressed_context is not None
                     else None
                 )
                 answer = _apply_response_guardrails(user_input, "llm_driven", tool_results, answer, compressed_syms)
@@ -6783,9 +7034,10 @@ class Agent:
 
         # If we exhausted rounds without a text response, synthesize from tool results
         answer = _synthesize_and_narrate("stock_brief", user_input, tool_results, self.backend)
+        compressed_context = getattr(self, "_compressed_context", None)
         compressed_syms = (
-            self._compressed_context.symbols_analyzed
-            if self._compressed_context is not None
+            compressed_context.symbols_analyzed
+            if compressed_context is not None
             else None
         )
         answer = _apply_response_guardrails(user_input, "llm_driven_fallback", tool_results, answer, compressed_syms)

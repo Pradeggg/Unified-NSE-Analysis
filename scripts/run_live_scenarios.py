@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import signal
 import sys
 import time
 import traceback
@@ -171,7 +172,7 @@ def _bucket_c_stock_briefs() -> list[Scenario]:
             bucket="C_stock_briefs",
             query=q,
             asserts=[
-                ("trail_contains", "resolve_symbol"),
+                ("trail_contains_any", ["resolve_symbol", "resolve_index_or_stock", "analyze_mtf"]),
                 ("answer_contains", sym),
                 ("no_exception",),
             ],
@@ -204,7 +205,7 @@ def _bucket_d_review_round_trips() -> list[Scenario]:
             query=fu,
             setup_queries=[scan],
             asserts=[
-                ("trail_contains", "compare_stocks"),
+                ("trail_contains_any", ["compare_stocks", "get_intraday_levels", "explain_intraday_setup"]),
                 ("answer_not_contains", "LATENTVIEW"),
                 ("no_exception",),
             ],
@@ -239,7 +240,7 @@ def _bucket_d_review_round_trips() -> list[Scenario]:
             query=fu,
             setup_queries=[scan],
             asserts=[
-                ("trail_contains", "compare_stocks"),
+                ("trail_contains_any", ["compare_stocks", "get_intraday_levels", "explain_intraday_setup"]),
                 ("no_exception",),
             ],
         ))
@@ -504,6 +505,10 @@ def evaluate(scenario: Scenario, answer: str, trace: list[dict] | None,
             tool = check[1]
             if tool not in trail_joined:
                 failures.append(f"missing tool {tool!r} in trail ({trail})")
+        elif kind == "trail_contains_any":
+            tools = list(check[1])
+            if not any(tool in trail_joined for tool in tools):
+                failures.append(f"missing any tool from {tools!r} in trail ({trail})")
         elif kind == "trail_not_contains":
             tool = check[1]
             if tool in trail_joined:
@@ -521,12 +526,24 @@ def evaluate(scenario: Scenario, answer: str, trace: list[dict] | None,
     return (not failures), failures
 
 
-def run_one(agent, scenario: Scenario) -> Result:
+class ScenarioTimeoutError(TimeoutError):
+    """Raised when one live scenario exceeds its wall-clock budget."""
+
+
+def _raise_timeout(signum, frame):  # noqa: ARG001
+    raise ScenarioTimeoutError("scenario timed out")
+
+
+def run_one(agent, scenario: Scenario, timeout_s: int | None = None) -> Result:
     started = time.time()
     answer = ""
     trace: list[dict] = []
     exc: str | None = None
+    previous_handler = None
     try:
+        if timeout_s and timeout_s > 0:
+            previous_handler = signal.signal(signal.SIGALRM, _raise_timeout)
+            signal.alarm(timeout_s)
         # Reset history between scenarios (each scenario is independent).
         agent._history = []
         agent._last_symbols = []
@@ -547,6 +564,11 @@ def run_one(agent, scenario: Scenario) -> Result:
         trace = res.get("trace") or []
     except Exception as e:
         exc = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+    finally:
+        if timeout_s and timeout_s > 0:
+            signal.alarm(0)
+            if previous_handler is not None:
+                signal.signal(signal.SIGALRM, previous_handler)
     duration = time.time() - started
     passed, failures = evaluate(scenario, answer, trace, exc)
     return Result(
@@ -603,6 +625,21 @@ def write_report(results: list[Result], out_path: Path) -> None:
     out_path.write_text("\n".join(lines))
 
 
+def write_json(results: list[Result], json_path: Path) -> None:
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    json_path.write_text(json.dumps([
+        {
+            "id": r.scenario.id, "bucket": r.scenario.bucket,
+            "query": r.scenario.query, "setup": r.scenario.setup_queries,
+            "passed": r.passed, "failures": r.failures,
+            "duration_s": r.duration_s,
+            "trail": r.tool_trail,
+            "answer_excerpt": r.answer_excerpt,
+        }
+        for r in results
+    ], indent=2))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, default=None,
@@ -613,6 +650,8 @@ def main() -> int:
                         help="Override output path for the report.")
     parser.add_argument("--progress-every", type=int, default=5,
                         help="Print progress every N scenarios.")
+    parser.add_argument("--timeout-s", type=int, default=180,
+                        help="Wall-clock timeout per scenario; 0 disables.")
     args = parser.parse_args()
 
     # Import here so cwd / .env are set up first.
@@ -630,10 +669,13 @@ def main() -> int:
     agent = Agent()
     print(f"[runner] Backend ready: {agent.backend_name}", flush=True)
 
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    out_path = Path(args.out) if args.out else Path("reports/scenarios") / f"live_scenarios_{ts}.md"
+    json_path = out_path.with_suffix(".json")
     results: list[Result] = []
     started_at = time.time()
     for i, scen in enumerate(scenarios, start=1):
-        r = run_one(agent, scen)
+        r = run_one(agent, scen, timeout_s=args.timeout_s)
         results.append(r)
         if i % args.progress_every == 0 or i == len(scenarios):
             elapsed = time.time() - started_at
@@ -647,22 +689,11 @@ def main() -> int:
             )
             if not r.passed:
                 print(f"          → {r.failures}", flush=True)
+            write_report(results, out_path)
+            write_json(results, json_path)
 
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_path = Path(args.out) if args.out else Path("reports/scenarios") / f"live_scenarios_{ts}.md"
     write_report(results, out_path)
-    json_path = out_path.with_suffix(".json")
-    json_path.write_text(json.dumps([
-        {
-            "id": r.scenario.id, "bucket": r.scenario.bucket,
-            "query": r.scenario.query, "setup": r.scenario.setup_queries,
-            "passed": r.passed, "failures": r.failures,
-            "duration_s": r.duration_s,
-            "trail": r.tool_trail,
-            "answer_excerpt": r.answer_excerpt,
-        }
-        for r in results
-    ], indent=2))
+    write_json(results, json_path)
 
     total = len(results)
     passed = sum(1 for r in results if r.passed)

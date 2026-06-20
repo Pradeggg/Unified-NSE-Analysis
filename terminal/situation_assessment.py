@@ -325,6 +325,29 @@ def needs_situation_assessment(user_input: str) -> bool:
     )
 
 
+def is_index_context_followup(user_input: str, previous_context: TurnContext | None) -> bool:
+    """True when a terse follow-up should stay scoped to the previous index."""
+    if not previous_context or not _prior_index_from_context(previous_context):
+        return False
+    q = _normalize(user_input)
+    if not q:
+        return False
+    if any(term in q for term in (
+        "breadth",
+        "stage distribution",
+        "stage dist",
+        "stages",
+        "top movers",
+        "movers",
+        "gainers",
+        "losers",
+        "constituents",
+        "top stocks",
+    )):
+        return True
+    return False
+
+
 def assess_entity_topic_request(user_input: str) -> EntityTopicAssessment:
     """Resolve direct command shape into entity + topic before routing.
 
@@ -574,6 +597,33 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
         )
 
     q = _normalize(user_input)
+
+    prior_index = _prior_index_from_context(previous_context)
+    if prior_index and is_index_context_followup(user_input, previous_context):
+        wants_movers = _asks_index_movers(q)
+        plan: list[tuple[str, dict[str, Any]]] = [
+            ("get_index_snapshot", {"index_name": prior_index}),
+            ("get_market_breadth", {"index": prior_index}),
+        ]
+        if wants_movers:
+            plan.append(("get_top_gainers_losers", {"index": prior_index, "top_n": 10, "direction": "both"}))
+        return SituationAssessment(
+            applies=True,
+            decision="run_tool_plan",
+            confidence="high",
+            user_is_asking=f"Follow-up on {prior_index}: scoped index breadth/stage/movers context.",
+            context_found=_context_found(previous_context),
+            source_assessment=_source_assessment(previous_context),
+            resolved_entities=[],
+            evidence_plan=[tool for tool, _ in plan],
+            tool_plan=plan,
+            plan=[
+                f"Bind the follow-up to the previous index context: {prior_index}.",
+                "Refresh scoped index snapshot and breadth.",
+                "Fetch scoped movers only if the follow-up asks for movers/gainers/losers.",
+            ],
+            synthesis_intent="index_status",
+        )
 
     if q in _AFFIRMATIVE_FOLLOWUPS:
         report_path = _report_path_from_context(previous_context)
@@ -1926,6 +1976,26 @@ def _report_path_from_context(context: TurnContext) -> str:
             if value:
                 return str(value)
     return ""
+
+
+def _prior_index_from_context(context: TurnContext) -> str:
+    for args in context.tool_args:
+        for key in ("index_name", "index"):
+            value = str(args.get(key) or "").strip().upper()
+            if value:
+                return value
+    return ""
+
+
+def _asks_index_movers(q: str) -> bool:
+    return any(term in q for term in (
+        "top movers",
+        "movers",
+        "gainers",
+        "losers",
+        "top stocks",
+        "constituents",
+    ))
 
 
 def _report_context_found(context: TurnContext, report_path: str) -> str:

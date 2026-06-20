@@ -32,6 +32,10 @@ router = APIRouter()
 log = logging.getLogger(__name__)
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 _FNO_INDICES = {"BANKNIFTY", "NIFTY", "FINNIFTY", "MIDCPNIFTY", "NIFTYNXT50", "SENSEX"}
+MIN_INTRADAY_RR = 1.5
+MIN_INTRADAY_POTENTIAL_PCT = 0.25
+MIN_SWING_RR = 1.5
+MIN_SWING_POTENTIAL_PCT = 1.0
 
 
 # ── Symbol → NSE index name mapping (for get_index_snapshot) ─────────────────
@@ -192,6 +196,30 @@ def _compute_intraday(price: float, pivot: float, supports: list,
     }
 
 
+def _quality_gate_setup(setup: dict, *, min_rr: float, min_potential_pct: float, label: str) -> dict:
+    """Annotate setup quality so weak mathematical trades are not promoted."""
+    if not setup:
+        return setup
+
+    rr = float(setup.get("rr") or 0)
+    potential_pct = float(setup.get("potential_pct") or 0)
+    reasons: list[str] = []
+    if rr < min_rr:
+        reasons.append(f"R:R {rr:.2f}x below {min_rr:.1f}x minimum")
+    if potential_pct < min_potential_pct:
+        reasons.append(f"potential {potential_pct:.3f}% below {min_potential_pct:.2f}% minimum")
+
+    gated = dict(setup)
+    gated["actionable"] = not reasons
+    gated["quality_label"] = "TRADEABLE" if not reasons else "WATCH_ONLY"
+    gated["quality_reasons"] = reasons
+    if reasons:
+        gate_text = f"No clean {label} trade — " + "; ".join(reasons)
+        original = str(gated.get("strategy") or "")
+        gated["strategy"] = f"{gate_text}. {original}".strip()
+    return gated
+
+
 # ── Swing setup ───────────────────────────────────────────────────────────────
 
 def _compute_swing(price: float, ema50: float, ema200: float,
@@ -243,11 +271,24 @@ def _compute_swing(price: float, ema50: float, ema200: float,
 
 # ── Options strategy suggestion ───────────────────────────────────────────────
 
-def _options_play(intraday_bias: str, swing_bias: str, pcr: float,
+def _options_play(intraday: dict, swing: dict, pcr: float,
                   atm: float, expiry: str) -> dict:
     """Suggest a simple options strategy based on bias + PCR."""
     if not atm:
         return {}
+
+    intraday_bias = intraday.get("bias", "NEUTRAL")
+    swing_bias = swing.get("bias", "NEUTRAL")
+    intraday_ok = intraday.get("actionable") is True
+    swing_ok = swing.get("actionable") is True
+
+    if not intraday_ok and not swing_ok:
+        return {
+            "strategy": "No directional options trade",
+            "description": "Underlying setup is watch-only because reward-to-risk or potential move is insufficient.",
+            "expiry": expiry,
+            "risk_note": "Avoid forcing option structures when the underlying trade math is weak.",
+        }
 
     if intraday_bias == "BULLISH" and swing_bias == "BULLISH":
         strat = "Bull Call Spread"
@@ -347,11 +388,15 @@ def _llm_recommendation(symbol: str, timeframe: str, safety: dict,
             f"  Trigger ₹{intraday.get('trigger','?')} | SL ₹{intraday.get('stop','?')} | "
             f"T1 ₹{(intraday.get('targets') or ['?'])[0]} | T2 ₹{(intraday.get('targets') or ['?','?'])[1]} | "
             f"RR {intraday.get('rr','?')}x | Potential {intraday.get('potential_pct','?')}%\n"
+            f"  Actionable: {intraday.get('actionable', False)} | Quality: {intraday.get('quality_label','?')} | "
+            f"Gate reasons: {'; '.join(intraday.get('quality_reasons', []) or [])}\n"
             f"  Strategy: {intraday.get('strategy','')}\n\n"
             f"SWING ({swing.get('bias','?')})\n"
             f"  Trigger ₹{swing.get('trigger','?')} | SL ₹{swing.get('stop','?')} | "
             f"T1 ₹{(swing.get('targets') or ['?'])[0]} | T2 ₹{(swing.get('targets') or ['?','?'])[1]} | "
             f"RR {swing.get('rr','?')}x | Potential {swing.get('potential_pct','?')}%\n"
+            f"  Actionable: {swing.get('actionable', False)} | Quality: {swing.get('quality_label','?')} | "
+            f"Gate reasons: {'; '.join(swing.get('quality_reasons', []) or [])}\n"
             f"  Strategy: {swing.get('strategy','')}\n\n"
             f"F&O: PCR={fno.get('pcr','?')} | ATM={fno.get('atm','?')} | MaxPain={fno.get('max_pain','?')}\n"
             f"  CE Resistance: {fno.get('ce_resistance',[])} | PE Support: {fno.get('pe_support',[])}\n"
@@ -372,7 +417,8 @@ def _llm_recommendation(symbol: str, timeframe: str, safety: dict,
             "4) Options play: strategy + strikes + why\n"
             "5) Key risk/watch: what would invalidate — be specific\n\n"
             "Rules: use ₹ for prices; be specific; no generic disclaimers; "
-            "if no clean trade exists, say so.\n\n"
+            "if no clean trade exists, say so. Never call the setup SAFE unless Safety rating is SAFE. "
+            "If Actionable is false for a setup, do not call it best, buy, sell, go long, or go short; label it watch-only.\n\n"
             f"{data_block}"
         )
 
@@ -393,13 +439,26 @@ def _llm_recommendation(symbol: str, timeframe: str, safety: dict,
 def _fallback_text(symbol: str, safety: dict, intraday: dict, swing: dict) -> str:
     i = intraday
     s = swing
+    verdict = f"{safety.get('rating','?')} ({safety.get('score','?')}/10)"
+    intraday_line = (
+        f"• Best intraday trade: No clean trade — {'; '.join(i.get('quality_reasons') or ['setup quality gate failed'])}."
+        if i.get("actionable") is False
+        else f"• Best intraday trade: {i.get('bias','?')} entry ₹{i.get('trigger','?')}, SL ₹{i.get('stop','?')}, "
+             f"T1 ₹{(i.get('targets') or ['?'])[0]} (RR {i.get('rr','?')}x, +{i.get('potential_pct','?')}%)."
+    )
+    swing_line = (
+        f"• Swing opportunity: Watch only — {'; '.join(s.get('quality_reasons') or ['setup quality gate failed'])}."
+        if s.get("actionable") is False
+        else f"• Swing opportunity: {s.get('bias','?')} entry ₹{s.get('trigger','?')}, SL ₹{s.get('stop','?')}, "
+             f"T1 ₹{(s.get('targets') or ['?'])[0]} (RR {s.get('rr','?')}x, +{s.get('potential_pct','?')}%)."
+    )
     return "\n".join([
-        f"• {safety.get('rating','?')} ({safety.get('score','?')}/10) — {(safety.get('reasons') or ['n/a'])[0]}",
-        f"• Intraday {i.get('bias','?')}: enter ₹{i.get('trigger','?')}, SL ₹{i.get('stop','?')}, "
-        f"T1 ₹{(i.get('targets') or ['?'])[0]} (RR {i.get('rr','?')}x, +{i.get('potential_pct','?')}%)",
-        f"• Swing {s.get('bias','?')}: enter ₹{s.get('trigger','?')}, SL ₹{s.get('stop','?')}, "
-        f"T1 ₹{(s.get('targets') or ['?'])[0]} (RR {s.get('rr','?')}x, +{s.get('potential_pct','?')}%)",
-        f"• {s.get('strategy','')}",
+        f"• Overall verdict: {verdict} — {(safety.get('reasons') or ['n/a'])[0]}",
+        intraday_line,
+        swing_line,
+        "• Options play: No directional options trade unless the underlying setup passes the trade-quality gate."
+        if not i.get("actionable") and not s.get("actionable")
+        else "• Options play: Use only if price confirms the underlying trigger and liquidity/spread are acceptable.",
         f"• Invalidation: price breaks below intraday SL ₹{i.get('stop','?')} on high volume",
     ])
 
@@ -474,9 +533,19 @@ async def ric_analyze(
     fno_signal   = str(pg_fno.get("fno_signal", "") or futures.get("signal", "") or "NEUTRAL")
 
     # ── Compute components ────────────────────────────────────────────────────
-    safety   = _compute_safety(price, pivot, ema21, nifty_up_days, pcr, max_pain)
-    intraday = _compute_intraday(price, pivot, supports, resistances, ema9, ema21)
-    swing    = _compute_swing(price, ema50, ema200, nifty_chg_10d, supports, resistances)
+    safety = _compute_safety(price, pivot, ema21, nifty_up_days, pcr, max_pain)
+    intraday = _quality_gate_setup(
+        _compute_intraday(price, pivot, supports, resistances, ema9, ema21),
+        min_rr=MIN_INTRADAY_RR,
+        min_potential_pct=MIN_INTRADAY_POTENTIAL_PCT,
+        label="intraday",
+    )
+    swing = _quality_gate_setup(
+        _compute_swing(price, ema50, ema200, nifty_chg_10d, supports, resistances),
+        min_rr=MIN_SWING_RR,
+        min_potential_pct=MIN_SWING_POTENTIAL_PCT,
+        label="swing",
+    )
 
     fno_data = {
         "pcr":          round(pcr, 3),
@@ -518,11 +587,7 @@ async def ric_analyze(
         "pivot_levels": levels.get("pivot_levels", {}),
     }
 
-    options_play = _options_play(
-        intraday.get("bias", "NEUTRAL"),
-        swing.get("bias", "NEUTRAL"),
-        pcr, atm, expiry,
-    )
+    options_play = _options_play(intraday, swing, pcr, atm, expiry)
 
     draw_signals = _build_draw_signals(levels, intraday, swing)
 
@@ -545,10 +610,13 @@ async def ric_analyze(
             pass
 
     # ── LLM synthesis ─────────────────────────────────────────────────────────
-    recommendation, in_tok, out_tok = _llm_recommendation(
-        sym, tf, safety, intraday, swing, fno_data, market_data,
-        options_play, capture_answer,
-    )
+    if intraday.get("actionable") is False or swing.get("actionable") is False:
+        recommendation, in_tok, out_tok = _fallback_text(sym, safety, intraday, swing), 0, 0
+    else:
+        recommendation, in_tok, out_tok = _llm_recommendation(
+            sym, tf, safety, intraday, swing, fno_data, market_data,
+            options_play, capture_answer,
+        )
 
     return {
         "symbol":       sym,

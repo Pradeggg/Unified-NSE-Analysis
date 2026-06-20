@@ -1,8 +1,8 @@
-# Top Investment Picks Analysis — 2026-06-12
+# Top Investment Picks Analysis — 2026-06-19
 
 *Agent Adda - Market Intelligence Agent*
 
-**Generated:** 2026-06-12 19:53 IST  
+**Generated:** 2026-06-20 10:59 IST  
 **Sources:** Sector Rotation Report + Stage 2 Tracker + PostgreSQL `scores.*`, `market.equity_eod`
 
 > **Disclaimer:** This report is not investment advice. It is a learning journey demonstrating how AI and rules-based agents can be applied to financial markets. Validate all data, prices, liquidity, corporate events, and risk independently before making any financial decision.
@@ -11,7 +11,7 @@
 
 Mechanically-synthesised basket of 10 stocks combining sector-rotation leadership and Weinstein stage-2 momentum, deep-screened across P&L, BS, CF, fundamental scores and corporate events. LLM unavailable — rule-based narrative.
 
-**Macro context:** Snapshot 2026-06-12: 947 stocks scanned; Stage 2 count 260 vs Stage 4 231; BUY/STRONG_BUY signals 168; mean RS vs Nifty 500 18.7%.
+**Macro context:** Snapshot 2026-06-19: 975 stocks scanned; Stage 2 count 349 vs Stage 4 173; BUY/STRONG_BUY signals 123; mean RS vs Nifty 500 12.7%.
 
 ## Methodology
 
@@ -58,472 +58,36 @@ A high-ranked pick should be read as a research shortlist candidate, not a direc
 
 | # | Symbol | Sector | Price | Stage | Inv.Score | RS% | 6M Tgt | RR(4M) | Risk | Source |
 |---|---|---|---:|---|---:|---:|---:|---:|:---:|---|
-| 1 | **NETWEB** | IT & Technology | 4587.40 | STAGE_2 | 71.80 | 40.5% | ₹6,723 | 1.73x | 2.5 | strategy+sector+s2 |
-| 2 | **DATAPATTNS** | Defence & Aerospace | 4545.70 | STAGE_2 | 64.90 | 42.2% | ₹6,238 | 1.38x | 2.5 | strategy+sector+s2 |
-| 3 | **APOLLO** | Other | 409.40 | STAGE_2 | 63.60 | 117.2% | ₹637 | 1.74x | 5.0 | strategy+vcp |
-| 4 | **PARAS** | Defence & Aerospace | 1097.15 | STAGE_2 | 63.20 | 76.8% | ₹1,625 | 1.01x | 6.0 | strategy+sector+s2 |
-| 5 | **JNKINDIA** | Other | 504.05 | STAGE_2 | 62.50 | 132.5% | ₹733 | 1.06x | 6.0 | strategy |
-| 6 | **APARINDS** | Capital Goods & Industrials | 15221.00 | STAGE_2 | 62.30 | 46.5% | ₹20,162 | 1.09x | 4.5 | strategy+sector+s2 |
-| 7 | **MTARTECH** | PSU / CPSE | 7159.50 | STAGE_2 | 57.50 | 99.0% | ₹10,966 | 2.00x | 3.5 | strategy+sector+s2 |
-| 8 | **ADANIGREEN** | Energy - Power | 1485.70 | STAGE_2 | 47.60 | 76.6% | ₹2,031 | 1.28x | 2.5 | strategy+vcp |
-| 9 | **HFCL** | Railways & PSU Infra | 171.86 | STAGE_2 | 47.40 | 145.7% | ₹256 | 1.65x | 5.0 | strategy |
-| 10 | **CUPID** | Other | 159.97 | STAGE_2 | 46.70 | 85.0% | ₹214 | 0.77x | 3.5 | strategy |
+| 1 | **MTARTECH** | PSU / CPSE | 8374.50 | STAGE_2 | 59.90 | 97.7% | ₹12,222 | 1.39x | 3.5 | strategy+sector+s2 |
+| 2 | **PANAMAPET** | Other | 483.25 | STAGE_2 | 52.80 | 70.7% | ₹684 | 0.83x | 7.5 | strategy |
+| 3 | **RPTECH** | IT & Technology | 750.65 | STAGE_2 | 49.70 | 95.2% | ₹1,016 | 0.79x | 6.5 | strategy+sector+s2 |
+| 4 | **WALCHANNAG** | Other | 312.05 | STAGE_2 | 48.30 | 82.8% | ₹436 | 1.02x | 5.0 | strategy |
+| 5 | **CUPID** | Other | 176.92 | STAGE_2 | 47.50 | 88.1% | ₹247 | 0.88x | 3.5 | strategy |
+| 6 | **PARAS** | Defence & Aerospace | 1408.65 | STAGE_2 | 46.30 | 106.7% | ₹2,123 | 0.82x | 6.5 | strategy+sector+s2 |
+| 7 | **LAURUSLABS** | Pharma & Healthcare | 1412.90 | STAGE_2 | 68.00 | 26.0% | ₹1,690 | 1.18x | 0.5 | vcp+sector |
+| 8 | **SASKEN** | IT & Technology | 2586.10 | STAGE_2 | 66.00 | 104.0% | ₹3,766 | 1.08x | 5.0 | vcp+sector |
+| 9 | **POLYCAB** | Capital Goods & Industrials | 10083.00 | STAGE_2 | 65.20 | 28.1% | ₹12,856 | 0.82x | 3.5 | vcp+sector |
+| 10 | **SATIN** | Financial Services | 235.43 | STAGE_2 | 62.70 | 46.4% | ₹337 | 1.74x | 3.0 | vcp+sector |
 
 ## Per-Stock Deep Dive
 
-### 1. NETWEB — IT & Technology
+### 1. MTARTECH — PSU / CPSE
 
-**Why selected:** Portfolio lab best strategy `darvas_box_breakout_v1` confirms as next buy; current Stage 2 inv=71.8, top sector strength=64
+**Why selected:** Portfolio lab best strategy `darvas_box_breakout_v1` confirms as open position; current Stage 2 inv=59.9, top sector strength=58
 
-**Portfolio lab confirmation:** `darvas_box_breakout_v1` (Darvas Box Breakout, rank 1, 70.22% return) marks this as **next buy**.
-
-**What the company does:** Incorporated in 1999, Netweb Technologies India (NTI) is one of India‘s leading high-end computing solutions (HCS) providers, with fully integrated design and manufacturing capabilities. [1]
-
-*Company profile source: screener.in (live) — https://www.screener.in/company/NETWEB/*
-
-**Thesis:** Stage-2 EMA stack (Price ₹4587 > EMA20 > EMA50 > EMA200) · ROCE 38% · ROE 33%
-
-**Technical view:** RSI 58.0, 1Y return 132.1%, dist from 52w high -7.6%.
-
-**Fundamental view:** Latest qtr revenue —% YoY, PAT —% YoY; —Y CAGR revenue —% / PAT —%; ROCE 37.5%; debt trend —; OCF/PAT —.
-
-**Sector view:** Sector strength 64.40
-
-**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
-
-**Key catalysts:**
-- Watch next quarterly print
-
-**Key risks:**
-- No quantitative red flag in dossier
-
-**Action:** Enter ₹4315-₹4587; stop ₹3705; signal STRONG_BUY.
-
-**Targets:** 2M ₹5,502 · 4M ₹6,113 · 6M ₹6,723  
-**Stop:** ₹3,705 · **Risk/Reward (4M):** 1.73x  
-**Risk score:** 2.5 / 10 (LOW) · **Suggested size:** 8%
-
-**Conviction:** **MEDIUM** — 3 positive · 0 negative factors flagged
-
-**Snapshot:**
-
-- Price ₹4587.40 · 1D 9.4% · 1W -1.7% · 1M 17.4%
-- Stage **STAGE_2** (score 0.64) · Stance **BULLISH** · Signal **STRONG_BUY**
-- Investment score 71.80 (tech 82.00, fund 73.99)
-- Relative Strength 40.5% vs Nifty 500; Supertrend BULLISH around ₹4018.74
-
-**Technicals:**
-
-| Metric | Value |
-|---|---:|
-| Close (2026-06-12) | ₹4587.40 |
-| EMA 20 / 50 / 200 | ₹4314.69 / ₹4037.82 / ₹3362.73 |
-| EMA50 slope (20d) | 8.63% |
-| RSI(14) | 57.96 |
-| ATR(14) | ₹305.03 (6.65%) |
-| 52W High / Low | ₹4965.00 / ₹1700.10 |
-| Distance from 52W high | -7.6% |
-| Returns 1M / 3M / 6M / 1Y | 16.6% / 38.0% / 51.0% / 132.1% |
-| Last-day volume vs 20d avg | 1.76x |
-
-**Fundamentals:**
-
-| Metric | Value |
-|---|---:|
-| Piotroski F-score | — / 9 |
-| Altman Z-score | — |
-| Beneish M-score | — |
-| Forensic risk | — |
-| Revenue growth 3Y | — |
-| PAT growth 3Y | — |
-| ROE | 32.8% |
-| ROCE | 37.5% |
-| Debt / Equity | — |
-| Promoter holding | 67.0% |
-
----
-
-### 2. DATAPATTNS — Defence & Aerospace
-
-**Why selected:** Portfolio lab best strategy `darvas_box_breakout_v1` confirms as next buy; current Stage 2 inv=64.9, top sector strength=67
-
-**Portfolio lab confirmation:** `darvas_box_breakout_v1` (Darvas Box Breakout, rank 1, 70.22% return) marks this as **next buy**.
-
-**What the company does:** Data Patterns (India) Limited is one of the fastest-growing companies in the Defence and Aerospace Electronics sector in India. It is among the few vertically integrated defence and aerospace electronics solutions providers catering to the indigenously developed defence products industry. It is focused on in-house development and manufacturing facilities led by innovation and design and development efforts. It is in the business for over 35 years. It has supplied products catering to all the platforms, viz.
-
-*Company profile source: screener.in (live) — https://www.screener.in/company/DATAPATTNS/*
-
-**Thesis:** Stage-2 EMA stack (Price ₹4546 > EMA20 > EMA50 > EMA200) · Momentum RSI 62 · Within 5% of 52w high · ROCE 23%
-
-**Technical view:** RSI 62.1, 1Y return 48.3%, dist from 52w high -3.7%.
-
-**Fundamental view:** Latest qtr revenue —% YoY, PAT —% YoY; —Y CAGR revenue —% / PAT —%; ROCE 23.3%; debt trend —; OCF/PAT —.
-
-**Sector view:** Sector strength 66.78
-
-**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
-
-**Key catalysts:**
-- Watch next quarterly print
-
-**Key risks:**
-- No quantitative red flag in dossier
-
-**Action:** Enter ₹4152-₹4546; stop ₹3668; signal BUY.
-
-**Targets:** 2M ₹5,271 · 4M ₹5,754 · 6M ₹6,238  
-**Stop:** ₹3,668 · **Risk/Reward (4M):** 1.38x  
-**Risk score:** 2.5 / 10 (LOW) · **Suggested size:** 8%
-
-**Conviction:** **MEDIUM** — 4 positive · 0 negative factors flagged
-
-**Snapshot:**
-
-- Price ₹4545.70 · 1D 8.1% · 1W 7.9% · 1M 13.3%
-- Stage **STAGE_2** (score 0.81) · Stance **BULLISH** · Signal **BUY**
-- Investment score 64.90 (tech 76.00, fund 52.76)
-- Relative Strength 42.2% vs Nifty 500; Supertrend BULLISH around ₹3781.92
-
-**Technicals:**
-
-| Metric | Value |
-|---|---:|
-| Close (2026-06-12) | ₹4545.70 |
-| EMA 20 / 50 / 200 | ₹4151.70 / ₹3894.08 / ₹3251.64 |
-| EMA50 slope (20d) | 7.55% |
-| RSI(14) | 62.11 |
-| ATR(14) | ₹241.71 (5.32%) |
-| 52W High / Low | ₹4722.00 / ₹2131.00 |
-| Distance from 52W high | -3.7% |
-| Returns 1M / 3M / 6M / 1Y | 8.3% / 32.1% / 75.7% / 48.3% |
-| Last-day volume vs 20d avg | 1.91x |
-
-**Fundamentals:**
-
-| Metric | Value |
-|---|---:|
-| Piotroski F-score | — / 9 |
-| Altman Z-score | — |
-| Beneish M-score | — |
-| Forensic risk | — |
-| Revenue growth 3Y | — |
-| PAT growth 3Y | — |
-| ROE | 16.7% |
-| ROCE | 23.3% |
-| Debt / Equity | — |
-| Promoter holding | 42.4% |
-
----
-
-### 3. APOLLO — Other
-
-**Why selected:** Portfolio lab best strategy `darvas_box_breakout_v1` confirms as open position; current Stage 2 inv=63.6, VCP=79
-
-**Portfolio lab confirmation:** `darvas_box_breakout_v1` (Darvas Box Breakout, rank 1, 70.22% return) marks this as **open position**.
-
-**What the company does:** Apollo Micro Systems Ltd is a pioneer in design, development, assembly and testing of electronic and electro mechanical solutions. [1]
-
-*Company profile source: screener.in (live) — https://www.screener.in/company/APOLLO/*
-
-**Thesis:** Stage-2 EMA stack (Price ₹409 > EMA20 > EMA50 > EMA200) · RS 117% vs Nifty 500 · Momentum RSI 61 · PAT YoY +164% · Revenue YoY +81% · PAT 4Y CAGR 63%
-
-**Technical view:** RSI 60.5, 1Y return 99.7%, dist from 52w high -8.4%.
-
-**Fundamental view:** Latest qtr revenue 80.9% YoY, PAT 164.3% YoY; 4Y CAGR revenue 38.9% / PAT 63.4%; ROCE —%; debt trend rising; OCF/PAT -1.21.
-
-**Sector view:** Sector strength 80.80
-
-**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
-
-**Key catalysts:**
-- Watch next quarterly print
-
-**Key risks:**
-- Debt rising ₹+335 Cr (3Y)
-- OCF/PAT -1.21 weak earnings quality
-
-**Action:** Enter ₹385-₹409; stop ₹326; signal BUY.
-
-**Targets:** 2M ₹496 · 4M ₹554 · 6M ₹637  
-**Stop:** ₹326 · **Risk/Reward (4M):** 1.74x  
-**Risk score:** 5.0 / 10 (MEDIUM) · **Suggested size:** 6%
-
-**Conviction:** **HIGH** — 6 positive · 2 negative factors flagged
-
-**Snapshot:**
-
-- Price ₹409.40 · 1D 7.2% · 1W -2.8% · 1M 34.0%
-- Stage **STAGE_2** (score 0.90) · Stance **BULLISH** · Signal **BUY**
-- Investment score 63.60 (tech 66.00, fund 54.74)
-- Relative Strength 117.2% vs Nifty 500; Supertrend BULLISH around ₹333.95
-
-**Technicals:**
-
-| Metric | Value |
-|---|---:|
-| Close (2026-06-12) | ₹409.40 |
-| EMA 20 / 50 / 200 | ₹385.05 / ₹336.16 / ₹274.15 |
-| EMA50 slope (20d) | 26.56% |
-| RSI(14) | 60.55 |
-| ATR(14) | ₹28.95 (7.07%) |
-| 52W High / Low | ₹446.90 / ₹162.34 |
-| Distance from 52W high | -8.4% |
-| Returns 1M / 3M / 6M / 1Y | 34.5% / 88.1% / 64.5% / 99.7% |
-| Last-day volume vs 20d avg | 0.62x |
-
-**Fundamentals:**
-
-| Metric | Value |
-|---|---:|
-| Piotroski F-score | — / 9 |
-| Altman Z-score | — |
-| Beneish M-score | — |
-| Forensic risk | — |
-| Revenue growth 3Y | — |
-| PAT growth 3Y | — |
-| ROE | — |
-| ROCE | — |
-| Debt / Equity | — |
-| Promoter holding | 52.0% |
-
----
-
-### 4. PARAS — Defence & Aerospace
-
-**Why selected:** Portfolio lab best strategy `darvas_box_breakout_v1` confirms as next buy; current Stage 2 inv=63.2, top sector strength=67
-
-**Portfolio lab confirmation:** `darvas_box_breakout_v1` (Darvas Box Breakout, rank 1, 70.22% return) marks this as **next buy**.
-
-**What the company does:** Paras Defence and Space Technologies (PDST) is an Private sector company primarily engaged in the designing, developing, manufacturing, and testing of a variety of defence and space engineering products and solutions. The company caters to four major segments - Defence & Space Optics, Defence Electronics, Heavy Engineering and Electromagnetic Pulse Protection Solutions. [1]
-
-*Company profile source: screener.in (live) — https://www.screener.in/company/PARAS/*
-
-**Thesis:** Stage-2 EMA stack (Price ₹1097 > EMA20 > EMA50 > EMA200) · RS 77% vs Nifty 500 · Within 5% of 52w high · PAT YoY +86% · Revenue YoY +58% · PAT 4Y CAGR 35% · Net cash ₹6 Cr
-
-**Technical view:** RSI 74.8, 1Y return 33.2%, dist from 52w high -0.7%.
-
-**Fundamental view:** Latest qtr revenue 58.3% YoY, PAT 85.7% YoY; 4Y CAGR revenue 27.1% / PAT 34.7%; ROCE —%; debt trend stable; OCF/PAT 0.28.
-
-**Sector view:** Sector strength 66.78
-
-**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
-
-**Key catalysts:**
-- Watch next quarterly print
-
-**Key risks:**
-- RSI 75 overbought
-- OCF/PAT 0.28 weak earnings quality
-
-**Action:** Enter ₹911-₹1097; stop ₹785; signal BUY.
-
-**Targets:** 2M ₹1,287 · 4M ₹1,413 · 6M ₹1,625  
-**Stop:** ₹785 · **Risk/Reward (4M):** 1.01x  
-**Risk score:** 6.0 / 10 (MEDIUM) · **Suggested size:** 6%
-
-**Conviction:** **HIGH** — 7 positive · 2 negative factors flagged
-
-**Snapshot:**
-
-- Price ₹1097.15 · 1D 10.9% · 1W 14.3% · 1M 40.1%
-- Stage **STAGE_2** (score 0.95) · Stance **BULLISH** · Signal **BUY**
-- Investment score 63.20 (tech 60.70, fund 84.38)
-- Relative Strength 76.8% vs Nifty 500; Supertrend BULLISH around ₹853.68
-
-**Technicals:**
-
-| Metric | Value |
-|---|---:|
-| Close (2026-06-12) | ₹1097.15 |
-| EMA 20 / 50 / 200 | ₹911.19 / ₹829.04 / ₹749.90 |
-| EMA50 slope (20d) | 11.18% |
-| RSI(14) | 74.82 |
-| ATR(14) | ₹63.12 (5.75%) |
-| 52W High / Low | ₹1105.20 / ₹580.50 |
-| Distance from 52W high | -0.7% |
-| Returns 1M / 3M / 6M / 1Y | 38.2% / 56.0% / 65.6% / 33.2% |
-| Last-day volume vs 20d avg | 1.63x |
-
-**Fundamentals:**
-
-| Metric | Value |
-|---|---:|
-| Piotroski F-score | — / 9 |
-| Altman Z-score | — |
-| Beneish M-score | — |
-| Forensic risk | — |
-| Revenue growth 3Y | — |
-| PAT growth 3Y | — |
-| ROE | — |
-| ROCE | — |
-| Debt / Equity | — |
-| Promoter holding | 53.2% |
-
----
-
-### 5. JNKINDIA — Other
-
-**Why selected:** Portfolio lab best strategy `darvas_box_breakout_v1` confirms as open position; current Stage 2 inv=62.5
-
-**Portfolio lab confirmation:** `darvas_box_breakout_v1` (Darvas Box Breakout, rank 1, 70.22% return) marks this as **open position**.
-
-**What the company does:** JIncorporated in 2010, JNK India Ltd is in the business of Technology based EPC Contracts and Solutions in Renewable Energy [1]
-
-*Company profile source: screener.in (live) — https://www.screener.in/company/JNKINDIA/*
-
-**Thesis:** Stage-2 EMA stack (Price ₹504 > EMA20 > EMA50 > EMA200) · RS 132% vs Nifty 500 · Within 5% of 52w high · PAT YoY +154% · Revenue YoY +77%
-
-**Technical view:** RSI 72.1, 1Y return 46.4%, dist from 52w high -1.4%.
-
-**Fundamental view:** Latest qtr revenue 77.0% YoY, PAT 153.8% YoY; 4Y CAGR revenue 29.0% / PAT 15.9%; ROCE —%; debt trend stable; OCF/PAT -0.03.
-
-**Sector view:** Sector strength 80.80
-
-**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
-
-**Key catalysts:**
-- OPM expanded 600bps vs 4Q avg
-
-**Key risks:**
-- RSI 72 overbought
-- OCF/PAT -0.03 weak earnings quality
-
-**Action:** Enter ₹415-₹504; stop ₹350; signal HOLD.
-
-**Targets:** 2M ₹602 · 4M ₹668 · 6M ₹733  
-**Stop:** ₹350 · **Risk/Reward (4M):** 1.06x  
-**Risk score:** 6.0 / 10 (MEDIUM) · **Suggested size:** 6%
-
-**Conviction:** **HIGH** — 5 positive · 2 negative factors flagged
-
-**Snapshot:**
-
-- Price ₹504.05 · 1D 7.2% · 1W 19.6% · 1M 46.1%
-- Stage **STAGE_2** (score 1.00) · Stance **NEUTRAL** · Signal **HOLD**
-- Investment score 62.50 (tech 48.00, fund 81.85)
-- Relative Strength 132.5% vs Nifty 500; Supertrend BULLISH around ₹389.44
-
-**Technicals:**
-
-| Metric | Value |
-|---|---:|
-| Close (2026-06-12) | ₹504.05 |
-| EMA 20 / 50 / 200 | ₹415.28 / ₹364.92 / ₹312.16 |
-| EMA50 slope (20d) | 18.28% |
-| RSI(14) | 72.05 |
-| ATR(14) | ₹32.73 (6.49%) |
-| 52W High / Low | ₹511.00 / ₹200.92 |
-| Distance from 52W high | -1.4% |
-| Returns 1M / 3M / 6M / 1Y | 48.1% / 113.0% / 128.6% / 46.4% |
-| Last-day volume vs 20d avg | 1.08x |
-
-**Fundamentals:**
-
-| Metric | Value |
-|---|---:|
-| Piotroski F-score | — / 9 |
-| Altman Z-score | — |
-| Beneish M-score | — |
-| Forensic risk | — |
-| Revenue growth 3Y | — |
-| PAT growth 3Y | — |
-| ROE | — |
-| ROCE | — |
-| Debt / Equity | — |
-| Promoter holding | 67.8% |
-
----
-
-### 6. APARINDS — Capital Goods & Industrials
-
-**Why selected:** Portfolio lab best strategy `darvas_box_breakout_v1` confirms as next buy; current Stage 2 inv=62.3, top sector strength=66
-
-**Portfolio lab confirmation:** `darvas_box_breakout_v1` (Darvas Box Breakout, rank 1, 70.22% return) marks this as **next buy**.
-
-**What the company does:** Apar, founded by Mr. Dharmsinh D. Desai in 1958, is a market leader in India with a global presence. Contributing to India’s process of electrification it started from manufacturing power transmission cables to having three broad business segments, which are Conductors, Transformer and specialty oils (TSO), and Power/telecom Cables. [1] [2]
-
-*Company profile source: screener.in (live) — https://www.screener.in/company/APARINDS/*
-
-**Thesis:** Stage-2 EMA stack (Price ₹15221 > EMA20 > EMA50 > EMA200) · Within 5% of 52w high · Revenue YoY +27% · OCF/PAT 0.99
-
-**Technical view:** RSI 72.7, 1Y return 87.8%, dist from 52w high -0.8%.
-
-**Fundamental view:** Latest qtr revenue 26.7% YoY, PAT 1.2% YoY; 4Y CAGR revenue 10.7% / PAT 11.2%; ROCE —%; debt trend rising; OCF/PAT 0.99.
-
-**Sector view:** Sector strength 65.74
-
-**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
-
-**Key catalysts:**
-- Watch next quarterly print
-
-**Key risks:**
-- RSI 73 overbought
-- Debt rising ₹+371 Cr (3Y)
-
-**Action:** Enter ₹13441-₹15221; stop ₹12059; signal BUY.
-
-**Targets:** 2M ₹17,290 · 4M ₹18,668 · 6M ₹20,162  
-**Stop:** ₹12,059 · **Risk/Reward (4M):** 1.09x  
-**Risk score:** 4.5 / 10 (MEDIUM) · **Suggested size:** 8%
-
-**Conviction:** **MEDIUM** — 4 positive · 2 negative factors flagged
-
-**Snapshot:**
-
-- Price ₹15221.00 · 1D 4.6% · 1W 9.7% · 1M 19.5%
-- Stage **STAGE_2** (score 0.79) · Stance **BULLISH** · Signal **BUY**
-- Investment score 62.30 (tech 66.70, fund 57.41)
-- Relative Strength 46.5% vs Nifty 500; Supertrend BULLISH around ₹12971.90
-
-**Technicals:**
-
-| Metric | Value |
-|---|---:|
-| Close (2026-06-12) | ₹15221.00 |
-| EMA 20 / 50 / 200 | ₹13441.27 / ₹12431.88 / ₹10236.99 |
-| EMA50 slope (20d) | 10.62% |
-| RSI(14) | 72.73 |
-| ATR(14) | ₹689.50 (4.53%) |
-| 52W High / Low | ₹15340.00 / ₹6801.00 |
-| Distance from 52W high | -0.8% |
-| Returns 1M / 3M / 6M / 1Y | 22.5% / 52.3% / 76.1% / 87.8% |
-| Last-day volume vs 20d avg | 1.79x |
-
-**Fundamentals:**
-
-| Metric | Value |
-|---|---:|
-| Piotroski F-score | — / 9 |
-| Altman Z-score | — |
-| Beneish M-score | — |
-| Forensic risk | — |
-| Revenue growth 3Y | — |
-| PAT growth 3Y | — |
-| ROE | — |
-| ROCE | — |
-| Debt / Equity | — |
-| Promoter holding | 57.8% |
-
----
-
-### 7. MTARTECH — PSU / CPSE
-
-**Why selected:** Portfolio lab best strategy `darvas_box_breakout_v1` confirms as open position; current Stage 2 inv=57.5, top sector strength=59
-
-**Portfolio lab confirmation:** `darvas_box_breakout_v1` (Darvas Box Breakout, rank 1, 70.22% return) marks this as **open position**.
+**Portfolio lab confirmation:** `darvas_box_breakout_v1` (Darvas Box Breakout, rank 1, 4.88% return) marks this as **open position**.
 
 **What the company does:** MTAR develops and manufactures components and equipment for the defense, aerospace, nuclear and clean energy sectors. The company was incorporated in 1970 by the promoters, Mr PR Reddy, Mr KSN Reddy and Mr PJ Reddy, to cater to the technical and engineering needs of the Indian government in the post embargo regime. MTAR has manufacturing footprints in Hyderabad with seven units spread across a 4 km radius and a dedicated export facility as well. [1] In addition, the company also supplies specialised products such.
 
 *Company profile source: screener.in (live) — https://www.screener.in/company/MTARTECH/*
 
-**Thesis:** Stage-2 EMA stack (Price ₹7160 > EMA20 > EMA50 > EMA200) · RS 99% vs Nifty 500 · PAT YoY +214% · Revenue YoY +67% · OCF/PAT 2.10
+**Thesis:** RS 98% vs Nifty 500 · Momentum RSI 63 · Within 5% of 52w high · PAT YoY +214% · Revenue YoY +67% · OCF/PAT 2.10
 
-**Technical view:** RSI 52.1, 1Y return 304.3%, dist from 52w high -15.3%.
+**Technical view:** RSI 62.8, 1Y return —%, dist from 52w high -3.9%.
 
 **Fundamental view:** Latest qtr revenue 67.2% YoY, PAT 214.3% YoY; 4Y CAGR revenue 28.4% / PAT 11.4%; ROCE —%; debt trend rising; OCF/PAT 2.10.
 
-**Sector view:** Sector strength 59.34
+**Sector view:** Sector strength 57.60
 
 **Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
 
@@ -533,34 +97,34 @@ A high-ranked pick should be read as a research shortlist candidate, not a direc
 **Key risks:**
 - Debt rising ₹+186 Cr (3Y)
 
-**Action:** Enter ₹6888-₹7160; stop ₹5800; signal BUY.
+**Action:** Enter ₹7493-₹8374; stop ₹6393; signal HOLD.
 
-**Targets:** 2M ₹8,791 · 4M ₹9,879 · 6M ₹10,966  
-**Stop:** ₹5,800 · **Risk/Reward (4M):** 2.00x  
-**Risk score:** 3.5 / 10 (MEDIUM) · **Suggested size:** 10%
+**Targets:** 2M ₹10,024 · 4M ₹11,123 · 6M ₹12,222  
+**Stop:** ₹6,393 · **Risk/Reward (4M):** 1.39x  
+**Risk score:** 3.5 / 10 (MEDIUM) · **Suggested size:** 8%
 
-**Conviction:** **HIGH** — 5 positive · 1 negative factors flagged
+**Conviction:** **HIGH** — 6 positive · 1 negative factors flagged
 
 **Snapshot:**
 
-- Price ₹7159.50 · 1D 13.5% · 1W -5.0% · 1M -5.7%
-- Stage **STAGE_2** (score 0.82) · Stance **BULLISH** · Signal **BUY**
-- Investment score 57.50 (tech 64.70, fund 50.93)
-- Relative Strength 99.0% vs Nifty 500; Supertrend BEARISH around ₹8397.85
+- Price ₹8374.50 · 1D 0.8% · 1W 17.0% · 1M 5.4%
+- Stage **STAGE_2** (score 0.95) · Stance **NEUTRAL** · Signal **HOLD**
+- Investment score 59.90 (tech 56.70, fund 50.93)
+- Relative Strength 97.7% vs Nifty 500; Supertrend BEARISH around ₹8397.85
 
 **Technicals:**
 
 | Metric | Value |
 |---|---:|
-| Close (2026-06-12) | ₹7159.50 |
-| EMA 20 / 50 / 200 | ₹7132.16 / ₹6302.04 / ₹3916.97 |
-| EMA50 slope (20d) | 26.55% |
-| RSI(14) | 52.06 |
-| ATR(14) | ₹543.82 (7.60%) |
-| 52W High / Low | ₹8449.50 / ₹1390.50 |
-| Distance from 52W high | -15.3% |
-| Returns 1M / 3M / 6M / 1Y | 5.9% / 92.9% / 207.5% / 304.3% |
-| Last-day volume vs 20d avg | 1.95x |
+| Close (2026-06-19) | ₹8374.50 |
+| EMA 20 / 50 / 200 | ₹7492.67 / ₹6593.05 / ₹— |
+| EMA50 slope (20d) | 23.10% |
+| RSI(14) | 62.82 |
+| ATR(14) | ₹549.68 (6.56%) |
+| 52W High / Low | ₹8714.00 / ₹1866.20 |
+| Distance from 52W high | -3.9% |
+| Returns 1M / 3M / 6M / 1Y | 12.3% / 143.6% / 261.6% / — |
+| Last-day volume vs 20d avg | 1.15x |
 
 **Fundamentals:**
 
@@ -579,23 +143,170 @@ A high-ranked pick should be read as a research shortlist candidate, not a direc
 
 ---
 
-### 8. ADANIGREEN — Energy - Power
+### 2. PANAMAPET — Other
 
-**Why selected:** Portfolio lab best strategy `darvas_box_breakout_v1` confirms as open position; current Stage 2 inv=47.6, VCP=76
+**Why selected:** Portfolio lab best strategy `darvas_box_breakout_v1` confirms as next buy; current Stage 2 inv=52.8
 
-**Portfolio lab confirmation:** `darvas_box_breakout_v1` (Darvas Box Breakout, rank 1, 70.22% return) marks this as **open position**.
+**Portfolio lab confirmation:** `darvas_box_breakout_v1` (Darvas Box Breakout, rank 1, 4.88% return) marks this as **next buy**.
 
-**What the company does:** Adani Green Energy Limited, incorporated in 2015, is a holding company of several subsidiaries carrying business of renewable power generation within the group and is primarily involved in renewable power generation and other ancillary activities. [1]
+**What the company does:** Panama Petrochem Ltd. was incorporated in 1982 by Amirali E Rayani and is engaged in the conversion and manufacturing of crude oil derivatives to 80+ specialty products across segments. [1]
 
-*Company profile source: screener.in (live) — https://www.screener.in/company/ADANIGREEN/*
+*Company profile source: screener.in (live) — https://www.screener.in/company/PANAMAPET/*
 
-**Thesis:** Stage-2 EMA stack (Price ₹1486 > EMA20 > EMA50 > EMA200) · RS 77% vs Nifty 500 · Momentum RSI 60 · Within 5% of 52w high · PAT YoY +34% · PAT 4Y CAGR 42% · OCF/PAT 5.10
+**Thesis:** RS 71% vs Nifty 500 · Within 5% of 52w high · PAT YoY +61% · Revenue YoY +18%
 
-**Technical view:** RSI 60.1, 1Y return 45.8%, dist from 52w high -3.8%.
+**Technical view:** RSI 80.8, 1Y return —%, dist from 52w high -1.4%.
 
-**Fundamental view:** Latest qtr revenue 14.0% YoY, PAT 34.2% YoY; 4Y CAGR revenue 26.0% / PAT 42.0%; ROCE —%; debt trend rising; OCF/PAT 5.10.
+**Fundamental view:** Latest qtr revenue 18.4% YoY, PAT 61.4% YoY; 4Y CAGR revenue 9.5% / PAT -2.0%; ROCE —%; debt trend rising; OCF/PAT -0.33.
 
-**Sector view:** Sector strength 51.46
+**Sector view:** Sector strength 78.52
+
+**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
+
+**Key catalysts:**
+- OPM expanded 240bps vs 4Q avg
+
+**Key risks:**
+- RSI 81 overbought
+- Debt rising ₹+85 Cr (3Y)
+- OCF/PAT -0.33 weak earnings quality
+
+**Action:** Enter ₹367-₹483; stop ₹310; signal BUY.
+
+**Targets:** 2M ₹569 · 4M ₹626 · 6M ₹684  
+**Stop:** ₹310 · **Risk/Reward (4M):** 0.83x  
+**Risk score:** 7.5 / 10 (HIGH) · **Suggested size:** 4%
+
+**Conviction:** **MEDIUM** — 4 positive · 3 negative factors flagged
+
+**Snapshot:**
+
+- Price ₹483.25 · 1D 18.4% · 1W 28.1% · 1M 49.3%
+- Stage **STAGE_2** (score 0.99) · Stance **BULLISH** · Signal **BUY**
+- Investment score 52.80 (tech 61.30, fund 69.06)
+- Relative Strength 70.7% vs Nifty 500; Supertrend BULLISH around ₹358.34
+
+**Technicals:**
+
+| Metric | Value |
+|---|---:|
+| Close (2026-06-19) | ₹483.25 |
+| EMA 20 / 50 / 200 | ₹366.99 / ₹330.21 / ₹— |
+| EMA50 slope (20d) | 15.80% |
+| RSI(14) | 80.76 |
+| ATR(14) | ₹28.64 (5.93%) |
+| 52W High / Low | ₹489.90 / ₹229.00 |
+| Distance from 52W high | -1.4% |
+| Returns 1M / 3M / 6M / 1Y | 49.8% / 88.6% / 73.7% / — |
+| Last-day volume vs 20d avg | 6.42x |
+
+**Fundamentals:**
+
+| Metric | Value |
+|---|---:|
+| Piotroski F-score | — / 9 |
+| Altman Z-score | — |
+| Beneish M-score | — |
+| Forensic risk | — |
+| Revenue growth 3Y | — |
+| PAT growth 3Y | — |
+| ROE | — |
+| ROCE | — |
+| Debt / Equity | — |
+| Promoter holding | 63.2% |
+
+---
+
+### 3. RPTECH — IT & Technology
+
+**Why selected:** Portfolio lab best strategy `darvas_box_breakout_v1` confirms as open position; current Stage 2 inv=49.7, top sector strength=68
+
+**Portfolio lab confirmation:** `darvas_box_breakout_v1` (Darvas Box Breakout, rank 1, 4.88% return) marks this as **open position**.
+
+**What the company does:** Incorporated in 1989, Rashi Peripherals Ltd operates in ICT product distribution business and after-sale services [1]
+
+*Company profile source: screener.in (live) — https://www.screener.in/company/RPTECH/*
+
+**Thesis:** RS 95% vs Nifty 500 · Within 5% of 52w high · PAT YoY +64% · Revenue YoY +51%
+
+**Technical view:** RSI 85.4, 1Y return —%, dist from 52w high -1.6%.
+
+**Fundamental view:** Latest qtr revenue 51.0% YoY, PAT 64.2% YoY; 4Y CAGR revenue 14.2% / PAT 11.4%; ROCE —%; debt trend rising; OCF/PAT 0.40.
+
+**Sector view:** Sector strength 67.62
+
+**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
+
+**Key catalysts:**
+- OPM expanded 60bps vs 4Q avg
+
+**Key risks:**
+- RSI 85 overbought
+- Debt rising ₹+291 Cr (3Y)
+
+**Action:** Enter ₹595-₹751; stop ₹512; signal HOLD.
+
+**Targets:** 2M ₹864 · 4M ₹940 · 6M ₹1,016  
+**Stop:** ₹512 · **Risk/Reward (4M):** 0.79x  
+**Risk score:** 6.5 / 10 (HIGH) · **Suggested size:** 4%
+
+**Conviction:** **MEDIUM** — 4 positive · 2 negative factors flagged
+
+**Snapshot:**
+
+- Price ₹750.65 · 1D 2.8% · 1W 34.4% · 1M 36.2%
+- Stage **STAGE_2** (score 0.99) · Stance **NEUTRAL** · Signal **HOLD**
+- Investment score 49.70 (tech 56.70, fund 55.77)
+- Relative Strength 95.2% vs Nifty 500; Supertrend BULLISH around ₹604.79
+
+**Technicals:**
+
+| Metric | Value |
+|---|---:|
+| Close (2026-06-19) | ₹750.65 |
+| EMA 20 / 50 / 200 | ₹594.59 / ₹527.96 / ₹— |
+| EMA50 slope (20d) | 16.47% |
+| RSI(14) | 85.45 |
+| ATR(14) | ₹37.88 (5.05%) |
+| 52W High / Low | ₹762.90 / ₹316.30 |
+| Distance from 52W high | -1.6% |
+| Returns 1M / 3M / 6M / 1Y | 38.1% / 115.1% / 123.9% / — |
+| Last-day volume vs 20d avg | 1.62x |
+
+**Fundamentals:**
+
+| Metric | Value |
+|---|---:|
+| Piotroski F-score | — / 9 |
+| Altman Z-score | — |
+| Beneish M-score | — |
+| Forensic risk | — |
+| Revenue growth 3Y | — |
+| PAT growth 3Y | — |
+| ROE | — |
+| ROCE | — |
+| Debt / Equity | — |
+| Promoter holding | 64.0% |
+
+---
+
+### 4. WALCHANNAG — Other
+
+**Why selected:** Portfolio lab best strategy `darvas_box_breakout_v1` confirms as open position; current Stage 2 inv=48.3
+
+**Portfolio lab confirmation:** `darvas_box_breakout_v1` (Darvas Box Breakout, rank 1, 4.88% return) marks this as **open position**.
+
+**What the company does:** Incorporated in 1908, Walchandnagar Industries Ltd is in the Heavy engineering and Foundry & Machine Shop business [1]
+
+*Company profile source: screener.in (live) — https://www.screener.in/company/WALCHANNAG/*
+
+**Thesis:** RS 83% vs Nifty 500 · Within 5% of 52w high
+
+**Technical view:** RSI 75.3, 1Y return —%, dist from 52w high -1.2%.
+
+**Fundamental view:** Latest qtr revenue —% YoY, PAT —% YoY; —Y CAGR revenue —% / PAT —%; ROCE 4.3%; debt trend —; OCF/PAT —.
+
+**Sector view:** Sector strength 78.52
 
 **Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
 
@@ -603,109 +314,36 @@ A high-ranked pick should be read as a research shortlist candidate, not a direc
 - Watch next quarterly print
 
 **Key risks:**
-- Debt rising ₹+38687 Cr (3Y)
+- RSI 75 overbought
 
-**Action:** Enter ₹1434-₹1486; stop ₹1267; signal HOLD.
+**Action:** Enter ₹261-₹312; stop ₹225; signal HOLD.
 
-**Targets:** 2M ₹1,654 · 4M ₹1,766 · 6M ₹2,031  
-**Stop:** ₹1,267 · **Risk/Reward (4M):** 1.28x  
-**Risk score:** 2.5 / 10 (LOW) · **Suggested size:** 8%
-
-**Conviction:** **HIGH** — 7 positive · 1 negative factors flagged
-
-**Snapshot:**
-
-- Price ₹1485.70 · 1D 2.1% · 1W -2.6% · 1M 5.0%
-- Stage **STAGE_2** (score 0.76) · Stance **NEUTRAL** · Signal **HOLD**
-- Investment score 47.60 (tech 50.00, fund 10.00)
-- Relative Strength 76.6% vs Nifty 500; Supertrend BULLISH around ₹1342.14
-
-**Technicals:**
-
-| Metric | Value |
-|---|---:|
-| Close (2026-06-12) | ₹1485.70 |
-| EMA 20 / 50 / 200 | ₹1434.07 / ₹1306.38 / ₹1108.30 |
-| EMA50 slope (20d) | 15.31% |
-| RSI(14) | 60.11 |
-| ATR(14) | ₹56.13 (3.78%) |
-| 52W High / Low | ₹1544.80 / ₹765.00 |
-| Distance from 52W high | -3.8% |
-| Returns 1M / 3M / 6M / 1Y | 8.7% / 73.4% / 49.5% / 45.8% |
-| Last-day volume vs 20d avg | 0.45x |
-
-**Fundamentals:**
-
-| Metric | Value |
-|---|---:|
-| Piotroski F-score | — / 9 |
-| Altman Z-score | — |
-| Beneish M-score | — |
-| Forensic risk | — |
-| Revenue growth 3Y | — |
-| PAT growth 3Y | — |
-| ROE | — |
-| ROCE | — |
-| Debt / Equity | — |
-| Promoter holding | 62.4% |
-
----
-
-### 9. HFCL — Railways & PSU Infra
-
-**Why selected:** Portfolio lab best strategy `darvas_box_breakout_v1` confirms as open position; current Stage 2 inv=47.4
-
-**Portfolio lab confirmation:** `darvas_box_breakout_v1` (Darvas Box Breakout, rank 1, 70.22% return) marks this as **open position**.
-
-**What the company does:** HFCL Ltd (Himachal Futuristic Communications Limited) is a diverse telecom infrastructure enabler with active interest spanning telecom infrastructure development, system integration, and manufacture and supply of high end telecom equipment, Optical Fiber and Optic Fiber Cable (OFC). [1]
-
-*Company profile source: screener.in (live) — https://www.screener.in/company/HFCL/*
-
-**Thesis:** Stage-2 EMA stack (Price ₹172 > EMA20 > EMA50 > EMA200) · RS 146% vs Nifty 500 · Revenue YoY +128%
-
-**Technical view:** RSI 58.1, 1Y return 88.0%, dist from 52w high -17.8%.
-
-**Fundamental view:** Latest qtr revenue 127.7% YoY, PAT -321.7% YoY; 4Y CAGR revenue 1.2% / PAT 0.2%; ROCE —%; debt trend rising; OCF/PAT -1.15.
-
-**Sector view:** Sector strength 56.54
-
-**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
-
-**Key catalysts:**
-- OPM expanded 700bps vs 4Q avg
-
-**Key risks:**
-- Debt rising ₹+753 Cr (3Y)
-- OCF/PAT -1.15 weak earnings quality
-
-**Action:** Enter ₹166-₹172; stop ₹135; signal HOLD.
-
-**Targets:** 2M ₹208 · 4M ₹232 · 6M ₹256  
-**Stop:** ₹135 · **Risk/Reward (4M):** 1.65x  
+**Targets:** 2M ₹365 · 4M ₹401 · 6M ₹436  
+**Stop:** ₹225 · **Risk/Reward (4M):** 1.02x  
 **Risk score:** 5.0 / 10 (MEDIUM) · **Suggested size:** 6%
 
-**Conviction:** **MEDIUM** — 3 positive · 2 negative factors flagged
+**Conviction:** **LOW** — 2 positive · 1 negative factors flagged
 
 **Snapshot:**
 
-- Price ₹171.86 · 1D 5.0% · 1W -8.2% · 1M 13.4%
-- Stage **STAGE_2** (score 0.67) · Stance **NEUTRAL** · Signal **HOLD**
-- Investment score 47.40 (tech 49.30, fund 10.00)
-- Relative Strength 145.7% vs Nifty 500; Supertrend BEARISH around ₹202.02
+- Price ₹312.05 · 1D 3.5% · 1W 17.6% · 1M 29.2%
+- Stage **STAGE_2** (score 0.89) · Stance **NEUTRAL** · Signal **HOLD**
+- Investment score 48.30 (tech 51.30, fund 52.40)
+- Relative Strength 82.8% vs Nifty 500; Supertrend BULLISH around ₹249.01
 
 **Technicals:**
 
 | Metric | Value |
 |---|---:|
-| Close (2026-06-12) | ₹171.86 |
-| EMA 20 / 50 / 200 | ₹166.70 / ₹139.69 / ₹98.46 |
-| EMA50 slope (20d) | 36.70% |
-| RSI(14) | 58.06 |
-| ATR(14) | ₹11.97 (6.97%) |
-| 52W High / Low | ₹208.98 / ₹59.82 |
-| Distance from 52W high | -17.8% |
-| Returns 1M / 3M / 6M / 1Y | 12.0% / 146.2% / 158.5% / 88.0% |
-| Last-day volume vs 20d avg | 0.17x |
+| Close (2026-06-19) | ₹312.05 |
+| EMA 20 / 50 / 200 | ₹260.59 / ₹235.98 / ₹— |
+| EMA50 slope (20d) | 13.95% |
+| RSI(14) | 75.30 |
+| ATR(14) | ₹17.71 (5.68%) |
+| 52W High / Low | ₹315.80 / ₹131.15 |
+| Distance from 52W high | -1.2% |
+| Returns 1M / 3M / 6M / 1Y | 31.0% / 107.2% / 103.3% / — |
+| Last-day volume vs 20d avg | 1.52x |
 
 **Fundamentals:**
 
@@ -717,30 +355,30 @@ A high-ranked pick should be read as a research shortlist candidate, not a direc
 | Forensic risk | — |
 | Revenue growth 3Y | — |
 | PAT growth 3Y | — |
-| ROE | — |
-| ROCE | — |
+| ROE | -3.8% |
+| ROCE | 4.3% |
 | Debt / Equity | — |
-| Promoter holding | 28.3% |
+| Promoter holding | 31.6% |
 
 ---
 
-### 10. CUPID — Other
+### 5. CUPID — Other
 
-**Why selected:** Portfolio lab best strategy `darvas_box_breakout_v1` confirms as open position; current Stage 2 inv=46.7
+**Why selected:** Portfolio lab best strategy `darvas_box_breakout_v1` confirms as open position; current Stage 2 inv=47.5
 
-**Portfolio lab confirmation:** `darvas_box_breakout_v1` (Darvas Box Breakout, rank 1, 70.22% return) marks this as **open position**.
+**Portfolio lab confirmation:** `darvas_box_breakout_v1` (Darvas Box Breakout, rank 1, 4.88% return) marks this as **open position**.
 
 **What the company does:** Established in 1993, CUPID Limited is India's premier manufacturer of male and female condoms, personal lubricant, and IVD kits. [1]
 
 *Company profile source: screener.in (live) — https://www.screener.in/company/CUPID/*
 
-**Thesis:** RS 85% vs Nifty 500 · PAT YoY +200% · Revenue YoY +114% · PAT 3Y CAGR 55% · Net cash ₹19 Cr
+**Thesis:** RS 88% vs Nifty 500 · PAT YoY +200% · Revenue YoY +114% · PAT 3Y CAGR 55% · Net cash ₹19 Cr
 
-**Technical view:** RSI 78.6, 1Y return 640.6%, dist from 52w high -69.6%.
+**Technical view:** RSI 85.3, 1Y return —%, dist from 52w high -66.4%.
 
 **Fundamental view:** Latest qtr revenue 114.3% YoY, PAT 200.0% YoY; 3Y CAGR revenue 33.9% / PAT 55.0%; ROCE —%; debt trend stable; OCF/PAT 0.43.
 
-**Sector view:** Sector strength 80.80
+**Sector view:** Sector strength 78.52
 
 **Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
 
@@ -748,36 +386,36 @@ A high-ranked pick should be read as a research shortlist candidate, not a direc
 - OPM expanded 140bps vs 4Q avg
 
 **Key risks:**
-- RSI 79 overbought
+- RSI 85 overbought
 
-**Action:** Enter ₹136-₹160; stop ₹126; signal HOLD.
+**Action:** Enter ₹149-₹177; stop ₹134; signal BUY.
 
-**Targets:** 2M ₹176 · 4M ₹186 · 6M ₹214  
-**Stop:** ₹126 · **Risk/Reward (4M):** 0.77x  
+**Targets:** 2M ₹200 · 4M ₹215 · 6M ₹247  
+**Stop:** ₹134 · **Risk/Reward (4M):** 0.88x  
 **Risk score:** 3.5 / 10 (MEDIUM) · **Suggested size:** 4%
 
 **Conviction:** **HIGH** — 5 positive · 1 negative factors flagged
 
 **Snapshot:**
 
-- Price ₹159.97 · 1D 3.1% · 1W 16.7% · 1M 30.0%
-- Stage **STAGE_2** (score 0.82) · Stance **NEUTRAL** · Signal **HOLD**
-- Investment score 46.70 (tech 61.30, fund 52.86)
-- Relative Strength 85.0% vs Nifty 500; Supertrend BULLISH around ₹140.73
+- Price ₹176.92 · 1D 4.6% · 1W 10.6% · 1M 47.2%
+- Stage **STAGE_2** (score 0.85) · Stance **BULLISH** · Signal **BUY**
+- Investment score 47.50 (tech 64.00, fund 52.86)
+- Relative Strength 88.1% vs Nifty 500; Supertrend BULLISH around ₹147.24
 
 **Technicals:**
 
 | Metric | Value |
 |---|---:|
-| Close (2026-06-12) | ₹159.97 |
-| EMA 20 / 50 / 200 | ₹136.25 / ₹144.66 / ₹162.56 |
-| EMA50 slope (20d) | -7.93% |
-| RSI(14) | 78.64 |
-| ATR(14) | ₹5.24 (3.28%) |
-| 52W High / Low | ₹526.95 / ₹17.68 |
-| Distance from 52W high | -69.6% |
-| Returns 1M / 3M / 6M / 1Y | 31.0% / 72.3% / -57.9% / 640.6% |
-| Last-day volume vs 20d avg | 1.33x |
+| Close (2026-06-19) | ₹176.92 |
+| EMA 20 / 50 / 200 | ₹149.12 / ₹149.76 / ₹— |
+| EMA50 slope (20d) | -1.40% |
+| RSI(14) | 85.28 |
+| ATR(14) | ₹7.59 (4.29%) |
+| 52W High / Low | ₹526.95 / ₹74.60 |
+| Distance from 52W high | -66.4% |
+| Returns 1M / 3M / 6M / 1Y | 48.1% / 124.7% / -55.1% / — |
+| Last-day volume vs 20d avg | 1.63x |
 
 **Fundamentals:**
 
@@ -796,6 +434,361 @@ A high-ranked pick should be read as a research shortlist candidate, not a direc
 
 ---
 
+### 6. PARAS — Defence & Aerospace
+
+**Why selected:** Portfolio lab best strategy `darvas_box_breakout_v1` confirms as open position; current Stage 2 inv=46.3, top sector strength=70
+
+**Portfolio lab confirmation:** `darvas_box_breakout_v1` (Darvas Box Breakout, rank 1, 4.88% return) marks this as **open position**.
+
+**What the company does:** Paras Defence and Space Technologies (PDST) is an Private sector company primarily engaged in the designing, developing, manufacturing, and testing of a variety of defence and space engineering products and solutions. The company caters to four major segments - Defence & Space Optics, Defence Electronics, Heavy Engineering and Electromagnetic Pulse Protection Solutions. [1]
+
+*Company profile source: screener.in (live) — https://www.screener.in/company/PARAS/*
+
+**Thesis:** RS 107% vs Nifty 500 · Within 5% of 52w high · PAT YoY +86% · Revenue YoY +58% · PAT 4Y CAGR 35% · Net cash ₹6 Cr
+
+**Technical view:** RSI 84.9, 1Y return —%, dist from 52w high -2.4%.
+
+**Fundamental view:** Latest qtr revenue 58.3% YoY, PAT 85.7% YoY; 4Y CAGR revenue 27.1% / PAT 34.7%; ROCE —%; debt trend stable; OCF/PAT 0.28.
+
+**Sector view:** Sector strength 70.40
+
+**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
+
+**Key catalysts:**
+- Watch next quarterly print
+
+**Key risks:**
+- RSI 85 overbought
+- OCF/PAT 0.28 weak earnings quality
+
+**Action:** Enter ₹1047-₹1409; stop ₹872; signal BUY.
+
+**Targets:** 2M ₹1,671 · 4M ₹1,846 · 6M ₹2,123  
+**Stop:** ₹872 · **Risk/Reward (4M):** 0.82x  
+**Risk score:** 6.5 / 10 (HIGH) · **Suggested size:** 4%
+
+**Conviction:** **HIGH** — 6 positive · 2 negative factors flagged
+
+**Snapshot:**
+
+- Price ₹1408.65 · 1D 7.5% · 1W 28.4% · 1M 78.2%
+- Stage **STAGE_2** (score 1.00) · Stance **BULLISH** · Signal **BUY**
+- Investment score 46.30 (tech 59.30, fund —)
+- Relative Strength 106.7% vs Nifty 500; Supertrend BULLISH around ₹1085.49
+
+**Technicals:**
+
+| Metric | Value |
+|---|---:|
+| Close (2026-06-19) | ₹1408.65 |
+| EMA 20 / 50 / 200 | ₹1047.17 / ₹904.06 / ₹— |
+| EMA50 slope (20d) | 21.00% |
+| RSI(14) | 84.89 |
+| ATR(14) | ₹87.44 (6.21%) |
+| 52W High / Low | ₹1443.00 / ₹580.50 |
+| Distance from 52W high | -2.4% |
+| Returns 1M / 3M / 6M / 1Y | 84.9% / 122.0% / 111.1% / — |
+| Last-day volume vs 20d avg | 3.09x |
+
+**Fundamentals:**
+
+| Metric | Value |
+|---|---:|
+| Piotroski F-score | — / 9 |
+| Altman Z-score | — |
+| Beneish M-score | — |
+| Forensic risk | — |
+| Revenue growth 3Y | — |
+| PAT growth 3Y | — |
+| ROE | — |
+| ROCE | — |
+| Debt / Equity | — |
+| Promoter holding | 53.2% |
+
+---
+
+### 7. LAURUSLABS — Pharma & Healthcare
+
+**Why selected:** VCP-confirmed Stage 2 (vcp=77, inv=68.0) in top-ranked sector Pharma & Healthcare (strength=70)
+
+**What the company does:** Founded in 2005, Laurus Labs is a research-driven pharmaceutical and biotechnology company having a global leadership position in select Active Pharmaceutical Ingredients (APIs) including anti-retroviral, oncology drugs (including High Potent APIs), Cardiovascular, and Gastro therapeutics. They also offer integrated CMO and CDMO services to Global Innovators from Clinical phase drug development to commercial manufacturing. Laurus employs 6,500+ people, including around 1,050+ scientists, at more than 11 facilities.
+
+*Company profile source: screener.in (live) — https://www.screener.in/company/LAURUSLABS/*
+
+**Thesis:** Momentum RSI 64 · Within 5% of 52w high · PAT YoY +21% · OCF/PAT 1.82
+
+**Technical view:** RSI 63.8, 1Y return —%, dist from 52w high -3.0%.
+
+**Fundamental view:** Latest qtr revenue 5.3% YoY, PAT 21.0% YoY; 4Y CAGR revenue 8.4% / PAT 1.7%; ROCE —%; debt trend falling; OCF/PAT 1.82.
+
+**Sector view:** Sector strength 70.40
+
+**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
+
+**Key catalysts:**
+- OPM expanded 420bps vs 4Q avg
+
+**Key risks:**
+- No quantitative red flag in dossier
+
+**Action:** Enter ₹1371-₹1413; stop ₹1246; signal BUY.
+
+**Targets:** 2M ₹1,532 · 4M ₹1,611 · 6M ₹1,690  
+**Stop:** ₹1,246 · **Risk/Reward (4M):** 1.18x  
+**Risk score:** 0.5 / 10 (LOW) · **Suggested size:** 8%
+
+**Conviction:** **MEDIUM** — 4 positive · 0 negative factors flagged
+
+**Snapshot:**
+
+- Price ₹1412.90 · 1D 3.2% · 1W 1.3% · 1M 4.6%
+- Stage **STAGE_2** (score 0.67) · Stance **BULLISH** · Signal **BUY**
+- Investment score 68.00 (tech 77.30, fund 73.10)
+- Relative Strength 26.0% vs Nifty 500; Supertrend BULLISH around ₹1351.98
+
+**Technicals:**
+
+| Metric | Value |
+|---|---:|
+| Close (2026-06-19) | ₹1412.90 |
+| EMA 20 / 50 / 200 | ₹1371.17 / ₹1284.49 / ₹— |
+| EMA50 slope (20d) | 11.20% |
+| RSI(14) | 63.84 |
+| ATR(14) | ₹39.54 (2.80%) |
+| 52W High / Low | ₹1457.00 / ₹864.70 |
+| Distance from 52W high | -3.0% |
+| Returns 1M / 3M / 6M / 1Y | 3.8% / 47.1% / 38.6% / — |
+| Last-day volume vs 20d avg | 1.30x |
+
+**Fundamentals:**
+
+| Metric | Value |
+|---|---:|
+| Piotroski F-score | — / 9 |
+| Altman Z-score | — |
+| Beneish M-score | — |
+| Forensic risk | — |
+| Revenue growth 3Y | — |
+| PAT growth 3Y | — |
+| ROE | — |
+| ROCE | — |
+| Debt / Equity | — |
+| Promoter holding | 27.5% |
+
+---
+
+### 8. SASKEN — IT & Technology
+
+**Why selected:** VCP-confirmed Stage 2 (vcp=80, inv=66.0) in top-ranked sector IT & Technology (strength=68)
+
+**What the company does:** Established in 1989, Sasken is a specialist in Product Engineering and Digital Transformation providing concept-to-market, chip-to-cognition R&D services to global leaders in Semiconductor, Automotive, Industrials, Consumer Electronics, Enterprise Devices, SatCom, and Transportation industries, etc. Located in India, the company has presence all over the world
+
+*Company profile source: screener.in (live) — https://www.screener.in/company/SASKEN/*
+
+**Thesis:** RS 104% vs Nifty 500 · PAT YoY +142% · Revenue YoY +126% · Net cash ₹249 Cr
+
+**Technical view:** RSI 70.9, 1Y return —%, dist from 52w high -7.0%.
+
+**Fundamental view:** Latest qtr revenue 125.7% YoY, PAT 141.7% YoY; 4Y CAGR revenue 26.5% / PAT -17.6%; ROCE —%; debt trend stable; OCF/PAT -0.39.
+
+**Sector view:** Sector strength 67.62
+
+**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
+
+**Key catalysts:**
+- OPM expanded 400bps vs 4Q avg
+
+**Key risks:**
+- RSI 71 overbought
+- OCF/PAT -0.39 weak earnings quality
+
+**Action:** Enter ₹2185-₹2586; stop ₹1808; signal HOLD.
+
+**Targets:** 2M ₹3,092 · 4M ₹3,429 · 6M ₹3,766  
+**Stop:** ₹1,808 · **Risk/Reward (4M):** 1.08x  
+**Risk score:** 5.0 / 10 (MEDIUM) · **Suggested size:** 6%
+
+**Conviction:** **MEDIUM** — 4 positive · 2 negative factors flagged
+
+**Snapshot:**
+
+- Price ₹2586.10 · 1D -2.3% · 1W 21.9% · 1M 49.3%
+- Stage **STAGE_2** (score 0.80) · Stance **BULLISH** · Signal **HOLD**
+- Investment score 66.00 (tech 59.30, fund 72.25)
+- Relative Strength 104.0% vs Nifty 500; Supertrend BULLISH around ₹2116.41
+
+**Technicals:**
+
+| Metric | Value |
+|---|---:|
+| Close (2026-06-19) | ₹2586.10 |
+| EMA 20 / 50 / 200 | ₹2185.20 / ₹1864.27 / ₹— |
+| EMA50 slope (20d) | 32.61% |
+| RSI(14) | 70.87 |
+| ATR(14) | ₹168.58 (6.52%) |
+| 52W High / Low | ₹2780.20 / ₹991.00 |
+| Distance from 52W high | -7.0% |
+| Returns 1M / 3M / 6M / 1Y | 50.5% / 157.7% / 115.5% / — |
+| Last-day volume vs 20d avg | 1.67x |
+
+**Fundamentals:**
+
+| Metric | Value |
+|---|---:|
+| Piotroski F-score | — / 9 |
+| Altman Z-score | — |
+| Beneish M-score | — |
+| Forensic risk | — |
+| Revenue growth 3Y | — |
+| PAT growth 3Y | — |
+| ROE | — |
+| ROCE | — |
+| Debt / Equity | — |
+| Promoter holding | 43.0% |
+
+---
+
+### 9. POLYCAB — Capital Goods & Industrials
+
+**Why selected:** VCP-confirmed Stage 2 (vcp=76, inv=65.2) in top-ranked sector Capital Goods & Industrials (strength=68)
+
+**What the company does:** Polycab is India’s leading manufacturers of cables and wires and allied products such as uPVC conduits and lugs and glands. We have a range of cables and wires for practically every application. More recently Polycab has also launched a wide range of consumer electrical products like Fans, Switches, Switchgear, LED lights and Luminaries, Solar Inverters, and Pumps.
+
+*Company profile source: screener.in (live) — https://www.screener.in/company/POLYCAB/*
+
+**Thesis:** Within 5% of 52w high · Revenue YoY +27% · PAT 4Y CAGR 31% · Net cash ₹3169 Cr · OCF/PAT 1.41
+
+**Technical view:** RSI 72.8, 1Y return —%, dist from 52w high -0.4%.
+
+**Fundamental view:** Latest qtr revenue 26.9% YoY, PAT 7.1% YoY; 4Y CAGR revenue 24.0% / PAT 31.1%; ROCE —%; debt trend rising; OCF/PAT 1.41.
+
+**Sector view:** Sector strength 67.88
+
+**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
+
+**Key catalysts:**
+- Watch next quarterly print
+
+**Key risks:**
+- RSI 73 overbought
+- Debt rising ₹+75 Cr (3Y)
+
+**Action:** Enter ₹9554-₹10083; stop ₹8743; signal BUY.
+
+**Targets:** 2M ₹10,741 · 4M ₹11,179 · 6M ₹12,856  
+**Stop:** ₹8,743 · **Risk/Reward (4M):** 0.82x  
+**Risk score:** 3.5 / 10 (MEDIUM) · **Suggested size:** 4%
+
+**Conviction:** **HIGH** — 5 positive · 2 negative factors flagged
+
+**Snapshot:**
+
+- Price ₹10083.00 · 1D 1.3% · 1W 5.5% · 1M 9.7%
+- Stage **STAGE_2** (score 0.70) · Stance **BULLISH** · Signal **BUY**
+- Investment score 65.20 (tech 77.30, fund 60.69)
+- Relative Strength 28.1% vs Nifty 500; Supertrend BULLISH around ₹9316.75
+
+**Technicals:**
+
+| Metric | Value |
+|---|---:|
+| Close (2026-06-19) | ₹10083.00 |
+| EMA 20 / 50 / 200 | ₹9554.50 / ₹9012.93 / ₹— |
+| EMA50 slope (20d) | 9.22% |
+| RSI(14) | 72.80 |
+| ATR(14) | ₹219.21 (2.17%) |
+| 52W High / Low | ₹10120.00 / ₹6663.00 |
+| Distance from 52W high | -0.4% |
+| Returns 1M / 3M / 6M / 1Y | 9.6% / 41.5% / 39.7% / — |
+| Last-day volume vs 20d avg | 1.63x |
+
+**Fundamentals:**
+
+| Metric | Value |
+|---|---:|
+| Piotroski F-score | — / 9 |
+| Altman Z-score | — |
+| Beneish M-score | — |
+| Forensic risk | — |
+| Revenue growth 3Y | — |
+| PAT growth 3Y | — |
+| ROE | — |
+| ROCE | — |
+| Debt / Equity | — |
+| Promoter holding | 61.5% |
+
+---
+
+### 10. SATIN — Financial Services
+
+**Why selected:** VCP-confirmed Stage 2 (vcp=74, inv=62.7) in top-ranked sector Financial Services (strength=58)
+
+**What the company does:** Satin Network Limited (SCNL) is a leading microfinance institution (MFI) with presence in 23 states & union territory and 95,000 villages. The company offers a bouquet of financial products in the Non‐MFI segment (comprising loans to MSMEs), a housing finance subsidiary, and business correspondent services and similar services to other financial Institutions through Taraashna Financial Services Limited (TFSL), a business correspondent company and a 100% subsidiary of SCNL. [1]
+
+*Company profile source: screener.in (live) — https://www.screener.in/company/SATIN/*
+
+**Thesis:** Within 5% of 52w high · PAT YoY +636% · Revenue YoY +50% · PAT 4Y CAGR 99%
+
+**Technical view:** RSI 59.5, 1Y return —%, dist from 52w high -4.7%.
+
+**Fundamental view:** Latest qtr revenue 49.6% YoY, PAT 636.4% YoY; 4Y CAGR revenue 22.9% / PAT 99.4%; ROCE —%; debt trend —; OCF/PAT -2.93.
+
+**Sector view:** Sector strength 58.14
+
+**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
+
+**Key catalysts:**
+- Watch next quarterly print
+
+**Key risks:**
+- OCF/PAT -2.93 weak earnings quality
+
+**Action:** Enter ₹228-₹235; stop ₹203; signal BUY.
+
+**Targets:** 2M ₹270 · 4M ₹293 · 6M ₹337  
+**Stop:** ₹203 · **Risk/Reward (4M):** 1.74x  
+**Risk score:** 3.0 / 10 (LOW) · **Suggested size:** 8%
+
+**Conviction:** **MEDIUM** — 4 positive · 1 negative factors flagged
+
+**Snapshot:**
+
+- Price ₹235.43 · 1D 1.7% · 1W 4.0% · 1M 8.2%
+- Stage **STAGE_2** (score 0.76) · Stance **BULLISH** · Signal **BUY**
+- Investment score 62.70 (tech 66.00, fund 53.26)
+- Relative Strength 46.4% vs Nifty 500; Supertrend BULLISH around ₹204.33
+
+**Technicals:**
+
+| Metric | Value |
+|---|---:|
+| Close (2026-06-19) | ₹235.43 |
+| EMA 20 / 50 / 200 | ₹227.75 / ₹208.77 / ₹— |
+| EMA50 slope (20d) | 14.48% |
+| RSI(14) | 59.46 |
+| ATR(14) | ₹11.47 (4.87%) |
+| 52W High / Low | ₹247.00 / ₹135.81 |
+| Distance from 52W high | -4.7% |
+| Returns 1M / 3M / 6M / 1Y | 5.8% / 62.8% / 65.0% / — |
+| Last-day volume vs 20d avg | 0.46x |
+
+**Fundamentals:**
+
+| Metric | Value |
+|---|---:|
+| Piotroski F-score | — / 9 |
+| Altman Z-score | — |
+| Beneish M-score | — |
+| Forensic risk | — |
+| Revenue growth 3Y | — |
+| PAT growth 3Y | — |
+| ROE | — |
+| ROCE | — |
+| Debt / Equity | — |
+| Promoter holding | 36.2% |
+
+---
+
 ## Portfolio Construction
 
 Equal-weight 10% per name baseline. Overweight HIGH-conviction names by +2%, halve LOW-conviction sizes. Cap sector exposure at 30%. Scale gross to 60-70% in elevated VIX regimes; cap per-trade risk at 1-2% of NAV via stop-distance × size.
@@ -803,12 +796,12 @@ Equal-weight 10% per name baseline. Overweight HIGH-conviction names by +2%, hal
 **Sector spread:**
 
 - Other: **3** name(s)
-- Defence & Aerospace: **2** name(s)
-- IT & Technology: **1** name(s)
-- Capital Goods & Industrials: **1** name(s)
+- IT & Technology: **2** name(s)
 - PSU / CPSE: **1** name(s)
-- Energy - Power: **1** name(s)
-- Railways & PSU Infra: **1** name(s)
+- Defence & Aerospace: **1** name(s)
+- Pharma & Healthcare: **1** name(s)
+- Capital Goods & Industrials: **1** name(s)
+- Financial Services: **1** name(s)
 
 ## Full Disclaimer
 

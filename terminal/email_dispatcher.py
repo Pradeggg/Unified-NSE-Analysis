@@ -19,6 +19,7 @@ import re
 import shlex
 import subprocess
 import textwrap
+from html import unescape
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -60,6 +61,12 @@ REPORT_ALIASES: dict[str, str] = {
     "calendar":         "latest/seasonal_calendar.html",
     "us":               "latest/us_market_report.html",
     "us-market":        "latest/us_market_report.html",
+    "eod":              "latest/eod_market_report.html",
+    "eod-market":       "latest/eod_market_report.html",
+    "eod_market":       "latest/eod_market_report.html",
+    "market-eod":       "latest/eod_market_report.html",
+    "market_eod":       "latest/eod_market_report.html",
+    "eod-market-report": "latest/eod_market_report.html",
 }
 
 # Dynamic aliases: resolved at lookup time via the configured glob (newest match
@@ -576,6 +583,89 @@ def _applescript_recipients(rec_type: str, addrs: list[str]) -> str:
     return "\n".join(lines)
 
 
+def _ensure_html_document(html_body: str) -> str:
+    """Return a complete HTML document for Outlook's HTML composer.
+
+    Outlook for Mac is more reliable when AppleScript receives a full document
+    instead of a fragment beginning with a bare <div>/<table>.
+    """
+    body = (html_body or "").strip()
+    if re.search(r"<\s*html\b", body, flags=re.IGNORECASE):
+        return body
+    return (
+        "<!doctype html>\n"
+        "<html>\n"
+        "<head>\n"
+        '  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">\n'
+        '  <meta name="viewport" content="width=device-width, initial-scale=1">\n'
+        "</head>\n"
+        '<body style="margin:0;padding:0;background:#ffffff;">\n'
+        f"{body}\n"
+        "</body>\n"
+        "</html>\n"
+    )
+
+
+def _html_to_plain_text(html_body: str) -> str:
+    """Small plain-text fallback for Outlook accounts not composing as HTML."""
+    text = re.sub(r"(?i)<\s*br\s*/?\s*>", "\n", html_body or "")
+    text = re.sub(r"(?i)</\s*(p|div|tr|h[1-6]|li|table)\s*>", "\n", text)
+    text = re.sub(r"(?is)<\s*style\b.*?</\s*style\s*>", "", text)
+    text = re.sub(r"(?is)<\s*script\b.*?</\s*script\s*>", "", text)
+    text = re.sub(r"<[^>]+>", "", text)
+    text = unescape(text)
+    text = re.sub(r"[ \t]+\n", "\n", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def _build_outlook_applescript(
+    *,
+    subject: str,
+    html_body_path: Path,
+    plain_body_path: Path,
+    to_addrs: list[str],
+    bcc_addrs: list[str],
+    attachments: list[Path],
+    send_immediately: bool,
+) -> str:
+    final_action = "send newMsg" if send_immediately else "open newMsg"
+    to_block = _applescript_recipients("to", to_addrs)
+    bcc_block = _applescript_recipients("bcc", bcc_addrs)
+
+    subj_e = subject.replace('"', '\\"')
+    html_path_str = str(html_body_path).replace('"', '\\"')
+    plain_path_str = str(plain_body_path).replace('"', '\\"')
+    attach_lines: list[str] = []
+    for att in attachments or []:
+        if att is None:
+            continue
+        att_str = str(att).replace('"', '\\"')
+        attach_lines.append(
+            f'    set attachPath to POSIX file "{att_str}"\n'
+            f'    make new attachment at newMsg with properties {{file:attachPath}}'
+        )
+    attach_block = "\n".join(attach_lines)
+
+    return f'''
+set htmlBody to (do shell script "cat " & quoted form of "{html_path_str}")
+set plainBody to (do shell script "cat " & quoted form of "{plain_path_str}")
+tell application "Microsoft Outlook"
+    activate
+    set newMsg to make new outgoing message with properties {{subject:"{subj_e}"}}
+    if has html of newMsg then
+        set content of newMsg to htmlBody
+    else
+        set plain text content of newMsg to plainBody
+    end if
+{to_block}
+{bcc_block}
+{attach_block}
+    {final_action}
+end tell
+'''
+
+
 def send_via_outlook(
     subject: str,
     html_body: str,
@@ -590,37 +680,20 @@ def send_via_outlook(
     """
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     body_path = LOG_DIR / f"_email_body_{datetime.now():%Y%m%d_%H%M%S}.html"
-    body_path.write_text(html_body, encoding="utf-8")
+    plain_path = LOG_DIR / f"_email_body_{datetime.now():%Y%m%d_%H%M%S}.txt"
+    html_document = _ensure_html_document(html_body)
+    body_path.write_text(html_document, encoding="utf-8")
+    plain_path.write_text(_html_to_plain_text(html_document), encoding="utf-8")
 
-    final_action = "send newMsg" if send_immediately else "open newMsg"
-    to_block  = _applescript_recipients("to",  to_addrs)
-    bcc_block = _applescript_recipients("bcc", bcc_addrs)
-
-    subj_e        = subject.replace('"', '\\"')
-    body_path_str = str(body_path).replace('"', '\\"')
-    attach_lines: list[str] = []
-    for att in attachments or []:
-        if att is None:
-            continue
-        att_str = str(att).replace('"', '\\"')
-        attach_lines.append(
-            f'    set attachPath to POSIX file "{att_str}"\n'
-            f'    make new attachment at newMsg with properties {{file:attachPath}}'
-        )
-    attach_block = "\n".join(attach_lines)
-
-    script = f'''
-set htmlBody to (do shell script "cat " & quoted form of "{body_path_str}")
-tell application "Microsoft Outlook"
-    activate
-    set newMsg to make new outgoing message with properties {{subject:"{subj_e}"}}
-    set content of newMsg to htmlBody
-{to_block}
-{bcc_block}
-{attach_block}
-    {final_action}
-end tell
-'''
+    script = _build_outlook_applescript(
+        subject=subject,
+        html_body_path=body_path,
+        plain_body_path=plain_path,
+        to_addrs=to_addrs,
+        bcc_addrs=bcc_addrs,
+        attachments=attachments,
+        send_immediately=send_immediately,
+    )
 
     result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
     if result.returncode != 0:

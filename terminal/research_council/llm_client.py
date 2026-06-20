@@ -201,7 +201,7 @@ def _load_dotenv_if_needed() -> None:
                 continue
             key, value = stripped.split("=", 1)
             key = key.strip()
-            if key and key not in os.environ:
+            if key and not os.environ.get(key):
                 os.environ[key] = value.strip().strip('"').strip("'")
     except OSError:
         return

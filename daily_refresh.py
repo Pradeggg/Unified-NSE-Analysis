@@ -32,6 +32,28 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 MAIN_WORKTREE_BASE = ROOT.parent.parent if ROOT.parent.name == ".worktrees" else ROOT
 PYTHON = sys.executable
+
+
+def _load_project_env() -> None:
+    """Load project .env values for missing or empty process env vars."""
+    env_path = ROOT / ".env"
+    if not env_path.exists():
+        return
+    try:
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or "=" not in stripped:
+                continue
+            key, value = stripped.split("=", 1)
+            key = key.strip()
+            if key and not os.environ.get(key):
+                os.environ[key] = value.strip().strip('"').strip("'")
+    except OSError:
+        return
+
+
+_load_project_env()
+
 PG_DSN = (
     os.environ.get("AGENT_ADDA_PG_DSN")
     or os.environ.get("PG_DSN")
@@ -56,7 +78,14 @@ def _now_ist() -> str:
     return datetime.fromtimestamp(ist_ts, tz=timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d %H:%M IST")
 
 
-def _run(label: str, cmd: list[str], dry_run: bool = False, cwd: Path | None = None, env: dict | None = None) -> bool:
+def _run(
+    label: str,
+    cmd: list[str],
+    dry_run: bool = False,
+    cwd: Path | None = None,
+    env: dict | None = None,
+    timeout: float | None = None,
+) -> bool:
     """Run a subprocess step. Returns True on success."""
     print(f"\n{'─'*60}")
     print(f"▶  {label}")
@@ -65,12 +94,18 @@ def _run(label: str, cmd: list[str], dry_run: bool = False, cwd: Path | None = N
         print("   [DRY RUN — skipped]")
         return True
     t0 = time.time()
-    result = subprocess.run(
-        cmd,
-        cwd=str(cwd or ROOT),
-        capture_output=False,
-        env=env,
-    )
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=str(cwd or ROOT),
+            capture_output=False,
+            env=env,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        elapsed = time.time() - t0
+        print(f"   ❌ TIMED OUT after {elapsed:.0f}s")
+        return False
     elapsed = time.time() - t0
     if result.returncode == 0:
         print(f"   ✅ Done in {elapsed:.0f}s")
@@ -280,7 +315,18 @@ def step_top_picks_report(dry_run: bool) -> bool:
     _section("STEP 5C — Top Investment Picks Detailed Report")
     return _run(
         "Top Investment Picks Analysis",
-        [PYTHON, "top_picks_report.py"],
+        [PYTHON, "top_picks_report.py", "--no-llm"],
+        dry_run=dry_run,
+        timeout=300,
+    )
+
+
+def step_eod_market_report(dry_run: bool) -> bool:
+    """Generate the intraday-backed EOD Market Report."""
+    _section("STEP 5D — EOD Market Report")
+    return _run(
+        "EOD Market Report",
+        [PYTHON, "scripts/build_eod_market_report.py", "--no-open"],
         dry_run=dry_run,
     )
 
@@ -667,8 +713,16 @@ def step_analyze_daily_results(
         "--limit", str(limit),
     ]
     if skip_llm:
-        cmd.append("--skip-llm")
-    return _run("Daily results analysis (LLM)", cmd, dry_run=dry_run)
+        cmd.extend(["--skip-llm", "--skip-filing"])
+        return _run("Daily results analysis (rules)", cmd, dry_run=dry_run, timeout=300)
+
+    ok = _run("Daily results analysis (LLM)", cmd, dry_run=dry_run, timeout=600)
+    if ok:
+        return True
+
+    print("  ⚠️  LLM results analysis failed or timed out; retrying rule-based fallback")
+    fallback_cmd = [*cmd, "--skip-llm", "--skip-filing"]
+    return _run("Daily results analysis (rule fallback)", fallback_cmd, dry_run=dry_run, timeout=300)
 
 
 def step_comprehensive_r_reports(dry_run: bool) -> bool:
@@ -722,6 +776,8 @@ def main() -> int:
                         help="Skip the LLM-driven daily results analysis report")
     parser.add_argument("--results-analysis-days-back", type=int, default=1,
                         help="Analyser window in calendar days (default 1)")
+    parser.add_argument("--results-analysis-limit", type=int, default=10,
+                        help="Maximum filings to analyse in daily refresh (default 10; raise for manual deep runs)")
     parser.add_argument("--results-analysis-skip-llm", action="store_true",
                         help="Run analyser with stub output (no LLM call)")
     parser.add_argument("--skip-portfolio-lab", action="store_true",
@@ -908,6 +964,14 @@ def main() -> int:
             print("  ⚠️  Top picks report QA failed (non-fatal)")
             failed.append("Report QA: top picks")
 
+    # 5D. Intraday-backed EOD market tape report.
+    if not step_eod_market_report(args.dry_run):
+        failed.append("EOD market report")
+    elif not args.skip_report_validation:
+        if not step_report_validation("eod_market", args.dry_run):
+            print("  ⚠️  EOD market report QA failed (non-fatal)")
+            failed.append("Report QA: EOD market")
+
     # 6. My portfolio EOD report from latest PostgreSQL stage snapshot.
     if not step_portfolio_monitor(args.dry_run, intraday=False):
         failed.append("My portfolio EOD report")
@@ -945,6 +1009,7 @@ def main() -> int:
         if not step_analyze_daily_results(
             args.dry_run,
             days_back=args.results_analysis_days_back,
+            limit=args.results_analysis_limit,
             skip_llm=args.results_analysis_skip_llm,
         ):
             print("  ⚠️  Daily results analysis had failures — see scores.financials_refresh_log")

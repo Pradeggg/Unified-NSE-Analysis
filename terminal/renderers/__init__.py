@@ -90,6 +90,9 @@ def render(
 
     # ── F&O ────────────────────────────────────────────────────────────────
     from . import fno
+    if intent == "intraday_options_trade_plan":
+        from . import intraday_options
+        return intraday_options.render(tool_results)
     if intent == "fno_overview":
         return fno.render(tool_results)
 

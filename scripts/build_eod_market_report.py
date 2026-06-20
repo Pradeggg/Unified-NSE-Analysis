@@ -181,13 +181,13 @@ def load_report_data(conn, report_date: date) -> dict[str, Any]:
         ),
         breadth AS (
             SELECT hour_bucket,
-                   count(*) FILTER (WHERE symbol NOT IN ('NIFTY','BANKNIFTY') AND hour_close > hour_open) AS adv,
-                   count(*) FILTER (WHERE symbol NOT IN ('NIFTY','BANKNIFTY') AND hour_close < hour_open) AS decl,
-                   count(*) FILTER (WHERE symbol NOT IN ('NIFTY','BANKNIFTY') AND hour_close = hour_open) AS unchanged,
-                   count(*) FILTER (WHERE symbol NOT IN ('NIFTY','BANKNIFTY')) AS universe,
-                   round(avg(CASE WHEN symbol NOT IN ('NIFTY','BANKNIFTY') AND hour_open > 0
+                   count(*) FILTER (WHERE symbol NOT IN ('NIFTY','BANKNIFTY','FINNIFTY','MIDCPNIFTY') AND hour_close > hour_open) AS adv,
+                   count(*) FILTER (WHERE symbol NOT IN ('NIFTY','BANKNIFTY','FINNIFTY','MIDCPNIFTY') AND hour_close < hour_open) AS decl,
+                   count(*) FILTER (WHERE symbol NOT IN ('NIFTY','BANKNIFTY','FINNIFTY','MIDCPNIFTY') AND hour_close = hour_open) AS unchanged,
+                   count(*) FILTER (WHERE symbol NOT IN ('NIFTY','BANKNIFTY','FINNIFTY','MIDCPNIFTY')) AS universe,
+                   round(avg(CASE WHEN symbol NOT IN ('NIFTY','BANKNIFTY','FINNIFTY','MIDCPNIFTY') AND hour_open > 0
                                   THEN ((hour_close-hour_open)/hour_open)*100 END)::numeric, 2) AS avg_stock_chg_pct,
-                   sum(hour_volume) FILTER (WHERE symbol NOT IN ('NIFTY','BANKNIFTY')) AS total_volume
+                   sum(hour_volume) FILTER (WHERE symbol NOT IN ('NIFTY','BANKNIFTY','FINNIFTY','MIDCPNIFTY')) AS total_volume
             FROM per_symbol_hour
             GROUP BY hour_bucket
         ),
@@ -231,7 +231,7 @@ def load_report_data(conn, report_date: date) -> dict[str, Any]:
             SELECT b.symbol, b.timestamp AT TIME ZONE %s AS ts, b.open, b.high, b.low, b.close, b.volume
             FROM intraday.ohlcv_bars b
             WHERE b.timeframe = '15m'
-              AND b.symbol NOT IN ('NIFTY','BANKNIFTY')
+              AND b.symbol NOT IN ('NIFTY','BANKNIFTY','FINNIFTY','MIDCPNIFTY')
               AND (b.timestamp AT TIME ZONE %s)::date = %s
         ),
         marked AS (
@@ -261,7 +261,7 @@ def load_report_data(conn, report_date: date) -> dict[str, Any]:
             SELECT symbol, timestamp AT TIME ZONE %s AS ts, open, high, low, close, volume
             FROM intraday.ohlcv_bars
             WHERE timeframe='15m'
-              AND symbol NOT IN ('NIFTY','BANKNIFTY')
+              AND symbol NOT IN ('NIFTY','BANKNIFTY','FINNIFTY','MIDCPNIFTY')
               AND (timestamp AT TIME ZONE %s)::date = %s
         ),
         marked AS (

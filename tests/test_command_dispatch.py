@@ -163,9 +163,9 @@ class TestCommandRegistry:
     """All registered handlers match expected inputs in both modes."""
 
     EXPECTED_HANDLERS = [
-        "help", "commands", "interaction", "copilot-workflows", "scan", "quality-breakouts", "strategy-council", "council",
-        "backtest", "data-coverage", "open-last-report", "visual-scan",
-        "doctor", "mtf", "strength", "email", "my-portfolio",
+        "help", "commands", "dashboard", "intraday-alerts", "interaction", "copilot-workflows", "scan", "quality-breakouts", "strategy-council", "council",
+        "backtest", "data-coverage", "broker-research", "open-last-report", "visual-scan",
+        "doctor", "mtf", "strength", "skills", "email", "my-portfolio",
         "swing-playbook", "diagnose", "report-diagnosis",
     ]
 
@@ -199,6 +199,7 @@ class TestCommandRegistry:
         test_inputs = {
             "help":             "/help",
             "commands":         "/commands",
+            "dashboard":         "/dashboard --once --html",
             "interaction":      "/style codex",
             "copilot-workflows": "/status",
             "scan":             "/scan nifty",
@@ -222,6 +223,129 @@ class TestCommandRegistry:
             assert h.match_fn(query.lower()), (
                 f"Handler '{name}' did not match expected input {query!r}"
             )
+
+    def test_dashboard_handler_calls_market_dashboard_runner(self, registry):
+        handler_map = {h.name: h for h in registry._handlers}
+        h = handler_map["dashboard"]
+
+        with patch("nse_agent._print_user"), \
+             patch("nse_agent._run_market_dashboard_live") as run_dashboard:
+            handled = h.handler_fn("/dashboard --once --html --drilldown", agent=None, show_trace=False)
+
+        assert handled is True
+        run_dashboard.assert_called_once_with(
+            "",
+            llm_backend=None,
+            once=True,
+            html_output=True,
+            open_browser=False,
+            drilldown=True,
+        )
+        assert h.match_fn("/dash")
+        assert h.match_fn("/dashboard --once")
+
+    def test_dashboard_parser_supports_live_commentary_flags(self):
+        parsed = nse_agent._parse_dashboard_command(
+            "/dashboard --live-commentary --symbols TRENT,DIXON --interval 30 --cycles 2 --no-llm"
+        )
+
+        assert parsed["live_commentary"] is True
+        assert parsed["symbols"] == ["TRENT", "DIXON"]
+        assert parsed["refresh_secs"] == 30
+        assert parsed["cycles"] == 2
+        assert parsed["use_llm"] is False
+        assert parsed["focus"] == ""
+
+    def test_dashboard_handler_routes_live_commentary_to_tracker_runner(self, registry):
+        handler_map = {h.name: h for h in registry._handlers}
+        h = handler_map["dashboard"]
+
+        with patch("nse_agent._print_user"), \
+             patch("nse_agent.run_live_commentary_dashboard", create=True) as live_runner:
+            handled = h.handler_fn(
+                "/dashboard --live-commentary --symbols TRENT,DIXON --interval 30 --cycles 1 --no-llm",
+                agent=None,
+                show_trace=False,
+            )
+
+        assert handled is True
+        live_runner.assert_called_once()
+        config = live_runner.call_args.args[0]
+        assert config.symbols == ["TRENT", "DIXON"]
+        assert config.refresh_secs == 30
+        assert config.max_cycles == 1
+        assert config.use_llm is False
+
+    def test_intraday_alerts_handler_is_registered_and_routes_to_monitor(self, registry):
+        handler_map = {h.name: h for h in registry._handlers}
+        h = handler_map["intraday-alerts"]
+
+        with patch("nse_agent._print_user"), \
+             patch("nse_agent.run_intraday_alert_commentary", create=True) as runner:
+            handled = h.handler_fn(
+                "/intraday-alerts --symbols BEL,MCX --cycles 1 --interval 5 --min-rr 2.5 --trigger active --dry-run --no-llm",
+                agent=None,
+                show_trace=False,
+            )
+
+        assert handled is True
+        runner.assert_called_once()
+        config = runner.call_args.args[0]
+        assert config.symbols == ["BEL", "MCX"]
+        assert config.cycles == 1
+        assert config.interval_secs == 5
+        assert config.min_rr == 2.5
+        assert config.trigger == "active"
+        assert config.dry_run is True
+        assert config.use_llm is False
+
+    def test_live_intraday_alerts_alias_routes_to_monitor(self, registry):
+        handler_map = {h.name: h for h in registry._handlers}
+        h = handler_map["intraday-alerts"]
+
+        assert h.match_fn("/live_intraday_alerts --symbols BEL")
+
+        with patch("nse_agent._print_user"), \
+             patch("nse_agent.run_intraday_alert_commentary", create=True) as runner:
+            handled = h.handler_fn(
+                "/live_intraday_alerts --symbols INDUSINDBK,NHPC --cycles 1 --interval 5 --no-llm",
+                agent=None,
+                show_trace=False,
+            )
+
+        assert handled is True
+        runner.assert_called_once()
+        config = runner.call_args.args[0]
+        assert config.symbols == ["INDUSINDBK", "NHPC"]
+        assert config.cycles == 1
+        assert config.interval_secs == 5
+        assert config.use_llm is False
+
+    def test_live_intraday_alerts_typo_and_pasted_separator_routes_to_monitor(self, registry):
+        handler_map = {h.name: h for h in registry._handlers}
+        h = handler_map["intraday-alerts"]
+
+        assert h.match_fn("/live_intraday_alertss --cycles 1")
+
+        with patch("nse_agent._print_user"), \
+             patch("nse_agent.run_intraday_alert_commentary", create=True) as runner:
+            handled = h.handler_fn(
+                "/live_intraday_alertss --cycles 1 --interval 180 --candle-interval 5m --trigger active_or_near │ --min-rr 1.3 --email-every-mins 15 --max-tracked-symbols 7 --min-volume-ratio 1.2",
+                agent=None,
+                show_trace=False,
+            )
+
+        assert handled is True
+        runner.assert_called_once()
+        config = runner.call_args.args[0]
+        assert config.cycles == 1
+        assert config.interval_secs == 180
+        assert config.candle_interval == "5m"
+        assert config.trigger == "active_or_near"
+        assert config.min_rr == 1.3
+        assert config.email_every_mins == 15
+        assert config.max_tracked_symbols == 7
+        assert config.min_volume_ratio == 1.2
 
     def test_my_portfolio_handler_is_registered(self, registry):
         """Bare /my-portfolio handler must exist in registry."""

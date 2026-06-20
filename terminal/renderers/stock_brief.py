@@ -8,6 +8,18 @@ from terminal.renderers._base import _get, _source_trail_lines, FOOTER
 
 # ─── Shared helpers ────────────────────────────────────────────────────────────
 
+def _row_pct(row: dict) -> float | None:
+    for key in ("pct_change", "change_1d_pct", "pChange", "perChange"):
+        value = row.get(key)
+        if value is None:
+            continue
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
 def _render_assessment_plan_block(plan: dict | None, tool_results: list[dict], lines: list[str]) -> None:
     """Render the SITUATION ASSESSMENT PLAN block into *lines* in place."""
     if not plan:
@@ -1229,9 +1241,8 @@ def render(
             lines.append(
                 "  Top gainers: "
                 + " | ".join(
-                    f"{row.get('symbol', '—')} {row.get('pct_change', 0):+.2f}%"
-                    if isinstance(row.get("pct_change"), (int, float))
-                    else f"{row.get('symbol', '—')} n/a"
+                    f"{row.get('symbol', '—')} {_row_pct(row):+.2f}%"
+                    if _row_pct(row) is not None else f"{row.get('symbol', '—')} n/a"
                     for row in gainers[:5]
                 )
             )
@@ -1239,9 +1250,8 @@ def render(
             lines.append(
                 "  Top losers: "
                 + " | ".join(
-                    f"{row.get('symbol', '—')} {row.get('pct_change', 0):+.2f}%"
-                    if isinstance(row.get("pct_change"), (int, float))
-                    else f"{row.get('symbol', '—')} n/a"
+                    f"{row.get('symbol', '—')} {_row_pct(row):+.2f}%"
+                    if _row_pct(row) is not None else f"{row.get('symbol', '—')} n/a"
                     for row in losers[:5]
                 )
             )

@@ -160,6 +160,7 @@ class ConversationMemory:
     pending_options: list[PendingOption] = field(default_factory=list)
     source_trails: list[dict[str, Any]] = field(default_factory=list)
     current_workflow_id: str = ""
+    agentic_state: dict[str, Any] = field(default_factory=dict)
 
     def record_turn(
         self,
@@ -449,6 +450,7 @@ class ConversationMemory:
             "pending_options": [opt.to_dict() for opt in self.pending_options],
             "source_trails": [dict(item) for item in self.source_trails],
             "current_workflow_id": self.current_workflow_id,
+            "agentic_state": dict(self.agentic_state),
         }
 
     @classmethod
@@ -490,6 +492,7 @@ class ConversationMemory:
             dict(item) for item in data.get("source_trails") or [] if isinstance(item, dict)
         ]
         memory.current_workflow_id = str(data.get("current_workflow_id") or "")
+        memory.agentic_state = dict(data.get("agentic_state") or {})
         return memory
 
     def save_to_postgres(self, dsn: str | None = None) -> dict[str, Any]:

@@ -139,7 +139,7 @@ def prepare_replay_frame(
     raw["latest_result_period"] = raw["latest_result_period"].fillna("").astype(str)
 
     features = raw.loc[pd.to_datetime(raw["date"]) >= pd.to_datetime(start_date), _FEATURE_COLUMNS].copy()
-    features = features.dropna(subset=["stage", "sma_20", "sma_50", "sma_100", "sma_200", "atr_14"])
+    features = features.dropna(subset=_REQUIRED_REPLAY_COLUMNS)
     features = features.sort_values(["date", "symbol"]).reset_index(drop=True)
     features["date"] = pd.to_datetime(features["date"]).dt.strftime("%Y-%m-%d")
     return features
@@ -503,3 +503,6 @@ _FEATURE_COLUMNS = [
     "vcp_breakout_pct",
     "vcp_contraction_pct",
 ]
+
+
+_REQUIRED_REPLAY_COLUMNS = ["stage", "sma_20", "sma_50", "atr_14"]

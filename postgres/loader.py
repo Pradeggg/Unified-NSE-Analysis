@@ -26,6 +26,28 @@ DATA    = BASE / "data"
 GEN_CSV = BASE / "reports" / "generated_csv" / "2026"
 REPORTS_DIR = BASE / "reports"
 PAGE_SIZE = 500
+
+
+def _load_project_env() -> None:
+    """Load project .env values before resolving PG_DSN."""
+    env_path = BASE / ".env"
+    if not env_path.exists():
+        return
+    try:
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or "=" not in stripped:
+                continue
+            key, value = stripped.split("=", 1)
+            key = key.strip()
+            if key and not os.environ.get(key):
+                os.environ[key] = value.strip().strip('"').strip("'")
+    except OSError:
+        return
+
+
+_load_project_env()
+
 PG_DSN  = (
     os.environ.get("AGENT_ADDA_PG_DSN")
     or os.environ.get("PG_DSN")

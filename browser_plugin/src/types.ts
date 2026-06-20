@@ -125,6 +125,12 @@ export interface ApiResponse<T> {
   status_code: number;
 }
 
+export interface SymbolSearchResult {
+  symbol: string;
+  name: string;
+  score: number;
+}
+
 // ── Backtest types ────────────────────────────────────────────────────────
 
 export interface BtMetrics {
@@ -196,6 +202,9 @@ export interface RicSetup {
   strategy:      string;
   potential_pct: number;
   holding:       string;
+  actionable?:   boolean;
+  quality_label?: "TRADEABLE" | "WATCH_ONLY";
+  quality_reasons?: string[];
 }
 
 export interface RicSafety {
@@ -328,6 +337,7 @@ export interface ChartPane {
   symbol: string | null;
   exchange: Exchange | null;
   timeframe: Timeframe | null;
+  is_active?: boolean;
   rect: CaptureSelectionRect;
 }
 

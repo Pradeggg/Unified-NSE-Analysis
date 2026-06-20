@@ -209,12 +209,46 @@ def test_call_llm_json_loads_api_key_from_dotenv(monkeypatch, tmp_path):
 
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_MODEL", raising=False)
+    monkeypatch.delenv("RESEARCH_COUNCIL_LLM_MODEL", raising=False)
     (tmp_path / ".env").write_text("OPENAI_API_KEY=test-dotenv-key\n", encoding="utf-8")
     monkeypatch.setattr(llm_client, "_openai_client", lambda: FakeClient())
 
     llm_client.call_llm_json(system="system", user="user", schema={"type": "object"})
 
     assert captured["model"] == "gpt-4o"
+    assert __import__("os").environ["OPENAI_API_KEY"] == "test-dotenv-key"
+
+
+def test_call_llm_json_loads_api_key_from_dotenv_when_env_is_empty(monkeypatch, tmp_path):
+    from terminal.research_council import llm_client
+
+    class FakeMessage:
+        content = "{}"
+
+    class FakeChoice:
+        message = FakeMessage()
+
+    class FakeResponse:
+        choices = [FakeChoice()]
+
+    class FakeCompletions:
+        def create(self, **kwargs):
+            return FakeResponse()
+
+    class FakeChat:
+        completions = FakeCompletions()
+
+    class FakeClient:
+        chat = FakeChat()
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    (tmp_path / ".env").write_text("OPENAI_API_KEY=test-dotenv-key\n", encoding="utf-8")
+    monkeypatch.setattr(llm_client, "_openai_client", lambda: FakeClient())
+
+    llm_client.call_llm_json(system="system", user="user", schema={"type": "object"})
+
     assert __import__("os").environ["OPENAI_API_KEY"] == "test-dotenv-key"
 
 

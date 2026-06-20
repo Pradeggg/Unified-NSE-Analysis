@@ -97,8 +97,18 @@ Required JSON shape:
   "evidence_plan": ["short evidence step"],
   "tool_plan": [{"tool": "allowed_tool_name", "args": {"symbol": "NSE_SYMBOL"}}],
   "plan": ["short execution step"],
-  "synthesis_intent": "stock_brief"
+  "synthesis_intent": "stock_results"
 }
+
+synthesis_intent must match the primary tool in tool_plan:
+- get_symbol_snapshot, get_technical_setup -> "stock_brief"
+- get_latest_results -> "stock_results"
+- get_cached_financials, scrape_screener_in -> "stock_fundamentals"
+- search_nse_announcements, search_bse_filings -> "stock_filings"
+- explain_intraday_setup, get_intraday_levels -> "intraday_setup"
+- compare_stocks -> "stock_comparison"
+- get_market_breadth, get_live_market_overview -> "market_situation_assessment"
+- read_report, summarize_report, open_report -> "report_lookup"
 
 Stock-market rules:
 - Resolve pronouns like it/this/these from conversation_context, not from the

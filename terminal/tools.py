@@ -1981,6 +1981,15 @@ def _normalize_index_name(index_name: str) -> str:
     """PG-SCAN-FALLBACK: canonicalize index name to NSE form (e.g. 'NIFTY500' -> 'NIFTY 500')."""
     raw = (index_name or "").strip().upper()
     raw = re.sub(r"\s+", " ", raw)
+    aliases = {
+        "MIDCPNIFTY": "NIFTY MIDCAP SELECT",
+        "MIDC NIFTY": "NIFTY MIDCAP SELECT",
+        "MIDCAP NIFTY": "NIFTY MIDCAP SELECT",
+        "NIFTY MID SELECT": "NIFTY MIDCAP SELECT",
+        "NIFTY MIDCAP": "NIFTY MIDCAP SELECT",
+    }
+    if raw in aliases:
+        return aliases[raw]
     # Insert a space between "NIFTY" and a trailing number when missing
     m = re.match(r"^NIFTY(\d{2,4})$", raw)
     if m:
@@ -2393,9 +2402,12 @@ def _index_reference_aliases() -> dict[str, str]:
         "NIFTY50": "NIFTY 50",
         "BANKNIFTY": "NIFTY BANK",
         "BANK NIFTY": "NIFTY BANK",
-        "MIDCPNIFTY": "NIFTY MIDCAP SELECT",
-        "MIDC NIFTY": "NIFTY MIDCAP SELECT",
-        "MIDCAP NIFTY": "NIFTY MIDCAP SELECT",
+        "MIDCPNIFTY": "NIFTY MID SELECT",
+        "MIDC NIFTY": "NIFTY MID SELECT",
+        "MIDCAP NIFTY": "NIFTY MID SELECT",
+        "NIFTY MIDCAP": "NIFTY MID SELECT",
+        "NIFTY MIDCAP SELECT": "NIFTY MID SELECT",
+        "NIFTY MID SELECT": "NIFTY MID SELECT",
         "NIFTY CAPITAL MARKET": "NIFTY CAPITAL MKT",
         "NIFTY CAPITAL MARKETS": "NIFTY CAPITAL MKT",
         "NIFTY SMALLCAP 50": "NIFTY SMLCAP 50",
@@ -2560,25 +2572,39 @@ def get_market_breadth(index: str | None = None) -> dict:
             )
             composition_count = int((count_rows[0][0] if count_rows else 0) or 0)
             if composition_count <= 0:
-                return {
-                    "error": f"Index constituents unavailable for {index_name}",
-                    "index": index_name,
-                    "snapshot_date": snap_date,
-                    "missing_evidence": ["ref.index_compositions"],
-                }
-            rows = _pg_fetchall(
-                """
-                SELECT s.symbol, s.change_1d_pct, s.change_1w_pct,
-                       s.relative_strength, s.stage
-                FROM scores.stage_snapshots s
-                JOIN ref.index_compositions ic
-                  ON UPPER(ic.symbol)=UPPER(s.symbol)
-                 AND UPPER(ic.index_symbol)=UPPER(%s)
-                WHERE s.snapshot_date=%s
-                """,
-                (index_name, snap_date),
-            )
-            data_source = "PostgreSQL scores.stage_snapshots + ref.index_compositions"
+                local_symbols = _load_index_constituents_local(index_name)
+                composition_count = len(local_symbols)
+                if composition_count <= 0:
+                    return {
+                        "error": f"Index constituents unavailable for {index_name}",
+                        "index": index_name,
+                        "snapshot_date": snap_date,
+                        "missing_evidence": ["ref.index_compositions", "local_index_constituents"],
+                    }
+                rows = _pg_fetchall(
+                    """
+                    SELECT symbol, change_1d_pct, change_1w_pct, relative_strength, stage
+                    FROM scores.stage_snapshots
+                    WHERE snapshot_date=%s
+                      AND UPPER(symbol)=ANY(%s)
+                    """,
+                    (snap_date, local_symbols),
+                )
+                data_source = "PostgreSQL scores.stage_snapshots + local index constituent CSV"
+            else:
+                rows = _pg_fetchall(
+                    """
+                    SELECT s.symbol, s.change_1d_pct, s.change_1w_pct,
+                           s.relative_strength, s.stage
+                    FROM scores.stage_snapshots s
+                    JOIN ref.index_compositions ic
+                      ON UPPER(ic.symbol)=UPPER(s.symbol)
+                     AND UPPER(ic.index_symbol)=UPPER(%s)
+                    WHERE s.snapshot_date=%s
+                    """,
+                    (index_name, snap_date),
+                )
+                data_source = "PostgreSQL scores.stage_snapshots + ref.index_compositions"
         else:
             rows = _pg_fetchall(
                 "SELECT symbol, change_1d_pct, change_1w_pct, relative_strength, stage "
@@ -5604,6 +5630,18 @@ def _fmt_variation_row(x: dict) -> dict:
     }
 
 
+def _filter_variation_rows_to_index(rows: list[dict], index: str) -> tuple[list[dict], int | None]:
+    symbols = _fetch_nse_index_constituents(index)
+    if not symbols:
+        return rows, None
+    allowed = set(symbols)
+    filtered = [
+        row for row in rows
+        if str(row.get("symbol") or "").strip().upper() in allowed
+    ]
+    return filtered, len(allowed)
+
+
 def get_top_gainers_losers(
     index: str = "NIFTY 500",
     top_n: int = 10,
@@ -5626,12 +5664,15 @@ def get_top_gainers_losers(
     """
     try:
         bucket = _variations_bucket_key(index)
+        canonical_index = _normalize_index_name(index)
         result: dict = {
             "index":  index,
+            "canonical_index": canonical_index,
             "bucket": bucket,
             "as_of":  datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "source": "NSE live-analysis-variations",
         }
+        constituent_count: int | None = None
 
         if direction in ("gainers", "both"):
             payload = _nse_get_json(
@@ -5639,6 +5680,7 @@ def get_top_gainers_losers(
                 timeout=10,
             )
             rows = ((payload.get(bucket) or {}).get("data") or [])
+            rows, constituent_count = _filter_variation_rows_to_index(rows, canonical_index)
             rows_sorted = sorted(
                 rows,
                 key=lambda x: float(x.get("perChange", 0) or 0),
@@ -5654,12 +5696,32 @@ def get_top_gainers_losers(
                 timeout=10,
             )
             rows = ((payload.get(bucket) or {}).get("data") or [])
+            rows, constituent_count = _filter_variation_rows_to_index(rows, canonical_index)
             rows_sorted = sorted(
                 rows,
                 key=lambda x: float(x.get("perChange", 0) or 0),
             )[:top_n]
             result["losers"] = [_fmt_variation_row(x) for x in rows_sorted]
 
+        if constituent_count:
+            result["constituent_count"] = constituent_count
+            result["source"] = result["source"] + " + index constituent filter"
+            needs_fallback = (
+                (direction in ("gainers", "both") and not result.get("gainers"))
+                or (direction in ("losers", "both") and not result.get("losers"))
+            )
+            if needs_fallback:
+                fallback = get_eod_top_movers(
+                    index=canonical_index,
+                    top_n=top_n,
+                    direction=direction,
+                )
+                if not fallback.get("error"):
+                    for key in ("gainers", "losers"):
+                        if direction in (key, "both") and not result.get(key) and fallback.get(key):
+                            result[key] = fallback[key]
+                    result["fallback_source"] = fallback.get("source")
+                    result["source"] = result["source"] + " + scoped EOD fallback"
         return result
     except Exception as e:
         return {"error": str(e), "index": index}
@@ -5698,16 +5760,27 @@ def get_eod_top_movers(
 
         result: dict = {
             "index": index,
+            "canonical_index": _normalize_index_name(index),
             "as_of": snap_date,
             "source": "PostgreSQL scores.stage_snapshots",
         }
+        symbols = _fetch_nse_index_constituents(result["canonical_index"])
+        if symbols:
+            result["constituent_count"] = len(symbols)
+            result["source"] = result["source"] + " + index constituent filter"
 
         def _rows(order: str) -> list[dict]:
+            where = "WHERE snapshot_date=%s AND change_1d_pct IS NOT NULL "
+            params: list = [snap_date]
+            if symbols:
+                where += "AND UPPER(symbol)=ANY(%s) "
+                params.append(symbols)
+            params.append(max(int(top_n), 1))
             rows = _pg_fetchall(
                 f"SELECT {cols} FROM scores.stage_snapshots "
-                f"WHERE snapshot_date=%s AND change_1d_pct IS NOT NULL "
+                f"{where}"
                 f"ORDER BY change_1d_pct {order} NULLS LAST LIMIT %s",
-                (snap_date, max(int(top_n), 1)),
+                tuple(params),
             )
             keys = (
                 "symbol", "company_name", "price", "change_1d_pct",
@@ -6137,6 +6210,7 @@ def get_upcoming_events(
 
 # ─── Market-wide latest quarterly results feed ─────────────────────────────
 _RESULTS_FEED_CACHE: dict[str, Any] = {"ts": 0.0, "data": None}
+_INTEGRATED_RESULTS_FEED_CACHE: dict[str, Any] = {"ts": 0.0, "data": None}
 _RESULTS_FEED_TTL = 1800  # 30 minutes
 
 
@@ -6178,12 +6252,134 @@ def _fetch_screener_latest_results() -> list[dict]:
         return []
 
 
+def _parse_results_dt(value: str):
+    """Parse NSE financial-results timestamps."""
+    import datetime as _dt
+
+    text = str(value or "").strip()
+    for fmt in ("%d-%b-%Y %H:%M", "%d-%b-%Y %H:%M:%S", "%d-%b-%Y"):
+        try:
+            return _dt.datetime.strptime(text, fmt)
+        except Exception:
+            continue
+    return None
+
+
+def _xbrl_text_by_local_name(root: Any, local_name: str) -> str:
+    """Return first non-empty XBRL element text by local tag name."""
+    for el in root.iter():
+        tag = str(el.tag or "").split("}", 1)[-1]
+        if tag == local_name:
+            text = str(el.text or "").strip()
+            if text:
+                return text
+    return ""
+
+
+def _parse_integrated_filing_xbrl(url: str) -> dict:
+    """Extract symbol/company metadata from an Integrated Filing XBRL URL."""
+    import xml.etree.ElementTree as _ET
+
+    if not url:
+        return {}
+    try:
+        session = _get_live_session()
+        response = session.get(url, timeout=15)
+        if not response.ok:
+            return {}
+        root = _ET.fromstring(response.content)
+    except Exception:
+        return {}
+
+    start = _xbrl_text_by_local_name(root, "DateOfStartOfReportingPeriod")
+    end = _xbrl_text_by_local_name(root, "DateOfEndOfReportingPeriod")
+    fy_start = _xbrl_text_by_local_name(root, "DateOfStartOfFinancialYear")
+    fy_end = _xbrl_text_by_local_name(root, "DateOfEndOfFinancialYear")
+    quarter = _xbrl_text_by_local_name(root, "ReportingQuarter")
+
+    return {
+        "symbol": _xbrl_text_by_local_name(root, "Symbol"),
+        "company": _xbrl_text_by_local_name(root, "NameOfTheCompany").title(),
+        "isin": _xbrl_text_by_local_name(root, "ISIN"),
+        "period": quarter.title() if quarter else "",
+        "from_date": start,
+        "to_date": end,
+        "financial_year": f"{fy_start} To {fy_end}" if fy_start or fy_end else "",
+        "audited": _xbrl_text_by_local_name(root, "WhetherResultsAreAuditedOrUnaudited"),
+        "consolidated": _xbrl_text_by_local_name(root, "NatureOfReportStandaloneConsolidated"),
+    }
+
+
+def _fetch_integrated_financial_results_feed() -> list[dict]:
+    """Fetch NSE Integrated Filing - Financials RSS rows with XBRL metadata."""
+    import time as _time
+    import xml.etree.ElementTree as _ET
+
+    now_ts = _time.time()
+    cached = _INTEGRATED_RESULTS_FEED_CACHE.get("data")
+    if cached is not None and (now_ts - float(_INTEGRATED_RESULTS_FEED_CACHE.get("ts") or 0)) < _RESULTS_FEED_TTL:
+        return list(cached)
+
+    try:
+        session = _get_live_session()
+        url = "https://nsearchives.nseindia.com/content/RSS/Integrated_Filing_Financials.xml"
+        response = session.get(url, timeout=15)
+        if not response.ok:
+            return []
+        root = _ET.fromstring(response.content)
+    except Exception:
+        return []
+
+    rows: list[dict] = []
+    for item in root.findall(".//item"):
+        title = str(item.findtext("title") or "").strip()
+        filing_date = str(item.findtext("pubDate") or "").strip()
+        link = str(item.findtext("link") or "").strip()
+        description = " ".join(str(item.findtext("description") or "").split())
+        if not filing_date or not link:
+            continue
+
+        meta = _parse_integrated_filing_xbrl(link)
+        symbol = str(meta.get("symbol") or "").strip().upper()
+        company = str(meta.get("company") or title).strip()
+        if not symbol and company:
+            resolved = _resolve_local_symbol(company)
+            symbol = str(resolved.get("symbol") or "").strip().upper()
+        if not symbol:
+            continue
+
+        parts = [p.strip() for p in description.split("|")]
+        filing_kind = parts[1] if len(parts) > 1 else ""
+        rows.append({
+            "symbol": symbol,
+            "company": company,
+            "industry": "",
+            "period": meta.get("period") or "",
+            "from_date": meta.get("from_date") or "",
+            "to_date": meta.get("to_date") or "",
+            "financial_year": meta.get("financial_year") or "",
+            "filing_date": filing_date,
+            "audited": meta.get("audited") or "",
+            "consolidated": meta.get("consolidated") or "",
+            "xbrl_url": link,
+            "isin": meta.get("isin") or "",
+            "filing_type": filing_kind,
+            "source": "nse-integrated-filing-financials",
+            "_dt": _parse_results_dt(filing_date),
+        })
+
+    _INTEGRATED_RESULTS_FEED_CACHE["data"] = rows
+    _INTEGRATED_RESULTS_FEED_CACHE["ts"] = now_ts
+    return rows
+
+
 def get_latest_results_feed(days_back: int = 7, limit: int = 50) -> dict:
     """
     Market-wide feed of companies that have filed quarterly financial results.
 
-    Primary source: NSE `corporates-financial-results` API (cached 30 min).
-    Fallback: screener.in `/results/latest/` HTML scrape.
+    Primary sources: NSE Integrated Filing - Financials RSS/XBRL and NSE
+    `corporates-financial-results` API (cached 30 min). Fallback:
+    screener.in `/results/latest/` HTML scrape.
 
     When no filings exist within `days_back`, returns the most recent rows
     available with an explanatory `window_note`.
@@ -6201,15 +6397,8 @@ def get_latest_results_feed(days_back: int = 7, limit: int = 50) -> dict:
         "source": None, "window_note": "",
     }
 
-    def _parse_dt(s: str) -> _dt.datetime | None:
-        for fmt in ("%d-%b-%Y %H:%M", "%d-%b-%Y %H:%M:%S", "%d-%b-%Y"):
-            try:
-                return _dt.datetime.strptime(s, fmt)
-            except Exception:
-                continue
-        return None
-
     # Use cached payload when fresh
+    integrated_rows = _fetch_integrated_financial_results_feed()
     now_ts = _time.time()
     cached = _RESULTS_FEED_CACHE.get("data")
     if cached and (now_ts - float(_RESULTS_FEED_CACHE.get("ts") or 0)) < _RESULTS_FEED_TTL:
@@ -6230,7 +6419,7 @@ def get_latest_results_feed(days_back: int = 7, limit: int = 50) -> dict:
         except Exception as exc:
             out["nse_error"] = str(exc)
 
-    if not rows:
+    if not rows and not integrated_rows:
         screener_rows = _fetch_screener_latest_results()
         if screener_rows:
             out["results"] = screener_rows[: int(limit)]
@@ -6242,12 +6431,13 @@ def get_latest_results_feed(days_back: int = 7, limit: int = 50) -> dict:
             out["window_note"] = "Both NSE and screener.in fallbacks failed."
         return out
 
-    # Decorate and sort by filing date
+    # Decorate and sort by filing date. Integrated Filing is included because
+    # current financial-results filings are routed there for newer periods.
     decorated: list[dict] = []
-    for row in rows:
+    for row in rows or []:
         if not isinstance(row, dict):
             continue
-        fd = _parse_dt(str(row.get("filingDate") or row.get("broadCastDate") or ""))
+        fd = _parse_results_dt(str(row.get("filingDate") or row.get("broadCastDate") or ""))
         if not fd:
             continue
         xbrl = row.get("xbrl") or ""
@@ -6266,9 +6456,28 @@ def get_latest_results_feed(days_back: int = 7, limit: int = 50) -> dict:
             "consolidated":   row.get("consolidated", ""),
             "xbrl_url":       xbrl,
             "isin":           row.get("isin", ""),
+            "source":         "nse-corporates-financial-results",
             "_dt":            fd,
         })
+
+    for row in integrated_rows:
+        if isinstance(row, dict) and row.get("_dt"):
+            decorated.append(dict(row))
     decorated.sort(key=lambda x: x["_dt"], reverse=True)
+
+    deduped: list[dict] = []
+    seen_rows: set[tuple[str, str, str]] = set()
+    for row in decorated:
+        key = (
+            str(row.get("symbol") or "").upper(),
+            str(row.get("filing_date") or ""),
+            str(row.get("xbrl_url") or ""),
+        )
+        if key in seen_rows:
+            continue
+        seen_rows.add(key)
+        deduped.append(row)
+    decorated = deduped
 
     cutoff = _dt.datetime.now() - _dt.timedelta(days=int(days_back))
     in_window = [r_ for r_ in decorated if r_["_dt"] >= cutoff]
@@ -6288,7 +6497,8 @@ def get_latest_results_feed(days_back: int = 7, limit: int = 50) -> dict:
     out["results"] = filtered[: int(limit)]
     out["total_in_window"] = len(in_window)
     out["total_available"] = len(decorated)
-    out["source"] = "nseindia.com/api/corporates-financial-results"
+    sources = sorted({str(r.get("source") or "") for r in decorated if r.get("source")})
+    out["source"] = "+".join(sources) or "nseindia.com/results"
     return out
 
 

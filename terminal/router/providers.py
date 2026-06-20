@@ -887,7 +887,10 @@ class MarketSituationProvider:
             )
         ):
             matched = None
-        if matched == "stage 2 stocks" and len(phrase_text.split()) <= 4:
+        if matched == "stage 2 stocks" and re.match(
+            r"^(?:show|list|find|get)\s+(?:me\s+)?stage\s+2\s+stocks\b",
+            phrase_text,
+        ):
             matched = None
         # Bare-word match for unambiguous single/two-token market queries
         # (e.g. "market", "sectors", "breadth", "fii")

@@ -474,6 +474,102 @@ class TestFnoRenderer(unittest.TestCase):
         _ok(out)
 
 
+class TestIntradayOptionsTradePlanRenderer(unittest.TestCase):
+
+    def test_intraday_options_trade_plan_has_ce_pe_and_no_trade_sections(self):
+        trs = [
+            _tr("resolve_symbol", symbol="INDUSINDBK"),
+            _tr(
+                "get_nse_intraday_snapshot",
+                symbol="INDUSINDBK",
+                last_price=931.35,
+                percent_change=0.58,
+                day_low=920.2,
+                day_high=932.85,
+            ),
+            _tr(
+                "get_intraday_levels",
+                symbol="INDUSINDBK",
+                timeframe="15m",
+                price=931.35,
+                pivot=929.73,
+                supports=[928.97, 928.49],
+                resistances=[931.57, 932.3, 934.85],
+            ),
+            _tr(
+                "get_options_chain",
+                symbol="INDUSINDBK",
+                pcr=0.91,
+                max_pain=930.0,
+            ),
+            _tr(
+                "get_fno_overview",
+                symbol="INDUSINDBK",
+                pcr=0.91,
+                max_pain=930.0,
+                basis=3.2,
+                cost_of_carry=9.71,
+            ),
+        ]
+
+        out = render("intraday_options_trade_plan", trs)
+
+        self.assertIn("INDUSINDBK", out)
+        self.assertIn("▶ CE SETUP", out)
+        self.assertIn("▶ PE SETUP", out)
+        self.assertIn("▶ NO-TRADE ZONE", out)
+        self.assertIn("PCR: 0.91", out)
+        self.assertIn("Max pain: 930.0", out)
+        self.assertIn("Not investment advice", out)
+
+    def test_intraday_options_trade_plan_flags_mixed_bias_when_setup_disagrees_with_pivot(self):
+        trs = [
+            _tr("resolve_symbol", symbol="AXISBANK"),
+            _tr("get_nse_intraday_snapshot", symbol="AXISBANK", last_price=1353.60),
+            _tr(
+                "get_intraday_levels",
+                symbol="AXISBANK",
+                timeframe="15m",
+                price=1353.60,
+                pivot=1365.40,
+                supports=[1362.90, 1360.80, 1356.20],
+                resistances=[1364.43, 1365.01, 1366.10],
+            ),
+            _tr("explain_intraday_setup", symbol="AXISBANK", setup_label="LONG_SETUP"),
+            _tr("get_options_chain", symbol="AXISBANK", pcr=0.791, max_pain=1330.0),
+            _tr("get_fno_overview", symbol="AXISBANK", pcr=0.791, max_pain=1330.0),
+        ]
+
+        out = render("intraday_options_trade_plan", trs)
+
+        self.assertIn("Mixed/conditional", out)
+        self.assertIn("setup label LONG_SETUP conflicts with spot below pivot", out)
+        self.assertNotIn("Bullish: spot ₹1,353.60 vs pivot ₹1,365.40", out)
+
+    def test_intraday_options_trade_plan_does_not_use_below_spot_resistance_as_ce_trigger(self):
+        trs = [
+            _tr("resolve_symbol", symbol="HDFCBANK"),
+            _tr("get_nse_intraday_snapshot", symbol="HDFCBANK", last_price=791.20),
+            _tr(
+                "get_intraday_levels",
+                symbol="HDFCBANK",
+                timeframe="15m",
+                price=791.20,
+                pivot=784.93,
+                supports=[787.50, 787.40, 786.42, 785.34],
+                resistances=[785.34],
+            ),
+            _tr("explain_intraday_setup", symbol="HDFCBANK", setup_label="LONG_SETUP"),
+            _tr("get_options_chain", symbol="HDFCBANK", pcr=0.639, max_pain=780.0),
+        ]
+
+        out = render("intraday_options_trade_plan", trs)
+
+        self.assertIn("No fresh CE trigger from current evidence", out)
+        self.assertNotIn("Trigger: sustained move above ₹785.34", out)
+        self.assertNotIn("between ₹787.50 and ₹785.34", out)
+
+
 # ── market dashboard ──────────────────────────────────────────────────────────
 
 _MARKET_SNAP = {
@@ -618,6 +714,39 @@ class TestDispatcher(unittest.TestCase):
         self.assertIn("\n  ▶ CURRENT OVERVIEW", out)
         self.assertNotIn("\n▶ CURRENT OVERVIEW", out)
         self.assertIn("▶ SALES & EPS GROWTH", out)
+
+    def test_synthesize_suppresses_diagnostics_only_structured_tail(self):
+        class Backend:
+            def chat(self, messages, tools=None, max_tokens=None):
+                return {
+                    "content": (
+                        "━━━ MIDCPNIFTY — Direct Answer ━━━\n\n"
+                        "▶ CURRENT OVERVIEW\n"
+                        "  - I cannot identify the top-performing stocks from the available evidence."
+                    )
+                }
+
+        trs = [
+            _tr("resolve_symbol", symbol="MIDCPNIFTY"),
+            _tr("get_symbol_snapshot", error="MIDCPNIFTY not found in DB snapshot"),
+            _tr("get_technical_setup", error="No price history available"),
+            _tr("get_sector_context", error="PostgreSQL scores.stage_snapshots unavailable"),
+            _tr("scrape_screener_in", error="404 Client Error"),
+        ]
+
+        out = _synthesize_and_narrate(
+            "stock_brief",
+            "top-performing stocks in NIFTY MIDCAP",
+            trs,
+            Backend(),
+        )
+
+        self.assertIn("▶ ANSWER", out)
+        self.assertIn("MIDCPNIFTY — Direct Answer", out)
+        self.assertNotIn("MIDCPNIFTY (MIDCPNIFTY) — Market Brief", out)
+        self.assertNotIn("▶ MISSING EVIDENCE", out)
+        self.assertNotIn("▶ SOURCE TRAIL", out)
+        self.assertIn("Not investment advice", out)
 
     def test_render_always_returns_str(self):
         # All registered intents must return a string

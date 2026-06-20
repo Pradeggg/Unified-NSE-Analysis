@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Header }           from "./components/Header";
 import { CaptureButton }    from "./components/CaptureButton";
 import { ChatPanel }        from "./components/ChatPanel";
@@ -25,6 +25,12 @@ import "./App.css";
 
 type MainTab = "analyze" | "backtest" | "ric";
 
+interface EffectiveChartContext {
+  symbol: string;
+  exchange: Exchange;
+  timeframe: Timeframe;
+}
+
 export function App() {
   const [symbol, setSymbol]       = useState("BANKNIFTY");
   const [exchange, setExchange]   = useState<Exchange>("NSE");
@@ -36,16 +42,49 @@ export function App() {
   const [mainTab, setMainTab]     = useState<MainTab>("analyze");
   const [multiAnalyses, setMultiAnalyses] = useState<MultiChartAnalysis[]>([]);
   const [multiRunning, setMultiRunning]   = useState(false);
+  const manualContextRef = useRef(false);
+  const lastPageContextKeyRef = useRef<string | null>(null);
 
   const { ctx, loading, createContext, addConclusion, applyAnalysisResult, resetContext } = useChartContext();
 
 
   function applyPageMetadata(metadata: PageMetadata) {
+    const pageContextKey = `${metadata.source_url || ""}::${metadata.page_title || ""}`;
+    const pageChanged = pageContextKey !== lastPageContextKeyRef.current;
+    if (pageChanged) {
+      const hadPreviousPageContext = lastPageContextKeyRef.current !== null;
+      lastPageContextKeyRef.current = pageContextKey;
+      if (hadPreviousPageContext) {
+        manualContextRef.current = false;
+      }
+    }
+
+    if (manualContextRef.current) {
+      return;
+    }
+
     const { symbol: s, exchange: e, timeframe: t } = metadata;
     if (s) setSymbol(s);
     if (e) setExchange(e);
     if (t) setTimeframe(t);
   }
+
+  const handleSymbolChange = useCallback((value: string) => {
+    const next = value.trim().toUpperCase();
+    if (!next) return;
+    manualContextRef.current = true;
+    setSymbol(next);
+  }, []);
+
+  const handleExchangeChange = useCallback((value: Exchange) => {
+    manualContextRef.current = true;
+    setExchange(value);
+  }, []);
+
+  const handleTimeframeChange = useCallback((value: Timeframe) => {
+    manualContextRef.current = true;
+    setTimeframe(value);
+  }, []);
 
   async function captureVisibleTabDirect(): Promise<CaptureVisibleTabResponse> {
     const [tab] = await chrome.tabs.query({
@@ -219,6 +258,37 @@ export function App() {
     });
   }
 
+  async function requestActiveMetadata(): Promise<PageMetadata | null> {
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage({ type: "GET_ACTIVE_METADATA" }, (msg) => {
+        if (chrome.runtime.lastError) {
+          resolve(null);
+          return;
+        }
+        resolve(msg?.type === "ACTIVE_METADATA" ? (msg.payload ?? null) : null);
+      });
+    });
+  }
+
+  function resolveEffectiveContext(
+    panes: GetChartPanesResponse["panes"],
+    metadata: PageMetadata | null,
+  ): EffectiveChartContext {
+    const activePanes = panes.filter((pane) => pane.is_active);
+    const primaryPane = activePanes.length === 1 ? activePanes[0] : panes.length === 1 ? panes[0] : null;
+    return {
+      symbol: (primaryPane?.symbol || metadata?.symbol || symbol).trim().toUpperCase(),
+      exchange: primaryPane?.exchange || metadata?.exchange || exchange,
+      timeframe: primaryPane?.timeframe || metadata?.timeframe || timeframe,
+    };
+  }
+
+  function getSinglePaneForCapture(panes: GetChartPanesResponse["panes"]) {
+    const activePanes = panes.filter((pane) => pane.is_active);
+    if (activePanes.length === 1) return activePanes[0];
+    return panes.length === 1 ? panes[0] : null;
+  }
+
   // ── Capture + auto-analyse (smart: detects multiple panes automatically) ──
   const handleCapture = useCallback(async (mode: "visible" | "area" = "visible") => {
     if (capturing || analysing || multiRunning) return;
@@ -245,6 +315,7 @@ export function App() {
           // Detection failure → fall through to single-chart mode.
         }
       }
+      const refreshedMetadata = await requestActiveMetadata();
 
       const capture = await requestVisibleTabCapture();
       if (!capture.ok || !capture.dataUrl) {
@@ -252,8 +323,12 @@ export function App() {
       }
       setCapturing(false);
 
+      const activeSinglePane = !isAreaCapture ? getSinglePaneForCapture(panes) : null;
+
       // ── Multi-chart path ────────────────────────────────────────────────
-      if (panes.length > 1) {
+      // Use multi-pane mode only when TradingView has multiple panes but the
+      // active toolbar symbol cannot be matched to exactly one pane.
+      if (!activeSinglePane && panes.length > 1) {
         const initialSlots: MultiChartAnalysis[] = panes.map((pane) => ({
           pane,
           status: "pending",
@@ -318,24 +393,38 @@ export function App() {
       }
 
       // ── Single-chart path ───────────────────────────────────────────────
+      const effective = resolveEffectiveContext(panes, refreshedMetadata);
+      if (
+        effective.symbol !== symbol ||
+        effective.exchange !== exchange ||
+        effective.timeframe !== timeframe
+      ) {
+        manualContextRef.current = false;
+        setSymbol(effective.symbol);
+        setExchange(effective.exchange);
+        setTimeframe(effective.timeframe);
+      }
+
       const imageDataUrl = selection?.rect
         ? await cropDataUrlToRect(capture.dataUrl, selection.rect)
+        : activeSinglePane?.rect
+          ? await cropDataUrlToRect(capture.dataUrl, activeSinglePane.rect)
         : capture.dataUrl;
 
-      createContext(symbol, exchange, timeframe, imageDataUrl);
+      createContext(effective.symbol, effective.exchange, effective.timeframe, imageDataUrl);
       setAnalysing(true);
 
       const res = await analyzeChart({
         image: imageDataUrl,
         source_url: capture.tab?.url ?? null,
         page_title: capture.tab?.title ?? null,
-        user_symbol: symbol,
-        exchange,
-        timeframe,
+        user_symbol: effective.symbol,
+        exchange: effective.exchange,
+        timeframe: effective.timeframe,
         visible_indicators: [],
         user_question: [
           "Analyze the captured chart as a technical trading setup.",
-          `MANDATORY: Start the answer with ▶ IDENTITY and include Visible, Context (${exchange}:${symbol} · ${timeframe}), Match, and Type before any bias or trade setup.`,
+          `MANDATORY: Start the answer with ▶ IDENTITY and include Visible, Context (${effective.exchange}:${effective.symbol} · ${effective.timeframe}), Match, and Type before any bias or trade setup.`,
           "If the screenshot/header is cropped or unreadable, explicitly say the visible instrument is unreadable and use the provided chart context.",
           "Inventory every visible indicator/annotation before concluding: EMAs, Supertrend, RSI, volume, levels, labels, and drawn zones.",
           "Use private plan-of-thought decomposition and tree-of-thought scenario checks for bull, bear, and range/no-trade cases.",
@@ -379,9 +468,9 @@ export function App() {
         exchange={exchange}
         timeframe={timeframe}
         apiReachable={apiReachable}
-        onSymbolChange={setSymbol}
-        onExchangeChange={setExchange}
-        onTimeframeChange={setTimeframe}
+        onSymbolChange={handleSymbolChange}
+        onExchangeChange={handleExchangeChange}
+        onTimeframeChange={handleTimeframeChange}
       />
 
       {/* Main tab strip */}

@@ -8,6 +8,7 @@ from terminal.situation_assessment import (
     assess_entity_topic_request,
     assess_followup,
     build_turn_context,
+    is_index_context_followup,
     request_clarification,
     resolve_conversation_reference,
     resolve_entity_context,
@@ -1056,3 +1057,58 @@ def test_assessment_llm_uses_responses_reasoning_for_gpt5_class_models():
     assert client.responses.kwargs["model"] == "gpt-5"
     assert client.responses.kwargs["reasoning"] == {"effort": "high"}
     assert client.responses.kwargs["text"]["format"]["type"] == "json_object"
+
+
+def _midcpnifty_index_context() -> TurnContext:
+    return build_turn_context(
+        user_input="MIDCPNIFTY analysis",
+        intent="index_status",
+        mode="historical",
+        source_label="EOD index snapshots + scoped DB index breadth",
+        tool_results=[
+            {
+                "tool": "get_index_snapshot",
+                "args": {"index_name": "NIFTY MIDCAP SELECT"},
+                "result": {"index": "NIFTY MID SELECT", "close": 14503.9, "chg_pct": 0.54},
+            },
+            {
+                "tool": "get_market_breadth",
+                "args": {"index": "NIFTY MIDCAP SELECT"},
+                "result": {
+                    "scope": "index",
+                    "index": "NIFTY MIDCAP SELECT",
+                    "advances": 15,
+                    "declines": 8,
+                    "stage_distribution": {"STAGE_1": 10, "STAGE_2": 8, "STAGE_4": 5},
+                },
+            },
+        ],
+        answer="",
+    )
+
+
+def test_index_breadth_followup_binds_to_prior_midcpnifty_context():
+    ctx = _midcpnifty_index_context()
+
+    assert is_index_context_followup("what about the breadth and stage distribution", ctx)
+    assessment = assess_followup("what about the breadth and stage distribution", ctx)
+
+    assert assessment.applies is True
+    assert assessment.decision == "run_tool_plan"
+    assert assessment.synthesis_intent == "index_status"
+    assert assessment.tool_plan == [
+        ("get_index_snapshot", {"index_name": "NIFTY MIDCAP SELECT"}),
+        ("get_market_breadth", {"index": "NIFTY MIDCAP SELECT"}),
+    ]
+
+
+def test_index_movers_followup_binds_to_prior_midcpnifty_context():
+    ctx = _midcpnifty_index_context()
+    assessment = assess_followup("show me the top movers", ctx)
+
+    assert assessment.applies is True
+    assert assessment.decision == "run_tool_plan"
+    assert assessment.tool_plan[-1] == (
+        "get_top_gainers_losers",
+        {"index": "NIFTY MIDCAP SELECT", "top_n": 10, "direction": "both"},
+    )

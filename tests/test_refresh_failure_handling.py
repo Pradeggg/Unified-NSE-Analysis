@@ -1,5 +1,6 @@
 import unittest
 from datetime import date
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -10,6 +11,37 @@ from fixed_nse_universe_analysis import STOCK_RESULT_COLUMNS, analyze_stocks
 
 
 class RefreshFailureHandlingTests(unittest.TestCase):
+    def test_daily_refresh_env_loader_replaces_empty_values_from_dotenv(self):
+        import os
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            env_path = Path(tmp) / ".env"
+            env_path.write_text(
+                "OPENAI_API_KEY=test-dotenv-key\n"
+                "PG_DSN=dbname=test_env\n",
+                encoding="utf-8",
+            )
+            with patch.object(daily_refresh, "ROOT", Path(tmp)), \
+                 patch.dict(os.environ, {"OPENAI_API_KEY": "", "PG_DSN": ""}, clear=False):
+                daily_refresh._load_project_env()
+
+                self.assertEqual(os.environ["OPENAI_API_KEY"], "test-dotenv-key")
+                self.assertEqual(os.environ["PG_DSN"], "dbname=test_env")
+
+    def test_daily_refresh_env_loader_preserves_non_empty_values(self):
+        import os
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            env_path = Path(tmp) / ".env"
+            env_path.write_text("OPENAI_API_KEY=test-dotenv-key\n", encoding="utf-8")
+            with patch.object(daily_refresh, "ROOT", Path(tmp)), \
+                 patch.dict(os.environ, {"OPENAI_API_KEY": "explicit-key"}, clear=False):
+                daily_refresh._load_project_env()
+
+                self.assertEqual(os.environ["OPENAI_API_KEY"], "explicit-key")
+
     def test_analyze_stocks_empty_when_history_insufficient_keeps_expected_columns(self):
         latest = date(2026, 5, 15)
         stock_data = pd.DataFrame(

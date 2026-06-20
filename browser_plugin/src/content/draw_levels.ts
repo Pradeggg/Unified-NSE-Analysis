@@ -22,14 +22,19 @@ export interface DrawSignal {
 const OVERLAY_ID = "agent-adda-ric-overlay";
 let _signals: DrawSignal[]   = [];
 let _timer:   ReturnType<typeof setInterval> | null = null;
+let _lastRenderError: string | null = null;
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
-export function drawRicLevels(signals: DrawSignal[]): void {
+export function drawRicLevels(signals: DrawSignal[]): { ok: boolean; error: string | null } {
   _signals = signals ?? [];
-  _render();
+  const rendered = _render();
   if (_timer) clearInterval(_timer);
   _timer = setInterval(_render, 2000);
+  return {
+    ok: rendered,
+    error: rendered ? null : (_lastRenderError ?? "Could not draw levels on the active chart."),
+  };
 }
 
 export function clearRicOverlay(): void {
@@ -88,25 +93,39 @@ function readAxisPoints(chartRect: DOMRect): AxisPoint[] {
     ".pricescale-label",
   ];
 
+  const collectFromElements = (els: Iterable<HTMLElement>): void => {
+    for (const el of els) {
+      const raw = el.textContent?.trim().replace(/[,\s]/g, "") ?? "";
+      if (!/^-?\d+(\.\d+)?$/.test(raw)) continue;
+      const price = parseFloat(raw);
+      if (!isFinite(price) || price < 10) continue;  // skip non-price text
+
+      const rect = el.getBoundingClientRect();
+      const centerY = rect.top + rect.height / 2;
+      const isNearRightAxis = rect.left >= chartRect.right - 140 || rect.right >= chartRect.right - 20;
+
+      // Must be inside the chart vertically and near the right price axis.
+      if (centerY < chartRect.top - 5 || centerY > chartRect.bottom + 5) continue;
+      if (!isNearRightAxis) continue;
+
+      points.push({ price, screenY: centerY });
+    }
+  };
+
   for (const sel of LABEL_SELECTORS) {
     const els = document.querySelectorAll<HTMLElement>(sel);
     if (els.length < 2) continue;
 
-    for (const el of els) {
-      const raw   = el.textContent?.trim().replace(/[,\s]/g, "") ?? "";
-      const price = parseFloat(raw);
-      if (!isFinite(price) || price < 10) continue;  // skip non-price text
-
-      const rect    = el.getBoundingClientRect();
-      const centerY = rect.top + rect.height / 2;
-
-      // Must be within the vertical bounds of the chart area
-      if (centerY < chartRect.top - 5 || centerY > chartRect.bottom + 5) continue;
-
-      points.push({ price, screenY: centerY });
-    }
+    collectFromElements(els);
 
     if (points.length >= 2) break;
+  }
+
+  if (points.length < 2) {
+    // TradingView frequently changes hashed class names. As a robust fallback,
+    // scan visible text nodes near the right edge of the chart and keep numeric
+    // price labels only.
+    collectFromElements(document.querySelectorAll<HTMLElement>("span, div"));
   }
 
   // Deduplicate (same price might appear twice at different positions)
@@ -145,22 +164,32 @@ function buildMapper(
   };
 }
 
-function _render(): void {
-  if (!_signals.length) return;
+function _render(): boolean {
+  _lastRenderError = null;
+  if (!_signals.length) {
+    _lastRenderError = "No RIC levels were provided.";
+    return false;
+  }
 
   // Remove stale overlay
   document.getElementById(OVERLAY_ID)?.remove();
 
   const chartEl = findChartContainer();
-  if (!chartEl) return;
+  if (!chartEl) {
+    _lastRenderError = "Could not find a TradingView chart container.";
+    return false;
+  }
 
   const chartRect = chartEl.getBoundingClientRect();
-  if (chartRect.width < 100 || chartRect.height < 100) return;
+  if (chartRect.width < 100 || chartRect.height < 100) {
+    _lastRenderError = "The active chart area is too small to draw levels.";
+    return false;
+  }
 
   const axisPoints = readAxisPoints(chartRect);
   if (axisPoints.length < 2) {
-    // Silently skip — TV may not have rendered axis yet
-    return;
+    _lastRenderError = "Could not read enough right-axis price labels from the chart.";
+    return false;
   }
 
   const priceToY = buildMapper(axisPoints, chartRect);
@@ -223,4 +252,5 @@ function _render(): void {
 
     ctx.restore();
   }
+  return true;
 }

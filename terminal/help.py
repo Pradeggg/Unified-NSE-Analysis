@@ -300,6 +300,8 @@ SECTIONS: dict[str, dict] = {
             ("/alert add RELIANCE price > 1500",    "Add watchlist price alert"),
             ("/alert list",                         "Show all active alerts"),
             ("/alert monitor",                      "Start background alert polling"),
+            ("/intraday-alerts",                    "Live intraday F&O commentary with trigger email alerts"),
+            ("/live_intraday_alerts",               "Alias for /intraday-alerts"),
         ],
     },
     "ric": {
@@ -348,6 +350,7 @@ SECTIONS: dict[str, dict] = {
             ("/company-index DMART --max-pages 10 --document-limit 5", "Bounded company website/document index run"),
             ("/company-xray DMART",               "Company + Sector X-Ray from indexed evidence"),
             ("/company-xray DMART --strict",      "Run X-Ray with strict evidence coverage"),
+            ("/diagnose DMART eps",               "Explain financial metric drivers such as EPS, ROCE, margins, debt, and cash flow"),
             ("/ric company-xray DMART",           "9-step company intelligence workflow"),
         ],
     },
@@ -409,6 +412,7 @@ SECTIONS: dict[str, dict] = {
             ("/report canslim TATAMOTORS", "CANSLIM quality report"),
             ("/report ric ADANIENT pdf",   "RIC investigation report in PDF"),
             ("/report sector IT",          "Sector analysis report"),
+            ("/swing-playbook",            "Generate the swing trading playbook report"),
         ],
     },
     "strategy_lab": {

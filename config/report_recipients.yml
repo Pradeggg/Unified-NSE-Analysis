@@ -13,7 +13,35 @@
 # Outlook for the user to review before sending. Nothing is auto-sent.
 # -----------------------------------------------------------------------------
 
+eod_market:
+  to:
+    - pgorai@deloitte.com
+  bcc:
+    - hibhatia@deloitte.com
+    - hikhan@deloitte.com
+    - parsmishra@DELOITTE.com
+    - sgorai@deloitte.com
+    - mbinjola@deloitte.com
+    - avsen@deloitte.com
+    - amahale@deloitte.com
+    - vitangirala@deloitte.com
+    - kchouhan@deloitte.com
+
 top_picks:
+  to:
+    - pgorai@deloitte.com
+  bcc:
+    - hibhatia@deloitte.com
+    - hikhan@deloitte.com
+    - parsmishra@DELOITTE.com
+    - sgorai@deloitte.com
+    - mbinjola@deloitte.com
+    - avsen@deloitte.com
+    - amahale@deloitte.com
+    - vitangirala@deloitte.com
+    - kchouhan@deloitte.com
+
+intraday_alerts:
   to:
     - pgorai@deloitte.com
   bcc:

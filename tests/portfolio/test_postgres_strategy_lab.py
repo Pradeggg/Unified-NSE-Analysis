@@ -67,6 +67,30 @@ def test_prepare_replay_frame_uses_stage_snapshots_and_computes_strategy_columns
         assert pd.notna(latest[column])
 
 
+def test_prepare_replay_frame_keeps_short_pg_history_without_200dma():
+    eod = pd.DataFrame(_eod_rows("AAA", 100.0, count=90))
+    stage = pd.DataFrame(
+        {
+            "date": eod["date"],
+            "symbol": ["AAA"] * len(eod),
+            "stage": ["STAGE_2"] * len(eod),
+            "snapshot_relative_strength": [78.0] * len(eod),
+            "snapshot_rsi": [58.0] * len(eod),
+        }
+    )
+
+    features = prepare_replay_frame(eod, stage, start_date="2024-03-01")
+
+    assert not features.empty
+    latest = features.iloc[-1]
+    assert latest["stage"] == "STAGE_2"
+    assert pd.notna(latest["sma_20"])
+    assert pd.notna(latest["sma_50"])
+    assert pd.notna(latest["atr_14"])
+    assert pd.isna(latest["sma_100"])
+    assert pd.isna(latest["sma_200"])
+
+
 def test_prepare_replay_frame_marks_persisted_vcp_picks_point_in_time():
     eod = pd.DataFrame(_eod_rows("AAA", 100.0))
     stage = pd.DataFrame(

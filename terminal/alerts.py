@@ -261,5 +261,20 @@ def check_alerts() -> list[dict]:
                      f'display notification "{msg}" with title "Agent Adda 🔔" sound name "Ping"'],
                     check=False,
                 )
+                try:
+                    from terminal.whatsapp_dispatcher import send_market_alert
+
+                    wa = send_market_alert(
+                        title=f"{sym} {ttype.replace('_', ' ')}",
+                        body=msg,
+                    )
+                    result["whatsapp_status"] = wa.status
+                    if wa.dry_run_path:
+                        result["whatsapp_dry_run_path"] = wa.dry_run_path
+                    if wa.error:
+                        result["whatsapp_error"] = wa.error
+                except Exception as exc:
+                    result["whatsapp_status"] = "error"
+                    result["whatsapp_error"] = str(exc)
 
     return triggered

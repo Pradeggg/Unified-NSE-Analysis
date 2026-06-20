@@ -39,13 +39,38 @@ const INVALID_SYMBOL_WORDS = new Set([
   "CHANGE",
   "CHANGESYMBOL",
   "SYMBOL",
+  "BUY",
+  "SELL",
+  "OPEN",
+  "CLOSE",
   "FUTURES",
   "FUTURE",
+  "INDEX",
   "INDICATORS",
   "COMPARE",
   "PUBLISH",
   "TRADE",
+  "RIC",
+  "ANALYSIS",
+  "CHART",
 ]);
+
+const TITLE_SYMBOL_ALIASES: Record<string, string> = {
+  BANKNIFTYINDEX: "BANKNIFTY",
+  FINNIFTYINDEX: "FINNIFTY",
+  MIDCPNIFTYINDEX: "MIDCPNIFTY",
+  NIFTY50: "NIFTY",
+  NIFTYBANK: "BANKNIFTY",
+  ICICIBANK: "ICICIBANK",
+  HDFCBANK: "HDFCBANK",
+  INDUSINDBANK: "INDUSINDBK",
+  NESTLEINDIA: "NESTLEIND",
+  LARSENTOUBRO: "LT",
+  BAJAJFINANCE: "BAJFINANCE",
+  BAJAJFINSERV: "BAJAJFINSV",
+  TVSMOTOR: "TVSMOTOR",
+  TVSMOTORCOMPANY: "TVSMOTOR",
+};
 
 // Strip continuous-futures suffix: "TORNTPHARM1!" → "TORNTPHARM", "NIFTY50!" → "NIFTY50".
 function cleanSymbol(raw: string): string {
@@ -65,9 +90,24 @@ function cleanSymbol(raw: string): string {
   return value;
 }
 
+function compactTitleSymbol(raw: string): string {
+  const compacted = raw
+    .replace(/\b(NSE|BSE|INDEX|FUTURES?|LIMITED|LTD)\b/gi, " ")
+    .replace(/\s+/g, "")
+    .trim()
+    .toUpperCase();
+  return TITLE_SYMBOL_ALIASES[compacted] ?? compacted;
+}
+
 function normaliseSymbolCandidate(raw: string | null | undefined): string | null {
   if (!raw) return null;
-  const cleaned = cleanSymbol(raw);
+  let cleaned = cleanSymbol(raw);
+  if (
+    (!cleaned || INVALID_SYMBOL_WORDS.has(cleaned) || !/^[A-Z0-9&]{2,30}$/.test(cleaned)) &&
+    /[\s·•]|futures?|index/i.test(raw)
+  ) {
+    cleaned = cleanSymbol(compactTitleSymbol(raw));
+  }
   if (!cleaned || INVALID_SYMBOL_WORDS.has(cleaned)) return null;
   if (!/^[A-Z0-9&]{2,30}$/.test(cleaned)) return null;
   return cleaned;
@@ -124,28 +164,15 @@ function readTVTimeframeFromDOM(): Timeframe | null {
 // ── Extractor registry per hostname ──────────────────────────────────────
 
 function extractTradingView(): Partial<PageMetadata> {
-  // 1. URL query param: tradingview.com/chart/.../?symbol=NSE:BANKNIFTY
-  const params = new URLSearchParams(window.location.search);
-  const symParam = params.get("symbol");
-  if (symParam) {
-    const [exch, sym] = symParam.includes(":") ? symParam.split(":") : ["NSE", symParam];
-    const symbol = normaliseSymbolCandidate(sym);
-    if (!symbol) return { detected_from: "none" };
-    return {
-      symbol,
-      exchange: (exch as Exchange) ?? "NSE",
-      detected_from: "url",
-    };
-  }
-
-  // 2. DOM — prefer compact tickers over title text, which may contain company names.
+  // 1. DOM — prefer the visible chart/legend over URL query params. TradingView
+  // can keep an old ?symbol= value after the user changes the visible chart.
   const domSym = readTVSymbolFromDOM();
   const domTF  = readTVTimeframeFromDOM();
   if (domSym) {
     return { symbol: domSym, timeframe: domTF ?? undefined, detected_from: "dom" };
   }
 
-  // 3. Page title — multiple TV formats:
+  // 2. Page title — multiple TV formats:
   //   "TORNTPHARM, D — TradingView"
   //   "BANKNIFTY, 5 — TradingView"
   //   "TORRENT PHARM FUTURES · 1D · NSE — TradingView"
@@ -170,13 +197,27 @@ function extractTradingView(): Partial<PageMetadata> {
   // Pattern B: "SYMBOL · TF" or "SYMBOL • TF" (bullet/middot separator)
   const mB = title.match(/^([A-Z0-9&!.\s]{2,25}?)\s*[·•]\s*([A-Z0-9]+)/i);
   if (mB) {
-    const rawSym = mB[1].trim().split(/\s+/).pop() ?? mB[1].trim();
+    const rawSym = compactTitleSymbol(mB[1]) || (mB[1].trim().split(/\s+/).pop() ?? mB[1].trim());
     const tf = normalizeTVTimeframe(mB[2]);
     const symbol = normaliseSymbolCandidate(rawSym);
     if (symbol) return { symbol, timeframe: tf ?? undefined, detected_from: "title" };
   }
 
-  // 4. Generic fallback: data-symbol / data-ticker attributes
+  // 3. URL query param fallback: tradingview.com/chart/.../?symbol=NSE:BANKNIFTY
+  const params = new URLSearchParams(window.location.search);
+  const symParam = params.get("symbol");
+  if (symParam) {
+    const [exch, sym] = symParam.includes(":") ? symParam.split(":") : ["NSE", symParam];
+    const symbol = normaliseSymbolCandidate(sym);
+    if (!symbol) return { detected_from: "none" };
+    return {
+      symbol,
+      exchange: (exch as Exchange) ?? "NSE",
+      detected_from: "url",
+    };
+  }
+
+  // 4. Generic fallback: data-symbol / data-ticker attributes.
   const symbolEl = document.querySelector<HTMLElement>(
     "[data-symbol], [data-ticker], .chart-container [title]"
   );
@@ -330,9 +371,15 @@ function detectTVChartPanes(): ChartPane[] {
 
   if (deduped.length === 0) {
     // Fallback: single pane covering the full visible page.
-    return [buildFullPagePane(0, readTVSymbolFromDOM(), "NSE", readTVTimeframeFromDOM())];
+    const activeSymbol = readTVSymbolFromDOM();
+    return [{
+      ...buildFullPagePane(0, activeSymbol, "NSE", readTVTimeframeFromDOM()),
+      is_active: Boolean(activeSymbol),
+    }];
   }
 
+  const activeSymbol = readTVSymbolFromDOM();
+  const activeTimeframe = readTVTimeframeFromDOM();
   const panes: ChartPane[] = [];
   for (const el of deduped) {
     const r = el.getBoundingClientRect();
@@ -342,7 +389,8 @@ function detectTVChartPanes(): ChartPane[] {
       index:    panes.length,
       symbol,
       exchange: symbol ? "NSE" : null,
-      timeframe,
+      timeframe: timeframe ?? activeTimeframe,
+      is_active: Boolean(activeSymbol && symbol === activeSymbol),
       rect: {
         x:             Math.round(r.left),
         y:             Math.round(r.top),
@@ -353,7 +401,9 @@ function detectTVChartPanes(): ChartPane[] {
       },
     });
   }
-  return panes;
+  return panes
+    .sort((left, right) => Number(right.is_active === true) - Number(left.is_active === true))
+    .map((pane, index) => ({ ...pane, index }));
 }
 
 function detectChartPanes(): ChartPane[] {
@@ -410,8 +460,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.type === "DRAW_RIC_LEVELS") {
     try {
-      drawRicLevels(message.signals as DrawSignal[]);
-      sendResponse({ ok: true, error: null } satisfies DrawOverlayResponse);
+      const result = drawRicLevels(message.signals as DrawSignal[]);
+      sendResponse(result satisfies DrawOverlayResponse);
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       sendResponse({ ok: false, error: reason } satisfies DrawOverlayResponse);

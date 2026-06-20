@@ -130,6 +130,12 @@ from terminal.market_calendar import format_session_clock, market_session_status
 from terminal.learning.interaction_log import build_command_action_event, capture_interaction_event
 from terminal.ui.links import linkify_markdown as _linkify_markdown
 from terminal.ui.links import text_with_links as _text_with_links
+from terminal.live_dashboard import LiveDashboardConfig, run_live_commentary_dashboard
+from terminal.live_intraday_alerts import (
+    build_arg_parser as _build_intraday_alert_arg_parser,
+    config_from_args as _intraday_alert_config_from_args,
+    run_intraday_alert_commentary,
+)
 
 colorama.init(autoreset=True)
 
@@ -1065,6 +1071,7 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     # ── Analyze / document commands ─────────────────────────────────────────
     ("/research RELIANCE",                "Comprehensive stock research report — overview, fundamentals, technicals, charts, narrative"),
     ("/research RELIANCE pdf",            "Comprehensive stock research report as PDF"),
+    ("/assess-report report.html RELIANCE","Read an existing generated report and write an LLM assessment sidecar"),
     ("/analyze",                          "Analyze a PDF/DOCX/web page, or run stock broker-note ingest + critique"),
     ("/analyze report.pdf",               "Read and summarize a local PDF document"),
     ("/analyze https://example.com",      "Scrape and analyze a web page"),
@@ -1095,6 +1102,12 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/screenshot --mode window --to a@x.com",  "Click a window to capture and mail"),
     ("/screenshot --mode full --to a@x.com --send", "Full screen, send immediately (no draft review)"),
     ("/screenshot --no-email --out ~/Desktop/shot.png", "Capture only — save to disk, don't email"),
+    # ── Intraday F&O alert monitor ─────────────────────────────────────────
+    ("/intraday-alerts",                   "Running intraday F&O commentary with trigger email alerts"),
+    ("/live_intraday_alerts",              "Alias for /intraday-alerts; launch live intraday alert monitor"),
+    ("/intraday-alerts --cycles 1 --dry-run", "One-cycle alert preview; writes email HTML preview to logs/"),
+    ("/intraday-alerts --symbols BEL,MCX --min-rr 2 --trigger active", "Track selected F&O names only"),
+    ("/intraday-alerts --cycles 0 --send", "Continuous loop; send trigger emails immediately"),
     # ── Latest results feed commands ────────────────────────────────────────
     ("/results-feed",                     "Latest quarterly results filings — default last 2 weeks"),
     ("/results-feed 2",                   "Latest quarterly results filings in last N weeks"),
@@ -1279,6 +1292,10 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/screen":   ("EOD Screeners",       "🔍"),
     "/monitor":  ("Background Monitors", "👁️"),
     "/alert":    ("Watchlist Alerts",    "🔔"),
+    "/intraday-alerts": ("Watchlist Alerts", "🔔"),
+    "/intraday_alerts": ("Watchlist Alerts", "🔔"),
+    "/live-intraday-alerts": ("Watchlist Alerts", "🔔"),
+    "/live_intraday_alerts": ("Watchlist Alerts", "🔔"),
     "/options":  ("F&O / Options",       "📊"),
     "/chain":    ("F&O / Options",       "📊"),
     "/oi":       ("F&O / Options",       "📊"),
@@ -2224,6 +2241,19 @@ def _parse_analyze_stock_research_command(text: str) -> dict:
         "skip_research": bool(ns.skip_research),
         "chat": bool(ns.chat and not ns.no_chat),
     }
+
+
+def _parse_assess_report_command(text: str) -> dict:
+    """Parse `/assess-report PATH [SYMBOL]` for second-pass report review."""
+    import argparse as _argparse
+    import shlex
+
+    tail = text.split(maxsplit=1)[1] if len(text.split(maxsplit=1)) > 1 else ""
+    parser = _argparse.ArgumentParser(prog="/assess-report", add_help=False)
+    parser.add_argument("path")
+    parser.add_argument("symbol", nargs="?", default="")
+    ns = parser.parse_args(shlex.split(tail))
+    return {"path": ns.path, "symbol": ns.symbol.upper().strip()}
 
 
 def _analyze_arg_is_document_source(arg: str) -> bool:
@@ -4284,9 +4314,21 @@ def _write_market_dashboard_html(snapshot: dict, *, drilldown: bool = False, ope
 def _parse_dashboard_command(text: str) -> dict:
     parts = text.split()
     args = parts[1:] if parts else []
-    flags = {"html": False, "open": False, "once": False, "drilldown": False}
+    flags = {
+        "html": False,
+        "open": False,
+        "once": False,
+        "drilldown": False,
+        "live_commentary": False,
+        "symbols": [],
+        "refresh_secs": 60,
+        "cycles": None,
+        "use_llm": True,
+    }
     focus_parts = []
-    for arg in args:
+    i = 0
+    while i < len(args):
+        arg = args[i]
         low = arg.lower()
         if low == "--html":
             flags["html"] = True
@@ -4297,8 +4339,37 @@ def _parse_dashboard_command(text: str) -> dict:
             flags["once"] = True
         elif low == "--drilldown":
             flags["drilldown"] = True
+        elif low == "--live-commentary":
+            flags["live_commentary"] = True
+        elif low == "--no-llm":
+            flags["use_llm"] = False
+        elif low == "--interval" and i + 1 < len(args):
+            try:
+                flags["refresh_secs"] = max(1, int(float(args[i + 1])))
+            except ValueError:
+                pass
+            i += 1
+        elif low == "--cycles" and i + 1 < len(args):
+            try:
+                flags["cycles"] = max(1, int(float(args[i + 1])))
+            except ValueError:
+                pass
+            i += 1
+        elif low == "--symbols":
+            collected: list[str] = []
+            j = i + 1
+            while j < len(args) and not args[j].startswith("--"):
+                collected.extend(part for part in re.split(r"[,\s]+", args[j]) if part)
+                j += 1
+            flags["symbols"] = [
+                re.sub(r"[^A-Za-z0-9&-]", "", part).upper()
+                for part in collected
+                if re.sub(r"[^A-Za-z0-9&-]", "", part)
+            ]
+            i = j - 1
         else:
             focus_parts.append(arg)
+        i += 1
     return {"focus": " ".join(focus_parts).strip(), **flags}
 
 
@@ -4804,6 +4875,20 @@ def _detect_mtf_intent_scored(text: str):
     from terminal.confidence import score_intent  # local to avoid import cycles
 
     if not text or text.lstrip().startswith("/"):
+        return None, None
+    q_lower = text.lower()
+    options_trade_terms = (
+        "option", "options", "f&o", "fno", "pcr", "oi", "open interest",
+        "ce", "pe", "call", "put",
+    )
+    trade_plan_terms = (
+        "target", "targets", "stop", "stop loss", "stop-loss", "support",
+        "resistance", "buildup", "build-up", "trade setup", "trading setup",
+    )
+    if (
+        any(term in q_lower for term in options_trade_terms)
+        and any(term in q_lower for term in trade_plan_terms)
+    ):
         return None, None
     if not _MTF_FREEFORM_RE.search(text):
         return None, None
@@ -7089,6 +7174,73 @@ def _build_command_registry():
         match_fn=lambda q: q == "/commands" or q.startswith("/commands "),
         handler_fn=_h_commands,
         description="Search or list available commands",
+    ))
+
+    # /dashboard
+    def _h_dashboard(query, agent, show_trace):
+        _print_user(query)
+        parsed_dashboard = _parse_dashboard_command(query)
+        if parsed_dashboard["live_commentary"]:
+            config = LiveDashboardConfig(
+                symbols=parsed_dashboard["symbols"],
+                refresh_secs=parsed_dashboard["refresh_secs"],
+                max_cycles=parsed_dashboard["cycles"],
+                use_llm=parsed_dashboard["use_llm"],
+            )
+            run_live_commentary_dashboard(
+                config,
+                backend=getattr(agent, "backend", None),
+                console=_mcon(),
+            )
+            return True
+        _run_market_dashboard_live(
+            parsed_dashboard["focus"],
+            llm_backend=getattr(agent, "backend", None),
+            once=parsed_dashboard["once"],
+            html_output=parsed_dashboard["html"],
+            open_browser=parsed_dashboard["open"],
+            drilldown=parsed_dashboard["drilldown"],
+        )
+        return True
+    registry.register(CommandHandler(
+        name="dashboard",
+        match_fn=lambda q: q in ("/dashboard", "/dash") or q.startswith(("/dashboard ", "/dash ")),
+        handler_fn=_h_dashboard,
+        description="Current-market dashboard + narrative",
+    ))
+
+    # /intraday-alerts
+    def _h_intraday_alerts(query, agent, show_trace):
+        _print_user(query)
+        import shlex
+
+        raw = re.sub(
+            r"^\s*/(?:intraday-alerts|intraday_alerts|live-intraday-alerts|live_intraday_alerts|live-intraday-alertss|live_intraday_alertss)\b",
+            "",
+            query or "",
+            flags=re.IGNORECASE,
+        ).strip()
+        raw = raw.replace("│", " ")
+        try:
+            args = _build_intraday_alert_arg_parser().parse_args(shlex.split(raw))
+        except SystemExit:
+            console.print("[red]Invalid /intraday-alerts arguments. Try /intraday-alerts --cycles 1 --dry-run[/red]")
+            return True
+        config = _intraday_alert_config_from_args(args)
+        run_intraday_alert_commentary(
+            config,
+            backend=getattr(agent, "backend", None),
+            console=_mcon(),
+        )
+        return True
+    registry.register(CommandHandler(
+        name="intraday-alerts",
+        match_fn=lambda q: re.match(
+            r"^/(?:intraday-alerts|intraday_alerts|live-intraday-alerts|live_intraday_alerts|live-intraday-alertss|live_intraday_alertss)(?:\s|$)",
+            q,
+        ) is not None,
+        handler_fn=_h_intraday_alerts,
+        description="Running intraday F&O commentary with trigger email alerts",
     ))
 
     # /scan
@@ -9568,6 +9720,37 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 continue
             except Exception as exc:
                 console.print(f"[red]  ✗ /critique-report failed:[/red] {exc}")
+                continue
+
+        # ── /assess-report — read an existing report and add LLM assessment ──
+        elif text.lower().startswith("/assess-report"):
+            try:
+                parsed = _parse_assess_report_command(text)
+                from terminal.reports import assess_existing_research_report
+
+                console.print(
+                    f"[dim]  → Reading report and producing LLM assessment: "
+                    f"{parsed['path']}[/dim]"
+                )
+                result = assess_existing_research_report(
+                    parsed["path"],
+                    symbol=parsed["symbol"],
+                )
+                if not result.get("success"):
+                    console.print(f"[yellow]  · Assessment status:[/yellow] {result.get('llm_assessment') or result.get('error')}")
+                else:
+                    console.print(f"[green]  ✓ Assessed research report saved:[/green] {result.get('report_path')}")
+                    console.print(f"[dim]    Markdown sidecar:[/dim] {result.get('assessment_path')}")
+                if result.get("report_path"):
+                    _open_report_path(result["report_path"], console=console)
+                elif result.get("assessment_path"):
+                    _open_report_path(result["assessment_path"], console=console)
+                continue
+            except SystemExit:
+                console.print("[red]  ✗ Usage:[/red] /assess-report <path-to-html-or-md-report> [SYMBOL]")
+                continue
+            except Exception as exc:
+                console.print(f"[red]  ✗ /assess-report failed:[/red] {exc}")
                 continue
 
         # ── /research — comprehensive single-stock research report ─────────

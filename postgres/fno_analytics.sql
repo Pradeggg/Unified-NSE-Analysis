@@ -276,6 +276,13 @@ BEGIN
 END;
 $$;
 
+ALTER FUNCTION derivatives.refresh_fno_analytics() SECURITY DEFINER;
+GRANT EXECUTE ON FUNCTION derivatives.refresh_fno_analytics() TO PUBLIC;
+GRANT SELECT ON derivatives.mv_fno_nearest_options TO PUBLIC;
+GRANT SELECT ON derivatives.mv_fno_option_chain TO PUBLIC;
+GRANT SELECT ON derivatives.mv_fno_max_pain TO PUBLIC;
+GRANT SELECT ON derivatives.mv_fno_symbol_analytics TO PUBLIC;
+
 CREATE OR REPLACE FUNCTION derivatives.option_payoff(
     p_symbol TEXT,
     p_option_type TEXT DEFAULT 'CE',

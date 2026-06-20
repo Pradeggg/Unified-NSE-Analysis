@@ -99,6 +99,10 @@ def test_memory_serializes_and_loads_snapshot_roundtrip():
     from terminal.conversation_memory import ConversationMemory
 
     memory = ConversationMemory(session_id="test-session")
+    memory.agentic_state = {
+        "workflow": "market_scan",
+        "next_actions": [{"id": "next_deep_dive_top_symbols"}],
+    }
     memory.record_turn(
         user_input="PCBL analysis",
         answer="PCBL answer",
@@ -112,6 +116,10 @@ def test_memory_serializes_and_loads_snapshot_roundtrip():
     assert restored.entities["PCBL"].latest_stance == "cautious_avoid_fresh_entry"
     assert restored.entities["PCBL"].freshness == "2026-05-19"
     assert restored.raw_event_count == 1
+    assert restored.agentic_state == {
+        "workflow": "market_scan",
+        "next_actions": [{"id": "next_deep_dive_top_symbols"}],
+    }
 
 
 def test_save_to_postgres_upserts_raw_event_and_snapshot(monkeypatch):

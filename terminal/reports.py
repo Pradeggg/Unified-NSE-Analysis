@@ -14,8 +14,9 @@ import datetime
 import html as _html
 import json
 import shutil
+from html.parser import HTMLParser
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 ROOT = Path(__file__).resolve().parent.parent
 REPORTS_DIR = ROOT / "reports" / "generated"
@@ -432,6 +433,769 @@ def _build_postgres_research_context(symbol: str) -> str:
         ])
 
     return "\n".join(lines)
+
+
+def _research_report_llm_assessment_enabled() -> bool:
+    raw = os.environ.get("AGENT_ADDA_RESEARCH_REPORT_LLM_ASSESSMENT", "1")
+    return raw.strip().lower() not in {"0", "false", "no", "off"}
+
+
+def _truncate_report_text_for_llm(text: str, limit: int = 48_000) -> str:
+    clean = re.sub(r"\n{4,}", "\n\n\n", _strip_rich_markup(_strip_ansi(text or ""))).strip()
+    if len(clean) <= limit:
+        return clean
+    head = clean[: int(limit * 0.58)].rstrip()
+    tail = clean[-int(limit * 0.38):].lstrip()
+    return f"{head}\n\n[... middle of report omitted for LLM assessment budget ...]\n\n{tail}"
+
+
+def _clean_llm_assessment_text(value: Any, fallback: str = "") -> str:
+    text = str(value or fallback or "").strip()
+    text = re.sub(r"\s+", " ", text)
+    return text[:1200]
+
+
+def _clean_llm_assessment_list(value: Any, fallback: list[str] | None = None, limit: int = 6) -> list[str]:
+    fallback = fallback or []
+    if not isinstance(value, list):
+        value = fallback
+    cleaned: list[str] = []
+    for item in value:
+        text = _clean_llm_assessment_text(item)
+        if text:
+            cleaned.append(text)
+        if len(cleaned) >= limit:
+            break
+    return cleaned or fallback[:limit]
+
+
+def _llm_report_assessment_markdown(assessment: dict[str, Any]) -> str:
+    verdict = _clean_llm_assessment_text(assessment.get("verdict"), "Assessment unavailable")
+    conviction = _clean_llm_assessment_text(assessment.get("conviction"), "LOW").upper()
+    thesis = _clean_llm_assessment_text(assessment.get("thesis"), "")
+    filings = _clean_llm_assessment_text(assessment.get("catalyst_and_filings_assessment"), "")
+    quarterly = _clean_llm_assessment_text(assessment.get("quarterly_results_assessment"), "")
+    evidence = _clean_llm_assessment_text(assessment.get("evidence_quality"), "")
+    source = _clean_llm_assessment_text(assessment.get("source"), "LLM")
+
+    lines = [
+        "## LLM Report Assessment",
+        "",
+        "> This section is a second-pass LLM assessment of the generated report text. It is constrained to the evidence already present in the report and should be treated as research commentary, not investment advice.",
+        "",
+        "| Field | Assessment |",
+        "|---|---|",
+        f"| Verdict | {verdict} |",
+        f"| Conviction | {conviction} |",
+        f"| Assessment source | {source} |",
+        "",
+    ]
+    if thesis:
+        lines.extend(["### Integrated Read", "", thesis, ""])
+    if filings:
+        lines.extend(["### Catalysts & Filings Read", "", filings, ""])
+    if quarterly:
+        lines.extend(["### Quarterly Results Read", "", quarterly, ""])
+    if evidence:
+        lines.extend(["### Evidence Quality", "", evidence, ""])
+
+    for title, key in (
+        ("Positive Signals", "positive_signals"),
+        ("Risks / Red Flags", "risks"),
+        ("Follow-up Checks", "follow_up_checks"),
+    ):
+        items = _clean_llm_assessment_list(assessment.get(key), [], 6)
+        if not items:
+            continue
+        lines.extend([f"### {title}", ""])
+        lines.extend(f"- {item}" for item in items)
+        lines.append("")
+
+    return "\n".join(lines).strip()
+
+
+class _ResearchReportSectionParser(HTMLParser):
+    """Extract logical source sections from a rendered research report."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.sections: list[dict[str, str]] = []
+        self._current_title = ""
+        self._current_lines: list[str] = []
+        self._capture: list[dict[str, Any]] = []
+        self._skip_depth = 0
+        self._body_depth: int | None = None
+        self._div_depth = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        tag = tag.lower()
+        attr = {k.lower(): (v or "") for k, v in attrs}
+        if tag in {"script", "style"}:
+            self._skip_depth += 1
+            return
+        if tag == "div":
+            self._div_depth += 1
+            classes = set(attr.get("class", "").split())
+            if attr.get("id") == "report-body" and self._body_depth is None:
+                self._body_depth = self._div_depth
+            if "part-divider" in classes:
+                self._capture.append({"tag": "div", "kind": "section", "parts": []})
+                return
+            if "arrow-header" in classes:
+                self._capture.append({"tag": "div", "kind": "subheading", "parts": []})
+                return
+        if self._body_depth is None:
+            return
+        if re.fullmatch(r"h[1-6]", tag):
+            level = int(tag[1])
+            kind = "section" if level <= 2 else "subheading"
+            self._capture.append({"tag": tag, "kind": kind, "parts": []})
+            return
+        if tag in {"p", "br", "li", "tr", "table", "blockquote"}:
+            self._append_text("\n")
+        elif tag in {"td", "th"}:
+            self._append_text(" | ")
+
+    def handle_endtag(self, tag: str) -> None:
+        tag = tag.lower()
+        if tag in {"script", "style"} and self._skip_depth:
+            self._skip_depth -= 1
+            return
+        if self._capture and self._capture[-1]["tag"] == tag:
+            capture = self._capture.pop()
+            text = self._normalise_line(" ".join(capture["parts"]))
+            if text:
+                if capture["kind"] == "section":
+                    self._start_section(text)
+                else:
+                    self._append_text(f"\n### {text}\n")
+        if tag == "div":
+            if self._body_depth == self._div_depth:
+                self._flush_section()
+                self._body_depth = None
+            self._div_depth = max(0, self._div_depth - 1)
+        elif self._body_depth is not None and tag in {"p", "li", "tr", "table", "blockquote"}:
+            self._append_text("\n")
+
+    def handle_data(self, data: str) -> None:
+        if self._skip_depth:
+            return
+        if self._capture:
+            self._capture[-1]["parts"].append(data)
+            return
+        if self._body_depth is not None:
+            self._append_text(data)
+
+    def close(self) -> None:
+        super().close()
+        self._flush_section()
+
+    def _start_section(self, title: str) -> None:
+        self._flush_section()
+        self._current_title = title
+        self._current_lines = []
+
+    def _append_text(self, text: str) -> None:
+        if not self._current_title:
+            self._current_title = "Source Report Body"
+        self._current_lines.append(text)
+
+    @staticmethod
+    def _normalise_line(text: str) -> str:
+        return re.sub(r"\s+", " ", _html.unescape(text or "")).strip()
+
+    @classmethod
+    def _normalise_block(cls, text: str) -> str:
+        text = _html.unescape(text or "")
+        text = re.sub(r"[ \t]+", " ", text)
+        text = re.sub(r" *\n *", "\n", text)
+        text = re.sub(r"\n{3,}", "\n\n", text)
+        return text.strip()
+
+    def _flush_section(self) -> None:
+        title = self._normalise_line(self._current_title)
+        body = self._normalise_block("".join(self._current_lines))
+        if title and body:
+            if not self.sections or self.sections[-1]["title"] != title or self.sections[-1]["text"] != body:
+                self.sections.append({"title": title, "text": body})
+        self._current_title = ""
+        self._current_lines = []
+
+
+def _extract_report_sections_from_html(raw: str) -> list[dict[str, str]]:
+    parser = _ResearchReportSectionParser()
+    parser.feed(raw)
+    parser.close()
+    sections = parser.sections
+    if sections:
+        return sections
+
+    text = _extract_report_text_from_html(raw)
+    return [{"title": "Source Report Body", "text": text}] if text else []
+
+
+def _extract_report_text_from_html(raw: str) -> str:
+    raw = re.sub(r"<script\b[^>]*>.*?</script>", " ", raw, flags=re.IGNORECASE | re.DOTALL)
+    raw = re.sub(r"<style\b[^>]*>.*?</style>", " ", raw, flags=re.IGNORECASE | re.DOTALL)
+    raw = re.sub(r"</(?:p|div|section|article|tr|li|h[1-6])>", "\n", raw, flags=re.IGNORECASE)
+    raw = re.sub(r"<[^>]+>", " ", raw)
+    raw = _html.unescape(raw)
+    raw = re.sub(r"[ \t]{2,}", " ", raw)
+    raw = re.sub(r"\n{3,}", "\n\n", raw)
+    return raw.strip()
+
+
+def extract_research_report_sections(path: str | Path) -> list[dict[str, str]]:
+    report_path = Path(path)
+    raw = report_path.read_text(encoding="utf-8", errors="ignore")
+    if report_path.suffix.lower() in {".html", ".htm"}:
+        return _extract_report_sections_from_html(raw)
+
+    sections: list[dict[str, str]] = []
+    current_title = "Source Report Body"
+    current_lines: list[str] = []
+    for line in raw.splitlines():
+        match = re.match(r"^(#{1,2})\s+(.+?)\s*$", line)
+        if match:
+            body = "\n".join(current_lines).strip()
+            if body:
+                sections.append({"title": current_title, "text": body})
+            current_title = match.group(2).strip()
+            current_lines = []
+            continue
+        current_lines.append(line)
+    body = "\n".join(current_lines).strip()
+    if body:
+        sections.append({"title": current_title, "text": body})
+    return sections
+
+
+def _extract_original_report_body_html(path: Path) -> str:
+    """Return the generated report body as trusted internal HTML."""
+    if path.suffix.lower() not in {".html", ".htm"}:
+        return ""
+    raw = path.read_text(encoding="utf-8", errors="ignore")
+    marker = '<div class="section-body" id="report-body">'
+    start = raw.find(marker)
+    if start < 0:
+        return ""
+    start += len(marker)
+    end_match = re.search(
+        r"\n\s*</div>\s*</div>(?:\s*<!--.*?-->)?\s*</main\b",
+        raw[start:],
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    if not end_match:
+        return ""
+    body = raw[start : start + end_match.start()].strip()
+    body = re.sub(r"<script\b[^>]*>.*?</script>", " ", body, flags=re.IGNORECASE | re.DOTALL)
+    return re.sub(r"\s+", " ", body).strip()
+
+
+def _html_text_for_assessment(fragment: str) -> str:
+    text = re.sub(r"<script\b[^>]*>.*?</script>", " ", fragment or "", flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"<style\b[^>]*>.*?</style>", " ", text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"</(?:p|div|li|tr|table|h[1-6]|dl|dd|dt)>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"<(?:td|th)\b[^>]*>", " | ", text, flags=re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = _html.unescape(text)
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def _title_from_html_header(header_html: str) -> str:
+    return re.sub(r"\s+", " ", _html_text_for_assessment(header_html)).strip()
+
+
+def _should_inline_assess_title(title: str) -> bool:
+    low = (title or "").strip().lower()
+    if not low:
+        return False
+    skip_bits = {
+        "source trail",
+        "not investment advice",
+        "research and learning only",
+        "assessment source",
+    }
+    return not any(bit in low for bit in skip_bits)
+
+
+def _inline_summary_html(summary: str) -> str:
+    clean = _clean_llm_assessment_text(summary, "")
+    if not clean:
+        return ""
+    return (
+        '<div class="aa-inline-summary">'
+        '<div class="aa-inline-summary-title">What this means</div>'
+        f'<p>{_html.escape(clean)}</p>'
+        '</div>'
+    )
+
+
+def build_inline_section_summary(
+    *,
+    title: str,
+    section_text: str,
+    symbol: str,
+    report_title: str = "",
+    allow_fallback: bool = True,
+) -> tuple[str, dict[str, Any]]:
+    """Translate one original report subsection into plain-English context."""
+    clean_title = _clean_llm_assessment_text(title, "Section")
+    clean_text = _truncate_report_text_for_llm(section_text, limit=8_000)
+    if not clean_text:
+        return "", {"status": "skipped", "reason": "empty section"}
+    schema = {
+        "type": "object",
+        "required": ["summary"],
+        "properties": {"summary": {"type": "string"}},
+    }
+    payload = {
+        "symbol": symbol.upper().strip(),
+        "report_title": report_title,
+        "section_title": clean_title,
+        "instruction": (
+            "Translate this report subsection into a short plain-English explanation for an investor. "
+            "Explain what the metric/table means and how to read the supplied values. Stay grounded in "
+            "the subsection text. Do not invent fresh numbers, targets, ratings, or filings. Keep it to "
+            "2-4 sentences. Do not mention LLMs."
+        ),
+        "section_text": clean_text,
+    }
+    try:
+        from terminal.research_council.llm_client import call_llm_json
+
+        result = call_llm_json(
+            system=(
+                "You are a senior Indian equity research reviewer. Translate report metrics and tables "
+                "into concise plain-English meaning. Use only supplied text. Do not invent missing facts. "
+                "Return strict json matching the requested schema."
+            ),
+            user=json.dumps(payload, default=str),
+            schema=schema,
+        )
+        return _clean_llm_assessment_text(result.get("summary"), ""), {"status": "ok", "source": "LLM"}
+    except Exception as exc:
+        if not allow_fallback:
+            return "", {"status": "skipped", "reason": f"assessment unavailable: {type(exc).__name__}"}
+        return (
+            f"This section should be read as a source-data block for {clean_title}. Use the values shown here as the reference, and verify any unusual move or red flag against the underlying filing before acting.",
+            {"status": "fallback", "reason": str(exc)},
+        )
+
+
+def _enrich_original_report_body_html(body: str, *, symbol: str, report_title: str) -> tuple[str, list[dict[str, Any]]]:
+    if not body:
+        return "", []
+    header_re = re.compile(
+        r'(<div\s+class="(?:part-divider|arrow-header)"[^>]*>.*?</div>|<h[2-4]\b[^>]*>.*?</h[2-4]>)',
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    matches = list(header_re.finditer(body))
+    if not matches:
+        return body, []
+    max_summaries = int(os.environ.get("AGENT_ADDA_ORIGINAL_REPORT_INLINE_SUMMARY_MAX", "24") or "24")
+    out: list[str] = []
+    rows: list[dict[str, Any]] = []
+    cursor = 0
+    inserted = 0
+    for idx, match in enumerate(matches):
+        out.append(body[cursor:match.end()])
+        cursor = match.end()
+        title = _title_from_html_header(match.group(1))
+        next_start = matches[idx + 1].start() if idx + 1 < len(matches) else len(body)
+        section_text = _html_text_for_assessment(body[match.end():next_start])
+        if inserted < max_summaries and _should_inline_assess_title(title) and section_text:
+            summary, meta = build_inline_section_summary(
+                title=title,
+                section_text=section_text,
+                symbol=symbol,
+                report_title=report_title,
+                allow_fallback=True,
+            )
+            summary_html = _inline_summary_html(summary)
+            if summary_html:
+                out.append(summary_html)
+                inserted += 1
+                rows.append({"title": title, "status": meta.get("status"), "meta": meta})
+    out.append(body[cursor:])
+    return "".join(out), rows
+
+
+def _original_report_body_markdown(path: Path, *, symbol: str = "", report_title: str = "") -> tuple[str, list[dict[str, Any]]]:
+    body = _extract_original_report_body_html(path)
+    if not body:
+        return "", []
+    enriched_body, inline_meta = _enrich_original_report_body_html(
+        body,
+        symbol=symbol,
+        report_title=report_title,
+    )
+    md = "\n".join(
+        [
+            "## Original Research Report",
+            "",
+            "> The source report is preserved below in its original rendered format, including financial tables and data blocks. Short `What this means` notes translate the key metrics and tables directly inside the report.",
+            "",
+            f'<section class="aa-original-report">{enriched_body}</section>',
+            "",
+        ]
+    ).strip()
+    return md, inline_meta
+
+
+def _section_assessment_markdown(assessment: dict[str, Any]) -> str:
+    narrative = _clean_llm_assessment_text(assessment.get("narrative"), "No section assessment produced.")
+    quality = _clean_llm_assessment_text(assessment.get("quality"), "")
+    lines = [narrative, ""]
+    if quality:
+        lines.extend(["**Evidence quality:** " + quality, ""])
+    for title, key in (
+        ("Positive Signals", "positive_signals"),
+        ("Risks / Red Flags", "risks"),
+        ("Follow-up Checks", "follow_up_checks"),
+    ):
+        items = _clean_llm_assessment_list(assessment.get(key), [], 4)
+        if items:
+            lines.extend([f"**{title}:**", ""])
+            lines.extend(f"- {item}" for item in items)
+            lines.append("")
+    return "\n".join(lines).strip()
+
+
+def build_llm_section_assessment(
+    section: dict[str, str],
+    *,
+    symbol: str,
+    report_title: str = "",
+    allow_fallback: bool = True,
+) -> tuple[str, dict[str, Any]]:
+    """Produce an LLM narrative for one source report section."""
+    title = _clean_llm_assessment_text(section.get("title"), "Untitled section")
+    text = _truncate_report_text_for_llm(section.get("text", ""), limit=12_000)
+    if not text:
+        return "", {"status": "skipped", "reason": "empty section"}
+    schema = {
+        "type": "object",
+        "required": ["narrative", "quality", "positive_signals", "risks", "follow_up_checks"],
+        "properties": {
+            "narrative": {"type": "string"},
+            "quality": {"type": "string"},
+            "positive_signals": {"type": "array", "items": {"type": "string"}},
+            "risks": {"type": "array", "items": {"type": "string"}},
+            "follow_up_checks": {"type": "array", "items": {"type": "string"}},
+        },
+    }
+    payload = {
+        "symbol": symbol.upper().strip(),
+        "report_title": report_title,
+        "section_title": title,
+        "instruction": (
+            "Assess only this section of the generated research report. Explain what the section means, "
+            "how strong the evidence is, and what should be checked next. Do not invent numbers or filings. "
+            "If the section is mostly boilerplate or lacks evidence, say that directly."
+        ),
+        "section_text": text,
+    }
+    try:
+        from terminal.research_council.llm_client import call_llm_json
+
+        result = call_llm_json(
+            system=(
+                "You are a senior Indian equity research reviewer. Produce a concise section-level "
+                "assessment grounded only in the supplied section text. Do not fetch new data or invent "
+                "missing facts. Return strict json matching the requested schema."
+            ),
+            user=json.dumps(payload, default=str),
+            schema=schema,
+        )
+        result["source"] = "LLM"
+        return _section_assessment_markdown(result), {"status": "ok", "source": "LLM"}
+    except Exception as exc:
+        if not allow_fallback:
+            return "", {"status": "skipped", "reason": f"LLM unavailable: {type(exc).__name__}"}
+        fallback = {
+            "narrative": "Section-level assessment was not completed for this section.",
+            "quality": f"LLM unavailable: {type(exc).__name__}.",
+            "positive_signals": [],
+            "risks": ["This section has not received a second-pass review."],
+            "follow_up_checks": ["Rerun the assessment when the assessment provider is available."],
+        }
+        return _section_assessment_markdown(fallback), {"status": "fallback", "reason": str(exc)}
+
+
+def _section_original_excerpt(text: str) -> str:
+    text = re.sub(r"\n{4,}", "\n\n\n", (text or "").strip())
+    limit = int(os.environ.get("AGENT_ADDA_ASSESSED_RESEARCH_SECTION_RENDER_CHARS", "9000") or "9000")
+    if len(text) <= limit:
+        return text
+    return text[:limit].rstrip() + "\n\n[Section text truncated in assessed report display; source report remains unchanged.]"
+
+
+def _build_section_assessments_markdown(
+    sections: list[dict[str, str]],
+    *,
+    symbol: str,
+    report_title: str,
+) -> tuple[str, list[dict[str, Any]]]:
+    if not sections:
+        return "## Source Report Section Assessments\n\nNo source sections were extracted.", []
+    max_sections = int(os.environ.get("AGENT_ADDA_ASSESSED_RESEARCH_MAX_SECTIONS", "40") or "40")
+    selected = sections[:max(1, max_sections)]
+    rows: list[dict[str, Any]] = []
+    lines = [
+        "## Source Report Section Assessments",
+        "",
+        "> Each assessment below is grounded in the matching source section. The full source report, including financial tables, is preserved above.",
+        "",
+    ]
+    if len(sections) > len(selected):
+        lines.extend([
+            f"> Section assessment limited to the first {len(selected)} of {len(sections)} extracted sections by AGENT_ADDA_ASSESSED_RESEARCH_MAX_SECTIONS.",
+            "",
+        ])
+    for idx, section in enumerate(selected, start=1):
+        title = _clean_llm_assessment_text(section.get("title"), f"Section {idx}")
+        assessment_md, meta = build_llm_section_assessment(
+            section,
+            symbol=symbol,
+            report_title=report_title,
+            allow_fallback=True,
+        )
+        rows.append({"title": title, "status": meta.get("status"), "meta": meta})
+        lines.extend([
+            f"### {idx}. {title}",
+            "",
+            "#### Assessment Narrative",
+            "",
+            assessment_md or "Section assessment was not produced.",
+            "",
+            "---",
+            "",
+        ])
+    return "\n".join(lines).strip(), rows
+
+
+def build_llm_report_assessment(
+    content: str,
+    *,
+    symbol: str,
+    report_type: str = "research",
+    title: str = "",
+    allow_fallback: bool = False,
+) -> tuple[str, dict[str, Any]]:
+    """Read generated report text and produce a grounded LLM assessment.
+
+    The assessment intentionally uses only the report body already assembled by
+    the pipeline. It does not fetch fresh data or invent missing values.
+    """
+    if not _research_report_llm_assessment_enabled():
+        return "", {"status": "disabled"}
+    if not content.strip():
+        return "", {"status": "skipped", "reason": "empty report content"}
+
+    schema = {
+        "type": "object",
+        "required": [
+            "verdict",
+            "conviction",
+            "thesis",
+            "catalyst_and_filings_assessment",
+            "quarterly_results_assessment",
+            "evidence_quality",
+            "positive_signals",
+            "risks",
+            "follow_up_checks",
+        ],
+        "properties": {
+            "verdict": {"type": "string"},
+            "conviction": {"type": "string"},
+            "thesis": {"type": "string"},
+            "catalyst_and_filings_assessment": {"type": "string"},
+            "quarterly_results_assessment": {"type": "string"},
+            "evidence_quality": {"type": "string"},
+            "positive_signals": {"type": "array", "items": {"type": "string"}},
+            "risks": {"type": "array", "items": {"type": "string"}},
+            "follow_up_checks": {"type": "array", "items": {"type": "string"}},
+        },
+    }
+    payload = {
+        "symbol": symbol.upper().strip(),
+        "report_type": report_type,
+        "title": title,
+        "instruction": (
+            "Assess only the supplied generated report. Do not fetch new data. "
+            "If the report says web catalysts returned no usable results but BSE/Screener filings exist, "
+            "separate true business catalysts from regulatory/ownership disclosures. "
+            "For SEBI SAST Reg. 29(2) disclosures, treat them as shareholding/ownership-change evidence, "
+            "not automatically as operating-performance catalysts. Highlight quarterly-results trends only "
+            "when the report contains numbers; otherwise say the report lacks enough quarterly detail."
+        ),
+        "report_text": _truncate_report_text_for_llm(content),
+    }
+    try:
+        from terminal.research_council.llm_client import call_llm_json
+
+        result = call_llm_json(
+            system=(
+                "You are a senior Indian equity research reviewer. Read a generated Agent Adda "
+                "research report and produce a second-pass assessment. Stay grounded in the supplied "
+                "report text. Do not invent P&L numbers, targets, filings, catalysts, or management "
+                "commentary. Separate data-quality gaps from investment judgement. This is not "
+                "investment advice. Return strict json matching the requested schema."
+            ),
+            user=json.dumps(payload, default=str),
+            schema=schema,
+        )
+        result["source"] = "LLM"
+        return _llm_report_assessment_markdown(result), {"status": "ok", "source": "LLM"}
+    except Exception as exc:
+        if not allow_fallback:
+            return "", {"status": "skipped", "reason": f"LLM unavailable: {type(exc).__name__}"}
+        fallback = {
+            "verdict": "Needs manual review",
+            "conviction": "LOW",
+            "thesis": "The report was generated, but the LLM assessment provider was unavailable, so no second-pass judgement was produced.",
+            "evidence_quality": f"LLM assessment unavailable: {type(exc).__name__}.",
+            "positive_signals": [],
+            "risks": ["LLM assessment was not completed."],
+            "follow_up_checks": ["Rerun with OPENAI_API_KEY or Ollama configured."],
+            "source": f"deterministic fallback; LLM unavailable: {type(exc).__name__}",
+        }
+        return _llm_report_assessment_markdown(fallback), {"status": "fallback", "reason": str(exc)}
+
+
+def _extract_report_text_from_file(path: Path) -> str:
+    raw = path.read_text(encoding="utf-8", errors="ignore")
+    if path.suffix.lower() not in {".html", ".htm"}:
+        return raw
+    return _extract_report_text_from_html(raw)
+
+
+def assess_existing_research_report(
+    path: str | Path,
+    *,
+    symbol: str = "",
+    output_path: str | Path | None = None,
+    output_format: str = "html",
+) -> dict[str, Any]:
+    """Read an existing report file and write a second-pass LLM assessment."""
+    raw_path = str(path)
+    if raw_path.startswith("file://"):
+        from urllib.parse import unquote, urlparse
+
+        report_path = Path(unquote(urlparse(raw_path).path)).expanduser()
+    else:
+        report_path = Path(path).expanduser()
+    if not report_path.exists():
+        return {
+            "success": False,
+            "path": str(report_path),
+            "assessment_path": None,
+            "report_path": None,
+            "error": "report file not found",
+        }
+    inferred_symbol = symbol.strip().upper()
+    if not inferred_symbol:
+        match = re.match(r"([A-Z0-9&-]{2,20})_", report_path.name.upper())
+        inferred_symbol = match.group(1) if match else ""
+    text = _extract_report_text_from_file(report_path)
+    assessment_md, meta = build_llm_report_assessment(
+        text,
+        symbol=inferred_symbol,
+        report_type="research",
+        title=report_path.stem,
+        allow_fallback=True,
+    )
+    sections = extract_research_report_sections(report_path)
+    original_report_md, inline_summary_meta = _original_report_body_markdown(
+        report_path,
+        symbol=inferred_symbol,
+        report_title=report_path.stem,
+    )
+    sections_md, section_meta = _build_section_assessments_markdown(
+        sections,
+        symbol=inferred_symbol,
+        report_title=report_path.stem,
+    )
+    target = Path(output_path).expanduser() if output_path else report_path.with_suffix(".assessment.md")
+    sidecar_content = "\n".join(
+        [
+            f"# {inferred_symbol or 'Report'} — LLM Report Assessment",
+            "",
+            f"- Source report: `{report_path}`",
+            f"- Assessment status: {meta.get('status')}",
+            f"- Original report inline summaries: {len(inline_summary_meta)}",
+            f"- Source sections assessed: {len(section_meta)}",
+            "",
+            assessment_md or "LLM assessment was not produced.",
+            "",
+            "---",
+            "",
+            original_report_md,
+            "",
+            "---",
+            "",
+            sections_md,
+            "",
+        ]
+    )
+    target.write_text(
+        sidecar_content,
+        encoding="utf-8",
+    )
+    first_class_content = "\n".join(
+        [
+            "## Assessment Source",
+            "",
+            "| Field | Value |",
+            "|---|---|",
+            f"| Source report | `{report_path}` |",
+            f"| Source report file | `{report_path.name}` |",
+            f"| Symbol | {inferred_symbol or 'N/A'} |",
+            f"| LLM assessment status | {meta.get('status')} |",
+            "",
+            "---",
+            "",
+            assessment_md or "LLM assessment was not produced.",
+            "",
+            "---",
+            "",
+            original_report_md,
+            "",
+            "---",
+            "",
+            sections_md,
+            "",
+            "## Audit Artifact",
+            "",
+            f"- Markdown sidecar: `{target}`",
+            f"- Source sections extracted: {len(sections)}",
+            f"- Original report inline summaries: {len(inline_summary_meta)}",
+            f"- Source sections assessed: {len(section_meta)}",
+        ]
+    )
+    now = datetime.datetime.now()
+    report_result = generate_report(
+        first_class_content,
+        report_type="assessed-research",
+        symbol=inferred_symbol,
+        output_format=output_format,
+        title=f"{inferred_symbol or 'Report'} — LLM-Assessed Research Report",
+        filename=f"{inferred_symbol or 'REPORT'}_research_assessment_{now:%Y%m%d_%H%M%S}",
+    )
+    return {
+        "success": bool(assessment_md) and bool(report_result.get("success")),
+        "path": str(report_path),
+        "assessment_path": str(target),
+        "report_path": report_result.get("path"),
+        "report_format": report_result.get("format"),
+        "symbol": inferred_symbol,
+        "llm_assessment": meta,
+        "inline_summaries": inline_summary_meta,
+        "section_assessments": section_meta,
+    }
 
 
 def _inline_md(text: str) -> str:
@@ -1089,6 +1853,27 @@ mark.srch-hl {{
   border-left:3px solid var(--accent); margin:10px 0;
   padding:8px 14px; background:rgba(124,111,255,.06);
   border-radius:0 6px 6px 0; color:#a0a0c0;
+}}
+.aa-inline-summary {{
+  margin:10px 0 14px 0;
+  padding:10px 12px;
+  border-left:3px solid var(--accent2);
+  background:rgba(34,211,238,.06);
+  border-radius:0 8px 8px 0;
+}}
+.aa-inline-summary-title {{
+  font-size:11px;
+  font-weight:800;
+  color:var(--accent2);
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  margin-bottom:4px;
+}}
+.aa-inline-summary p {{
+  margin:0;
+  color:#c8d2ea;
+  font-size:13px;
+  line-height:1.6;
 }}
 .gap {{ height:6px; }}
 .gap + .gap, .gap + .part-divider, .part-divider + .gap {{ display:none; }}
@@ -2106,6 +2891,26 @@ REPORT_TYPES = {
             "Sector Context & Relative Strength",
             "Risk Factors",
             "Investment Verdict",
+        ],
+    },
+    "assessed-research": {
+        "title": "{symbol} — LLM-Assessed Research Report",
+        "badge": "badge-research",
+        "badge_label": "ASSESSED RESEARCH",
+        "sections": [
+            "Assessment Source",
+            "LLM Report Assessment",
+            "Integrated Read",
+            "Catalysts & Filings Read",
+            "Quarterly Results Read",
+            "Evidence Quality",
+            "Original Research Report",
+            "Source Report Section Assessments",
+            "Assessment Narrative",
+            "Positive Signals",
+            "Risks / Red Flags",
+            "Follow-up Checks",
+            "Audit Artifact",
         ],
     },
     "intraday": {
@@ -4561,12 +5366,26 @@ def generate_report(
         if pg_context:
             content = f"{pg_context}\n\n---\n\n{content}"
 
+    llm_assessment_meta: dict[str, Any] = {"status": "not_applicable"}
+    if report_type == "research" and symbol and "## LLM Report Assessment" not in content:
+        assessment_md, llm_assessment_meta = build_llm_report_assessment(
+            content,
+            symbol=symbol,
+            report_type=report_type,
+            title=title,
+        )
+        if assessment_md:
+            content = f"{content}\n\n---\n\n{assessment_md}"
+
     if output_format == "md":
-        return _generate_md_report(content, title, report_type, symbol, filename, type_config)
+        result = _generate_md_report(content, title, report_type, symbol, filename, type_config)
     elif output_format == "pdf":
-        return _generate_pdf_report(content, title, report_type, symbol, filename, type_config)
+        result = _generate_pdf_report(content, title, report_type, symbol, filename, type_config)
     else:
-        return _generate_html_report(content, title, report_type, symbol, filename, type_config)
+        result = _generate_html_report(content, title, report_type, symbol, filename, type_config)
+    if report_type == "research":
+        result["llm_assessment"] = llm_assessment_meta
+    return result
 
 
 def _generate_md_report(

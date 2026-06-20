@@ -28,15 +28,24 @@ function SetupCard({ title, setup, icon }: { title: string; setup: RicSetup; ico
   const pnl = setup.potential_pct
     ? `+${setup.potential_pct}%`
     : null;
+  const isWatchOnly = setup.actionable === false;
+  const reasons = setup.quality_reasons ?? [];
   return (
-    <div className="ric-card">
+    <div className={`ric-card ${isWatchOnly ? "ric-card--watch" : ""}`}>
       <div className="ric-card-header">
         <span className="ric-card-title">{icon} {title}</span>
-        <BiasTag bias={setup.bias} />
+        <div className="ric-card-tags">
+          {isWatchOnly ? (
+            <span className="ric-quality-badge ric-quality-badge--watch">WATCH ONLY</span>
+          ) : (
+            <span className="ric-quality-badge ric-quality-badge--trade">TRADEABLE</span>
+          )}
+          <BiasTag bias={setup.bias} />
+        </div>
       </div>
       <div className="ric-card-body">
         <div className="ric-row">
-          <span className="ric-lbl">Entry</span>
+          <span className="ric-lbl">{isWatchOnly ? "Trigger" : "Entry"}</span>
           <span className="ric-val ric-val--entry">₹{setup.trigger?.toLocaleString("en-IN")}</span>
         </div>
         <div className="ric-row">
@@ -62,6 +71,13 @@ function SetupCard({ title, setup, icon }: { title: string; setup: RicSetup; ico
           </>}
         </div>
         <div className="ric-strategy">{setup.strategy}</div>
+        {reasons.length ? (
+          <div className="ric-quality-reasons">
+            {reasons.map((reason) => (
+              <span key={reason}>• {reason}</span>
+            ))}
+          </div>
+        ) : null}
         <div className="ric-holding">⏱ {setup.holding}</div>
       </div>
     </div>

@@ -934,7 +934,7 @@ def signal_volume_spike(df: pd.DataFrame) -> dict | None:
             "rr":        _rr(entry, target, sl),
             "strength":  "Strong" if vol_ratio > 3 else "Moderate",
             "note":      f"Volume spike {round(vol_ratio,1)}× average, price +{round(price_move,1)}%",
-            "indicator": {"vol_ratio": round(vol_ratio,1), "price_move_pct": round(price_move,1)},
+            "indicator": {"vol_ratio": round(vol_ratio,1), "price_move_pct": round(price_move,1), "volume_confirmed": True},
         }
     if vol_ratio >= 2.0 and price_move < -0.8:
         entry  = round(close, 2)
@@ -949,10 +949,79 @@ def signal_volume_spike(df: pd.DataFrame) -> dict | None:
             "rr":        _rr(entry, target, sl),
             "strength":  "Strong" if vol_ratio > 3 else "Moderate",
             "note":      f"Volume spike {round(vol_ratio,1)}× average, price {round(price_move,1)}%",
-            "indicator": {"vol_ratio": round(vol_ratio,1), "price_move_pct": round(price_move,1)},
+            "indicator": {"vol_ratio": round(vol_ratio,1), "price_move_pct": round(price_move,1), "volume_confirmed": True},
         }
     return None
 
+
+
+def signal_near_breakout_volume(df: pd.DataFrame, lookback: int = 20) -> dict | None:
+    """Near-breakout watch with mandatory volume and range pressure.
+
+    This is intentionally a pre-trigger signal: it catches names close to a
+    recent pivot/box high where current volume and ATR pressure suggest enough
+    fuel for a breakout attempt.
+    """
+    if len(df) < lookback + 5:
+        return None
+    df = compute_atr(compute_ema_stack(df))
+    last = df.iloc[-1]
+    close = float(last["Close"])
+    atr = float(last["ATR"]) if not pd.isna(last["ATR"]) else 0.0
+    if close <= 0 or atr <= 0:
+        return None
+
+    recent = df.tail(lookback)
+    prior = df.iloc[-lookback - 1:-1]
+    if prior.empty:
+        return None
+    pivot = float(prior["High"].max())
+    box_low = float(prior["Low"].min())
+    avg_vol = float(prior["Volume"].tail(20).mean())
+    last_vol = float(last["Volume"])
+    if pivot <= 0 or avg_vol <= 0:
+        return None
+
+    distance_pct = (pivot - close) / pivot * 100
+    atr_pct = atr / close * 100
+    day_range_pct = (float(recent["High"].max()) - float(recent["Low"].min())) / close * 100
+    vol_ratio = last_vol / avg_vol
+    ema_ok = close >= float(last["EMA21"])
+    near_pivot = -0.3 <= distance_pct <= 1.5
+    range_ok = atr_pct >= 0.35 or day_range_pct >= 1.2
+    volume_ok = vol_ratio >= 1.2
+
+    if not (near_pivot and volume_ok and range_ok and ema_ok):
+        return None
+
+    entry = round(pivot * 1.001, 2)
+    stop = round(max(box_low, close - 1.2 * atr), 2)
+    target = round(entry + 2.0 * atr, 2)
+    if stop >= entry or target <= entry:
+        return None
+
+    return {
+        "strategy": "Near Breakout + Volume",
+        "direction": "BUY",
+        "entry": entry,
+        "target": target,
+        "stoploss": stop,
+        "rr": _rr(entry, target, stop),
+        "strength": "High" if vol_ratio >= 1.5 else "Moderate",
+        "note": (
+            f"Near pivot {round(pivot,2)}; distance {round(distance_pct,2)}%; "
+            f"volume {round(vol_ratio,1)}x; ATR {round(atr_pct,2)}%"
+        ),
+        "indicator": {
+            "pivot_high": round(pivot, 2),
+            "distance_to_breakout_pct": round(distance_pct, 2),
+            "vol_ratio": round(vol_ratio, 2),
+            "atr_pct": round(atr_pct, 2),
+            "range_pct": round(day_range_pct, 2),
+            "volume_confirmed": True,
+            "range_pressure": True,
+        },
+    }
 
 
 # ── New signal generators ──────────────────────────────────────────────────────
@@ -1394,7 +1463,9 @@ def signal_darvas(df: pd.DataFrame, box_bars: int = 15) -> dict | None:
     # Confirm box: last bar didn't just make the top (it should have formed a ceiling)
     last_5 = df.tail(5)
     is_breakout = (close > box_top) and (last_5["High"].max() >= box_top * 0.998)
-    vol_confirm = last["Volume"] > recent["Volume"].mean() * 1.2
+    avg_vol = recent["Volume"].mean()
+    vol_ratio = float(last["Volume"] / avg_vol) if avg_vol else 0.0
+    vol_confirm = vol_ratio > 1.2
 
     if not (is_breakout and vol_confirm):
         return None
@@ -1414,7 +1485,13 @@ def signal_darvas(df: pd.DataFrame, box_bars: int = 15) -> dict | None:
         "rr":        _rr(entry, target, sl),
         "strength":  "High" if vol_confirm else "Moderate",
         "note":      f"Darvas breakout above {round(box_top,2)}; box {round(box_bottom,2)}–{round(box_top,2)} ({box_bars}b)",
-        "indicator": {"box_top": round(box_top, 2), "box_bottom": round(box_bottom, 2), "box_height": round(box_height, 2)},
+        "indicator": {
+            "box_top": round(box_top, 2),
+            "box_bottom": round(box_bottom, 2),
+            "box_height": round(box_height, 2),
+            "vol_ratio": round(vol_ratio, 2),
+            "volume_confirmed": True,
+        },
     }
 
 
@@ -1723,6 +1800,7 @@ _STRATEGIES = {
     "ema":                  signal_ema_crossover,
     "vcp":                  signal_vcp,
     "volume":               signal_volume_spike,
+    "near_breakout_volume": signal_near_breakout_volume,
     "orb":                  signal_orb,
     "gap":                  signal_gap,
     "vwap":                 signal_vwap,
@@ -1743,6 +1821,20 @@ def run_all_signals(df: pd.DataFrame, strategies: list[str] | None = None) -> li
 
     Returns a list of signal dicts (one per triggering strategy).
     """
+    context_df = compute_atr(df) if "ATR" not in df.columns else df
+    context_recent = context_df.tail(20)
+    last_context = context_df.iloc[-1] if not context_df.empty else None
+    avg_vol = float(context_recent["Volume"].iloc[:-1].tail(19).mean()) if len(context_recent) > 2 else 0.0
+    last_vol = float(last_context["Volume"]) if last_context is not None else 0.0
+    close = float(last_context["Close"]) if last_context is not None else 0.0
+    atr = float(last_context["ATR"]) if last_context is not None and not pd.isna(last_context["ATR"]) else 0.0
+    vol_ratio = round(last_vol / avg_vol, 2) if avg_vol > 0 else None
+    atr_pct = round(atr / close * 100, 2) if close > 0 and atr > 0 else None
+    range_pct = (
+        round((float(context_recent["High"].max()) - float(context_recent["Low"].min())) / close * 100, 2)
+        if close > 0 and not context_recent.empty
+        else None
+    )
     fns = {k: v for k, v in _STRATEGIES.items()
            if strategies is None or k in strategies}
     signals = []
@@ -1750,6 +1842,15 @@ def run_all_signals(df: pd.DataFrame, strategies: list[str] | None = None) -> li
         try:
             sig = fn(df.copy())
             if sig:
+                indicator = sig.setdefault("indicator", {})
+                if vol_ratio is not None:
+                    indicator.setdefault("vol_ratio", vol_ratio)
+                    indicator.setdefault("volume_confirmed", vol_ratio >= 1.2)
+                if atr_pct is not None:
+                    indicator.setdefault("atr_pct", atr_pct)
+                if range_pct is not None:
+                    indicator.setdefault("range_pct", range_pct)
+                    indicator.setdefault("range_pressure", range_pct >= 1.2 or (atr_pct or 0) >= 0.35)
                 sig["strategy_key"] = name
                 signals.append(sig)
         except Exception:

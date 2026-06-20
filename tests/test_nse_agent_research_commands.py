@@ -15,6 +15,14 @@ def test_research_command_accepts_report_format_positionally_or_flag():
     assert flagged == {"symbol": "CGPOWER", "format": "md"}
 
 
+def test_assess_report_command_accepts_path_and_optional_symbol():
+    parsed = nse_agent._parse_assess_report_command(
+        "/assess-report /tmp/AEROENTER_research.html AEROENTER"
+    )
+
+    assert parsed == {"path": "/tmp/AEROENTER_research.html", "symbol": "AEROENTER"}
+
+
 def test_analyze_plain_symbol_uses_broker_ingest_critique_mode():
     parsed = nse_agent._parse_analyze_stock_research_command(
         "/analyze CGPOWER --brand icici --max 2 --skip-qa"

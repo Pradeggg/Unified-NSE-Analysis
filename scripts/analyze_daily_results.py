@@ -100,11 +100,22 @@ def _latest_index_items(index_items: list[dict], *, out_dir: Path, latest_dir: P
 def run(args: argparse.Namespace) -> int:
     feed = get_latest_results_feed(days_back=args.days_back, limit=args.limit)
     rows = feed.get("results") or []
+    requested_symbols = {
+        sym.strip().upper()
+        for sym in str(args.symbols or "").split(",")
+        if sym.strip()
+    }
+    if requested_symbols:
+        rows = [
+            row for row in rows
+            if str((row or {}).get("symbol") or "").strip().upper() in requested_symbols
+        ]
     if not rows:
-        print(f"[results-analysis] no filings in window (days_back={args.days_back})")
+        filter_note = f", symbols={sorted(requested_symbols)}" if requested_symbols else ""
+        print(f"[results-analysis] no filings in window (days_back={args.days_back}{filter_note})")
         log_refresh_run(JOB_NAME, symbols_attempted=0, symbols_loaded=0,
                          rows_upserted=0, errors=0,
-                         notes=f"empty feed days_back={args.days_back}")
+                         notes=f"empty feed days_back={args.days_back}{filter_note}")
         return 0
 
     # Dedupe by symbol (NSE feed can repeat for the same company across periods)
@@ -117,8 +128,9 @@ def run(args: argparse.Namespace) -> int:
         seen.add(sym)
         filers.append({**r, "symbol": sym})
 
+    symbol_note = f"  symbols={','.join(sorted(requested_symbols))}" if requested_symbols else ""
     print(f"[results-analysis] candidates={len(filers)}  days_back={args.days_back}  "
-          f"skip_llm={args.skip_llm}")
+          f"skip_llm={args.skip_llm}{symbol_note}")
 
     out_dir = _date_dirs(Path(args.out_dir), _dt.date.today())
     conn = psycopg2.connect(args.dsn)
@@ -151,11 +163,15 @@ def run(args: argparse.Namespace) -> int:
                     analysis = _stub_analysis(pack)
                     model_used = "stub:no_llm"
                 else:
-                    analysis = analyze_with_llm(pack, model=args.model)
-                    model_used = args.model or os.environ.get("OPENAI_MODEL") or "default"
-                    if analysis_has_placeholders(analysis):
-                        analysis = deterministic_financial_analysis(pack, reason="llm_placeholder_output")
-                        model_used = "deterministic:llm_placeholder_output"
+                    try:
+                        analysis = analyze_with_llm(pack, model=args.model)
+                        model_used = args.model or os.environ.get("OPENAI_MODEL") or "default"
+                        if analysis_has_placeholders(analysis):
+                            analysis = deterministic_financial_analysis(pack, reason="llm_placeholder_output")
+                            model_used = "deterministic:llm_placeholder_output"
+                    except Exception as exc:  # noqa: BLE001
+                        analysis = deterministic_financial_analysis(pack, reason=f"llm_error:{exc}")
+                        model_used = "deterministic:llm_error_fallback"
 
                 # Render HTML first so we can persist its path.
                 html_path = out_dir / f"{sym}.html"
@@ -255,6 +271,8 @@ def main():
                     help="Calendar days of results-feed window (default 1)")
     p.add_argument("--limit", type=int, default=200,
                     help="Max symbols to consider from the feed")
+    p.add_argument("--symbols", default="",
+                    help="Comma-separated NSE symbols to analyse from the feed")
     p.add_argument("--skip-llm", action="store_true",
                     help="Skip the LLM call (use deterministic stub) — useful for dry runs")
     p.add_argument("--skip-filing", action="store_true",

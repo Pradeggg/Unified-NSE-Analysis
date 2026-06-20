@@ -11,6 +11,7 @@ import type {
   LeaderRow,
   RicResult,
   DrawOverlayResponse,
+  SymbolSearchResult,
 } from "../../types";
 
 const BASE_URL = "http://localhost:8765";
@@ -152,6 +153,23 @@ export async function fetchPatterns(
 ): Promise<ApiResponse<{ patterns: PatternFinding[] }>> {
   const params = new URLSearchParams({ symbol, exchange, timeframe });
   return apiFetch<{ patterns: PatternFinding[] }>(`/api/patterns/query?${params}`);
+}
+
+// ── Symbol search ────────────────────────────────────────────────────────
+
+export async function searchSymbols(
+  query: string,
+  limit = 20,
+): Promise<ApiResponse<{ query: string; results: SymbolSearchResult[]; error?: string }>> {
+  const params = new URLSearchParams({ q: query, limit: String(limit) });
+  return apiFetch(`/api/symbols/search?${params}`);
+}
+
+export async function fetchSymbolUniverse(
+  limit = 1500,
+): Promise<ApiResponse<{ query: string; results: SymbolSearchResult[]; error?: string }>> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  return apiFetch(`/api/symbols/universe?${params}`);
 }
 
 // ── RIC (Recursive Insights Composite) ───────────────────────────────────

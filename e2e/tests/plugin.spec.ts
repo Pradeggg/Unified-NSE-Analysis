@@ -68,15 +68,15 @@ test("header is visible", async () => {
 });
 
 test("header shows BANKNIFTY as default symbol", async () => {
-  await expect(panelPage.locator(".context-value")).toContainText("BANKNIFTY");
+  await expect(panelPage.locator(".header-context")).toContainText("BANKNIFTY");
 });
 
 test("header shows NSE exchange", async () => {
-  await expect(panelPage.locator(".context-value")).toContainText("NSE");
+  await expect(panelPage.locator(".header-context")).toContainText("NSE");
 });
 
 test("header shows 5m timeframe", async () => {
-  await expect(panelPage.locator(".context-value")).toContainText("5m");
+  await expect(panelPage.locator(".header-context")).toContainText("5m");
 });
 
 test("header shows API status indicator", async () => {
@@ -104,7 +104,8 @@ test("capture button is visible", async () => {
 
 test("capture button shows capture action label", async () => {
   const btn = panelPage.locator(".capture-btn");
-  await expect(btn).toContainText(/capture|📷/i);
+  await expect(btn).toContainText(/analyze/i);
+  await expect(btn).toHaveAttribute("aria-label", /capture and analyze/i);
 });
 
 test("select area capture control is visible", async () => {
@@ -133,23 +134,21 @@ test("chat locked message is shown before capture", async () => {
 // ── Chart context interaction ─────────────────────────────────────────────────
 
 test("chart context editor is collapsed by default", async () => {
-  await expect(panelPage.locator(".chart-context")).toBeVisible();
+  await expect(panelPage.locator(".header-context")).toBeVisible();
   await expect(panelPage.locator(".symbol-input")).toBeHidden();
 });
 
-test("chart context edit reveals controls and accepts a new value", async () => {
+test("chart context edit reveals symbol dropdown and accepts a canonical ticker", async () => {
   await panelPage.locator(".context-edit-btn").click();
   await expect(panelPage.locator(".symbol-input")).toBeVisible();
+  await expect(panelPage.locator(".symbol-select")).toBeVisible();
+  await expect(panelPage.locator(".symbol-select")).toContainText("MUTHOOTFIN");
 
-  const input = panelPage.locator("input").first();
-  await input.click({ clickCount: 3 });
-  await input.fill("RELIANCE");
-  await expect(input).toHaveValue("RELIANCE");
-  await expect(panelPage.locator(".context-value")).toContainText("RELIANCE");
+  await panelPage.locator(".symbol-select").selectOption("MUTHOOTFIN");
+  await expect(panelPage.locator(".header-context")).toContainText("MUTHOOTFIN");
 
   // Reset back to BANKNIFTY for subsequent tests.
-  await input.click({ clickCount: 3 });
-  await input.fill("BANKNIFTY");
+  await panelPage.locator(".symbol-select").selectOption("BANKNIFTY");
   await panelPage.locator(".context-edit-btn").click();
   await expect(panelPage.locator(".symbol-input")).toBeHidden();
 });
@@ -321,8 +320,9 @@ test("RIC results show AI recommendation text", async () => {
     await panelPage.locator(".ric-run-btn").click();
     await panelPage.waitForSelector(".ric-safety", { timeout: 30_000 });
   }
-  const rec = panelPage.locator(".ric-rec-text");
+  const rec = panelPage.locator(".ric-recommendation");
   await expect(rec).toBeVisible();
+  await expect(rec.locator(".ric-rec-card").first()).toBeVisible();
   const text = await rec.textContent();
   expect((text ?? "").length).toBeGreaterThan(20);
 });

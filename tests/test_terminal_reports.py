@@ -218,10 +218,175 @@ def test_diagnosis_report_preset_writes_latest_markdown_and_html(monkeypatch, tm
     assert Path(html["latest_path"]).exists()
     assert "DMART eps explanation" in html["markdown"]
     assert html["warnings"] == ["Cache stale"]
-
     assert md["format"] == "md"
     assert md["latest_path"].endswith("fundamental_driver_diagnosis.md")
     assert "## Fundamental Driver Diagnosis" in Path(md["latest_path"]).read_text(encoding="utf-8")
+
+
+def test_research_report_generation_appends_llm_assessment(monkeypatch, tmp_path):
+    import terminal.reports as reports_module
+
+    monkeypatch.setattr(reports_module, "REPORTS_DIR", tmp_path / "reports" / "generated")
+    monkeypatch.setattr(reports_module, "_build_postgres_research_context", lambda symbol: "")
+
+    calls = {}
+
+    def fake_assessment(content, *, symbol, report_type, title, allow_fallback=False):
+        calls["symbol"] = symbol
+        calls["content"] = content
+        return "## LLM Report Assessment\n\nAssessment body.", {"status": "ok", "source": "LLM"}
+
+    monkeypatch.setattr(reports_module, "build_llm_report_assessment", fake_assessment)
+
+    result = reports_module.generate_report(
+        "## Latest Catalysts And Filings\n\nThe latest-catalyst search returned no usable web results.\n",
+        report_type="research",
+        symbol="AEROENTER",
+        output_format="md",
+        title="AEROENTER Research",
+        filename="aeroenter_test",
+    )
+
+    assert result["success"] is True
+    assert result["llm_assessment"] == {"status": "ok", "source": "LLM"}
+    assert calls["symbol"] == "AEROENTER"
+    rendered = Path(result["path"]).read_text(encoding="utf-8")
+    assert "## LLM Report Assessment" in rendered
+    assert "Assessment body." in rendered
+
+
+def test_build_llm_report_assessment_uses_report_text_only(monkeypatch):
+    import terminal.reports as reports_module
+    import terminal.research_council.llm_client as llm_client
+
+    captured = {}
+
+    def fake_call_llm_json(*, system, user, schema, **kwargs):
+        captured["system"] = system
+        captured["user"] = user
+        return {
+            "verdict": "HOLD / WATCH",
+            "conviction": "medium",
+            "thesis": "Quarterly detail is limited, so the report needs filing review.",
+            "catalyst_and_filings_assessment": "SAST Reg. 29(2) disclosures are ownership disclosures, not automatic operating catalysts.",
+            "quarterly_results_assessment": "The report lacks enough quarterly numbers for a hard trend call.",
+            "evidence_quality": "Evidence is mixed because web catalysts are absent but BSE filings are linked.",
+            "positive_signals": ["BSE source links are present."],
+            "risks": ["Catalyst interpretation could be overstated."],
+            "follow_up_checks": ["Open the SAST PDFs and extract acquirer/seller/holding changes."],
+        }
+
+    monkeypatch.setattr(llm_client, "call_llm_json", fake_call_llm_json)
+
+    md, meta = reports_module.build_llm_report_assessment(
+        "## Latest Catalysts And Filings\n\nDisclosures under Reg. 29(2) of SEBI (SAST) Regulations.",
+        symbol="AEROENTER",
+        title="AEROENTER report",
+    )
+
+    assert meta["status"] == "ok"
+    assert "## LLM Report Assessment" in md
+    assert "SAST Reg. 29(2)" in md
+    assert "report_text" in captured["user"]
+
+
+def test_assess_existing_research_report_writes_sidecar_and_first_class_report(monkeypatch, tmp_path):
+    import terminal.reports as reports_module
+
+    monkeypatch.setattr(reports_module, "REPORTS_DIR", tmp_path / "reports" / "generated")
+    source = tmp_path / "AEROENTER_research.html"
+    source.write_text(
+        """
+        <html><body><main>
+        <div class="summary-card section" id="main-section">
+        <div class="section-body" id="report-body">
+          <h2>Latest Catalysts And Filings</h2>
+          <p>The latest-catalyst search returned no usable web results.</p>
+          <div class="part-divider"><span>Quarterly Results Review</span></div>
+          <p>Revenue and PAT need manual validation from filings.</p>
+          <div class="tbl-wrap"><table class="data-table"><thead><tr><th>Metric</th><th>Mar 2026</th></tr></thead><tbody><tr><td>Sales</td><td>200</td></tr></tbody></table></div>
+        </div>
+        </div>
+        </main></body></html>
+        """,
+        encoding="utf-8",
+    )
+
+    def fake_assessment(content, *, symbol, report_type, title, allow_fallback=False):
+        assert "Latest Catalysts And Filings" in content
+        assert symbol == "AEROENTER"
+        assert allow_fallback is True
+        return "## LLM Report Assessment\n\nExisting report assessment.", {"status": "ok"}
+
+    def fake_section_assessment(section, *, symbol, report_title, allow_fallback=True):
+        assert symbol == "AEROENTER"
+        return f"Section narrative for {section['title']}.", {"status": "ok"}
+
+    def fake_inline_summary(*, title, section_text, symbol, report_title="", allow_fallback=True):
+        assert symbol == "AEROENTER"
+        return f"{title} translated for investors.", {"status": "ok"}
+
+    monkeypatch.setattr(reports_module, "build_llm_report_assessment", fake_assessment)
+    monkeypatch.setattr(reports_module, "build_llm_section_assessment", fake_section_assessment)
+    monkeypatch.setattr(reports_module, "build_inline_section_summary", fake_inline_summary)
+
+    result = reports_module.assess_existing_research_report(source.as_uri())
+
+    assert result["success"] is True
+    assert result["symbol"] == "AEROENTER"
+    assert len(result["section_assessments"]) == 2
+    assert Path(result["assessment_path"]).exists()
+    assert Path(result["report_path"]).exists()
+    assert result["report_format"] == "html"
+    sidecar = Path(result["assessment_path"]).read_text(encoding="utf-8")
+    assert "Existing report assessment." in sidecar
+    assert "Section narrative for Quarterly Results Review." in sidecar
+    assert "Original Research Report" in sidecar
+    assert '<table class="data-table"' in sidecar
+    assert "Latest Catalysts And Filings translated for investors." in sidecar
+    report_html = Path(result["report_path"]).read_text(encoding="utf-8")
+    assert "ASSESSED RESEARCH" in report_html
+    assert "Existing report assessment." in report_html
+    assert "Source Report Section Assessments" in report_html
+    assert "Assessment Narrative" in report_html
+    assert "Original Research Report" in report_html
+    assert "The latest-catalyst search returned no usable web results." in report_html
+    assert "Section narrative for Latest Catalysts And Filings." in report_html
+    assert "What this means" in report_html
+    assert "Latest Catalysts And Filings translated for investors." in report_html
+    assert "LLM Section Narrative" not in report_html
+    assert "<table" in report_html
+
+
+def test_extract_research_report_sections_preserves_original_report_blocks(tmp_path):
+    import terminal.reports as reports_module
+
+    source = tmp_path / "source.html"
+    source.write_text(
+        """
+        <html><body>
+        <h1>Ignored Page Title</h1>
+        <div class="section-body" id="report-body">
+          <div class="part-divider"><span>AEROENTER — FORENSIC ACCOUNTING ANALYSIS</span></div>
+          <div class="arrow-header">Beneish M-score</div>
+          <p>Overall forensic risk: LOW.</p>
+          <h2>Latest Catalysts And Filings</h2>
+          <p>Disclosures under Reg. 29(2) of SEBI SAST Regulations.</p>
+        </div>
+        </body></html>
+        """,
+        encoding="utf-8",
+    )
+
+    sections = reports_module.extract_research_report_sections(source)
+
+    assert [s["title"] for s in sections] == [
+        "AEROENTER — FORENSIC ACCOUNTING ANALYSIS",
+        "Latest Catalysts And Filings",
+    ]
+    assert "### Beneish M-score" in sections[0]["text"]
+    assert "Overall forensic risk: LOW." in sections[0]["text"]
+    assert "SEBI SAST" in sections[1]["text"]
 
 
 class TerminalReportsTests(unittest.TestCase):
