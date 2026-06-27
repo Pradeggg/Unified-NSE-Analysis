@@ -155,9 +155,7 @@ def test_strong_quality_reasonable_valuation_outranks_weak_expensive_name():
 
 
 def test_mirror_test_fails_when_core_claims_are_missing():
-    result = build_checklist_result(
-        _evidence("THIN", valuation={}, missing_evidence=("valuation",))
-    )
+    result = build_checklist_result(_evidence("THIN", valuation={}))
 
     assert result.mirror_test_passed is False
     assert any("valuation" in item.lower() for item in result.mirror_test)

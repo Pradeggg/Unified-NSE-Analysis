@@ -98,10 +98,15 @@ class ValueChecklistReport:
 def build_checklist_result(evidence: ValueChecklistEvidence) -> ValueChecklistResult:
     missing = tuple(dict.fromkeys(str(item) for item in (evidence.missing_evidence or ())))
     fundamentals = dict(evidence.fundamentals or {})
+    valuation = dict(evidence.valuation or {})
+    if not fundamentals:
+        missing = tuple(dict.fromkeys(missing + ("fundamentals",)))
+    if not valuation:
+        missing = tuple(dict.fromkeys(missing + ("valuation",)))
     if not fundamentals:
         return _insufficient_result(
             evidence,
-            missing + ("fundamentals",),
+            missing,
             "Missing fundamentals",
         )
 
