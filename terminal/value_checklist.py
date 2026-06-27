@@ -254,7 +254,6 @@ def render_value_checklist_html(markdown: str) -> str:
 
 def write_value_checklist_report(
     results: Iterable[ValueChecklistResult],
-    *,
     project_root: Path | str | None = None,
 ) -> ValueChecklistReport:
     root = Path(project_root) if project_root is not None else ROOT

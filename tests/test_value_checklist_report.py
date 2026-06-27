@@ -71,3 +71,18 @@ def test_write_value_checklist_report_writes_timestamped_and_latest_outputs(tmp_
     assert Path(report.latest_html_path).exists()
     assert Path(report.latest_summary_csv_path).exists()
     assert Path(report.latest_summary_csv_path).read_text(encoding="utf-8").startswith("rank,symbol,company_name")
+
+
+def test_write_value_checklist_report_accepts_positional_project_root(tmp_path):
+    report = write_value_checklist_report([_result("TCS")], tmp_path)
+
+    latest_markdown = tmp_path / "reports" / "latest" / "investment_checklist.md"
+    latest_html = tmp_path / "reports" / "latest" / "investment_checklist.html"
+    latest_csv = tmp_path / "reports" / "latest" / "investment_checklist_summary.csv"
+
+    assert Path(report.latest_markdown_path) == latest_markdown
+    assert Path(report.latest_html_path) == latest_html
+    assert Path(report.latest_summary_csv_path) == latest_csv
+    assert latest_markdown.exists()
+    assert latest_html.exists()
+    assert latest_csv.exists()
