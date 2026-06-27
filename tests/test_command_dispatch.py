@@ -164,7 +164,7 @@ class TestCommandRegistry:
 
     EXPECTED_HANDLERS = [
         "help", "commands", "dashboard", "intraday-alerts", "interaction", "copilot-workflows", "scan", "quality-breakouts", "strategy-council", "council",
-        "backtest", "data-coverage", "broker-research", "open-last-report", "visual-scan",
+        "backtest", "data-coverage", "investment-checklist", "broker-research", "open-last-report", "visual-scan",
         "doctor", "mtf", "strength", "skills", "email", "my-portfolio",
         "swing-playbook", "diagnose", "report-diagnosis",
     ]

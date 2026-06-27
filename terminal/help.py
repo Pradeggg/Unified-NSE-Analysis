@@ -381,6 +381,7 @@ SECTIONS: dict[str, dict] = {
             ("/broker-crawl BEL --max-sources 4", "Bounded scheduled crawl of public broker indexes"),
             ("/broker-research BEL",             "Generate broker consensus report from stored facts"),
             ("/financial-research BEL --broker icici", "Generate financial analyst POV from stored broker evidence"),
+            ("/investment-checklist TCS INFY HDFCBANK", "Compare NSE stocks using deterministic value checklist scoring"),
             ("/research-reports BEL",            "List dated cataloged research reports"),
             ("/open-research BEL",               "Open the latest financial research report"),
             ("/deep-research BEL --brokers public", "Publish deep broker research report"),

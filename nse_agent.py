@@ -1068,6 +1068,8 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/report broker BEL html",          "Render broker research report for a symbol as HTML"),
     ("/broker-crawl",                    "Scheduled public broker index crawl for one symbol"),
     ("/broker-crawl BEL --max-sources 4", "Crawl bounded public broker sources for a symbol"),
+    ("/investment-checklist", "NSE multi-stock value checklist comparison"),
+    ("/investment-checklist TCS INFY HDFCBANK", "Compare NSE stocks across quality, valuation, governance, and trend evidence"),
     # ── Analyze / document commands ─────────────────────────────────────────
     ("/research RELIANCE",                "Comprehensive stock research report — overview, fundamentals, technicals, charts, narrative"),
     ("/research RELIANCE pdf",            "Comprehensive stock research report as PDF"),
@@ -1325,6 +1327,7 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/strategy-lab": ("Strategy Lab",     "🧪"),
     "/strategy-council": ("Strategy Council", "🧠"),
     "/council": ("Research Council",      "🧠"),
+    "/investment-checklist": ("Research Council", "🧠"),
     "/data-coverage": ("Data Coverage", "📊"),
     "/forensic": ("Forensic",            "🧪"),
     "/email":    ("Report Mailer",       "✉️"),
@@ -7326,6 +7329,22 @@ def _build_command_registry():
         match_fn=lambda q: q.startswith("/data-coverage"),
         handler_fn=_h_data_coverage,
         description="Data coverage report",
+    ))
+
+    # /investment-checklist
+    def _h_investment_checklist(query, agent, show_trace):
+        from terminal.value_checklist import handle_investment_checklist_command
+
+        _print_user(query)
+        output = handle_investment_checklist_command(query)
+        _remember_generated_report(output)
+        console.print(Markdown(_linkify_markdown(output)))
+        return True
+    registry.register(CommandHandler(
+        name="investment-checklist",
+        match_fn=lambda q: re.match(r"^/(?:investment-checklist|investment_checklist)(?:\s|$)", q) is not None,
+        handler_fn=_h_investment_checklist,
+        description="NSE multi-stock value checklist comparison",
     ))
 
     # /broker-sources, /broker-index, /broker-fetch, /broker-research, and /deep-research
