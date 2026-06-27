@@ -9,6 +9,7 @@ from terminal.value_checklist import (
 def _evidence(
     symbol: str,
     *,
+    sector: str = "Information Technology",
     fundamentals: dict | None = None,
     valuation: dict | None = None,
     governance: dict | None = None,
@@ -18,7 +19,7 @@ def _evidence(
     return ValueChecklistEvidence(
         symbol=symbol,
         company_name=f"{symbol} Ltd",
-        sector="Information Technology",
+        sector=sector,
         fundamentals={
             "roe": 24.0,
             "roce": 31.0,
@@ -383,3 +384,29 @@ def test_unusable_fundamentals_returns_insufficient_evidence():
     assert "fundamentals" in result.missing_evidence
     assert result.mirror_test_passed is False
     assert not any("ROE 0.0" in item for item in result.mirror_test)
+
+
+def test_fund_score_only_mirror_claim_does_not_fabricate_ratios():
+    result = build_checklist_result(
+        _evidence("FUNDSCORE", fundamentals={"enhanced_fund_score": 82.0})
+    )
+
+    assert not any("ROE 0.0" in item for item in result.mirror_test)
+    assert not any("ROCE 0.0" in item for item in result.mirror_test)
+    assert any(
+        "Agent Adda fundamental score 82.0" in item
+        for item in result.mirror_test
+    )
+
+
+def test_missing_sector_fails_mirror_test():
+    result = build_checklist_result(_evidence("NOSECTOR", sector=""))
+
+    assert "sector" in result.missing_evidence
+    assert result.mirror_test_passed is False
+    assert result.verdict in {"CONDITIONAL", "WATCH", "AVOID", "INSUFFICIENT_EVIDENCE"}
+    assert any(
+        "sector" in item.lower() or "business context" in item.lower()
+        for item in result.mirror_test
+    )
+    assert not any("an identified NSE sector" in item for item in result.mirror_test)

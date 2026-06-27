@@ -106,6 +106,8 @@ def build_checklist_result(evidence: ValueChecklistEvidence) -> ValueChecklistRe
         missing = _normalize_missing_evidence(missing + ("valuation",))
     if not _has_usable_governance(governance):
         missing = _normalize_missing_evidence(missing + ("governance",))
+    if not _meaningful_text(evidence.sector):
+        missing = _normalize_missing_evidence(missing + ("sector",))
     if not _has_usable_fundamentals(fundamentals):
         return _insufficient_result(
             evidence,
@@ -486,6 +488,8 @@ def _hard_caps(evidence: ValueChecklistEvidence, missing: tuple[str, ...]) -> tu
         caps.append("Missing valuation evidence caps verdict at WATCH.")
     if "governance" in missing:
         caps.append("Missing governance evidence caps verdict at CONDITIONAL.")
+    if "sector" in missing:
+        caps.append("Missing sector/business context caps verdict at CONDITIONAL.")
     return tuple(caps)
 
 
@@ -494,6 +498,8 @@ def _apply_caps(verdict: str, hard_caps: tuple[str, ...]) -> str:
     for cap in hard_caps:
         low = cap.lower()
         if "missing governance" in low:
+            capped = _worse_verdict(capped, "CONDITIONAL")
+        if "missing sector" in low or "business context" in low:
             capped = _worse_verdict(capped, "CONDITIONAL")
         elif "governance" in low:
             capped = _worse_verdict(capped, "WATCH")
@@ -535,7 +541,9 @@ def _mirror_test(
     verdict: str,
 ) -> tuple[tuple[str, ...], bool]:
     missing_core = tuple(
-        item for item in missing if item in {"fundamentals", "valuation", "governance"}
+        item
+        for item in missing
+        if item in {"fundamentals", "valuation", "governance", "sector"}
     )
     if missing_core:
         return (
@@ -548,14 +556,40 @@ def _mirror_test(
     claims = (
         f"{_sym(evidence.symbol)} business context is tied to "
         f"{evidence.sector or 'an identified NSE sector'}.",
-        f"Quality evidence: ROE {_num(f.get('roe')):.1f}%, "
-        f"ROCE {_num(f.get('roce')):.1f}%.",
+        _quality_mirror_claim(f),
         f"Governance evidence does not force an avoid verdict; final verdict is {verdict}.",
         _valuation_mirror_claim(v),
         f"Technical evidence: {str(t.get('stage') or 'UNKNOWN')} "
         f"with signal {str(t.get('trading_signal') or 'n/a')}.",
     )
     return claims, verdict not in {"INSUFFICIENT_EVIDENCE", "AVOID"}
+
+
+def _quality_mirror_claim(fundamentals: Mapping[str, Any]) -> str:
+    f = dict(fundamentals or {})
+    parts: list[str] = []
+    roe = _num_or_none(f.get("roe"))
+    roce = _num_or_none(f.get("roce"))
+    opm = _num_or_none(f.get("opm_pct"))
+    debt = _num_or_none(f.get("debt_to_equity"))
+    fund_score = _num_or_none(f.get("enhanced_fund_score"))
+    if fund_score is None:
+        fund_score = _num_or_none(f.get("fundamental_score"))
+
+    if roe is not None:
+        parts.append(f"ROE {roe:.1f}%")
+    if roce is not None:
+        parts.append(f"ROCE {roce:.1f}%")
+    if opm is not None:
+        parts.append(f"OPM {opm:.1f}%")
+    if debt is not None:
+        parts.append(f"debt-to-equity {debt:.2f}")
+    if isinstance(f.get("free_cash_flow_positive"), bool):
+        fcf = "positive" if f.get("free_cash_flow_positive") else "not positive"
+        parts.append(f"free cash flow {fcf}")
+    if fund_score is not None:
+        parts.append(f"Agent Adda fundamental score {fund_score:.1f}")
+    return f"Quality evidence: {', '.join(parts)}."
 
 
 def _valuation_mirror_claim(valuation: Mapping[str, Any]) -> str:
