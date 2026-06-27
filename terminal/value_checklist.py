@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import csv
+import datetime as _dt
 import math
 import re
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Mapping
@@ -161,6 +164,134 @@ def compare_checklist_results(
     )
 
 
+def build_value_checklist_markdown(results: Iterable[ValueChecklistResult]) -> str:
+    ranked = compare_checklist_results(results)
+    generated = _dt.datetime.now().strftime("%Y-%m-%d %H:%M IST")
+    lines: list[str] = [
+        "# NSE Investment Checklist Comparison",
+        "",
+        f"Generated: {generated}",
+        "",
+        "Research only. Not investment advice.",
+        "",
+        "## Ranked Comparison",
+        "",
+        "| Rank | Symbol | Verdict | Score | Evidence | Key Strength | Key Risk |",
+        "| ---: | --- | --- | ---: | --- | --- | --- |",
+    ]
+    for idx, result in enumerate(ranked, start=1):
+        lines.append(
+            "| {rank} | {symbol} | {verdict} | {score:.1f} | {quality} | {strength} | {risk} |".format(
+                rank=idx,
+                symbol=_md(result.symbol),
+                verdict=result.verdict,
+                score=result.total_score,
+                quality=result.evidence_quality,
+                strength=_md(result.top_strengths[0] if result.top_strengths else "-"),
+                risk=_md(result.top_risks[0] if result.top_risks else "-"),
+            )
+        )
+    lines.extend(["", "## Comparison Readout", ""])
+    if ranked:
+        leader = ranked[0]
+        lines.append(
+            f"- **Top ranked:** {leader.symbol} with `{leader.verdict}` and score {leader.total_score:.1f}."
+        )
+        lines.append(
+            "- Ranking sorts by verdict, score, evidence quality, governance safety, "
+            "valuation reasonableness, and technical confirmation."
+        )
+    lines.append("")
+    for result in ranked:
+        lines.extend(_result_markdown(result))
+    lines.extend(
+        [
+            "## Source Trail",
+            "",
+        ]
+    )
+    for result in ranked:
+        if not result.source_trail:
+            lines.append(f"- **{result.symbol}:** no source trail recorded.")
+            continue
+        for source in result.source_trail:
+            name = source.get("name", "source")
+            status = source.get("status", "unknown")
+            date = source.get("date") or source.get("age_hours") or ""
+            suffix = f" ({date})" if date != "" else ""
+            lines.append(f"- **{result.symbol}:** `{name}` -> {status}{suffix}")
+    lines.extend(
+        [
+            "",
+            "## Limitations",
+            "",
+            "- Scores are deterministic research labels from available Agent Adda evidence.",
+            "- Missing evidence blocks unsupported conclusions instead of being inferred.",
+            "- Verdicts are not buy/sell recommendations.",
+            "",
+            "Research only. Not investment advice.",
+        ]
+    )
+    return "\n".join(lines).strip() + "\n"
+
+
+def render_value_checklist_html(markdown: str) -> str:
+    from terminal.reports import _md_to_html_basic
+
+    body = _md_to_html_basic(markdown)
+    return (
+        "<!doctype html><html><head><meta charset='utf-8'>"
+        "<title>NSE Investment Checklist Comparison</title>"
+        "<style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:32px;color:#0f172a}"
+        "table{border-collapse:collapse;width:100%;margin:12px 0}th,td{border:1px solid #cbd5e1;padding:8px;text-align:left}"
+        "th{background:#f1f5f9}.sig-buy{color:#047857;font-weight:700}.sig-avoid,.sig-sell{color:#b91c1c;font-weight:700}"
+        ".sig-warn,.sig-hold{color:#b45309;font-weight:700}code{background:#f1f5f9;padding:1px 4px;border-radius:4px}</style>"
+        "</head><body>"
+        f"{body}"
+        "</body></html>"
+    )
+
+
+def write_value_checklist_report(
+    results: Iterable[ValueChecklistResult],
+    *,
+    project_root: Path | str | None = None,
+) -> ValueChecklistReport:
+    root = Path(project_root) if project_root is not None else ROOT
+    report_dir = root / "reports" / "value_checklists"
+    latest_dir = root / "reports" / "latest"
+    report_dir.mkdir(parents=True, exist_ok=True)
+    latest_dir.mkdir(parents=True, exist_ok=True)
+    stamp = _dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+    ranked = compare_checklist_results(results)
+    markdown = build_value_checklist_markdown(ranked)
+    html = render_value_checklist_html(markdown)
+    md_path = report_dir / f"investment_checklist_{stamp}.md"
+    html_path = report_dir / f"investment_checklist_{stamp}.html"
+    csv_path = report_dir / f"investment_checklist_summary_{stamp}.csv"
+    latest_md = latest_dir / "investment_checklist.md"
+    latest_html = latest_dir / "investment_checklist.html"
+    latest_csv = latest_dir / "investment_checklist_summary.csv"
+    rows = _summary_rows(ranked)
+    md_path.write_text(markdown, encoding="utf-8")
+    html_path.write_text(html, encoding="utf-8")
+    _write_summary_csv(csv_path, rows)
+    shutil.copy2(md_path, latest_md)
+    shutil.copy2(html_path, latest_html)
+    shutil.copy2(csv_path, latest_csv)
+    return ValueChecklistReport(
+        markdown=markdown,
+        html=html,
+        summary_rows=tuple(rows),
+        markdown_path=str(md_path),
+        html_path=str(html_path),
+        summary_csv_path=str(csv_path),
+        latest_markdown_path=str(latest_md),
+        latest_html_path=str(latest_html),
+        latest_summary_csv_path=str(latest_csv),
+    )
+
+
 def parse_investment_checklist_symbols(text: str, *, limit: int = 10) -> list[str]:
     raw = re.sub(
         r"^\s*/(?:investment-checklist|investment_checklist)\b",
@@ -274,6 +405,105 @@ def _collect_one_symbol_evidence(symbol: str) -> ValueChecklistEvidence:
 
 def _sym(value: Any) -> str:
     return re.sub(r"[^A-Z0-9&-]", "", str(value or "").upper())
+
+
+def _result_markdown(result: ValueChecklistResult) -> list[str]:
+    lines: list[str] = [
+        f"## {result.symbol}",
+        "",
+        f"**Company:** {result.company_name or result.symbol}",
+        "",
+        f"**Verdict:** `{result.verdict}`",
+        "",
+        f"**Score:** {result.total_score:.1f}",
+        "",
+        f"**Evidence quality:** {result.evidence_quality}",
+        "",
+        "### Scorecard",
+        "",
+        "| Dimension | Weight | Raw Score | Weighted Score | Reasons | Missing Evidence |",
+        "| --- | ---: | ---: | ---: | --- | --- |",
+    ]
+    for score in result.dimension_scores:
+        reasons = "; ".join(score.reasons) if score.reasons else "-"
+        missing = "; ".join(score.missing_evidence) if score.missing_evidence else "-"
+        lines.append(
+            "| {dimension} | {weight:.0f} | {raw:.1f} | {weighted:.1f} | {reasons} | {missing} |".format(
+                dimension=_md(score.name),
+                weight=score.weight,
+                raw=score.raw_score,
+                weighted=score.weighted_score,
+                reasons=_md(reasons),
+                missing=_md(missing),
+            )
+        )
+    lines.extend(["", "### Key Strengths", ""])
+    for strength in result.top_strengths:
+        lines.append(f"- {strength}")
+    lines.extend(["", "### Key Risks", ""])
+    for risk in result.top_risks:
+        lines.append(f"- {risk}")
+    if result.hard_caps:
+        lines.extend(["", "### Hard Caps", ""])
+        for cap in result.hard_caps:
+            lines.append(f"- {cap}")
+    if result.missing_evidence:
+        lines.extend(["", "### Missing Evidence", ""])
+        for item in result.missing_evidence:
+            lines.append(f"- {item}")
+    lines.extend(["", "### Mirror Test", ""])
+    lines.append(f"- Result: {'PASS' if result.mirror_test_passed else 'FAIL'}")
+    for claim in result.mirror_test:
+        lines.append(f"- {claim}")
+    lines.append("")
+    return lines
+
+
+def _summary_rows(results: Iterable[ValueChecklistResult]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for idx, result in enumerate(results, start=1):
+        rows.append(
+            {
+                "rank": idx,
+                "symbol": result.symbol,
+                "company_name": result.company_name,
+                "verdict": result.verdict,
+                "total_score": f"{result.total_score:.1f}",
+                "evidence_quality": result.evidence_quality,
+                "top_strength": result.top_strengths[0] if result.top_strengths else "",
+                "top_risk": result.top_risks[0] if result.top_risks else "",
+                "mirror_test_passed": result.mirror_test_passed,
+                "hard_caps": "; ".join(result.hard_caps),
+                "missing_evidence": "; ".join(result.missing_evidence),
+            }
+        )
+    return rows
+
+
+def _write_summary_csv(path: Path, rows: list[dict[str, Any]]) -> None:
+    fieldnames = [
+        "rank",
+        "symbol",
+        "company_name",
+        "verdict",
+        "total_score",
+        "evidence_quality",
+        "top_strength",
+        "top_risk",
+        "mirror_test_passed",
+        "hard_caps",
+        "missing_evidence",
+    ]
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def _md(value: Any) -> str:
+    text = str(value if value is not None else "")
+    text = re.sub(r"\s+", " ", text).strip()
+    return text.replace("\\", "\\\\").replace("|", r"\|")
 
 
 def _num(value: Any, default: float = 0.0) -> float:
