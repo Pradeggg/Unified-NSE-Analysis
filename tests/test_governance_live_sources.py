@@ -86,7 +86,7 @@ def _corporate_actions(symbol, max_results=8):
     }
 
 
-def _pdf_bytes():
+def _pdf_bytes(heading="Independent Auditor's Report"):
     import fitz
 
     doc = fitz.open()
@@ -94,7 +94,7 @@ def _pdf_bytes():
     page.insert_text(
         (72, 72),
         "Board report prose except for fair value instruments.\n"
-        "Independent Auditor's Report\n"
+        f"{heading}\n"
         "To the Members of Infosys Limited\n"
         "For Deloitte Haskins & Sells LLP\n"
         "In our opinion the financial statements give a true and fair view.\n"
@@ -112,6 +112,16 @@ def test_extract_annual_report_text_from_pdf_bytes_finds_auditor_report_heading(
     assert "Board report prose" in text
     assert metadata["start_page"] == 1
     assert metadata["pages"] == [1, 1]
+
+
+def test_extract_annual_report_text_from_pdf_bytes_handles_curly_apostrophe_heading():
+    text, metadata = extract_annual_report_text_from_pdf_bytes(
+        _pdf_bytes("Independent Auditor’s Report"),
+        pages_after_heading=5,
+    )
+
+    assert "Independent Auditor" in text
+    assert metadata["start_page"] == 1
 
 
 def test_refresh_live_sources_returns_raw_sources_and_writes_governance_cache(tmp_path):

@@ -41,6 +41,25 @@ def test_parse_nse_shareholding_orders_latest_quarter_first():
     assert snapshots[0].pledge_pct == 12.5
 
 
+def test_parse_nse_shareholding_preserves_row_source_when_present():
+    raw = {
+        "data": [
+            {
+                "quarter": "Mar 2026",
+                "promoter_pct": "14.5",
+                "fii": "32",
+                "dii": "39",
+                "public": "14",
+                "source": "screener",
+            }
+        ]
+    }
+
+    snapshots = parse_nse_shareholding(raw)
+
+    assert snapshots[0].source == "screener"
+
+
 def test_parse_nse_insider_disclosures_uses_real_dates_and_values():
     raw = {
         "data": [

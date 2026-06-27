@@ -150,7 +150,7 @@ def parse_nse_shareholding(raw: dict[str, Any]) -> list[ShareholdingSnapshot]:
                 fii_pct=to_float(_first(row, "fii", "FII")),
                 dii_pct=to_float(_first(row, "dii", "DII")),
                 public_pct=to_float(_first(row, "public", "PUBLIC")),
-                source="NSE",
+                source=str(_first(row, "source", "SOURCE") or "NSE"),
             )
         )
     return sorted(snapshots, key=lambda item: item.quarter_end or date.min, reverse=True)

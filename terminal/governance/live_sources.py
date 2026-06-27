@@ -342,6 +342,7 @@ def _shareholding_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
                 "fii": _series_value(shareholding, "FIIs", idx),
                 "dii": _series_value(shareholding, "DIIs", idx),
                 "public": _series_value(shareholding, "Public", idx),
+                "source": "screener",
             }
         )
     return rows
