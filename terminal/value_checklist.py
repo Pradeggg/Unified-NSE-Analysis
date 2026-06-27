@@ -197,10 +197,7 @@ def build_value_checklist_markdown(results: Iterable[ValueChecklistResult]) -> s
         lines.append(
             f"- **Top ranked:** {leader.symbol} with `{leader.verdict}` and score {leader.total_score:.1f}."
         )
-        lines.append(
-            "- Ranking sorts by verdict, score, evidence quality, governance safety, "
-            "valuation reasonableness, and technical confirmation."
-        )
+        lines.append("- Ranking sorts by verdict, total score, evidence quality, and symbol.")
     lines.append("")
     for result in ranked:
         lines.extend(_result_markdown(result))
@@ -261,7 +258,7 @@ def write_value_checklist_report(
     latest_dir = root / "reports" / "latest"
     report_dir.mkdir(parents=True, exist_ok=True)
     latest_dir.mkdir(parents=True, exist_ok=True)
-    stamp = _dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+    stamp = _dt.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     ranked = compare_checklist_results(results)
     markdown = build_value_checklist_markdown(ranked)
     html = render_value_checklist_html(markdown)
@@ -502,7 +499,7 @@ def _write_summary_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 def _md(value: Any) -> str:
     text = str(value if value is not None else "")
     text = re.sub(r"\s+", " ", text).strip()
-    return text.replace("\\", "\\\\").replace("|", r"\|")
+    return text.replace("\\", "\\\\").replace("|", "/")
 
 
 def _num(value: Any, default: float = 0.0) -> float:
