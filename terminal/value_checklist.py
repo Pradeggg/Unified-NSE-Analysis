@@ -335,6 +335,7 @@ def handle_investment_checklist_command(text: str, project_root: Path | str | No
         "## NSE Investment Checklist Comparison",
         "",
         f"Compared symbols: {', '.join(item.symbol for item in ranked)}",
+        f"Report: {report.markdown_path}",
         f"Markdown: `{report.markdown_path}`",
         f"HTML: `{report.html_path}`",
         f"Summary CSV: `{report.summary_csv_path}`",

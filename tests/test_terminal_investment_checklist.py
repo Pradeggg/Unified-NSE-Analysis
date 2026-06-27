@@ -1,3 +1,4 @@
+from pathlib import Path
 from unittest.mock import patch
 
 import nse_agent
@@ -45,6 +46,8 @@ def test_handle_investment_checklist_command_writes_report(monkeypatch, tmp_path
 
     assert "NSE Investment Checklist Comparison" in output
     assert "TCS" in output
+    expected_report_prefix = f"Report: {tmp_path / 'reports' / 'value_checklists' / 'investment_checklist_'}"
+    assert expected_report_prefix in output
     assert "Markdown:" in output
     assert "HTML:" in output
     assert "Latest Summary CSV:" in output
@@ -59,13 +62,30 @@ def test_investment_checklist_registry_handler_is_registered(monkeypatch):
 
     with patch(
         "terminal.value_checklist.handle_investment_checklist_command",
-        return_value="# NSE Investment Checklist Comparison\n\nMarkdown: x\nHTML: y",
+        return_value="# NSE Investment Checklist Comparison\n\nReport: /tmp/checklist.md\nMarkdown: x\nHTML: y",
     ) as handle, patch("nse_agent.console.print") as printed:
         handled = registry.dispatch("/investment-checklist TCS INFY", agent=None, show_trace=False, mode="single_query")
 
     assert handled is True
     handle.assert_called_once_with("/investment-checklist TCS INFY")
     assert printed.called
+
+
+def test_investment_checklist_registry_remembers_report_path():
+    registry = nse_agent._build_command_registry()
+    previous_report = nse_agent._last_generated_report
+    nse_agent._last_generated_report = None
+    try:
+        with patch(
+            "terminal.value_checklist.handle_investment_checklist_command",
+            return_value="# NSE Investment Checklist Comparison\n\nReport: /tmp/checklist.md\nMarkdown: x\nHTML: y",
+        ), patch("nse_agent.console.print"):
+            handled = registry.dispatch("/investment-checklist TCS INFY", agent=None, show_trace=False, mode="single_query")
+
+        assert handled is True
+        assert nse_agent._last_generated_report == Path("/tmp/checklist.md")
+    finally:
+        nse_agent._last_generated_report = previous_report
 
 
 def test_investment_checklist_is_visible_in_slash_commands_and_help():
