@@ -340,6 +340,7 @@ def handle_investment_checklist_command(text: str, project_root: Path | str | No
         f"Summary CSV: `{report.summary_csv_path}`",
         f"Latest Markdown: `{report.latest_markdown_path}`",
         f"Latest HTML: `{report.latest_html_path}`",
+        f"Latest Summary CSV: `{report.latest_summary_csv_path}`",
         "",
         "| Rank | Symbol | Verdict | Score |",
         "| ---: | --- | --- | ---: |",

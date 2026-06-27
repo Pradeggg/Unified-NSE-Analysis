@@ -47,7 +47,9 @@ def test_handle_investment_checklist_command_writes_report(monkeypatch, tmp_path
     assert "TCS" in output
     assert "Markdown:" in output
     assert "HTML:" in output
+    assert "Latest Summary CSV:" in output
     assert (tmp_path / "reports" / "latest" / "investment_checklist.md").exists()
+    assert (tmp_path / "reports" / "latest" / "investment_checklist_summary.csv").exists()
 
 
 def test_investment_checklist_registry_handler_is_registered(monkeypatch):
