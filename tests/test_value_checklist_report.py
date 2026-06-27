@@ -74,6 +74,13 @@ def test_value_checklist_html_renders_tables_without_raw_markdown_separator():
     assert "| ---" not in html
 
 
+def test_value_checklist_html_renders_pass_verdict_with_positive_styling():
+    html = render_value_checklist_html(build_value_checklist_markdown([_result("PASS")]))
+
+    assert 'class="sig-avoid">PASS' not in html
+    assert 'class="sig-buy">PASS' in html
+
+
 def test_write_value_checklist_report_uses_unique_paths_within_same_second(tmp_path, monkeypatch):
     class SameSecondDatetime(_real_dt.datetime):
         calls = 0

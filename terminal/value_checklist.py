@@ -236,6 +236,7 @@ def render_value_checklist_html(markdown: str) -> str:
     from terminal.reports import _md_to_html_basic
 
     body = _md_to_html_basic(markdown)
+    body = body.replace('<span class="sig-avoid">PASS</span>', '<span class="sig-buy">PASS</span>')
     return (
         "<!doctype html><html><head><meta charset='utf-8'>"
         "<title>NSE Investment Checklist Comparison</title>"
