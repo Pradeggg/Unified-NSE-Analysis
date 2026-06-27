@@ -319,6 +319,37 @@ def collect_value_checklist_evidence(
     return evidence
 
 
+def handle_investment_checklist_command(text: str, project_root: Path | str | None = None) -> str:
+    symbols = parse_investment_checklist_symbols(text)
+    if not symbols:
+        return (
+            "## NSE Investment Checklist Comparison\n\n"
+            "Usage: `/investment-checklist TCS INFY HDFCBANK`\n\n"
+            "Provide 1-10 NSE symbols. Research only. Not investment advice."
+        )
+    evidence = collect_value_checklist_evidence(symbols)
+    results = [build_checklist_result(item) for item in evidence]
+    report = write_value_checklist_report(results, project_root=project_root)
+    ranked = compare_checklist_results(results)
+    lines = [
+        "## NSE Investment Checklist Comparison",
+        "",
+        f"Compared symbols: {', '.join(item.symbol for item in ranked)}",
+        f"Markdown: `{report.markdown_path}`",
+        f"HTML: `{report.html_path}`",
+        f"Summary CSV: `{report.summary_csv_path}`",
+        f"Latest Markdown: `{report.latest_markdown_path}`",
+        f"Latest HTML: `{report.latest_html_path}`",
+        "",
+        "| Rank | Symbol | Verdict | Score |",
+        "| ---: | --- | --- | ---: |",
+    ]
+    for idx, result in enumerate(ranked, start=1):
+        lines.append(f"| {idx} | {result.symbol} | {result.verdict} | {result.total_score:.1f} |")
+    lines.extend(["", "Research only. Not investment advice."])
+    return "\n".join(lines)
+
+
 def _collect_one_symbol_evidence(symbol: str) -> ValueChecklistEvidence:
     snapshot: dict[str, Any] = {}
     screener: dict[str, Any] | None = None
