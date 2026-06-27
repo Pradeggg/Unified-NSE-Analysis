@@ -234,7 +234,8 @@ def _fetch_annual_report_text(
 ) -> str:
     reports = screener_payload.get("annual_reports") if isinstance(screener_payload, dict) else []
     reports = reports if isinstance(reports, list) else []
-    url = _first_report_url(reports)
+    selected = _select_annual_report(reports)
+    url = selected["url"]
     if not url:
         source_trail.append(GovernanceSource("live.annual_report", "missing", rows=0, fallback=True))
         missing_evidence.append(_missing(symbol, "annual_report_text", "No annual-report URL found"))
@@ -258,7 +259,7 @@ def _fetch_annual_report_text(
                 rows=0,
                 fallback=True,
                 error=str(metadata.get("error") or "Annual report text extraction failed"),
-                metadata={"url": url, **metadata},
+                metadata={"url": url, "selected_label": selected["label"], **metadata},
             )
         )
         missing_evidence.append(_missing(symbol, "annual_report_text", "Annual report text extraction failed"))
@@ -271,7 +272,7 @@ def _fetch_annual_report_text(
             "ok",
             rows=1,
             fallback=True,
-            metadata={"url": url, **metadata},
+            metadata={"url": url, "selected_label": selected["label"], **metadata},
         )
     )
     return text
@@ -442,11 +443,44 @@ def _payload_error(payload: dict[str, Any]) -> str | None:
     return text or None
 
 
+def _select_annual_report(reports: list[Any]) -> dict[str, str]:
+    candidates = []
+    for index, item in enumerate(reports):
+        if not isinstance(item, dict):
+            continue
+        url = _text(item.get("url"))
+        if not url:
+            continue
+        label = _text(item.get("label"))
+        candidates.append(
+            {
+                "index": index,
+                "label": label,
+                "url": url,
+                "year": _annual_report_year(label, url),
+            }
+        )
+    if not candidates:
+        return {"label": "", "url": ""}
+
+    with_year = [item for item in candidates if item["year"] is not None]
+    if with_year:
+        selected = max(with_year, key=lambda item: (int(item["year"]), -int(item["index"])))
+    else:
+        selected = candidates[0]
+    return {"label": str(selected["label"]), "url": str(selected["url"])}
+
+
 def _first_report_url(reports: list[Any]) -> str:
-    for item in reports:
-        if isinstance(item, dict) and _text(item.get("url")):
-            return _text(item.get("url"))
-    return ""
+    return _select_annual_report(reports)["url"]
+
+
+def _annual_report_year(label: str, url: str) -> int | None:
+    text = f"{label} {url}"
+    years = [int(match) for match in re.findall(r"\b(20\d{2})\b", text)]
+    if not years:
+        return None
+    return max(years)
 
 
 def _missing(symbol: str, field: str, reason: str) -> GovernanceMissingEvidence:

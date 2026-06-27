@@ -64,6 +64,33 @@ def render_markdown(report: GovernanceReport) -> str:
         if summary:
             lines.append(_list_text(summary))
 
+    if report.annual_report_review:
+        lines.extend(["", "## Annual Report LLM Review"])
+        label = report.annual_report_review.get("review_label")
+        summary = report.annual_report_review.get("summary")
+        audit_opinion = report.annual_report_review.get("audit_opinion")
+        auditor = report.annual_report_review.get("auditor")
+        if label:
+            lines.append(f"Label: {_list_text(label)}")
+        if audit_opinion:
+            lines.append(f"Audit opinion: {_list_text(audit_opinion)}")
+        if auditor:
+            lines.append(f"Auditor: {_list_text(auditor)}")
+        if summary:
+            lines.append(_list_text(summary))
+        evidence = report.annual_report_review.get("page_evidence") or []
+        if evidence:
+            lines.extend(["", "Page evidence:"])
+            for item in evidence:
+                page = item.get("page")
+                finding = item.get("finding") or ""
+                quote = item.get("quote") or ""
+                suffix = f" — {quote}" if quote else ""
+                lines.append(f"- {_list_text(f'p.{page}: {finding}{suffix}')}")
+    elif report.annual_report_review_status != "not_requested":
+        lines.extend(["", "## Annual Report LLM Review"])
+        lines.append(f"Status: {_list_text(report.annual_report_review_status)}")
+
     lines.extend(["", "Research-only governance evaluation. Not investment advice."])
     return "\n".join(lines)
 

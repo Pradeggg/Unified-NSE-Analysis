@@ -1,6 +1,7 @@
 import json
 import subprocess
 import sys
+from dataclasses import replace
 from datetime import date
 
 from terminal.governance.engine import evaluate_governance, main
@@ -84,6 +85,41 @@ def test_evaluate_governance_attaches_llm_opinion_when_requested():
     assert report.llm_opinion["opinion_label"] == "Strong"
 
 
+def test_evaluate_governance_attaches_annual_report_llm_review_when_requested():
+    def fake_llm(**kwargs):
+        return {
+            "review_label": "Watch",
+            "summary": "AAA annual report has a clean audit section with one watch item.",
+            "audit_opinion": "Clean",
+            "auditor": "Deloitte Haskins & Sells LLP",
+            "strengths": ["Clean audit language"],
+            "concerns": [],
+            "data_gaps": [],
+            "watch_items": ["Review related-party notes manually"],
+            "page_evidence": [{"page": 12, "finding": "Clean opinion", "quote": "true and fair view"}],
+            "needs_human_review": False,
+            "research_only_disclaimer": "Research-only governance review; not investment advice.",
+        }
+
+    raw = replace(_raw_sources(), annual_report_text="""
+--- Page 12 ---
+Independent Auditor's Report
+In our opinion the financial statements give a true and fair view.
+For Deloitte Haskins & Sells LLP
+""".strip())
+
+    report = evaluate_governance(
+        "AAA",
+        raw_sources=raw,
+        as_of=date(2026, 6, 27),
+        use_annual_report_llm=True,
+        llm_client=fake_llm,
+    )
+
+    assert report.annual_report_review_status == "ok"
+    assert report.annual_report_review["review_label"] == "Watch"
+
+
 def test_evaluate_governance_records_non_ok_llm_status_without_opinion():
     def fake_llm(**kwargs):
         return {
@@ -151,6 +187,16 @@ def test_markdown_renders_score_flags_sources_and_disclaimer():
     assert "Research-only" in text
 
 
+def test_markdown_renders_annual_report_review_status_when_unavailable():
+    report = evaluate_governance("AAA", raw_sources=_raw_sources(), as_of=date(2026, 6, 27), use_llm=False)
+    report = replace(report, annual_report_review_status="unavailable")
+
+    text = render_markdown(report)
+
+    assert "Annual Report LLM Review" in text
+    assert "Status: unavailable" in text
+
+
 def test_markdown_escapes_table_and_list_content():
     report = evaluate_governance("AAA", raw_sources=_raw_sources(), as_of=date(2026, 6, 27), use_llm=False)
     report.component_scores.append(
@@ -188,6 +234,20 @@ def test_main_forwards_llm_flag_to_injected_evaluator(capsys):
     capsys.readouterr()
     assert code == 0
     assert calls[0]["use_llm"] is True
+
+
+def test_main_forwards_llm_read_flag_to_injected_evaluator(capsys):
+    calls = []
+
+    def evaluator(symbol, **kwargs):
+        calls.append(kwargs)
+        return evaluate_governance(symbol, raw_sources=_raw_sources(), as_of=date(2026, 6, 27), use_llm=False)
+
+    code = main(["AAA", "--json", "--llm-read"], evaluator=evaluator)
+
+    capsys.readouterr()
+    assert code == 0
+    assert calls[0]["use_annual_report_llm"] is True
 
 
 def test_main_forwards_refresh_live_flag_to_injected_evaluator(capsys):

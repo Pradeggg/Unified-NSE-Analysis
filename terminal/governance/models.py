@@ -192,3 +192,5 @@ class GovernanceReport(JsonMixin):
     missing_evidence: list[GovernanceMissingEvidence]
     llm_status: str
     llm_opinion: dict[str, Any] | None = None
+    annual_report_review_status: str = "not_requested"
+    annual_report_review: dict[str, Any] | None = None

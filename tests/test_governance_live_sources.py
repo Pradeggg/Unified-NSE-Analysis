@@ -54,6 +54,16 @@ def _screener_payload():
     }
 
 
+def _screener_payload_with_unsorted_annual_reports():
+    payload = _screener_payload()
+    payload["annual_reports"] = [
+        {"label": "Financial Year 2022 from bse", "url": "https://example.test/aaa-2022.pdf"},
+        {"label": "Financial Year 2025 from bse", "url": "https://example.test/aaa-2025.pdf"},
+        {"label": "Financial Year 2024 from web", "url": "https://example.test/aaa-2024.pdf"},
+    ]
+    return payload
+
+
 def _announcements(symbol, max_results=8):
     return {
         "symbol": symbol,
@@ -163,6 +173,26 @@ def test_refresh_live_sources_returns_raw_sources_and_writes_governance_cache(tm
     assert parsed["annual_report_text"]
     assert manifest["symbol"] == "INFY"
     assert manifest["source_count"] == len(raw.source_trail)
+
+
+def test_refresh_live_sources_prefers_newest_annual_report_link(tmp_path):
+    fetched_urls = []
+
+    raw = refresh_live_sources(
+        "INFY",
+        data_dir=tmp_path,
+        nse_client=FakeNSEClient(),
+        announcements_fetcher=_announcements,
+        corporate_actions_fetcher=_corporate_actions,
+        screener_fetcher=lambda symbol: _screener_payload_with_unsorted_annual_reports(),
+        pdf_fetcher=lambda url: fetched_urls.append(url) or _pdf_bytes(),
+    )
+
+    assert raw.annual_report_text
+    assert fetched_urls == ["https://example.test/aaa-2025.pdf"]
+    manifest = json.loads((tmp_path / "governance" / "INFY" / "manifest.json").read_text(encoding="utf-8"))
+    annual_source = next(source for source in manifest["sources"] if source["name"] == "live.annual_report")
+    assert annual_source["metadata"]["selected_label"] == "Financial Year 2025 from bse"
 
 
 def test_refresh_live_sources_records_source_errors_without_raising(tmp_path):

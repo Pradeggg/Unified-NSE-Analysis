@@ -7,6 +7,7 @@ from datetime import date
 from typing import Any, Callable
 
 from terminal.governance.audit_parser import parse_audit_text
+from terminal.governance.annual_report_review import generate_annual_report_review
 from terminal.governance.cache_sources import load_cached_sources
 from terminal.governance.live_sources import refresh_live_sources
 from terminal.governance.markdown import render_markdown
@@ -74,6 +75,7 @@ def evaluate_governance(
     symbol: str,
     *,
     use_llm: bool = False,
+    use_annual_report_llm: bool = False,
     refresh_live: bool = False,
     raw_sources: GovernanceRawSources | None = None,
     live_source_loader: Callable[..., GovernanceRawSources] | None = None,
@@ -89,6 +91,24 @@ def evaluate_governance(
         raw = raw_sources or load_cached_sources(target, data_dir=data_dir)
     evidence = _build_evidence(target, raw, as_of or date.today())
     report = score_governance(evidence)
+
+    if use_annual_report_llm:
+        review = generate_annual_report_review(report, raw.annual_report_text, llm_client=llm_client)
+        status = str(review.get("status") or "invalid")
+        if status == "ok":
+            review_payload = dict(review)
+            review_payload.pop("status", None)
+            report = replace(
+                report,
+                annual_report_review_status="ok",
+                annual_report_review=review_payload,
+            )
+        else:
+            report = replace(
+                report,
+                annual_report_review_status=status,
+                annual_report_review=None,
+            )
 
     if not use_llm:
         return report
@@ -108,11 +128,17 @@ def main(argv: list[str] | None = None, *, evaluator: Callable[..., GovernanceRe
     parser.add_argument("symbol")
     parser.add_argument("--json", action="store_true", help="Print JSON output")
     parser.add_argument("--llm", action="store_true", help="Attach an LLM governance opinion")
+    parser.add_argument("--llm-read", action="store_true", help="Attach an LLM annual-report governance review")
     parser.add_argument("--markdown", action="store_true", help="Print Markdown output")
     parser.add_argument("--refresh-live", action="store_true", help="Fetch live evidence and update governance cache")
     args = parser.parse_args(argv)
 
-    report = evaluator(args.symbol, use_llm=args.llm, refresh_live=args.refresh_live)
+    report = evaluator(
+        args.symbol,
+        use_llm=args.llm,
+        use_annual_report_llm=args.llm_read,
+        refresh_live=args.refresh_live,
+    )
     if args.json:
         print(json.dumps(report.to_dict(), indent=2, sort_keys=True))
     else:
