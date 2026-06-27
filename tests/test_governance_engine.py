@@ -121,6 +121,25 @@ def test_evaluate_governance_synthesizes_missing_evidence_for_empty_raw_sources(
     assert {"shareholding", "insider_disclosures", "annual_report_text", "corporate_events"} <= fields
 
 
+def test_evaluate_governance_can_refresh_live_sources_with_injected_loader():
+    calls = []
+
+    def fake_loader(symbol, **kwargs):
+        calls.append((symbol, kwargs))
+        return _raw_sources()
+
+    report = evaluate_governance(
+        "aaa",
+        refresh_live=True,
+        live_source_loader=fake_loader,
+        as_of=date(2026, 6, 27),
+        data_dir="custom-data",
+    )
+
+    assert report.symbol == "AAA"
+    assert calls == [("AAA", {"data_dir": "custom-data"})]
+
+
 def test_markdown_renders_score_flags_sources_and_disclaimer():
     report = evaluate_governance("AAA", raw_sources=_raw_sources(), as_of=date(2026, 6, 27), use_llm=False)
 
@@ -169,6 +188,20 @@ def test_main_forwards_llm_flag_to_injected_evaluator(capsys):
     capsys.readouterr()
     assert code == 0
     assert calls[0]["use_llm"] is True
+
+
+def test_main_forwards_refresh_live_flag_to_injected_evaluator(capsys):
+    calls = []
+
+    def evaluator(symbol, **kwargs):
+        calls.append(kwargs)
+        return evaluate_governance(symbol, raw_sources=_raw_sources(), as_of=date(2026, 6, 27), use_llm=False)
+
+    code = main(["AAA", "--json", "--refresh-live"], evaluator=evaluator)
+
+    capsys.readouterr()
+    assert code == 0
+    assert calls[0]["refresh_live"] is True
 
 
 def test_module_cli_prints_json_without_runpy_warning():

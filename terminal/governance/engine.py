@@ -8,6 +8,7 @@ from typing import Any, Callable
 
 from terminal.governance.audit_parser import parse_audit_text
 from terminal.governance.cache_sources import load_cached_sources
+from terminal.governance.live_sources import refresh_live_sources
 from terminal.governance.markdown import render_markdown
 from terminal.governance.models import GovernanceEvidence, GovernanceMissingEvidence, GovernanceRawSources, GovernanceReport
 from terminal.governance.opinion import generate_governance_opinion
@@ -73,13 +74,19 @@ def evaluate_governance(
     symbol: str,
     *,
     use_llm: bool = False,
+    refresh_live: bool = False,
     raw_sources: GovernanceRawSources | None = None,
+    live_source_loader: Callable[..., GovernanceRawSources] | None = None,
     llm_client: Callable[..., dict[str, Any]] | None = None,
     as_of: date | None = None,
     data_dir: str = "data",
 ) -> GovernanceReport:
     target = symbol.upper()
-    raw = raw_sources or load_cached_sources(target, data_dir=data_dir)
+    if refresh_live:
+        loader = live_source_loader or refresh_live_sources
+        raw = loader(target, data_dir=data_dir)
+    else:
+        raw = raw_sources or load_cached_sources(target, data_dir=data_dir)
     evidence = _build_evidence(target, raw, as_of or date.today())
     report = score_governance(evidence)
 
@@ -102,9 +109,10 @@ def main(argv: list[str] | None = None, *, evaluator: Callable[..., GovernanceRe
     parser.add_argument("--json", action="store_true", help="Print JSON output")
     parser.add_argument("--llm", action="store_true", help="Attach an LLM governance opinion")
     parser.add_argument("--markdown", action="store_true", help="Print Markdown output")
+    parser.add_argument("--refresh-live", action="store_true", help="Fetch live evidence and update governance cache")
     args = parser.parse_args(argv)
 
-    report = evaluator(args.symbol, use_llm=args.llm)
+    report = evaluator(args.symbol, use_llm=args.llm, refresh_live=args.refresh_live)
     if args.json:
         print(json.dumps(report.to_dict(), indent=2, sort_keys=True))
     else:
