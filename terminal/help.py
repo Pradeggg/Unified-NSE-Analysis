@@ -370,6 +370,21 @@ SECTIONS: dict[str, dict] = {
             ("/governance INFY --json",       "Print machine-readable governance report JSON"),
         ],
     },
+    "financial-rigor": {
+        "title":  "Financial Rigor & Report Audit",
+        "icon":   "🔎",
+        "color":  "cyan",
+        "aliases": ["financial-rigor", "valuation-check", "audit-report", "report-audit", "data-audit"],
+        "entries": [
+            ("/audit-report reports/latest/investment_checklist.md", "Extract auditable numeric claims from a generated Markdown report"),
+            ("/audit-report reports/latest/top_picks.md --ratio 0.2 --seed 42", "Sample a reproducible claim-audit checklist"),
+            ("/audit-report reports/latest/investment_checklist.md --json", "Print machine-readable audit sample JSON"),
+            ("/financial-rigor INFY", "Exact valuation math from cached Screener evidence"),
+            ("/financial-rigor INFY --json", "Print machine-readable valuation snapshot JSON"),
+            ("/valuation-check INFY TCS HDFCBANK", "Compare valuation metrics from cached Screener evidence"),
+            ("/valuation-check INFY TCS --json", "Print machine-readable multi-symbol valuation JSON"),
+        ],
+    },
     "skills": {
         "title":  "Skill Store",
         "icon":   "🧠",

@@ -1076,6 +1076,9 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/governance INFY --live --llm",     "Governance evaluation with live refresh and LLM opinion"),
     ("/governance INFY --live --llm-read", "Live governance evaluation with annual-report LLM review"),
     ("/governance INFY --json",           "Governance evaluation as machine-readable JSON"),
+    ("/audit-report reports/latest/investment_checklist.md", "Extract auditable numeric claims from a generated Markdown report"),
+    ("/financial-rigor INFY",             "Exact valuation math from cached Screener evidence"),
+    ("/valuation-check INFY TCS HDFCBANK", "Compare valuation metrics from cached Screener evidence"),
     # ── Analyze / document commands ─────────────────────────────────────────
     ("/research RELIANCE",                "Comprehensive stock research report — overview, fundamentals, technicals, charts, narrative"),
     ("/research RELIANCE pdf",            "Comprehensive stock research report as PDF"),
@@ -1336,6 +1339,9 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/investment-checklist": ("Research Council", "🧠"),
     "/governance": ("Governance", "🛡️"),
     "/gov": ("Governance", "🛡️"),
+    "/audit-report": ("Data Quality", "🔎"),
+    "/financial-rigor": ("Data Quality", "🔎"),
+    "/valuation-check": ("Data Quality", "🔎"),
     "/data-coverage": ("Data Coverage", "📊"),
     "/forensic": ("Forensic",            "🧪"),
     "/email":    ("Report Mailer",       "✉️"),
@@ -7368,6 +7374,51 @@ def _build_command_registry():
         match_fn=lambda q: re.match(r"^/(?:governance|gov)(?:\s|$)", q) is not None,
         handler_fn=_h_governance,
         description="NSE governance evaluation report",
+    ))
+
+    # /audit-report
+    def _h_audit_report(query, agent, show_trace):
+        from terminal.financial_rigor.commands import handle_audit_report_command
+
+        _print_user(query)
+        output = handle_audit_report_command(query)
+        console.print(Markdown(_linkify_markdown(output)))
+        return True
+    registry.register(CommandHandler(
+        name="audit-report",
+        match_fn=lambda q: re.match(r"^/audit-report(?:\s|$)", q) is not None,
+        handler_fn=_h_audit_report,
+        description="Extract auditable numeric claims from a generated Markdown report",
+    ))
+
+    # /financial-rigor
+    def _h_financial_rigor(query, agent, show_trace):
+        from terminal.financial_rigor.commands import handle_financial_rigor_command
+
+        _print_user(query)
+        output = handle_financial_rigor_command(query)
+        console.print(Markdown(_linkify_markdown(output)))
+        return True
+    registry.register(CommandHandler(
+        name="financial-rigor",
+        match_fn=lambda q: re.match(r"^/financial-rigor(?:\s|$)", q) is not None,
+        handler_fn=_h_financial_rigor,
+        description="Exact valuation math from cached Screener evidence",
+    ))
+
+    # /valuation-check
+    def _h_valuation_check(query, agent, show_trace):
+        from terminal.financial_rigor.commands import handle_valuation_check_command
+
+        _print_user(query)
+        output = handle_valuation_check_command(query)
+        console.print(Markdown(_linkify_markdown(output)))
+        return True
+    registry.register(CommandHandler(
+        name="valuation-check",
+        match_fn=lambda q: re.match(r"^/valuation-check(?:\s|$)", q) is not None,
+        handler_fn=_h_valuation_check,
+        description="Compare valuation metrics from cached Screener evidence",
     ))
 
     # /broker-sources, /broker-index, /broker-fetch, /broker-research, and /deep-research
