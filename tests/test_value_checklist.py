@@ -263,3 +263,101 @@ def test_missing_evidence_labels_are_normalized():
     )
 
     assert result.missing_evidence == ("valuation", "governance")
+
+
+def test_zero_valuation_metric_is_treated_as_missing():
+    result = build_checklist_result(_evidence("ZEROVAL", valuation={"pe": 0.0}))
+
+    assert "valuation" in result.missing_evidence
+    assert result.mirror_test_passed is False
+    assert result.verdict in {"WATCH", "AVOID", "INSUFFICIENT_EVIDENCE"}
+    assert any("valuation" in item.lower() for item in result.mirror_test)
+    assert not any("PE 0.0" in item for item in result.mirror_test)
+
+
+def test_negative_valuation_metrics_are_treated_as_missing():
+    result = build_checklist_result(
+        _evidence(
+            "NEGVAL",
+            valuation={"pe": -8.0, "pb": -2.0, "earnings_yield_pct": -1.5},
+        )
+    )
+
+    assert "valuation" in result.missing_evidence
+    assert result.mirror_test_passed is False
+    assert result.verdict in {"WATCH", "AVOID", "INSUFFICIENT_EVIDENCE"}
+    assert any("valuation" in item.lower() for item in result.mirror_test)
+
+
+def test_whitespace_padded_forensic_red_flag_caps_governance():
+    result = build_checklist_result(
+        _evidence(
+            "PADGOV",
+            governance={
+                "promoter_pledge_pct": 0.0,
+                "forensic_risk": " high ",
+                "insider_signal": "neutral",
+            },
+        )
+    )
+
+    governance_score = next(
+        score
+        for score in result.dimension_scores
+        if score.name == "Management / Governance"
+    )
+    assert result.verdict in {"WATCH", "AVOID"}
+    assert any("governance" in cap.lower() for cap in result.hard_caps)
+    assert not any(
+        "no severe governance issue" in reason.lower()
+        for reason in governance_score.reasons
+    )
+
+
+def test_whitespace_padded_expensive_signal_caps_valuation():
+    result = build_checklist_result(
+        _evidence(
+            "PADVAL",
+            valuation={
+                "pe": 24.0,
+                "pb": 5.5,
+                "earnings_yield_pct": 4.2,
+                "valuation_signal": " expensive ",
+            },
+        )
+    )
+
+    assert result.verdict in {"WATCH", "AVOID"}
+    assert any("valuation" in cap.lower() for cap in result.hard_caps)
+
+
+def test_pb_only_valuation_appears_in_mirror_test():
+    result = build_checklist_result(_evidence("PBONLY", valuation={"pb": 4.2}))
+
+    assert "valuation" not in result.missing_evidence
+    assert any("PB 4.2" in item for item in result.mirror_test)
+    assert "Valuation evidence: ." not in result.mirror_test
+
+
+def test_severe_governance_reason_is_not_contradictory():
+    result = build_checklist_result(
+        _evidence(
+            "SEVERE",
+            governance={
+                "promoter_pledge_pct": 0.0,
+                "forensic_risk": "severe",
+                "insider_signal": "neutral",
+            },
+        )
+    )
+
+    governance_score = next(
+        score
+        for score in result.dimension_scores
+        if score.name == "Management / Governance"
+    )
+    assert any("forensic risk is high" in reason.lower() for reason in governance_score.reasons)
+    assert not any(
+        "no severe governance issue" in reason.lower()
+        for reason in governance_score.reasons
+    )

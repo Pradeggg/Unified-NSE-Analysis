@@ -201,10 +201,19 @@ def _meaningful_text(value: Any) -> str:
     return "" if text.lower() in _EMPTY_TEXT_VALUES else text
 
 
+def _normalized_text(value: Any) -> str:
+    return _meaningful_text(value).lower()
+
+
+def _positive_num_or_none(value: Any) -> float | None:
+    number = _num_or_none(value)
+    return number if number is not None and number > 0 else None
+
+
 def _has_usable_valuation(valuation: Mapping[str, Any] | None) -> bool:
     v = dict(valuation or {})
     if any(
-        _num_or_none(v.get(key)) is not None
+        _positive_num_or_none(v.get(key)) is not None
         for key in ("pe", "pb", "earnings_yield_pct")
     ):
         return True
@@ -319,9 +328,10 @@ def _score_governance(evidence: ValueChecklistEvidence) -> ChecklistDimensionSco
             ("governance",),
         )
     pledge = _num_or_none(g.get("promoter_pledge_pct"))
-    risk = str(g.get("forensic_risk") or "").lower()
+    risk = _normalized_text(g.get("forensic_risk"))
     raw = 80.0
-    reasons = ["No severe governance issue found in collected evidence."]
+    reasons: list[str] = []
+    severe_issue = (pledge is not None and pledge >= 20) or risk in {"high", "severe"}
     if pledge is not None and pledge > 0:
         raw -= min(35.0, pledge)
         reasons.append(f"Promoter pledge detected at {pledge:.1f}%.")
@@ -331,6 +341,8 @@ def _score_governance(evidence: ValueChecklistEvidence) -> ChecklistDimensionSco
     elif risk in {"medium", "watch"}:
         raw -= 15
         reasons.append("Forensic risk requires monitoring.")
+    if not severe_issue:
+        reasons.insert(0, "No severe governance issue found in collected evidence.")
     return _dimension("Management / Governance", 15, raw, reasons)
 
 
@@ -344,10 +356,10 @@ def _score_valuation(evidence: ValueChecklistEvidence) -> ChecklistDimensionScor
             ["Valuation evidence is missing."],
             ("valuation",),
         )
-    pe = _num_or_none(v.get("pe"))
-    pb = _num_or_none(v.get("pb"))
-    earnings_yield = _num_or_none(v.get("earnings_yield_pct"))
-    signal = str(v.get("valuation_signal") or "").lower()
+    pe = _positive_num_or_none(v.get("pe"))
+    pb = _positive_num_or_none(v.get("pb"))
+    earnings_yield = _positive_num_or_none(v.get("earnings_yield_pct"))
+    signal = _normalized_text(v.get("valuation_signal"))
     raw = 55.0
     reasons: list[str] = []
     if pe is not None and 0 < pe <= 30:
@@ -372,7 +384,7 @@ def _score_valuation(evidence: ValueChecklistEvidence) -> ChecklistDimensionScor
 
 def _score_technical(evidence: ValueChecklistEvidence) -> ChecklistDimensionScore:
     t = dict(evidence.technical or {})
-    stage = str(t.get("stage") or "").upper()
+    stage = _meaningful_text(t.get("stage")).upper()
     score = _num_or_none(t.get("technical_score"))
     raw = score if score is not None else 45.0
     reasons: list[str] = []
@@ -382,10 +394,10 @@ def _score_technical(evidence: ValueChecklistEvidence) -> ChecklistDimensionScor
     elif stage == "STAGE_4":
         raw -= 25
         reasons.append("Stage 4 technical breakdown.")
-    if str(t.get("trend_signal") or "").upper() in {"BULLISH", "STRONG_BULLISH"}:
+    if _meaningful_text(t.get("trend_signal")).upper() in {"BULLISH", "STRONG_BULLISH"}:
         raw += 8
         reasons.append("Bullish trend signal.")
-    if str(t.get("trading_signal") or "").upper() in {"BUY", "STRONG_BUY"}:
+    if _meaningful_text(t.get("trading_signal")).upper() in {"BUY", "STRONG_BUY"}:
         raw += 7
         reasons.append("Constructive trading signal.")
     return _dimension(
@@ -438,16 +450,16 @@ def _hard_caps(evidence: ValueChecklistEvidence, missing: tuple[str, ...]) -> tu
     f = dict(evidence.fundamentals or {})
     v = dict(evidence.valuation or {})
     t = dict(evidence.technical or {})
-    governance_risk = str(g.get("forensic_risk") or "").lower()
+    governance_risk = _normalized_text(g.get("forensic_risk"))
     pledge = _num_or_none(g.get("promoter_pledge_pct"))
     if (pledge is not None and pledge >= 20) or governance_risk in {"high", "severe"}:
         caps.append("Severe governance or promoter pledge red flag caps verdict.")
     if f.get("free_cash_flow_positive") is False:
         caps.append("Weak cash conversion caps verdict at CONDITIONAL.")
-    if str(t.get("stage") or "").upper() == "STAGE_4":
+    if _meaningful_text(t.get("stage")).upper() == "STAGE_4":
         caps.append("Stage 4 technical breakdown caps verdict at WATCH.")
-    pe = _num_or_none(v.get("pe"))
-    if str(v.get("valuation_signal") or "").lower() == "expensive" or (pe is not None and pe >= 70):
+    pe = _positive_num_or_none(v.get("pe"))
+    if _normalized_text(v.get("valuation_signal")) == "expensive" or (pe is not None and pe >= 70):
         caps.append("Excessive valuation caps verdict at WATCH.")
     if "valuation" in missing:
         caps.append("Missing valuation evidence caps verdict at WATCH.")
@@ -528,11 +540,14 @@ def _mirror_test(
 def _valuation_mirror_claim(valuation: Mapping[str, Any]) -> str:
     v = dict(valuation or {})
     parts: list[str] = []
-    pe = _num_or_none(v.get("pe"))
-    earnings_yield = _num_or_none(v.get("earnings_yield_pct"))
+    pe = _positive_num_or_none(v.get("pe"))
+    pb = _positive_num_or_none(v.get("pb"))
+    earnings_yield = _positive_num_or_none(v.get("earnings_yield_pct"))
     signal = _meaningful_text(v.get("valuation_signal"))
     if pe is not None:
         parts.append(f"PE {pe:.1f}")
+    if pb is not None:
+        parts.append(f"PB {pb:.1f}")
     if earnings_yield is not None:
         parts.append(f"earnings yield {earnings_yield:.1f}%")
     if signal:
