@@ -1070,6 +1070,11 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/broker-crawl BEL --max-sources 4", "Crawl bounded public broker sources for a symbol"),
     ("/investment-checklist", "NSE multi-stock value checklist comparison"),
     ("/investment-checklist TCS INFY HDFCBANK", "Compare NSE stocks across quality, valuation, governance, and trend evidence"),
+    ("/governance INFY",                  "Governance evaluation from cached NSE/Screener/annual-report evidence"),
+    ("/gov INFY",                         "Alias for /governance"),
+    ("/governance INFY --live",           "Refresh live governance evidence into data/governance/{SYMBOL}/"),
+    ("/governance INFY --live --llm",     "Governance evaluation with live refresh and LLM opinion"),
+    ("/governance INFY --json",           "Governance evaluation as machine-readable JSON"),
     # ── Analyze / document commands ─────────────────────────────────────────
     ("/research RELIANCE",                "Comprehensive stock research report — overview, fundamentals, technicals, charts, narrative"),
     ("/research RELIANCE pdf",            "Comprehensive stock research report as PDF"),
@@ -1328,6 +1333,8 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/strategy-council": ("Strategy Council", "🧠"),
     "/council": ("Research Council",      "🧠"),
     "/investment-checklist": ("Research Council", "🧠"),
+    "/governance": ("Governance", "🛡️"),
+    "/gov": ("Governance", "🛡️"),
     "/data-coverage": ("Data Coverage", "📊"),
     "/forensic": ("Forensic",            "🧪"),
     "/email":    ("Report Mailer",       "✉️"),
@@ -7345,6 +7352,21 @@ def _build_command_registry():
         match_fn=lambda q: re.match(r"^/(?:investment-checklist|investment_checklist)(?:\s|$)", q) is not None,
         handler_fn=_h_investment_checklist,
         description="NSE multi-stock value checklist comparison",
+    ))
+
+    # /governance
+    def _h_governance(query, agent, show_trace):
+        from terminal.governance.commands import handle_governance_command
+
+        _print_user(query)
+        output = handle_governance_command(query)
+        console.print(Markdown(_linkify_markdown(output)))
+        return True
+    registry.register(CommandHandler(
+        name="governance",
+        match_fn=lambda q: re.match(r"^/(?:governance|gov)(?:\s|$)", q) is not None,
+        handler_fn=_h_governance,
+        description="NSE governance evaluation report",
     ))
 
     # /broker-sources, /broker-index, /broker-fetch, /broker-research, and /deep-research

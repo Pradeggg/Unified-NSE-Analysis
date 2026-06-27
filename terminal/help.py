@@ -354,6 +354,20 @@ SECTIONS: dict[str, dict] = {
             ("/ric company-xray DMART",           "9-step company intelligence workflow"),
         ],
     },
+    "governance": {
+        "title":  "Governance Evaluation",
+        "icon":   "🛡️",
+        "color":  "cyan",
+        "aliases": ["governance", "gov", "forensic-governance", "annual-report"],
+        "entries": [
+            ("/governance INFY",              "Governance evaluation from cached evidence"),
+            ("/gov INFY",                     "Alias for /governance"),
+            ("/governance INFY --live",       "Refresh NSE/Screener/annual-report evidence into data/governance/{SYMBOL}/"),
+            ("/governance INFY --llm",        "Attach an LLM governance opinion"),
+            ("/governance INFY --live --llm", "Refresh evidence and attach an LLM governance opinion"),
+            ("/governance INFY --json",       "Print machine-readable governance report JSON"),
+        ],
+    },
     "skills": {
         "title":  "Skill Store",
         "icon":   "🧠",
