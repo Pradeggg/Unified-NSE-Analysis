@@ -158,4 +158,63 @@ def test_mirror_test_fails_when_core_claims_are_missing():
     result = build_checklist_result(_evidence("THIN", valuation={}))
 
     assert result.mirror_test_passed is False
+    assert "valuation" in result.missing_evidence
+    assert result.verdict != "PASS"
+    decision_score = next(
+        score
+        for score in result.dimension_scores
+        if score.name == "Decision Discipline"
+    )
+    assert "valuation" in decision_score.missing_evidence
     assert any("valuation" in item.lower() for item in result.mirror_test)
+
+
+def test_missing_debt_to_equity_does_not_add_low_leverage_credit():
+    result = build_checklist_result(
+        _evidence(
+            "NODEBT",
+            fundamentals={
+                "roe": 24.0,
+                "roce": 31.0,
+                "opm_pct": 26.0,
+                "free_cash_flow_positive": True,
+                "sales_growth": 12.0,
+                "profit_growth": 14.0,
+                "enhanced_fund_score": 82.0,
+            },
+        )
+    )
+
+    quality_score = next(
+        score
+        for score in result.dimension_scores
+        if score.name == "Business Quality"
+    )
+    assert "Low leverage." not in quality_score.reasons
+
+
+def test_empty_governance_does_not_claim_clean_governance():
+    result = build_checklist_result(_evidence("NOGOV", governance={}))
+
+    governance_score = next(
+        score
+        for score in result.dimension_scores
+        if score.name == "Management / Governance"
+    )
+    assert not any(
+        "no severe governance issue" in reason.lower()
+        for reason in governance_score.reasons
+    )
+
+
+def test_zero_technical_score_remains_zero_not_neutral():
+    result = build_checklist_result(
+        _evidence("ZEROTECH", technical={"technical_score": 0.0})
+    )
+
+    technical_score = next(
+        score
+        for score in result.dimension_scores
+        if score.name == "Technical Confirmation"
+    )
+    assert technical_score.raw_score == 0.0

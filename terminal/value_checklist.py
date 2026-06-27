@@ -99,10 +99,13 @@ def build_checklist_result(evidence: ValueChecklistEvidence) -> ValueChecklistRe
     missing = tuple(dict.fromkeys(str(item) for item in (evidence.missing_evidence or ())))
     fundamentals = dict(evidence.fundamentals or {})
     valuation = dict(evidence.valuation or {})
+    governance = dict(evidence.governance or {})
     if not fundamentals:
         missing = tuple(dict.fromkeys(missing + ("fundamentals",)))
     if not valuation:
         missing = tuple(dict.fromkeys(missing + ("valuation",)))
+    if not governance:
+        missing = tuple(dict.fromkeys(missing + ("governance",)))
     if not fundamentals:
         return _insufficient_result(
             evidence,
@@ -117,11 +120,11 @@ def build_checklist_result(evidence: ValueChecklistEvidence) -> ValueChecklistRe
         _score_governance(evidence),
         _score_valuation(evidence),
         _score_technical(evidence),
-        _score_decision_discipline(evidence),
+        _score_decision_discipline(missing),
     )
     evidence_quality = _evidence_quality(evidence, missing)
     total = round(sum(item.weighted_score for item in scores), 2)
-    hard_caps = _hard_caps(evidence)
+    hard_caps = _hard_caps(evidence, missing)
     verdict = _apply_caps(_base_verdict(total, evidence_quality), hard_caps)
     strengths, risks = _strengths_and_risks(scores, hard_caps)
     mirror_test, mirror_passed = _mirror_test(evidence, missing, verdict)
@@ -168,9 +171,14 @@ def _num(value: Any, default: float = 0.0) -> float:
         return default
 
 
-def _has_missing(evidence: ValueChecklistEvidence, name: str) -> bool:
-    missing = {str(item).lower() for item in evidence.missing_evidence or ()}
-    return name.lower() in missing
+def _num_or_none(value: Any) -> float | None:
+    try:
+        if value is None:
+            return None
+        out = float(value)
+        return out if math.isfinite(out) else None
+    except Exception:
+        return None
 
 
 def _dimension(
@@ -208,24 +216,24 @@ def _score_business_quality(evidence: ValueChecklistEvidence) -> ChecklistDimens
     f = dict(evidence.fundamentals or {})
     raw = 35.0
     reasons: list[str] = []
-    roe = _num(f.get("roe"))
-    roce = _num(f.get("roce"))
-    opm = _num(f.get("opm_pct"))
-    debt = _num(f.get("debt_to_equity"))
-    fund_score = _num(f.get("enhanced_fund_score") or f.get("fundamental_score"))
-    if roe >= 20 or roce >= 25:
+    roe = _num_or_none(f.get("roe"))
+    roce = _num_or_none(f.get("roce"))
+    opm = _num_or_none(f.get("opm_pct"))
+    debt = _num_or_none(f.get("debt_to_equity"))
+    fund_score = _num_or_none(f.get("enhanced_fund_score") or f.get("fundamental_score"))
+    if (roe is not None and roe >= 20) or (roce is not None and roce >= 25):
         raw += 20
         reasons.append("High return ratios.")
-    if opm >= 18:
+    if opm is not None and opm >= 18:
         raw += 12
         reasons.append("Healthy operating margin.")
     if f.get("free_cash_flow_positive") is True:
         raw += 12
         reasons.append("Positive cash conversion.")
-    if debt <= 0.5:
+    if debt is not None and debt <= 0.5:
         raw += 10
         reasons.append("Low leverage.")
-    if fund_score >= 70:
+    if fund_score is not None and fund_score >= 70:
         raw += 12
         reasons.append("Strong Agent Adda fundamental score.")
     return _dimension(
@@ -241,10 +249,12 @@ def _score_moat(evidence: ValueChecklistEvidence) -> ChecklistDimensionScore:
     f = dict(evidence.fundamentals or {})
     raw = 45.0
     reasons: list[str] = []
-    if _num(t.get("relative_strength")) >= 1.0:
+    relative_strength = _num_or_none(t.get("relative_strength"))
+    fund_score = _num_or_none(f.get("enhanced_fund_score") or f.get("fundamental_score"))
+    if relative_strength is not None and relative_strength >= 1.0:
         raw += 18
         reasons.append("Relative strength is above market baseline.")
-    if _num(f.get("enhanced_fund_score") or f.get("fundamental_score")) >= 75:
+    if fund_score is not None and fund_score >= 75:
         raw += 16
         reasons.append("Quality score supports competitive position.")
     if str(evidence.sector or ""):
@@ -260,11 +270,19 @@ def _score_moat(evidence: ValueChecklistEvidence) -> ChecklistDimensionScore:
 
 def _score_governance(evidence: ValueChecklistEvidence) -> ChecklistDimensionScore:
     g = dict(evidence.governance or {})
-    pledge = _num(g.get("promoter_pledge_pct"))
+    if not g:
+        return _dimension(
+            "Management / Governance",
+            15,
+            45.0,
+            ["Governance evidence is missing."],
+            ("governance",),
+        )
+    pledge = _num_or_none(g.get("promoter_pledge_pct"))
     risk = str(g.get("forensic_risk") or "").lower()
     raw = 80.0
     reasons = ["No severe governance issue found in collected evidence."]
-    if pledge > 0:
+    if pledge is not None and pledge > 0:
         raw -= min(35.0, pledge)
         reasons.append(f"Promoter pledge detected at {pledge:.1f}%.")
     if risk in {"high", "severe"}:
@@ -286,22 +304,22 @@ def _score_valuation(evidence: ValueChecklistEvidence) -> ChecklistDimensionScor
             ["Valuation evidence is missing."],
             ("valuation",),
         )
-    pe = _num(v.get("pe"))
-    pb = _num(v.get("pb"))
-    earnings_yield = _num(v.get("earnings_yield_pct"))
+    pe = _num_or_none(v.get("pe"))
+    pb = _num_or_none(v.get("pb"))
+    earnings_yield = _num_or_none(v.get("earnings_yield_pct"))
     signal = str(v.get("valuation_signal") or "").lower()
     raw = 55.0
     reasons: list[str] = []
-    if 0 < pe <= 30:
+    if pe is not None and 0 < pe <= 30:
         raw += 18
         reasons.append("PE is not stretched for a quality screen.")
-    if 0 < pb <= 8:
+    if pb is not None and 0 < pb <= 8:
         raw += 8
         reasons.append("PB is within a tolerable range.")
-    if earnings_yield >= 3:
+    if earnings_yield is not None and earnings_yield >= 3:
         raw += 10
         reasons.append("Earnings yield offers some valuation support.")
-    if signal == "expensive" or pe >= 70:
+    if signal == "expensive" or (pe is not None and pe >= 70):
         raw -= 25
         reasons.append("Valuation appears stretched.")
     return _dimension(
@@ -315,8 +333,8 @@ def _score_valuation(evidence: ValueChecklistEvidence) -> ChecklistDimensionScor
 def _score_technical(evidence: ValueChecklistEvidence) -> ChecklistDimensionScore:
     t = dict(evidence.technical or {})
     stage = str(t.get("stage") or "").upper()
-    score = _num(t.get("technical_score"))
-    raw = score if score else 45.0
+    score = _num_or_none(t.get("technical_score"))
+    raw = score if score is not None else 45.0
     reasons: list[str] = []
     if stage == "STAGE_2":
         raw += 15
@@ -338,15 +356,12 @@ def _score_technical(evidence: ValueChecklistEvidence) -> ChecklistDimensionScor
     )
 
 
-def _score_decision_discipline(
-    evidence: ValueChecklistEvidence,
-) -> ChecklistDimensionScore:
-    missing = tuple(evidence.missing_evidence or ())
+def _score_decision_discipline(missing: tuple[str, ...]) -> ChecklistDimensionScore:
     raw = 80.0 - min(40.0, len(missing) * 10.0)
     reasons = (
-        ["Mirror-test claims can be built from collected evidence."]
-        if raw >= 70
-        else ["Mirror-test claims have evidence gaps."]
+        ["Mirror-test claims have evidence gaps."]
+        if missing
+        else ["Mirror-test claims can be built from collected evidence."]
     )
     return _dimension("Decision Discipline", 10, raw, reasons, missing)
 
@@ -377,21 +392,25 @@ def _base_verdict(total: float, quality: str) -> str:
     return "AVOID"
 
 
-def _hard_caps(evidence: ValueChecklistEvidence) -> tuple[str, ...]:
+def _hard_caps(evidence: ValueChecklistEvidence, missing: tuple[str, ...]) -> tuple[str, ...]:
     caps: list[str] = []
     g = dict(evidence.governance or {})
     f = dict(evidence.fundamentals or {})
     v = dict(evidence.valuation or {})
     t = dict(evidence.technical or {})
     governance_risk = str(g.get("forensic_risk") or "").lower()
-    if _num(g.get("promoter_pledge_pct")) >= 20 or governance_risk in {"high", "severe"}:
+    pledge = _num_or_none(g.get("promoter_pledge_pct"))
+    if (pledge is not None and pledge >= 20) or governance_risk in {"high", "severe"}:
         caps.append("Severe governance or promoter pledge red flag caps verdict.")
     if f.get("free_cash_flow_positive") is False:
         caps.append("Weak cash conversion caps verdict at CONDITIONAL.")
     if str(t.get("stage") or "").upper() == "STAGE_4":
         caps.append("Stage 4 technical breakdown caps verdict at WATCH.")
-    if str(v.get("valuation_signal") or "").lower() == "expensive" or _num(v.get("pe")) >= 70:
+    pe = _num_or_none(v.get("pe"))
+    if str(v.get("valuation_signal") or "").lower() == "expensive" or (pe is not None and pe >= 70):
         caps.append("Excessive valuation caps verdict at WATCH.")
+    if "valuation" in missing:
+        caps.append("Missing valuation evidence caps verdict at WATCH.")
     return tuple(caps)
 
 
