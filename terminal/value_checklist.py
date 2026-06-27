@@ -441,6 +441,11 @@ def _collect_one_symbol_evidence(symbol: str) -> ValueChecklistEvidence:
     fundamentals = _fundamentals_from_sources(snapshot, screener or {})
     valuation = _valuation_from_screener(screener or {})
     governance = _governance_from_screener(screener or {})
+    engine_governance, engine_source = _governance_from_engine(symbol)
+    if engine_source:
+        source_trail.append(engine_source)
+    if engine_governance:
+        governance = {**governance, **engine_governance}
     technical = _technical_from_snapshot(snapshot)
     fundamentals_freshness = "missing"
     if screener:
@@ -743,6 +748,91 @@ def _governance_from_screener(screener: Mapping[str, Any]) -> dict[str, Any]:
     return out
 
 
+def _governance_from_engine(symbol: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    try:
+        from terminal.governance.engine import evaluate_governance
+
+        report = evaluate_governance(symbol)
+    except Exception as exc:
+        return {}, {"name": "governance_engine", "status": f"ERROR: {exc}"}
+
+    rating = _meaningful_text(getattr(report, "rating", ""))
+    score = _num_or_none(getattr(report, "score", None))
+    confidence = _meaningful_text(getattr(report, "confidence", ""))
+    source: dict[str, Any] = {
+        "name": "governance_engine",
+        "status": "ok" if score is not None and rating else "missing",
+    }
+    if rating:
+        source["rating"] = rating
+    if score is not None:
+        source["score"] = round(score, 2)
+    as_of = getattr(report, "as_of", None)
+    if as_of:
+        source["date"] = str(as_of)
+
+    if not rating or rating.upper() == "INSUFFICIENT_EVIDENCE" or score is None:
+        source["status"] = "missing"
+        return {}, source
+
+    out: dict[str, Any] = {
+        "governance_score": score,
+        "governance_rating": rating,
+    }
+    if confidence:
+        out["governance_confidence"] = confidence
+
+    pledge = _governance_engine_latest_pledge(report)
+    if pledge is not None and pledge >= 0:
+        out["promoter_pledge_pct"] = pledge
+
+    risk = _governance_rating_to_risk(rating)
+    if risk:
+        out["forensic_risk"] = risk
+
+    insider_signal = _governance_engine_insider_signal(report)
+    if insider_signal:
+        out["insider_signal"] = insider_signal
+
+    flags = tuple(str(item).strip() for item in (getattr(report, "flags", None) or ()) if str(item).strip())
+    if flags:
+        out["governance_flags"] = flags
+
+    return out, source
+
+
+def _governance_rating_to_risk(rating: str) -> str:
+    normalized = rating.upper()
+    if normalized == "HIGH_RISK":
+        return "high"
+    if normalized == "CONCERN":
+        return "medium"
+    return ""
+
+
+def _governance_engine_latest_pledge(report: Any) -> float | None:
+    evidence = getattr(report, "evidence", None)
+    shareholding = getattr(evidence, "shareholding", None) if evidence is not None else None
+    if not shareholding:
+        return None
+    latest = shareholding[0]
+    return _num_or_none(getattr(latest, "pledge_pct", None))
+
+
+def _governance_engine_insider_signal(report: Any) -> str:
+    for component in getattr(report, "component_scores", None) or ():
+        if getattr(component, "name", "") != "insider_activity":
+            continue
+        status = _normalized_text(getattr(component, "status", ""))
+        if status == "red":
+            return "negative"
+        if status == "amber":
+            return "watch"
+        if status == "green":
+            return "neutral"
+    return ""
+
+
 def _technical_from_snapshot(snapshot: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "stage": snapshot.get("stage"),
@@ -855,9 +945,11 @@ def _has_usable_governance(governance: Mapping[str, Any] | None) -> bool:
     g = dict(governance or {})
     if _num_or_none(g.get("promoter_pledge_pct")) is not None:
         return True
+    if _num_or_none(g.get("governance_score")) is not None:
+        return True
     return any(
         _meaningful_text(g.get(key))
-        for key in ("forensic_risk", "insider_signal")
+        for key in ("governance_rating", "forensic_risk", "insider_signal")
     )
 
 
@@ -980,19 +1072,36 @@ def _score_governance(evidence: ValueChecklistEvidence) -> ChecklistDimensionSco
             ("governance",),
         )
     pledge = _num_or_none(g.get("promoter_pledge_pct"))
+    engine_score = _num_or_none(g.get("governance_score"))
+    rating = _meaningful_text(g.get("governance_rating"))
     risk = _normalized_text(g.get("forensic_risk"))
-    raw = 80.0
+    raw = engine_score if engine_score is not None else 80.0
     reasons: list[str] = []
-    severe_issue = (pledge is not None and pledge >= 20) or risk in {"high", "severe"}
+    severe_issue = (
+        (pledge is not None and pledge >= 20)
+        or risk in {"high", "severe"}
+        or rating.upper() == "HIGH_RISK"
+    )
+    if engine_score is not None and rating:
+        reasons.append(f"Governance engine rating is {rating} with score {engine_score:.1f}.")
     if pledge is not None and pledge > 0:
-        raw -= min(35.0, pledge)
+        if engine_score is None:
+            raw -= min(35.0, pledge)
         reasons.append(f"Promoter pledge detected at {pledge:.1f}%.")
     if risk in {"high", "severe"}:
-        raw -= 35
+        if engine_score is None:
+            raw -= 35
         reasons.append("Forensic risk is high.")
     elif risk in {"medium", "watch"}:
-        raw -= 15
+        if engine_score is None:
+            raw -= 15
         reasons.append("Forensic risk requires monitoring.")
+    flag_values = g.get("governance_flags") or ()
+    if isinstance(flag_values, str):
+        flag_values = (flag_values,)
+    flags = tuple(str(item).strip() for item in flag_values if str(item).strip())
+    if flags and severe_issue:
+        reasons.append(flags[0])
     if not severe_issue:
         reasons.insert(0, "No severe governance issue found in collected evidence.")
     return _dimension("Management / Governance", 15, raw, reasons)
@@ -1103,8 +1212,13 @@ def _hard_caps(evidence: ValueChecklistEvidence, missing: tuple[str, ...]) -> tu
     v = dict(evidence.valuation or {})
     t = dict(evidence.technical or {})
     governance_risk = _normalized_text(g.get("forensic_risk"))
+    governance_rating = _meaningful_text(g.get("governance_rating")).upper()
     pledge = _num_or_none(g.get("promoter_pledge_pct"))
-    if (pledge is not None and pledge >= 20) or governance_risk in {"high", "severe"}:
+    if (
+        (pledge is not None and pledge >= 20)
+        or governance_risk in {"high", "severe"}
+        or governance_rating == "HIGH_RISK"
+    ):
         caps.append("Severe governance or promoter pledge red flag caps verdict.")
     if f.get("free_cash_flow_positive") is False:
         caps.append("Weak cash conversion caps verdict at CONDITIONAL.")

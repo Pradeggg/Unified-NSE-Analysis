@@ -512,6 +512,101 @@ def test_collect_evidence_uses_stage_snapshot_and_cached_screener(monkeypatch):
     assert any(item["name"] == "scores.stage_snapshots" for item in evidence.source_trail)
 
 
+def test_collect_evidence_uses_cached_governance_engine_report(monkeypatch):
+    class FakeReport:
+        symbol = "GOVOK"
+        score = 82.0
+        rating = "WATCH"
+        confidence = "High"
+        flags = []
+        component_scores = []
+        source_trail = []
+        as_of = "2026-06-27"
+
+    def fake_snapshot(symbol):
+        return {
+            "symbol": symbol,
+            "company_name": f"{symbol} Ltd",
+            "sector": "Industrials",
+            "stage": "STAGE_2",
+            "relative_strength": 1.2,
+            "technical_score": 75,
+            "trend_signal": "BULLISH",
+            "trading_signal": "BUY",
+            "enhanced_fund_score": 80,
+            "snapshot_date": "2026-06-26",
+            "missing_evidence": [],
+        }
+
+    def fake_cache(symbol, max_age_hours=None):
+        return {
+            "ratios": {"Stock P/E": "24", "ROE": "24%", "ROCE": "31%"},
+            "annual_pl": {"OPM %": ["22%", "24%", "26%"], "_headers": ["Mar 2024", "Mar 2025", "Mar 2026"]},
+            "cash_flow": {"Free Cash Flow": ["1200", "1500", "1800"], "_headers": ["Mar 2024", "Mar 2025", "Mar 2026"]},
+            "_cache_age_hours": 2.5,
+        }
+
+    monkeypatch.setattr("terminal.tools.get_symbol_snapshot", fake_snapshot)
+    monkeypatch.setattr("terminal.financials_cache.screener_payload_from_cache", fake_cache)
+    monkeypatch.setattr("terminal.governance.engine.evaluate_governance", lambda symbol: FakeReport())
+
+    evidence = collect_value_checklist_evidence(["GOVOK"])[0]
+    result = build_checklist_result(evidence)
+
+    assert evidence.governance["governance_score"] == 82.0
+    assert evidence.governance["governance_rating"] == "WATCH"
+    assert "governance" not in result.missing_evidence
+    assert not any("Missing governance" in cap for cap in result.hard_caps)
+    assert any(item["name"] == "governance_engine" and item["status"] == "ok" for item in evidence.source_trail)
+
+
+def test_high_risk_governance_engine_report_caps_checklist(monkeypatch):
+    class FakeReport:
+        symbol = "GOVBAD"
+        score = 55.0
+        rating = "HIGH_RISK"
+        confidence = "High"
+        flags = ["Non-clean audit opinion: Qualified"]
+        component_scores = []
+        source_trail = []
+        as_of = "2026-06-27"
+
+    def fake_snapshot(symbol):
+        return {
+            "symbol": symbol,
+            "company_name": f"{symbol} Ltd",
+            "sector": "Industrials",
+            "stage": "STAGE_2",
+            "relative_strength": 1.2,
+            "technical_score": 75,
+            "trend_signal": "BULLISH",
+            "trading_signal": "BUY",
+            "enhanced_fund_score": 80,
+            "snapshot_date": "2026-06-26",
+            "missing_evidence": [],
+        }
+
+    def fake_cache(symbol, max_age_hours=None):
+        return {
+            "ratios": {"Stock P/E": "24", "ROE": "24%", "ROCE": "31%"},
+            "annual_pl": {"OPM %": ["22%", "24%", "26%"], "_headers": ["Mar 2024", "Mar 2025", "Mar 2026"]},
+            "cash_flow": {"Free Cash Flow": ["1200", "1500", "1800"], "_headers": ["Mar 2024", "Mar 2025", "Mar 2026"]},
+            "_cache_age_hours": 2.5,
+        }
+
+    monkeypatch.setattr("terminal.tools.get_symbol_snapshot", fake_snapshot)
+    monkeypatch.setattr("terminal.financials_cache.screener_payload_from_cache", fake_cache)
+    monkeypatch.setattr("terminal.governance.engine.evaluate_governance", lambda symbol: FakeReport())
+
+    evidence = collect_value_checklist_evidence(["GOVBAD"])[0]
+    result = build_checklist_result(evidence)
+
+    assert evidence.governance["forensic_risk"] == "high"
+    assert "governance" not in result.missing_evidence
+    assert any("governance" in cap.lower() for cap in result.hard_caps)
+    assert result.verdict in {"WATCH", "AVOID"}
+
+
 def test_collect_evidence_marks_missing_fundamentals(monkeypatch):
     monkeypatch.setattr(
         "terminal.tools.get_symbol_snapshot",
