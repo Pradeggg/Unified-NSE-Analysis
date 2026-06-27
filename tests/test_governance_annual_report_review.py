@@ -53,6 +53,30 @@ The company has a whistle blower mechanism and vigil mechanism.
 """.strip()
 
 
+def test_auditor_opinion_section_ignores_governance_and_ceo_cfo_certificates():
+    text = """
+--- Page 61 ---
+Independent Auditor's Certificate on Corporate Governance
+It is neither an audit nor an expression of opinion on the financial statements of the Company.
+
+--- Page 142 ---
+CEO and CFO Certification
+The financial statements present a true and fair view in all material respects.
+
+--- Page 144 ---
+Independent Auditor's Report
+Standalone Financial Statements
+Opinion
+In our opinion the financial statements give a true and fair view.
+For Deloitte Haskins & Sells LLP
+""".strip()
+
+    sections = build_annual_report_review_sections(text)
+    auditor = next(section for section in sections if section["section_id"] == "auditor_opinion")
+
+    assert auditor["pages"] == [144]
+
+
 def test_build_annual_report_review_payload_is_page_aware_and_bounded():
     payload = build_annual_report_review_payload(_report("AAA"), _annual_text(), max_chars=1200)
 

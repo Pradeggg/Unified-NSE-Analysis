@@ -406,6 +406,12 @@ def _section_hits(spec: dict[str, Any], normalized: str, page_text: str) -> list
         return []
     if spec["section_id"] == "auditor_opinion":
         leading = _bounded_text(page_text, 160).lower()
+        if "corporate governance" in normalized and (
+            "certificate" in normalized or "neither an audit" in normalized or "not an audit" in normalized
+        ):
+            return []
+        if "ceo" in normalized and "cfo" in normalized and "certification" in normalized:
+            return []
         if "annexure" in leading and "qualified opinion" not in normalized:
             return []
         if not any(term in normalized for term in ("opinion", "basis for opinion", "true and fair view")):
