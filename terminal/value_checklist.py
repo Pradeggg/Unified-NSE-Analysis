@@ -274,7 +274,7 @@ def _dimension(
 def _score_understandable_business(
     evidence: ValueChecklistEvidence,
 ) -> ChecklistDimensionScore:
-    sector = str(evidence.sector or "").strip()
+    sector = _meaningful_text(evidence.sector)
     raw = 80.0 if sector else 45.0
     reasons = (
         [f"Sector identified as {sector}."]
@@ -329,7 +329,7 @@ def _score_moat(evidence: ValueChecklistEvidence) -> ChecklistDimensionScore:
     if fund_score is not None and fund_score >= 75:
         raw += 16
         reasons.append("Quality score supports competitive position.")
-    if str(evidence.sector or ""):
+    if _meaningful_text(evidence.sector):
         raw += 8
         reasons.append("Sector context is available.")
     return _dimension(
@@ -487,7 +487,7 @@ def _hard_caps(evidence: ValueChecklistEvidence, missing: tuple[str, ...]) -> tu
     if "valuation" in missing:
         caps.append("Missing valuation evidence caps verdict at WATCH.")
     if "governance" in missing:
-        caps.append("Missing governance evidence caps verdict at CONDITIONAL.")
+        caps.append("Missing governance evidence caps verdict at WATCH.")
     if "sector" in missing:
         caps.append("Missing sector/business context caps verdict at CONDITIONAL.")
     return tuple(caps)
@@ -498,7 +498,7 @@ def _apply_caps(verdict: str, hard_caps: tuple[str, ...]) -> str:
     for cap in hard_caps:
         low = cap.lower()
         if "missing governance" in low:
-            capped = _worse_verdict(capped, "CONDITIONAL")
+            capped = _worse_verdict(capped, "WATCH")
         if "missing sector" in low or "business context" in low:
             capped = _worse_verdict(capped, "CONDITIONAL")
         elif "governance" in low:
@@ -572,6 +572,8 @@ def _quality_mirror_claim(fundamentals: Mapping[str, Any]) -> str:
     roce = _num_or_none(f.get("roce"))
     opm = _num_or_none(f.get("opm_pct"))
     debt = _num_or_none(f.get("debt_to_equity"))
+    sales_growth = _num_or_none(f.get("sales_growth"))
+    profit_growth = _num_or_none(f.get("profit_growth"))
     fund_score = _num_or_none(f.get("enhanced_fund_score"))
     if fund_score is None:
         fund_score = _num_or_none(f.get("fundamental_score"))
@@ -587,6 +589,10 @@ def _quality_mirror_claim(fundamentals: Mapping[str, Any]) -> str:
     if isinstance(f.get("free_cash_flow_positive"), bool):
         fcf = "positive" if f.get("free_cash_flow_positive") else "not positive"
         parts.append(f"free cash flow {fcf}")
+    if sales_growth is not None:
+        parts.append(f"sales growth {sales_growth:.1f}%")
+    if profit_growth is not None:
+        parts.append(f"profit growth {profit_growth:.1f}%")
     if fund_score is not None:
         parts.append(f"Agent Adda fundamental score {fund_score:.1f}")
     return f"Quality evidence: {', '.join(parts)}."

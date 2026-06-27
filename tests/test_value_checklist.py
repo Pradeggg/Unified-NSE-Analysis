@@ -410,3 +410,43 @@ def test_missing_sector_fails_mirror_test():
         for item in result.mirror_test
     )
     assert not any("an identified NSE sector" in item for item in result.mirror_test)
+
+
+def test_missing_governance_cap_text_matches_watch_verdict():
+    result = build_checklist_result(_evidence("NOGOVCAP", governance={}))
+
+    assert result.verdict == "WATCH"
+    assert any(
+        "missing governance" in cap.lower() and "watch" in cap.lower()
+        for cap in result.hard_caps
+    )
+    assert not any(
+        "missing governance" in cap.lower() and "conditional" in cap.lower()
+        for cap in result.hard_caps
+    )
+
+
+def test_growth_only_fundamentals_appear_in_quality_mirror_claim():
+    result = build_checklist_result(
+        _evidence(
+            "GROWTH",
+            fundamentals={"sales_growth": 12.0, "profit_growth": 14.0},
+        )
+    )
+
+    assert any("sales growth 12.0%" in item for item in result.mirror_test)
+    assert any("profit growth 14.0%" in item for item in result.mirror_test)
+    assert "Quality evidence: ." not in result.mirror_test
+
+
+def test_placeholder_sector_is_not_used_as_identified_sector():
+    result = build_checklist_result(_evidence("PLACESECTOR", sector="N/A"))
+
+    assert "sector" in result.missing_evidence
+    assert result.mirror_test_passed is False
+    assert not any(
+        "Sector identified as N/A" in reason
+        for score in result.dimension_scores
+        for reason in score.reasons
+    )
+    assert not any("N/A" in item for item in result.mirror_test)
