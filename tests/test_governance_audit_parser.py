@@ -140,3 +140,43 @@ def test_extract_auditor_section_skips_table_of_contents_page_lines():
     assert signal.auditor_name == "B.S.R. & Co. LLP"
     assert signal.auditor_tier == "Big4"
     assert signal.opinion_type == "Clean"
+
+
+def test_parse_audit_text_ignores_generic_independent_auditor_prose_before_heading():
+    text = (
+        "The audit committee meets the independent auditors periodically.\n"
+        "The financial statements are prepared on historical cost basis except for financial instruments.\n"
+        "Independent Auditor's Report\n"
+        "To the Members of Example Limited\n"
+        "For Deloitte Haskins & Sells LLP\n"
+        "In our opinion the financial statements give a true and fair view.\n"
+        "Balance Sheet\n"
+    )
+
+    section = extract_auditor_section(text)
+    signal = parse_audit_text(text)
+
+    assert section is not None
+    assert section.startswith("Independent Auditor's Report")
+    assert signal.auditor_name == "Deloitte Haskins & Sells LLP"
+    assert signal.opinion_type == "Clean"
+
+
+def test_parse_audit_text_skips_board_report_auditors_reports_summary():
+    text = (
+        "Auditors' reports\n"
+        "The Auditors' Report for fiscal 2026 does not contain any qualification.\n"
+        "The financial statements are prepared on historical cost basis except for financial instruments.\n"
+        "Independent Auditor's Report\n"
+        "To the Members of Example Limited\n"
+        "For Deloitte Haskins & Sells LLP\n"
+        "In our opinion the financial statements give a true and fair view.\n"
+        "Balance Sheet\n"
+    )
+
+    section = extract_auditor_section(text)
+    signal = parse_audit_text(text)
+
+    assert section is not None
+    assert section.startswith("Independent Auditor's Report")
+    assert signal.opinion_type == "Clean"

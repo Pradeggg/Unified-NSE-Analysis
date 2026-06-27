@@ -27,8 +27,8 @@ MID_TIER_NAMES = (
 )
 
 _AUDITOR_START_MARKERS = (
-    "independent auditor",
-    "auditor's report",
+    "independent auditor's report",
+    "independent auditors' report",
     "to the members",
 )
 _AUDITOR_STOP_MARKERS = (
@@ -91,7 +91,7 @@ def _auditor_section_start(text: str) -> int | None:
     fallback = None
     offset = 0
     for line in text.splitlines(keepends=True):
-        lowered = line.lower()
+        lowered = _normalize_apostrophes(line.lower())
         if any(marker in lowered for marker in _AUDITOR_START_MARKERS):
             if not _is_toc_line(line):
                 return offset + _line_marker_offset(line)
@@ -102,9 +102,13 @@ def _auditor_section_start(text: str) -> int | None:
 
 
 def _line_marker_offset(line: str) -> int:
-    lowered = line.lower()
+    lowered = _normalize_apostrophes(line.lower())
     indexes = [lowered.find(marker) for marker in _AUDITOR_START_MARKERS if lowered.find(marker) >= 0]
     return min(indexes) if indexes else 0
+
+
+def _normalize_apostrophes(text: str) -> str:
+    return str(text or "").replace("’", "'")
 
 
 def _is_toc_line(line: str) -> bool:
