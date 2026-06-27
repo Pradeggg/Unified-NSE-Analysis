@@ -1,6 +1,8 @@
 import json
+from datetime import date
 
 from terminal.governance.cache_sources import load_cached_sources
+from terminal.governance.models import GovernanceMissingEvidence, GovernanceRawSources, GovernanceSource
 from terminal.governance.nse_client import NSEJsonClient
 
 
@@ -84,6 +86,48 @@ def test_load_cached_sources_filters_symbol_and_records_missing_files(tmp_path):
         "cache.bulk_block_deals",
         "cache.corporate_events",
     }
+
+
+def test_load_cached_sources_prefers_governance_raw_sources_cache(tmp_path):
+    parsed_dir = tmp_path / "governance" / "INFY" / "parsed"
+    parsed_dir.mkdir(parents=True)
+    cached = GovernanceRawSources(
+        symbol="INFY",
+        shareholding_payloads=[{"data": [{"quarter": "Mar 2026", "promoter_pct": "14.5"}]}],
+        insider_payloads=[{"data": [{"symbol": "INFY", "acqName": "Trust"}]}],
+        announcement_rows=[{"SYMBOL": "INFY", "subject": "Board meeting"}],
+        screener_payload={"symbol": "INFY"},
+        annual_report_text="Independent Auditor's Report",
+        source_trail=[
+            GovernanceSource(
+                name="live.screener.company",
+                status="ok",
+                rows=1,
+                latest_date=date(2026, 6, 27),
+                fallback=True,
+            )
+        ],
+        missing_evidence=[
+            GovernanceMissingEvidence(
+                scope="governance",
+                subject="INFY",
+                field="complaints",
+                severity="warn",
+                reason="Not fetched",
+            )
+        ],
+    )
+    (parsed_dir / "raw_sources.json").write_text(json.dumps(cached.to_dict()), encoding="utf-8")
+
+    raw = load_cached_sources("INFY", data_dir=tmp_path)
+
+    assert raw.symbol == "INFY"
+    assert raw.shareholding_payloads[0]["data"][0]["quarter"] == "Mar 2026"
+    assert raw.annual_report_text == "Independent Auditor's Report"
+    assert raw.screener_payload == {"symbol": "INFY"}
+    assert raw.source_trail[0].name == "live.screener.company"
+    assert raw.source_trail[0].latest_date == date(2026, 6, 27)
+    assert raw.missing_evidence[0].field == "complaints"
 
 
 def test_load_cached_sources_uses_non_blank_corporate_event_subject_fallback(tmp_path):

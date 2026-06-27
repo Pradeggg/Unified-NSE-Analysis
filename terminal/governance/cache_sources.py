@@ -60,6 +60,10 @@ def _latest_pit_file(cache_dir: Path) -> Path | None:
 def load_cached_sources(symbol: str, *, data_dir: str | Path = "data") -> GovernanceRawSources:
     target = _normalized_symbol(symbol)
     root = Path(data_dir)
+    governance_cache = _load_governance_raw_sources_cache(target, root)
+    if governance_cache is not None:
+        return governance_cache
+
     cache_dir = root / "_insider_cache"
     source_trail: list[GovernanceSource] = []
     missing_evidence: list[GovernanceMissingEvidence] = []
@@ -212,3 +216,68 @@ def _first_non_blank(*values: Any) -> str | None:
         if text:
             return text
     return None
+
+
+def _load_governance_raw_sources_cache(symbol: str, root: Path) -> GovernanceRawSources | None:
+    cache_file = root / "governance" / symbol / "parsed" / "raw_sources.json"
+    if not cache_file.exists():
+        return None
+    try:
+        payload = json.loads(cache_file.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if not isinstance(payload, dict) or _normalized_symbol(payload.get("symbol")) != symbol:
+        return None
+
+    return GovernanceRawSources(
+        symbol=symbol,
+        shareholding_payloads=_dict_list(payload.get("shareholding_payloads")),
+        insider_payloads=_dict_list(payload.get("insider_payloads")),
+        deal_rows=_dict_list(payload.get("deal_rows")),
+        announcement_rows=_dict_list(payload.get("announcement_rows")),
+        complaint_payloads=_dict_list(payload.get("complaint_payloads")),
+        screener_payload=payload.get("screener_payload") if isinstance(payload.get("screener_payload"), dict) else None,
+        annual_report_text=payload.get("annual_report_text") if isinstance(payload.get("annual_report_text"), str) else None,
+        source_trail=[_source_from_dict(item) for item in _dict_list(payload.get("source_trail"))],
+        missing_evidence=[_missing_from_dict(item) for item in _dict_list(payload.get("missing_evidence"))],
+    )
+
+
+def _source_from_dict(item: dict[str, Any]) -> GovernanceSource:
+    return GovernanceSource(
+        name=str(item.get("name") or ""),
+        status=str(item.get("status") or "unknown"),
+        rows=_optional_int(item.get("rows")),
+        latest_date=parse_date(item.get("latest_date")),
+        fallback=bool(item.get("fallback")),
+        error=str(item.get("error")) if item.get("error") is not None else None,
+        metadata=item.get("metadata") if isinstance(item.get("metadata"), dict) else {},
+    )
+
+
+def _missing_from_dict(item: dict[str, Any]) -> GovernanceMissingEvidence:
+    severity = str(item.get("severity") or "warn")
+    if severity not in {"info", "warn", "block"}:
+        severity = "warn"
+    return GovernanceMissingEvidence(
+        scope=str(item.get("scope") or "governance"),
+        subject=_normalized_symbol(item.get("subject")),
+        field=str(item.get("field") or ""),
+        severity=severity,  # type: ignore[arg-type]
+        reason=str(item.get("reason")) if item.get("reason") is not None else None,
+    )
+
+
+def _dict_list(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
+def _optional_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
