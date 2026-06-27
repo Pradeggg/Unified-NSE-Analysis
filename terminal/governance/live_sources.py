@@ -151,28 +151,81 @@ def extract_annual_report_text_from_pdf_bytes(
 
     try:
         heading = re.compile(r"independent\s+auditor\S*\s+report", re.IGNORECASE)
-        start_page = None
+        selected_pages: set[int] = set()
+        auditor_start_page = None
         for page_idx in range(len(doc)):
-            if heading.search(doc[page_idx].get_text("text")):
-                start_page = page_idx
-                break
-        if start_page is None:
-            return "", {"error": "auditor report heading not found", "total_pages": len(doc)}
+            page_text = doc[page_idx].get_text("text")
+            if _annual_report_toc_page(page_text):
+                continue
+            if auditor_start_page is None and heading.search(page_text):
+                auditor_start_page = page_idx
+                selected_pages.update(range(page_idx, min(len(doc), page_idx + max(1, pages_after_heading))))
+            if _annual_report_review_page(page_text):
+                selected_pages.add(page_idx)
+        if not selected_pages:
+            return "", {"error": "auditor/governance review sections not found", "total_pages": len(doc)}
 
-        page_count = max(1, pages_after_heading)
-        end_page = min(len(doc), start_page + page_count)
         parts = []
-        for page_idx in range(start_page, end_page):
+        for page_idx in sorted(selected_pages):
             text = doc[page_idx].get_text("text").strip()
             if text:
                 parts.append(f"--- Page {page_idx + 1} ---\n{text}")
+        if not parts:
+            return "", {"error": "annual report text extraction failed", "total_pages": len(doc)}
+        first_page = min(selected_pages) + 1
+        last_page = max(selected_pages) + 1
         return "\n\n".join(parts), {
-            "start_page": start_page + 1,
-            "pages": [start_page + 1, end_page],
+            "start_page": first_page,
+            "pages": [first_page, last_page],
+            "selected_pages": [page_idx + 1 for page_idx in sorted(selected_pages)],
             "total_pages": len(doc),
         }
     finally:
         doc.close()
+
+
+def _annual_report_review_page(text: str) -> bool:
+    lowered = str(text or "").lower()
+    keywords = (
+        "independent auditor",
+        "auditors' report",
+        "auditor's report",
+        "basis for opinion",
+        "qualified opinion",
+        "adverse opinion",
+        "disclaimer of opinion",
+        "key audit matter",
+        "companies (auditor's report) order",
+        "caro",
+        "internal financial control",
+        "related party",
+        "contingent liabil",
+        "litigation",
+        "corporate governance",
+        "whistle",
+        "vigil mechanism",
+        "subsidiar",
+    )
+    return any(keyword in lowered for keyword in keywords)
+
+
+def _annual_report_toc_page(text: str) -> bool:
+    lowered = str(text or "").lower()
+    if "contents" not in lowered and "page no" not in lowered and "particulars" not in lowered:
+        return False
+    dotted_rows = len(re.findall(r"\.{4,}\s*\d{1,4}", lowered))
+    section_mentions = sum(
+        1
+        for keyword in (
+            "corporate governance",
+            "independent auditor",
+            "related party",
+            "financial statement",
+            "board's report",
+        )
+        if keyword in lowered
+    )
+    return dotted_rows >= 2 or section_mentions >= 3
 
 
 def _fetch_pit(

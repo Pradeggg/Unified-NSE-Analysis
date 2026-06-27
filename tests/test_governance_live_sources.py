@@ -115,6 +115,45 @@ def _pdf_bytes(heading="Independent Auditor's Report"):
     return payload
 
 
+def _pdf_bytes_with_toc_and_real_review_sections():
+    import fitz
+
+    doc = fitz.open()
+    toc = doc.new_page()
+    toc.insert_text(
+        (72, 72),
+        "CONTENTS\n"
+        "Corporate Governance Report ................................ 50\n"
+        "Independent Auditor's Report .............................. 90\n"
+        "Related Party Transactions ............................... 140\n",
+    )
+    governance = doc.new_page()
+    governance.insert_text(
+        (72, 72),
+        "Corporate Governance Report\n"
+        "The company has a vigil mechanism and whistle blower mechanism.\n",
+    )
+    filler = doc.new_page()
+    filler.insert_text((72, 72), "Business overview and operating commentary.")
+    audit = doc.new_page()
+    audit.insert_text(
+        (72, 72),
+        "Independent Auditor's Report\n"
+        "To the Members\n"
+        "In our opinion the financial statements give a true and fair view.\n"
+        "For Deloitte Haskins & Sells LLP\n",
+    )
+    rpt = doc.new_page()
+    rpt.insert_text(
+        (72, 72),
+        "Related Party Transactions\n"
+        "All related party transactions were placed before the audit committee.\n",
+    )
+    payload = doc.tobytes()
+    doc.close()
+    return payload
+
+
 def test_extract_annual_report_text_from_pdf_bytes_finds_auditor_report_heading():
     text, metadata = extract_annual_report_text_from_pdf_bytes(_pdf_bytes(), pages_after_heading=5)
 
@@ -122,6 +161,20 @@ def test_extract_annual_report_text_from_pdf_bytes_finds_auditor_report_heading(
     assert "Board report prose" in text
     assert metadata["start_page"] == 1
     assert metadata["pages"] == [1, 1]
+
+
+def test_extract_annual_report_text_from_pdf_bytes_skips_toc_and_keeps_review_sections():
+    text, metadata = extract_annual_report_text_from_pdf_bytes(
+        _pdf_bytes_with_toc_and_real_review_sections(),
+        pages_after_heading=5,
+    )
+
+    assert "CONTENTS" not in text
+    assert "Corporate Governance Report" in text
+    assert "Independent Auditor's Report" in text
+    assert "Related Party Transactions" in text
+    assert metadata["selected_pages"] == [2, 4, 5]
+    assert metadata["start_page"] == 2
 
 
 def test_extract_annual_report_text_from_pdf_bytes_handles_curly_apostrophe_heading():

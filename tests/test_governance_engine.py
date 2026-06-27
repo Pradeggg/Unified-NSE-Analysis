@@ -87,6 +87,20 @@ def test_evaluate_governance_attaches_llm_opinion_when_requested():
 
 def test_evaluate_governance_attaches_annual_report_llm_review_when_requested():
     def fake_llm(**kwargs):
+        payload = json.loads(kwargs["user"])
+        if payload["mode"] == "section_review":
+            section = payload["section"]
+            return {
+                "section_id": section["section_id"],
+                "title": section["title"],
+                "status": "ok",
+                "risk_label": "Watch",
+                "key_findings": ["Clean audit language"],
+                "concerns": [],
+                "data_gaps": [],
+                "page_evidence": [{"page": 12, "finding": "Clean opinion", "quote": "true and fair view"}],
+                "needs_human_review": False,
+            }
         return {
             "review_label": "Watch",
             "summary": "AAA annual report has a clean audit section with one watch item.",
@@ -96,6 +110,9 @@ def test_evaluate_governance_attaches_annual_report_llm_review_when_requested():
             "concerns": [],
             "data_gaps": [],
             "watch_items": ["Review related-party notes manually"],
+            "key_findings": ["Clean audit language"],
+            "parser_mismatches": [],
+            "human_review_checklist": ["Review related-party notes manually"],
             "page_evidence": [{"page": 12, "finding": "Clean opinion", "quote": "true and fair view"}],
             "needs_human_review": False,
             "research_only_disclaimer": "Research-only governance review; not investment advice.",
@@ -118,6 +135,7 @@ For Deloitte Haskins & Sells LLP
 
     assert report.annual_report_review_status == "ok"
     assert report.annual_report_review["review_label"] == "Watch"
+    assert report.annual_report_review["section_reviews"]
 
 
 def test_evaluate_governance_records_non_ok_llm_status_without_opinion():
@@ -195,6 +213,60 @@ def test_markdown_renders_annual_report_review_status_when_unavailable():
 
     assert "Annual Report LLM Review" in text
     assert "Status: unavailable" in text
+
+
+def test_markdown_renders_annual_report_key_findings_and_section_reviews():
+    report = evaluate_governance("AAA", raw_sources=_raw_sources(), as_of=date(2026, 6, 27), use_llm=False)
+    report = replace(
+        report,
+        annual_report_review_status="ok",
+        annual_report_review={
+            "review_label": "Watch",
+            "summary": "Sectional annual-report review completed.",
+            "audit_opinion": "Clean",
+            "auditor": "Deloitte Haskins & Sells LLP",
+            "key_findings": ["Clean audit opinion", "Related-party note needs review"],
+            "parser_mismatches": ["Parser flagged Qualified but section read Clean"],
+            "human_review_checklist": ["Open Note 37"],
+            "page_evidence": [{"page": 12, "finding": "Clean opinion", "quote": "true and fair view"}],
+            "section_reviews": [
+                {
+                    "section_id": "auditor_opinion",
+                    "title": "Auditor Opinion and Basis for Opinion",
+                    "status": "ok",
+                    "risk_label": "Watch",
+                    "key_findings": ["Clean audit opinion"],
+                    "concerns": [],
+                    "data_gaps": [],
+                    "page_evidence": [{"page": 12, "finding": "Clean opinion", "quote": "true and fair view"}],
+                    "needs_human_review": False,
+                },
+                {
+                    "section_id": "related_party",
+                    "title": "Related-Party Transactions",
+                    "status": "unavailable",
+                    "risk_label": "Insufficient Evidence",
+                    "key_findings": [],
+                    "concerns": [],
+                    "data_gaps": ["provider timeout"],
+                    "page_evidence": [],
+                    "needs_human_review": True,
+                },
+            ],
+        },
+    )
+
+    text = render_markdown(report)
+
+    assert "Key findings:" in text
+    assert "Clean audit opinion" in text
+    assert "Parser mismatches:" in text
+    assert "Parser flagged Qualified but section read Clean" in text
+    assert "Section findings:" in text
+    assert "Auditor Opinion and Basis for Opinion" in text
+    assert "Related-Party Transactions" in text
+    assert "Human review checklist:" in text
+    assert "Open Note 37" in text
 
 
 def test_markdown_escapes_table_and_list_content():

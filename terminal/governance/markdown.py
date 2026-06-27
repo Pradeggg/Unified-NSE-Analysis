@@ -78,6 +78,14 @@ def render_markdown(report: GovernanceReport) -> str:
             lines.append(f"Auditor: {_list_text(auditor)}")
         if summary:
             lines.append(_list_text(summary))
+        key_findings = report.annual_report_review.get("key_findings") or []
+        if key_findings:
+            lines.extend(["", "Key findings:"])
+            lines.extend(f"- {_list_text(item)}" for item in key_findings)
+        parser_mismatches = report.annual_report_review.get("parser_mismatches") or []
+        if parser_mismatches:
+            lines.extend(["", "Parser mismatches:"])
+            lines.extend(f"- {_list_text(item)}" for item in parser_mismatches)
         evidence = report.annual_report_review.get("page_evidence") or []
         if evidence:
             lines.extend(["", "Page evidence:"])
@@ -87,6 +95,24 @@ def render_markdown(report: GovernanceReport) -> str:
                 quote = item.get("quote") or ""
                 suffix = f" — {quote}" if quote else ""
                 lines.append(f"- {_list_text(f'p.{page}: {finding}{suffix}')}")
+        section_reviews = report.annual_report_review.get("section_reviews") or []
+        if section_reviews:
+            lines.extend(["", "Section findings:"])
+            for item in section_reviews:
+                title = item.get("title") or item.get("section_id") or "Section"
+                status = item.get("status") or "unknown"
+                risk = item.get("risk_label") or "Unknown"
+                lines.append(f"- {_list_text(f'{title}: {risk} ({status})')}")
+                for finding in item.get("key_findings") or []:
+                    lines.append(f"  - {_list_text(finding)}")
+                for concern in item.get("concerns") or []:
+                    lines.append(f"  - Concern: {_list_text(concern)}")
+                for gap in item.get("data_gaps") or []:
+                    lines.append(f"  - Gap: {_list_text(gap)}")
+        checklist = report.annual_report_review.get("human_review_checklist") or []
+        if checklist:
+            lines.extend(["", "Human review checklist:"])
+            lines.extend(f"- {_list_text(item)}" for item in checklist)
     elif report.annual_report_review_status != "not_requested":
         lines.extend(["", "## Annual Report LLM Review"])
         lines.append(f"Status: {_list_text(report.annual_report_review_status)}")
