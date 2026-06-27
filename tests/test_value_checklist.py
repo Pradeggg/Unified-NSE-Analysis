@@ -218,3 +218,48 @@ def test_zero_technical_score_remains_zero_not_neutral():
         if score.name == "Technical Confirmation"
     )
     assert technical_score.raw_score == 0.0
+
+
+def test_unusable_valuation_evidence_is_treated_as_missing():
+    result = build_checklist_result(
+        _evidence(
+            "BADVAL",
+            valuation={"pe": None, "pb": "n/a", "earnings_yield_pct": None},
+        )
+    )
+
+    assert "valuation" in result.missing_evidence
+    assert result.mirror_test_passed is False
+    assert result.verdict in {"WATCH", "AVOID", "INSUFFICIENT_EVIDENCE"}
+    assert any("valuation" in item.lower() for item in result.mirror_test)
+    assert not any("PE 0.0" in item for item in result.mirror_test)
+
+
+def test_empty_governance_evidence_fails_mirror_test():
+    result = build_checklist_result(_evidence("NOGOV", governance={}))
+
+    assert "governance" in result.missing_evidence
+    assert result.verdict != "PASS"
+    assert result.mirror_test_passed is False
+    assert any("governance" in item.lower() for item in result.mirror_test)
+    assert not any(
+        "governance evidence does not force" in item.lower()
+        for item in result.mirror_test
+    )
+
+
+def test_missing_evidence_labels_are_normalized():
+    result = build_checklist_result(
+        _evidence(
+            "LABELS",
+            missing_evidence=(
+                " Valuation ",
+                "",
+                "valuation",
+                " GOVERNANCE ",
+                "governance",
+            ),
+        )
+    )
+
+    assert result.missing_evidence == ("valuation", "governance")

@@ -96,16 +96,16 @@ class ValueChecklistReport:
 
 
 def build_checklist_result(evidence: ValueChecklistEvidence) -> ValueChecklistResult:
-    missing = tuple(dict.fromkeys(str(item) for item in (evidence.missing_evidence or ())))
+    missing = _normalize_missing_evidence(evidence.missing_evidence)
     fundamentals = dict(evidence.fundamentals or {})
     valuation = dict(evidence.valuation or {})
     governance = dict(evidence.governance or {})
     if not fundamentals:
-        missing = tuple(dict.fromkeys(missing + ("fundamentals",)))
-    if not valuation:
-        missing = tuple(dict.fromkeys(missing + ("valuation",)))
-    if not governance:
-        missing = tuple(dict.fromkeys(missing + ("governance",)))
+        missing = _normalize_missing_evidence(missing + ("fundamentals",))
+    if not _has_usable_valuation(valuation):
+        missing = _normalize_missing_evidence(missing + ("valuation",))
+    if not _has_usable_governance(governance):
+        missing = _normalize_missing_evidence(missing + ("governance",))
     if not fundamentals:
         return _insufficient_result(
             evidence,
@@ -179,6 +179,46 @@ def _num_or_none(value: Any) -> float | None:
         return out if math.isfinite(out) else None
     except Exception:
         return None
+
+
+_EMPTY_TEXT_VALUES = {"", "n/a", "na", "none", "null", "unknown", "-"}
+
+
+def _normalize_missing_evidence(items: Iterable[Any]) -> tuple[str, ...]:
+    labels: list[str] = []
+    seen: set[str] = set()
+    for item in items or ():
+        label = str(item or "").strip().lower()
+        if not label or label in seen:
+            continue
+        seen.add(label)
+        labels.append(label)
+    return tuple(labels)
+
+
+def _meaningful_text(value: Any) -> str:
+    text = str(value or "").strip()
+    return "" if text.lower() in _EMPTY_TEXT_VALUES else text
+
+
+def _has_usable_valuation(valuation: Mapping[str, Any] | None) -> bool:
+    v = dict(valuation or {})
+    if any(
+        _num_or_none(v.get(key)) is not None
+        for key in ("pe", "pb", "earnings_yield_pct")
+    ):
+        return True
+    return bool(_meaningful_text(v.get("valuation_signal")))
+
+
+def _has_usable_governance(governance: Mapping[str, Any] | None) -> bool:
+    g = dict(governance or {})
+    if _num_or_none(g.get("promoter_pledge_pct")) is not None:
+        return True
+    return any(
+        _meaningful_text(g.get(key))
+        for key in ("forensic_risk", "insider_signal")
+    )
 
 
 def _dimension(
@@ -270,7 +310,7 @@ def _score_moat(evidence: ValueChecklistEvidence) -> ChecklistDimensionScore:
 
 def _score_governance(evidence: ValueChecklistEvidence) -> ChecklistDimensionScore:
     g = dict(evidence.governance or {})
-    if not g:
+    if not _has_usable_governance(g):
         return _dimension(
             "Management / Governance",
             15,
@@ -296,7 +336,7 @@ def _score_governance(evidence: ValueChecklistEvidence) -> ChecklistDimensionSco
 
 def _score_valuation(evidence: ValueChecklistEvidence) -> ChecklistDimensionScore:
     v = dict(evidence.valuation or {})
-    if not v:
+    if not _has_usable_valuation(v):
         return _dimension(
             "Valuation / Safety Margin",
             15,
@@ -411,6 +451,8 @@ def _hard_caps(evidence: ValueChecklistEvidence, missing: tuple[str, ...]) -> tu
         caps.append("Excessive valuation caps verdict at WATCH.")
     if "valuation" in missing:
         caps.append("Missing valuation evidence caps verdict at WATCH.")
+    if "governance" in missing:
+        caps.append("Missing governance evidence caps verdict at CONDITIONAL.")
     return tuple(caps)
 
 
@@ -418,7 +460,9 @@ def _apply_caps(verdict: str, hard_caps: tuple[str, ...]) -> str:
     capped = verdict
     for cap in hard_caps:
         low = cap.lower()
-        if "governance" in low:
+        if "missing governance" in low:
+            capped = _worse_verdict(capped, "CONDITIONAL")
+        elif "governance" in low:
             capped = _worse_verdict(capped, "WATCH")
         if "cash conversion" in low:
             capped = _worse_verdict(capped, "CONDITIONAL")
@@ -457,9 +501,12 @@ def _mirror_test(
     missing: tuple[str, ...],
     verdict: str,
 ) -> tuple[tuple[str, ...], bool]:
-    if any(item in {"fundamentals", "valuation"} for item in missing):
+    missing_core = tuple(
+        item for item in missing if item in {"fundamentals", "valuation", "governance"}
+    )
+    if missing_core:
         return (
-            "Mirror test failed: fundamentals or valuation evidence is missing.",
+            f"Mirror test failed: {', '.join(missing_core)} evidence is missing.",
             f"Missing evidence: {', '.join(missing)}.",
         ), False
     f = dict(evidence.fundamentals or {})
@@ -471,12 +518,26 @@ def _mirror_test(
         f"Quality evidence: ROE {_num(f.get('roe')):.1f}%, "
         f"ROCE {_num(f.get('roce')):.1f}%.",
         f"Governance evidence does not force an avoid verdict; final verdict is {verdict}.",
-        f"Valuation evidence: PE {_num(v.get('pe')):.1f}, "
-        f"earnings yield {_num(v.get('earnings_yield_pct')):.1f}%.",
+        _valuation_mirror_claim(v),
         f"Technical evidence: {str(t.get('stage') or 'UNKNOWN')} "
         f"with signal {str(t.get('trading_signal') or 'n/a')}.",
     )
     return claims, verdict not in {"INSUFFICIENT_EVIDENCE", "AVOID"}
+
+
+def _valuation_mirror_claim(valuation: Mapping[str, Any]) -> str:
+    v = dict(valuation or {})
+    parts: list[str] = []
+    pe = _num_or_none(v.get("pe"))
+    earnings_yield = _num_or_none(v.get("earnings_yield_pct"))
+    signal = _meaningful_text(v.get("valuation_signal"))
+    if pe is not None:
+        parts.append(f"PE {pe:.1f}")
+    if earnings_yield is not None:
+        parts.append(f"earnings yield {earnings_yield:.1f}%")
+    if signal:
+        parts.append(f"signal {signal}")
+    return f"Valuation evidence: {', '.join(parts)}."
 
 
 def _insufficient_result(
