@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import csv
 import datetime as _dt
+import html as _html
 import math
 import re
 import shutil
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Mapping
@@ -15,6 +17,7 @@ from typing import Any, Iterable, Mapping
 ROOT = Path(__file__).resolve().parent.parent
 VALUE_CHECKLIST_DIR = ROOT / "reports" / "value_checklists"
 LATEST_DIR = ROOT / "reports" / "latest"
+MAX_INVESTMENT_CHECKLIST_SYMBOLS = 10
 
 
 @dataclass(frozen=True)
@@ -83,6 +86,7 @@ class ValueChecklistResult:
     mirror_test_passed: bool
     source_trail: tuple[Mapping[str, Any], ...]
     missing_evidence: tuple[str, ...]
+    freshness: Mapping[str, str] | None = None
 
 
 @dataclass(frozen=True)
@@ -147,6 +151,7 @@ def build_checklist_result(evidence: ValueChecklistEvidence) -> ValueChecklistRe
         mirror_test_passed=mirror_passed,
         source_trail=tuple(evidence.source_trail or ()),
         missing_evidence=missing,
+        freshness=_clean_freshness(evidence.freshness),
     )
 
 
@@ -199,6 +204,9 @@ def build_value_checklist_markdown(results: Iterable[ValueChecklistResult]) -> s
         )
         lines.append("- Ranking sorts by verdict, total score, evidence quality, and symbol.")
     lines.append("")
+    lines.extend(_verdict_distribution_markdown(ranked))
+    lines.extend(_ranking_rationale_markdown(ranked))
+    lines.extend(_data_freshness_markdown(ranked))
     for result in ranked:
         lines.extend(_result_markdown(result))
     lines.extend(
@@ -250,6 +258,22 @@ def render_value_checklist_html(markdown: str) -> str:
     )
 
 
+def _render_value_checklist_html_failure(exc: Exception) -> str:
+    message = f"HTML rendering failed: {exc}"
+    escaped_message = _html.escape(message)
+    return (
+        "<!doctype html><html><head><meta charset='utf-8'>"
+        "<title>NSE Investment Checklist Comparison</title>"
+        "<style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:32px;color:#0f172a}"
+        ".error{color:#b91c1c;font-weight:700}</style>"
+        "</head><body>"
+        "<h1>NSE Investment Checklist Comparison</h1>"
+        f"<p class='error'>{escaped_message}</p>"
+        "<p>Research only. Not investment advice.</p>"
+        "</body></html>"
+    )
+
+
 def write_value_checklist_report(
     results: Iterable[ValueChecklistResult],
     project_root: Path | str | None = None,
@@ -262,7 +286,6 @@ def write_value_checklist_report(
     stamp = _dt.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     ranked = compare_checklist_results(results)
     markdown = build_value_checklist_markdown(ranked)
-    html = render_value_checklist_html(markdown)
     md_path = report_dir / f"investment_checklist_{stamp}.md"
     html_path = report_dir / f"investment_checklist_{stamp}.html"
     csv_path = report_dir / f"investment_checklist_summary_{stamp}.csv"
@@ -271,8 +294,12 @@ def write_value_checklist_report(
     latest_csv = latest_dir / "investment_checklist_summary.csv"
     rows = _summary_rows(ranked)
     md_path.write_text(markdown, encoding="utf-8")
-    html_path.write_text(html, encoding="utf-8")
     _write_summary_csv(csv_path, rows)
+    try:
+        html = render_value_checklist_html(markdown)
+    except Exception as exc:
+        html = _render_value_checklist_html_failure(exc)
+    html_path.write_text(html, encoding="utf-8")
     shutil.copy2(md_path, latest_md)
     shutil.copy2(html_path, latest_html)
     shutil.copy2(csv_path, latest_csv)
@@ -289,7 +316,7 @@ def write_value_checklist_report(
     )
 
 
-def parse_investment_checklist_symbols(text: str, *, limit: int = 10) -> list[str]:
+def parse_investment_checklist_symbols(text: str, *, limit: int | None = MAX_INVESTMENT_CHECKLIST_SYMBOLS) -> list[str]:
     raw = re.sub(
         r"^\s*/(?:investment-checklist|investment_checklist)\b",
         "",
@@ -305,7 +332,7 @@ def parse_investment_checklist_symbols(text: str, *, limit: int = 10) -> list[st
             continue
         seen.add(sym)
         symbols.append(sym)
-        if len(symbols) >= limit:
+        if limit is not None and len(symbols) >= limit:
             break
     return symbols
 
@@ -320,12 +347,20 @@ def collect_value_checklist_evidence(
 
 
 def handle_investment_checklist_command(text: str, project_root: Path | str | None = None) -> str:
-    symbols = parse_investment_checklist_symbols(text)
+    symbols = parse_investment_checklist_symbols(text, limit=None)
     if not symbols:
         return (
             "## NSE Investment Checklist Comparison\n\n"
             "Usage: `/investment-checklist TCS INFY HDFCBANK`\n\n"
             "Provide 1-10 NSE symbols. Research only. Not investment advice."
+        )
+    if len(symbols) > MAX_INVESTMENT_CHECKLIST_SYMBOLS:
+        return (
+            "## NSE Investment Checklist Comparison\n\n"
+            f"Requested {len(symbols)} unique symbols; max is {MAX_INVESTMENT_CHECKLIST_SYMBOLS} symbols.\n\n"
+            "Please narrow the list to 10 or fewer NSE symbols, or use a screener workflow "
+            "to shortlist candidates before running this comparison.\n\n"
+            "Research only. Not investment advice."
         )
     evidence = collect_value_checklist_evidence(symbols)
     results = [build_checklist_result(item) for item in evidence]
@@ -435,6 +470,100 @@ def _collect_one_symbol_evidence(symbol: str) -> ValueChecklistEvidence:
 
 def _sym(value: Any) -> str:
     return re.sub(r"[^A-Z0-9&-]", "", str(value or "").upper())
+
+
+def _verdict_distribution_markdown(results: list[ValueChecklistResult]) -> list[str]:
+    lines = ["## Verdict Distribution", ""]
+    counts = Counter(result.verdict for result in results)
+    if not counts:
+        lines.append("- No verdicts generated.")
+    else:
+        ordered = sorted(
+            counts.items(),
+            key=lambda item: (VERDICT_PRIORITY.get(item[0], 99), item[0]),
+        )
+        for verdict, count in ordered:
+            lines.append(f"- {verdict}: {count}")
+    lines.append("")
+    return lines
+
+
+def _ranking_rationale_markdown(results: list[ValueChecklistResult]) -> list[str]:
+    lines = ["## Ranking Rationale", ""]
+    if not results:
+        lines.append("- No symbols were ranked.")
+    elif len(results) == 1:
+        only = results[0]
+        lines.append(f"- **{only.symbol}** is the only ranked symbol; no cross-symbol comparison applies.")
+    else:
+        leader = results[0]
+        second = results[1]
+        lines.append(
+            f"- **{leader.symbol}** ranks higher than **{second.symbol}** because "
+            f"{_ranking_comparison_reason(leader, second)}."
+        )
+        lines.append("- Comparator order: verdict, total score, evidence quality, then symbol.")
+    lines.append("")
+    return lines
+
+
+def _ranking_comparison_reason(
+    leader: ValueChecklistResult,
+    second: ValueChecklistResult,
+) -> str:
+    leader_verdict = VERDICT_PRIORITY.get(leader.verdict, 99)
+    second_verdict = VERDICT_PRIORITY.get(second.verdict, 99)
+    if leader_verdict != second_verdict:
+        return f"`{leader.verdict}` outranks `{second.verdict}`"
+    if leader.total_score != second.total_score:
+        return (
+            f"both have `{leader.verdict}` verdicts, and its score "
+            f"{leader.total_score:.1f} is above {second.total_score:.1f}"
+        )
+    leader_quality = _quality_rank(leader.evidence_quality)
+    second_quality = _quality_rank(second.evidence_quality)
+    if leader_quality != second_quality:
+        return (
+            f"verdict and score are tied, and evidence quality "
+            f"`{leader.evidence_quality}` outranks `{second.evidence_quality}`"
+        )
+    return (
+        "verdict, score, and evidence quality are tied, so the symbol tiebreaker "
+        f"places {leader.symbol} before {second.symbol}"
+    )
+
+
+def _data_freshness_markdown(results: list[ValueChecklistResult]) -> list[str]:
+    lines = [
+        "## Data Freshness",
+        "",
+        "| Symbol | Freshness |",
+        "| --- | --- |",
+    ]
+    if not results:
+        lines.append("| - | No freshness recorded. |")
+        lines.append("")
+        return lines
+    for result in results:
+        freshness = _clean_freshness(result.freshness)
+        if freshness:
+            rendered = "; ".join(f"`{_md(key)}`: {_md(value)}" for key, value in freshness.items())
+        else:
+            rendered = "No freshness recorded."
+        lines.append(f"| {result.symbol} | {rendered} |")
+    lines.append("")
+    return lines
+
+
+def _clean_freshness(freshness: Mapping[str, Any] | None) -> dict[str, str]:
+    cleaned: dict[str, str] = {}
+    for key, value in dict(freshness or {}).items():
+        label = str(key or "").strip()
+        if not label:
+            continue
+        text = str(value if value is not None else "").strip()
+        cleaned[label] = text or "unknown"
+    return cleaned
 
 
 def _result_markdown(result: ValueChecklistResult) -> list[str]:
@@ -1136,4 +1265,5 @@ def _insufficient_result(
         mirror_test_passed=False,
         source_trail=tuple(evidence.source_trail or ()),
         missing_evidence=clean_missing,
+        freshness=_clean_freshness(evidence.freshness),
     )

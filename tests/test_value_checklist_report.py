@@ -66,6 +66,23 @@ def test_comparison_readout_describes_actual_ranking_comparator():
     assert "technical confirmation" not in readout
 
 
+def test_value_checklist_markdown_includes_distribution_freshness_and_ranking_rationale():
+    markdown = build_value_checklist_markdown([_result("TCS"), _result("INFY")])
+
+    assert "## Verdict Distribution" in markdown
+    assert "PASS: 2" in markdown
+    assert "## Data Freshness" in markdown
+    assert "TCS" in markdown
+    assert "stage_snapshot" in markdown
+    assert "## Ranking Rationale" in markdown
+    assert "TCS" in markdown
+    assert "INFY" in markdown
+
+    rationale = markdown.split("## Ranking Rationale", 1)[1].split("\n## ", 1)[0]
+    assert "TCS" in rationale
+    assert "INFY" in rationale
+
+
 def test_value_checklist_html_renders_tables_without_raw_markdown_separator():
     html = render_value_checklist_html(build_value_checklist_markdown([_result("TCS"), _result("INFY")]))
 
@@ -137,6 +154,25 @@ def test_write_value_checklist_report_writes_timestamped_and_latest_outputs(tmp_
     assert Path(report.latest_html_path).exists()
     assert Path(report.latest_summary_csv_path).exists()
     assert Path(report.latest_summary_csv_path).read_text(encoding="utf-8").startswith("rank,symbol,company_name")
+
+
+def test_write_value_checklist_report_keeps_markdown_and_csv_when_html_rendering_fails(tmp_path, monkeypatch):
+    def fail_html(markdown):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(value_checklist, "render_value_checklist_html", fail_html)
+
+    report = write_value_checklist_report([_result("TCS")], tmp_path)
+
+    assert Path(report.markdown_path).exists()
+    assert Path(report.summary_csv_path).exists()
+    assert Path(report.latest_markdown_path).exists()
+    assert Path(report.latest_summary_csv_path).exists()
+    assert Path(report.html_path).exists()
+    assert Path(report.latest_html_path).exists()
+    assert "HTML rendering failed: boom" in report.html
+    assert "HTML rendering failed: boom" in Path(report.html_path).read_text(encoding="utf-8")
+    assert "HTML rendering failed: boom" in Path(report.latest_html_path).read_text(encoding="utf-8")
 
 
 def test_write_value_checklist_report_accepts_positional_project_root(tmp_path):

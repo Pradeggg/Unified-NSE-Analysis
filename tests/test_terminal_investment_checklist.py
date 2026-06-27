@@ -55,6 +55,25 @@ def test_handle_investment_checklist_command_writes_report(monkeypatch, tmp_path
     assert (tmp_path / "reports" / "latest" / "investment_checklist_summary.csv").exists()
 
 
+def test_handle_investment_checklist_command_rejects_more_than_ten_symbols(monkeypatch, tmp_path):
+    from terminal.value_checklist import handle_investment_checklist_command
+
+    def forbidden_collection(symbols):
+        raise AssertionError(f"collection should not run for over-limit input: {symbols}")
+
+    monkeypatch.setattr("terminal.value_checklist.collect_value_checklist_evidence", forbidden_collection)
+
+    symbols = " ".join(f"S{i}" for i in range(11))
+    output = handle_investment_checklist_command(f"/investment-checklist {symbols}", project_root=tmp_path)
+
+    assert "## NSE Investment Checklist Comparison" in output
+    assert "max is 10 symbols" in output.lower()
+    assert "narrow" in output.lower()
+    assert "screener" in output.lower()
+    assert "Research only. Not investment advice." in output
+    assert not (tmp_path / "reports").exists()
+
+
 def test_investment_checklist_registry_handler_is_registered(monkeypatch):
     registry = nse_agent._build_command_registry()
 
