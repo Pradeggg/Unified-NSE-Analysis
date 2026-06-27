@@ -2,7 +2,9 @@ from terminal.value_checklist import (
     CHECKLIST_DIMENSIONS,
     ValueChecklistEvidence,
     build_checklist_result,
+    collect_value_checklist_evidence,
     compare_checklist_results,
+    parse_investment_checklist_symbols,
 )
 
 
@@ -450,3 +452,75 @@ def test_placeholder_sector_is_not_used_as_identified_sector():
         for reason in score.reasons
     )
     assert not any("N/A" in item for item in result.mirror_test)
+
+
+def test_parse_investment_checklist_symbols_accepts_commas_spaces_and_dedupes():
+    assert parse_investment_checklist_symbols("/investment-checklist TCS, INFY HDFCBANK TCS") == [
+        "TCS",
+        "INFY",
+        "HDFCBANK",
+    ]
+
+
+def test_parse_investment_checklist_symbols_limits_to_ten():
+    text = "/investment-checklist " + " ".join(f"S{i}" for i in range(12))
+
+    assert parse_investment_checklist_symbols(text) == [f"S{i}" for i in range(10)]
+
+
+def test_collect_evidence_uses_stage_snapshot_and_cached_screener(monkeypatch):
+    def fake_snapshot(symbol):
+        return {
+            "symbol": symbol,
+            "company_name": f"{symbol} Ltd",
+            "sector": "IT",
+            "stage": "STAGE_2",
+            "relative_strength": 1.2,
+            "rsi": 62,
+            "technical_score": 81,
+            "trend_signal": "BULLISH",
+            "trading_signal": "BUY",
+            "enhanced_fund_score": 84,
+            "fundamental_score": 78,
+            "earnings_quality": 82,
+            "sales_growth": 13,
+            "financial_strength": 88,
+            "data_source": "scores.stage_snapshots",
+            "snapshot_date": "2026-06-26",
+            "missing_evidence": [],
+        }
+
+    def fake_cache(symbol, max_age_hours=None):
+        return {
+            "ratios": {"Stock P/E": "24", "ROE": "24%", "ROCE": "31%", "Debt to equity": "0.05"},
+            "annual_pl": {"OPM %": ["22%", "24%", "26%"], "_headers": ["Mar 2024", "Mar 2025", "Mar 2026"]},
+            "cash_flow": {"Free Cash Flow": ["1200", "1500", "1800"], "_headers": ["Mar 2024", "Mar 2025", "Mar 2026"]},
+            "_cache_age_hours": 2.5,
+        }
+
+    monkeypatch.setattr("terminal.tools.get_symbol_snapshot", fake_snapshot)
+    monkeypatch.setattr("terminal.financials_cache.screener_payload_from_cache", fake_cache)
+
+    evidence = collect_value_checklist_evidence(["TCS"])[0]
+
+    assert evidence.symbol == "TCS"
+    assert evidence.company_name == "TCS Ltd"
+    assert evidence.fundamentals["roe"] == 24.0
+    assert evidence.valuation["pe"] == 24.0
+    assert evidence.technical["stage"] == "STAGE_2"
+    assert evidence.missing_evidence == ()
+    assert any(item["name"] == "scores.stage_snapshots" for item in evidence.source_trail)
+
+
+def test_collect_evidence_marks_missing_fundamentals(monkeypatch):
+    monkeypatch.setattr(
+        "terminal.tools.get_symbol_snapshot",
+        lambda symbol: {"symbol": symbol, "error": "not found", "missing_evidence": ["stage_snapshot"]},
+    )
+    monkeypatch.setattr("terminal.financials_cache.screener_payload_from_cache", lambda symbol, max_age_hours=None: None)
+
+    evidence = collect_value_checklist_evidence(["NOPE"])[0]
+
+    assert evidence.symbol == "NOPE"
+    assert "fundamentals" in evidence.missing_evidence
+    assert "stage_snapshot" in evidence.missing_evidence

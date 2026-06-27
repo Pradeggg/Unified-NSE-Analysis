@@ -161,6 +161,111 @@ def compare_checklist_results(
     )
 
 
+def parse_investment_checklist_symbols(text: str, *, limit: int = 10) -> list[str]:
+    raw = re.sub(
+        r"^\s*/(?:investment-checklist|investment_checklist)\b",
+        "",
+        text or "",
+        flags=re.IGNORECASE,
+    )
+    tokens = re.split(r"[\s,，、]+", raw.strip())
+    symbols: list[str] = []
+    seen: set[str] = set()
+    for token in tokens:
+        sym = _sym(token)
+        if not sym or sym in seen:
+            continue
+        seen.add(sym)
+        symbols.append(sym)
+        if len(symbols) >= limit:
+            break
+    return symbols
+
+
+def collect_value_checklist_evidence(
+    symbols: Iterable[str],
+) -> list[ValueChecklistEvidence]:
+    evidence: list[ValueChecklistEvidence] = []
+    for symbol in symbols:
+        evidence.append(_collect_one_symbol_evidence(_sym(symbol)))
+    return evidence
+
+
+def _collect_one_symbol_evidence(symbol: str) -> ValueChecklistEvidence:
+    snapshot: dict[str, Any] = {}
+    screener: dict[str, Any] | None = None
+    missing: list[str] = []
+    source_trail: list[dict[str, Any]] = []
+
+    try:
+        from terminal.tools import get_symbol_snapshot
+
+        snapshot = get_symbol_snapshot(symbol)
+        if snapshot.get("error"):
+            missing.extend(snapshot.get("missing_evidence") or ["stage_snapshot"])
+            source_trail.append(
+                {
+                    "name": "scores.stage_snapshots",
+                    "status": f"ERROR: {snapshot.get('error')}",
+                }
+            )
+        else:
+            source_trail.append(
+                {
+                    "name": "scores.stage_snapshots",
+                    "status": "ok",
+                    "date": snapshot.get("snapshot_date"),
+                }
+            )
+    except Exception as exc:
+        missing.append("stage_snapshot")
+        source_trail.append({"name": "scores.stage_snapshots", "status": f"ERROR: {exc}"})
+
+    try:
+        from terminal.financials_cache import screener_payload_from_cache
+
+        screener = screener_payload_from_cache(symbol, max_age_hours=None)
+        if screener:
+            source_trail.append(
+                {
+                    "name": "screener_cache",
+                    "status": "ok",
+                    "age_hours": screener.get("_cache_age_hours"),
+                }
+            )
+        else:
+            missing.append("fundamentals")
+            source_trail.append({"name": "screener_cache", "status": "missing"})
+    except Exception as exc:
+        missing.append("fundamentals")
+        source_trail.append({"name": "screener_cache", "status": f"ERROR: {exc}"})
+
+    fundamentals = _fundamentals_from_sources(snapshot, screener or {})
+    valuation = _valuation_from_screener(screener or {})
+    governance = _governance_from_screener(screener or {})
+    technical = _technical_from_snapshot(snapshot)
+    if not fundamentals:
+        missing.append("fundamentals")
+    if not valuation:
+        missing.append("valuation")
+    return ValueChecklistEvidence(
+        symbol=symbol,
+        company_name=str(snapshot.get("company_name") or symbol),
+        sector=str(snapshot.get("sector") or ""),
+        fundamentals=fundamentals,
+        valuation=valuation,
+        governance=governance,
+        technical=technical,
+        latest_results=_latest_results_from_snapshot(snapshot),
+        source_trail=tuple(source_trail),
+        missing_evidence=tuple(dict.fromkeys(item for item in missing if item)),
+        freshness={
+            "stage_snapshot": str(snapshot.get("snapshot_date") or ""),
+            "fundamentals": str((screener or {}).get("_cache_age_hours") or "cached"),
+        },
+    )
+
+
 def _sym(value: Any) -> str:
     return re.sub(r"[^A-Z0-9&-]", "", str(value or "").upper())
 
@@ -181,6 +286,131 @@ def _num_or_none(value: Any) -> float | None:
         return out if math.isfinite(out) else None
     except Exception:
         return None
+
+
+def _fundamentals_from_sources(
+    snapshot: Mapping[str, Any],
+    screener: Mapping[str, Any],
+) -> dict[str, Any]:
+    ratios = dict(screener.get("ratios") or {})
+    annual = dict(screener.get("annual_pl") or {})
+    cash_flow = dict(screener.get("cash_flow") or {})
+    out: dict[str, Any] = {}
+    out["roe"] = _first_number(ratios, ("ROE", "Return on equity"))
+    out["roce"] = _first_number(ratios, ("ROCE", "Return on capital employed"))
+    out["debt_to_equity"] = _first_number(
+        ratios,
+        ("Debt to equity", "Debt / Equity"),
+    )
+    out["opm_pct"] = _last_series_number(annual, ("OPM %", "OPM"))
+    fcf = _last_series_number_or_none(cash_flow, ("Free Cash Flow", "FCF"))
+    if fcf is not None:
+        out["free_cash_flow_positive"] = fcf > 0
+    for key in (
+        "enhanced_fund_score",
+        "fundamental_score",
+        "earnings_quality",
+        "sales_growth",
+        "financial_strength",
+    ):
+        if snapshot.get(key) is not None:
+            out[key] = _num(snapshot.get(key))
+    return {key: value for key, value in out.items() if value not in (None, "")}
+
+
+def _valuation_from_screener(screener: Mapping[str, Any]) -> dict[str, Any]:
+    ratios = dict(screener.get("ratios") or {})
+    pe = _first_number(ratios, ("Stock P/E", "P/E", "PE"))
+    pb = _first_number(ratios, ("Price to book value", "Price to Book", "PB"))
+    out: dict[str, Any] = {}
+    if pe:
+        out["pe"] = pe
+        out["earnings_yield_pct"] = round(100.0 / pe, 2) if pe else None
+        out["valuation_signal"] = (
+            "expensive" if pe >= 70 else ("reasonable" if pe <= 35 else "neutral")
+        )
+    if pb:
+        out["pb"] = pb
+    return {key: value for key, value in out.items() if value not in (None, "")}
+
+
+def _governance_from_screener(screener: Mapping[str, Any]) -> dict[str, Any]:
+    shareholding = dict(screener.get("shareholding") or {})
+    pledge = _first_number(shareholding, ("Pledged", "Promoter Pledge", "pledged"))
+    return {
+        "promoter_pledge_pct": pledge or 0.0,
+        "forensic_risk": "unknown",
+        "insider_signal": "neutral",
+    }
+
+
+def _technical_from_snapshot(snapshot: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "stage": snapshot.get("stage"),
+        "relative_strength": snapshot.get("relative_strength"),
+        "rsi": snapshot.get("rsi"),
+        "technical_score": snapshot.get("technical_score"),
+        "trend_signal": snapshot.get("trend_signal"),
+        "trading_signal": snapshot.get("trading_signal"),
+    }
+
+
+def _latest_results_from_snapshot(snapshot: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "status": "snapshot",
+        "sales_growth": snapshot.get("sales_growth"),
+        "earnings_quality": snapshot.get("earnings_quality"),
+    }
+
+
+def _first_number(mapping: Mapping[str, Any], keys: tuple[str, ...]) -> float | None:
+    lowered = {str(key).strip().lower(): value for key, value in mapping.items()}
+    for key in keys:
+        value = lowered.get(key.strip().lower())
+        parsed = _parse_number(value)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _last_series_number(mapping: Mapping[str, Any], keys: tuple[str, ...]) -> float:
+    value = _last_series_number_or_none(mapping, keys)
+    return value if value is not None else 0.0
+
+
+def _last_series_number_or_none(
+    mapping: Mapping[str, Any],
+    keys: tuple[str, ...],
+) -> float | None:
+    lowered = {str(key).strip().lower(): value for key, value in mapping.items()}
+    for key in keys:
+        values = lowered.get(key.strip().lower())
+        if isinstance(values, list):
+            for item in reversed(values):
+                parsed = _parse_number(item)
+                if parsed is not None:
+                    return parsed
+            continue
+        parsed = _parse_number(values)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _parse_number(value: Any) -> float | None:
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        number = float(value)
+        return number if math.isfinite(number) else None
+    text = str(value).replace(",", "").replace("%", "").strip()
+    if not text or text.lower() in {"-", "\u2014", "none", "nan", "n/a", "na"}:
+        return None
+    try:
+        number = float(text)
+    except ValueError:
+        return None
+    return number if math.isfinite(number) else None
 
 
 _EMPTY_TEXT_VALUES = {"", "n/a", "na", "none", "null", "unknown", "-"}
