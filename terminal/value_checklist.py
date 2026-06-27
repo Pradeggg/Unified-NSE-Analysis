@@ -100,13 +100,13 @@ def build_checklist_result(evidence: ValueChecklistEvidence) -> ValueChecklistRe
     fundamentals = dict(evidence.fundamentals or {})
     valuation = dict(evidence.valuation or {})
     governance = dict(evidence.governance or {})
-    if not fundamentals:
+    if not _has_usable_fundamentals(fundamentals):
         missing = _normalize_missing_evidence(missing + ("fundamentals",))
     if not _has_usable_valuation(valuation):
         missing = _normalize_missing_evidence(missing + ("valuation",))
     if not _has_usable_governance(governance):
         missing = _normalize_missing_evidence(missing + ("governance",))
-    if not fundamentals:
+    if not _has_usable_fundamentals(fundamentals):
         return _insufficient_result(
             evidence,
             missing,
@@ -228,6 +228,27 @@ def _has_usable_governance(governance: Mapping[str, Any] | None) -> bool:
         _meaningful_text(g.get(key))
         for key in ("forensic_risk", "insider_signal")
     )
+
+
+def _has_usable_fundamentals(fundamentals: Mapping[str, Any] | None) -> bool:
+    f = dict(fundamentals or {})
+    if any(
+        _num_or_none(f.get(key)) is not None
+        for key in (
+            "roe",
+            "roce",
+            "opm_pct",
+            "sales_growth",
+            "profit_growth",
+            "enhanced_fund_score",
+            "fundamental_score",
+        )
+    ):
+        return True
+    debt = _num_or_none(f.get("debt_to_equity"))
+    if debt is not None and debt >= 0:
+        return True
+    return isinstance(f.get("free_cash_flow_positive"), bool)
 
 
 def _dimension(

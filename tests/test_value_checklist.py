@@ -361,3 +361,25 @@ def test_severe_governance_reason_is_not_contradictory():
         "no severe governance issue" in reason.lower()
         for reason in governance_score.reasons
     )
+
+
+def test_unusable_fundamentals_returns_insufficient_evidence():
+    result = build_checklist_result(
+        _evidence(
+            "BADFUND",
+            fundamentals={
+                "roe": None,
+                "roce": None,
+                "opm_pct": "n/a",
+                "free_cash_flow_positive": None,
+                "debt_to_equity": None,
+                "enhanced_fund_score": None,
+            },
+        )
+    )
+
+    assert result.verdict == "INSUFFICIENT_EVIDENCE"
+    assert result.total_score == 0
+    assert "fundamentals" in result.missing_evidence
+    assert result.mirror_test_passed is False
+    assert not any("ROE 0.0" in item for item in result.mirror_test)
