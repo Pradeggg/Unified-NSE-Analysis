@@ -524,3 +524,131 @@ def test_collect_evidence_marks_missing_fundamentals(monkeypatch):
     assert evidence.symbol == "NOPE"
     assert "fundamentals" in evidence.missing_evidence
     assert "stage_snapshot" in evidence.missing_evidence
+
+
+def test_collect_sparse_real_cache_shape_does_not_fabricate_clean_evidence(monkeypatch):
+    def fake_snapshot(symbol):
+        return {
+            "symbol": symbol,
+            "company_name": f"{symbol} Ltd",
+            "sector": "IT",
+            "stage": "STAGE_2",
+            "snapshot_date": "2026-06-26",
+            "missing_evidence": [],
+        }
+
+    def fake_cache(symbol, max_age_hours=None):
+        return {
+            "ratios": {},
+            "shareholding": {},
+            "cash_flow": {"Net Cash Flow": ["10", "15", "20"]},
+            "_cache_age_hours": 1,
+        }
+
+    monkeypatch.setattr("terminal.tools.get_symbol_snapshot", fake_snapshot)
+    monkeypatch.setattr("terminal.financials_cache.screener_payload_from_cache", fake_cache)
+
+    evidence = collect_value_checklist_evidence(["SPARSE"])[0]
+    result = build_checklist_result(evidence)
+
+    assert evidence.fundamentals == {}
+    assert evidence.governance == {}
+    assert "fundamentals" in result.missing_evidence
+    assert "governance" in result.missing_evidence
+    assert result.verdict == "INSUFFICIENT_EVIDENCE"
+
+
+def test_collect_evidence_omits_invalid_snapshot_score_strings(monkeypatch):
+    def fake_snapshot(symbol):
+        return {
+            "symbol": symbol,
+            "company_name": f"{symbol} Ltd",
+            "sector": "IT",
+            "enhanced_fund_score": "bad",
+            "sales_growth": "bad",
+            "snapshot_date": "2026-06-26",
+            "missing_evidence": [],
+        }
+
+    monkeypatch.setattr("terminal.tools.get_symbol_snapshot", fake_snapshot)
+    monkeypatch.setattr("terminal.financials_cache.screener_payload_from_cache", lambda symbol, max_age_hours=None: None)
+
+    evidence = collect_value_checklist_evidence(["BADSTR"])[0]
+
+    assert "enhanced_fund_score" not in evidence.fundamentals
+    assert "sales_growth" not in evidence.fundamentals
+
+
+def test_collect_evidence_treats_negative_pe_as_missing_valuation(monkeypatch):
+    def fake_snapshot(symbol):
+        return {
+            "symbol": symbol,
+            "company_name": f"{symbol} Ltd",
+            "sector": "IT",
+            "enhanced_fund_score": 82,
+            "snapshot_date": "2026-06-26",
+            "missing_evidence": [],
+        }
+
+    def fake_cache(symbol, max_age_hours=None):
+        return {
+            "ratios": {"Stock P/E": "-12"},
+            "shareholding": {"Pledged": "0"},
+            "_cache_age_hours": 1,
+        }
+
+    monkeypatch.setattr("terminal.tools.get_symbol_snapshot", fake_snapshot)
+    monkeypatch.setattr("terminal.financials_cache.screener_payload_from_cache", fake_cache)
+
+    evidence = collect_value_checklist_evidence(["NEGPE"])[0]
+    result = build_checklist_result(evidence)
+
+    assert evidence.valuation == {}
+    assert evidence.valuation.get("valuation_signal") != "reasonable"
+    assert "valuation" in result.missing_evidence
+
+
+def test_collect_evidence_propagates_snapshot_missing_evidence_without_error(monkeypatch):
+    monkeypatch.setattr(
+        "terminal.tools.get_symbol_snapshot",
+        lambda symbol: {
+            "symbol": symbol,
+            "company_name": f"{symbol} Ltd",
+            "sector": "IT",
+            "enhanced_fund_score": 82,
+            "snapshot_date": "2026-06-26",
+            "missing_evidence": ["technical"],
+        },
+    )
+    monkeypatch.setattr(
+        "terminal.financials_cache.screener_payload_from_cache",
+        lambda symbol, max_age_hours=None: {
+            "ratios": {"Stock P/E": "24"},
+            "shareholding": {"Pledged": "0"},
+            "_cache_age_hours": 1,
+        },
+    )
+
+    evidence = collect_value_checklist_evidence(["PARTIAL"])[0]
+    result = build_checklist_result(evidence)
+
+    assert "technical" in evidence.missing_evidence
+    assert "technical" in result.missing_evidence
+
+
+def test_collect_evidence_marks_fundamentals_freshness_missing_without_screener(monkeypatch):
+    monkeypatch.setattr(
+        "terminal.tools.get_symbol_snapshot",
+        lambda symbol: {
+            "symbol": symbol,
+            "company_name": f"{symbol} Ltd",
+            "sector": "IT",
+            "snapshot_date": "2026-06-26",
+            "missing_evidence": [],
+        },
+    )
+    monkeypatch.setattr("terminal.financials_cache.screener_payload_from_cache", lambda symbol, max_age_hours=None: None)
+
+    evidence = collect_value_checklist_evidence(["NOCACHE"])[0]
+
+    assert evidence.freshness["fundamentals"] in {"missing", "unknown"}

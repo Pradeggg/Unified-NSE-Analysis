@@ -200,9 +200,10 @@ def _collect_one_symbol_evidence(symbol: str) -> ValueChecklistEvidence:
     try:
         from terminal.tools import get_symbol_snapshot
 
-        snapshot = get_symbol_snapshot(symbol)
+        snapshot = get_symbol_snapshot(symbol) or {}
+        snapshot_missing = snapshot.get("missing_evidence") or ()
         if snapshot.get("error"):
-            missing.extend(snapshot.get("missing_evidence") or ["stage_snapshot"])
+            missing.extend(snapshot_missing or ["stage_snapshot"])
             source_trail.append(
                 {
                     "name": "scores.stage_snapshots",
@@ -210,6 +211,7 @@ def _collect_one_symbol_evidence(symbol: str) -> ValueChecklistEvidence:
                 }
             )
         else:
+            missing.extend(snapshot_missing)
             source_trail.append(
                 {
                     "name": "scores.stage_snapshots",
@@ -244,6 +246,10 @@ def _collect_one_symbol_evidence(symbol: str) -> ValueChecklistEvidence:
     valuation = _valuation_from_screener(screener or {})
     governance = _governance_from_screener(screener or {})
     technical = _technical_from_snapshot(snapshot)
+    fundamentals_freshness = "missing"
+    if screener:
+        cache_age = screener.get("_cache_age_hours")
+        fundamentals_freshness = str(cache_age) if cache_age is not None else "unknown"
     if not fundamentals:
         missing.append("fundamentals")
     if not valuation:
@@ -261,7 +267,7 @@ def _collect_one_symbol_evidence(symbol: str) -> ValueChecklistEvidence:
         missing_evidence=tuple(dict.fromkeys(item for item in missing if item)),
         freshness={
             "stage_snapshot": str(snapshot.get("snapshot_date") or ""),
-            "fundamentals": str((screener or {}).get("_cache_age_hours") or "cached"),
+            "fundamentals": fundamentals_freshness,
         },
     )
 
@@ -302,7 +308,7 @@ def _fundamentals_from_sources(
         ratios,
         ("Debt to equity", "Debt / Equity"),
     )
-    out["opm_pct"] = _last_series_number(annual, ("OPM %", "OPM"))
+    out["opm_pct"] = _last_series_number_or_none(annual, ("OPM %", "OPM"))
     fcf = _last_series_number_or_none(cash_flow, ("Free Cash Flow", "FCF"))
     if fcf is not None:
         out["free_cash_flow_positive"] = fcf > 0
@@ -313,8 +319,9 @@ def _fundamentals_from_sources(
         "sales_growth",
         "financial_strength",
     ):
-        if snapshot.get(key) is not None:
-            out[key] = _num(snapshot.get(key))
+        parsed = _parse_number(snapshot.get(key))
+        if parsed is not None:
+            out[key] = parsed
     return {key: value for key, value in out.items() if value not in (None, "")}
 
 
@@ -323,13 +330,13 @@ def _valuation_from_screener(screener: Mapping[str, Any]) -> dict[str, Any]:
     pe = _first_number(ratios, ("Stock P/E", "P/E", "PE"))
     pb = _first_number(ratios, ("Price to book value", "Price to Book", "PB"))
     out: dict[str, Any] = {}
-    if pe:
+    if pe is not None and pe > 0:
         out["pe"] = pe
-        out["earnings_yield_pct"] = round(100.0 / pe, 2) if pe else None
+        out["earnings_yield_pct"] = round(100.0 / pe, 2)
         out["valuation_signal"] = (
             "expensive" if pe >= 70 else ("reasonable" if pe <= 35 else "neutral")
         )
-    if pb:
+    if pb is not None and pb > 0:
         out["pb"] = pb
     return {key: value for key, value in out.items() if value not in (None, "")}
 
@@ -337,11 +344,14 @@ def _valuation_from_screener(screener: Mapping[str, Any]) -> dict[str, Any]:
 def _governance_from_screener(screener: Mapping[str, Any]) -> dict[str, Any]:
     shareholding = dict(screener.get("shareholding") or {})
     pledge = _first_number(shareholding, ("Pledged", "Promoter Pledge", "pledged"))
-    return {
-        "promoter_pledge_pct": pledge or 0.0,
-        "forensic_risk": "unknown",
-        "insider_signal": "neutral",
-    }
+    out: dict[str, Any] = {}
+    if pledge is not None and pledge >= 0:
+        out["promoter_pledge_pct"] = pledge
+    for key in ("forensic_risk", "insider_signal"):
+        value = _meaningful_text(screener.get(key))
+        if value:
+            out[key] = value
+    return out
 
 
 def _technical_from_snapshot(snapshot: Mapping[str, Any]) -> dict[str, Any]:
