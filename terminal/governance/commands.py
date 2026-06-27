@@ -18,7 +18,9 @@ Examples:
 - `/gov INFY`
 - `/governance INFY --live`
 - `/governance INFY --llm`
+- `/governance INFY --llm-read`
 - `/governance INFY --live --llm`
+- `/governance INFY --live --llm-read`
 - `/governance INFY --json`
 
 Research only. Not investment advice."""
@@ -32,6 +34,7 @@ def handle_governance_command(text: str) -> str:
     report = evaluate_governance(
         args.symbol.upper(),
         use_llm=bool(args.llm),
+        use_annual_report_llm=bool(args.llm_read),
         refresh_live=bool(args.live),
     )
     if args.json:
@@ -57,6 +60,7 @@ def _parse_args(text: str) -> argparse.Namespace | None:
     parser.add_argument("symbol")
     parser.add_argument("--live", "--refresh-live", dest="live", action="store_true")
     parser.add_argument("--llm", action="store_true")
+    parser.add_argument("--llm-read", dest="llm_read", action="store_true")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("-h", "--help", action="store_true")
     try:

@@ -36,7 +36,7 @@ def test_governance_command_defaults_to_cached_markdown(monkeypatch):
     assert calls == [
         (
             "INFY",
-            {"use_llm": False, "refresh_live": False},
+            {"use_llm": False, "use_annual_report_llm": False, "refresh_live": False},
         )
     ]
 
@@ -59,7 +59,29 @@ def test_governance_command_supports_alias_live_llm_and_json(monkeypatch):
     assert calls == [
         (
             "INFY",
-            {"use_llm": True, "refresh_live": True},
+            {"use_llm": True, "use_annual_report_llm": False, "refresh_live": True},
+        )
+    ]
+
+
+def test_governance_command_forwards_llm_read_flag(monkeypatch):
+    from terminal.governance.commands import handle_governance_command
+
+    calls = []
+
+    def fake_evaluate(symbol, **kwargs):
+        calls.append((symbol, kwargs))
+        return _FakeGovernanceReport()
+
+    monkeypatch.setattr("terminal.governance.commands.evaluate_governance", fake_evaluate)
+
+    output = handle_governance_command("/governance INFY --live --llm-read --json")
+
+    assert '"symbol": "INFY"' in output
+    assert calls == [
+        (
+            "INFY",
+            {"use_llm": False, "use_annual_report_llm": True, "refresh_live": True},
         )
     ]
 
@@ -96,6 +118,7 @@ def test_governance_is_visible_in_slash_commands_categories_and_help():
     assert "/governance INFY" in commands
     assert "/gov INFY" in commands
     assert "/governance INFY --live --llm" in commands
+    assert "/governance INFY --live --llm-read" in commands
     assert "/governance" in nse_agent._CMD_CATEGORIES
 
     from terminal.help import SECTIONS

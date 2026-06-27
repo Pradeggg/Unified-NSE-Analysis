@@ -1074,6 +1074,7 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/gov INFY",                         "Alias for /governance"),
     ("/governance INFY --live",           "Refresh live governance evidence into data/governance/{SYMBOL}/"),
     ("/governance INFY --live --llm",     "Governance evaluation with live refresh and LLM opinion"),
+    ("/governance INFY --live --llm-read", "Live governance evaluation with annual-report LLM review"),
     ("/governance INFY --json",           "Governance evaluation as machine-readable JSON"),
     # ── Analyze / document commands ─────────────────────────────────────────
     ("/research RELIANCE",                "Comprehensive stock research report — overview, fundamentals, technicals, charts, narrative"),
